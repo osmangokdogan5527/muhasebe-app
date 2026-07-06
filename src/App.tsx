@@ -243,14 +243,14 @@ const StormLogo = ({
         <rect width="200" height="200" rx="48" fill={`url(#${patternId})`} />
       )}
 
-      {/* Modern Minimalist Lightning Bolt */}
-      <g transform="translate(78, 32)">
+      {/* Modern Minimalist Lightning Bolt - Enlarged and centered */}
+      <g transform="translate(70, 22) scale(1.2)">
         <path d="M28 2 L8 38 L23 38 L15 66 L42 28 L28 28 Z" fill="#ffffff" />
       </g>
 
-      {/* Typography */}
-      <text x="100" y="132" dx="2" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="900" fontSize="23" fill="#ffffff" letterSpacing="4">STORM</text>
-      <text x="100" y="156" dx="1.25" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="800" fontSize="9" fill="#ffffff" letterSpacing="2.5" opacity="0.9">MUHASEBE</text>
+      {/* Typography - Enlarged and high contrast for absolute sharpness */}
+      <text x="100" y="136" dx="2" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="950" fontSize="27" fill="#ffffff" letterSpacing="3.5">STORM</text>
+      <text x="100" y="162" dx="1" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="900" fontSize="11" fill="#ffffff" letterSpacing="2" opacity="1">MUHASEBE</text>
     </svg>
   );
 };

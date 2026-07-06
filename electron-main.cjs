@@ -136,8 +136,6 @@ function createWindow() {
     title: "Storm Ön Muhasebe"
   });
 
-  const isDev = !app.isPackaged;
-
   if (isDev) {
     mainWindow.loadURL('http://localhost:3000');
   } else {
