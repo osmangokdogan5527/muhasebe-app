@@ -255,15 +255,18 @@ const StormLogo = ({
   );
 };
 
-const APP_VERSION = '1.5.1';
+const APP_VERSION = '1.5.2';
 
 const CHANGELOG = {
-  version: '1.5.1',
+  version: '1.5.2',
   features: [
-    "Kişiselleştirme ayarlarındaki yan menü ve ana ekran arka plan desenlerinin tam ortalı durması ve ekran geneline eşit şekilde dağılması sağlandı."
+    "Barkod tasarımı için 40x60 mm (dikey) yeni barkod etiketi şablonu eklendi.",
+    "Şablon Tasarımcısına 'Barkod Etiketi (40x60)' seçeneği ve dinamik kağıt boyutu desteği entegre edildi."
   ],
   fixes: [
-    "SVG desen şablonlarındaki koordinat ve hizalama (offset/position) parametreleri optimize edilerek görsel kaymalar giderildi."
+    "Masaüstü uygulaması için yüksek çözünürlüklü .ico formatında yeni uygulama simgesi (icon) oluşturuldu.",
+    "Şablon derleyicisindeki mükerrer kod blokları temizlenerek üretim sürümü derleme hatası düzeltildi.",
+    "Büyük boyutlu yedek (.zip) dosyaları ve derleme artıkları Git takibinden çıkarılarak GitHub senkronizasyonu optimize edildi."
   ]
 };
 
@@ -463,6 +466,17 @@ export const PIN_ACCOUNTS = [
 ];
 
 const changelogData = [
+  {
+    version: "1.5.2",
+    date: "06.07.2026",
+    changes: [
+      "Barkod tasarımı için 40x60 mm (dikey) boyutunda yeni barkod etiketi şablonu eklendi.",
+      "Şablon Tasarımcısına 'Barkod Etiketi (40x60)' seçeneği ve dinamik kağıt boyutu desteği entegre edildi.",
+      "Masaüstü uygulaması için yüksek çözünürlüklü .ico formatında yeni uygulama simgesi (icon) oluşturuldu ve simge uyumluluk hataları giderildi.",
+      "Şablon derleyicisindeki mükerrer 'etiket_40x60' durum blokları temizlenerek üretim aşamasındaki (production build) hata giderildi.",
+      "Büyük boyutlu yedek (.zip) dosyaları ve derleme artıkları Git takibinden çıkarılarak GitHub senkronizasyonu optimize edildi."
+    ]
+  },
   {
     version: "1.5.1",
     date: "06.07.2026",

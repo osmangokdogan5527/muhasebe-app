@@ -7,7 +7,7 @@ export interface PrintTemplateConfig {
   name: string;
   type: 'satis' | 'alis' | 'iade' | 'teklif' | 'barkod';
   documentTitle: string;
-  paperSize: 'a4' | 'a4_yatay' | 'a5' | 'a5_yatay' | 'termal_80' | 'termal_58' | 'etiket_40x30' | 'etiket_60x40' | 'etiket_80x50' | 'etiket_40x20';
+  paperSize: 'a4' | 'a4_yatay' | 'a5' | 'a5_yatay' | 'termal_80' | 'termal_58' | 'etiket_40x30' | 'etiket_60x40' | 'etiket_80x50' | 'etiket_40x20' | 'etiket_40x60';
   textSize?: 'small' | 'normal' | 'large';
   
   // General Settings
@@ -83,6 +83,27 @@ const DEFAULT_TEMPLATES: PrintTemplateConfig[] = [
     showVatRate: false,
     showUnitPrice: false,
     barcodeFormat: 'CODE128',
+    showBarcodePrice: true,
+    showBarcodeName: true,
+    showBarcodeCode: true,
+  },
+  {
+    id: "default-barkod-40x60",
+    name: "Barkod Etiketi (40x60)",
+    type: "barkod",
+    documentTitle: "BARKOD ETİKETİ 40x60",
+    paperSize: "etiket_40x60",
+    showLogo: false,
+    showCompanyAddress: false,
+    showValidityDate: false,
+    showFooter: false,
+    showCustomerBalance: false,
+    showProductImage: false,
+    showDiscountRate: false,
+    showExVatAmount: false,
+    showVatRate: false,
+    showUnitPrice: false,
+    barcodeFormat: "CODE128",
     showBarcodePrice: true,
     showBarcodeName: true,
     showBarcodeCode: true,
@@ -256,6 +277,7 @@ export default function TemplateDesignerView() {
       case 'termal_58': return { maxWidth: '219px', aspectRatio: 'auto', minHeight: '300px', padding: '8px' };
       case 'etiket_80x50': return { maxWidth: '302px', aspectRatio: '80 / 50', padding: '12px', minHeight: 'auto' };
       case 'etiket_60x40': return { maxWidth: '226px', aspectRatio: '60 / 40', padding: '8px', minHeight: 'auto' };
+      case 'etiket_40x60': return { maxWidth: '151px', aspectRatio: '40 / 60', padding: '8px', minHeight: 'auto' };
       case 'etiket_40x30': return { maxWidth: '151px', aspectRatio: '40 / 30', padding: '8px', minHeight: 'auto' };
       case 'etiket_40x20': return { maxWidth: '151px', aspectRatio: '40 / 20', padding: '8px', minHeight: 'auto' };
       default: return { maxWidth: '794px', aspectRatio: '1 / 1.414', padding: '40px' };
@@ -272,6 +294,7 @@ export default function TemplateDesignerView() {
       case 'termal_58': return 'TERMAL 58MM';
       case 'etiket_80x50': return 'ETİKET 80x50';
       case 'etiket_60x40': return 'ETİKET 60x40';
+      case 'etiket_40x60': return 'ETİKET 40x60';
       case 'etiket_40x30': return 'ETİKET 40x30';
       case 'etiket_40x20': return 'ETİKET 40x20';
       default: return size;
@@ -528,6 +551,7 @@ export default function TemplateDesignerView() {
                     <option value="termal_58">Termal Rulo (58mm)</option>
                     <option value="etiket_80x50">Barkod Etiketi (80x50mm)</option>
                     <option value="etiket_60x40">Barkod Etiketi (60x40mm)</option>
+                    <option value="etiket_40x60">Barkod Etiketi (40x60mm)</option>
                     <option value="etiket_40x30">Barkod Etiketi (40x30mm)</option>
                     <option value="etiket_40x20">Barkod Etiketi (40x20mm)</option>
                   </select>
