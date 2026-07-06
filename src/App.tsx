@@ -255,18 +255,17 @@ const StormLogo = ({
   );
 };
 
-const APP_VERSION = '1.5.2';
+const APP_VERSION = '1.5.3';
 
 const CHANGELOG = {
-  version: '1.5.2',
+  version: '1.5.3',
   features: [
-    "Barkod tasarımı için 40x60 mm (dikey) yeni barkod etiketi şablonu eklendi.",
-    "Şablon Tasarımcısına 'Barkod Etiketi (40x60)' seçeneği ve dinamik kağıt boyutu desteği entegre edildi."
+    "Barkod yazdırma çıktılarında çizgilerin kaymasını ve silikleşmesini engelleyen yüksek keskinlikli (crisp-edges) SVG render motoru entegre edildi.",
+    "Tüm barkod etiket boyutları (40x20, 60x40, 80x50, 40x60) için milimetrik marj ve hizalama optimizasyonları yapıldı."
   ],
   fixes: [
-    "Masaüstü uygulaması için yüksek çözünürlüklü .ico formatında yeni uygulama simgesi (icon) oluşturuldu.",
-    "Şablon derleyicisindeki mükerrer kod blokları temizlenerek üretim sürümü derleme hatası düzeltildi.",
-    "Büyük boyutlu yedek (.zip) dosyaları ve derleme artıkları Git takibinden çıkarılarak GitHub senkronizasyonu optimize edildi."
+    "Dinamik etiket yazı boyutları, barkod çizgi genişlikleri ve oranları güncellenerek tam milimetrik uyumluluk sağlandı.",
+    "Uygulama versiyonu v1.5.3 olarak güncellendi ve tüm web/masaüstü üretim derleme süreçleri başarıyla tamamlandı."
   ]
 };
 
@@ -466,6 +465,16 @@ export const PIN_ACCOUNTS = [
 ];
 
 const changelogData = [
+  {
+    version: "1.5.3",
+    date: "06.07.2026",
+    changes: [
+      "Barkod yazdırma çıktılarında çizgilerin bozulmasını ve bulanıklaşmasını engelleyen yüksek keskinlikli (crisp-edges) SVG render teknolojisi entegre edildi.",
+      "Yazdırma şablonlarında sayfa kenar boşlukları (margins) ve hizalamalar tüm etiket boyutları (40x20, 60x40, 80x50, 40x60) için milimetrik olarak optimize edildi.",
+      "Dinamik yazı boyutları, barkod çizgisi yükseklikleri ve genişlik oranları güncellenerek etiket sınırlarına tam uyum sağlandı.",
+      "Uygulama versiyonu v1.5.3 olarak güncellendi ve tüm masaüstü/web üretim derleme süreçleri tamamlandı."
+    ]
+  },
   {
     version: "1.5.2",
     date: "06.07.2026",

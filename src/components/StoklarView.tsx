@@ -768,38 +768,57 @@ export default function StoklarView({
                   </div>
                   
                   {/* Preview Area */}
-                  <div className="mt-4 p-4 bg-white rounded-lg flex flex-col items-center justify-center text-black">
+                  <div className="mt-4 p-4 bg-white rounded-lg flex flex-col items-center justify-center text-black overflow-hidden relative">
                     {(() => {
                       const t = printTemplates.find(tpl => tpl.id === selectedTemplateId);
                       if (!t) return null;
                       
                       const barcodeValue = printingStock.barcode || printingStock.code || '1234567890';
                       const is40x20 = t.paperSize === 'etiket_40x20';
+                      const is60x40 = t.paperSize === 'etiket_60x40';
+                      const is40x60 = t.paperSize === 'etiket_40x60';
+                      const is80x50 = t.paperSize === 'etiket_80x50';
+                      
+                      let w = 200; // 40mm scaled x5
+                      let h = 150; // 30mm scaled x5
+                      if (is60x40) { w = 300; h = 200; }
+                      if (is40x60) { w = 200; h = 300; }
+                      if (is80x50) { w = 400; h = 250; }
+                      if (is40x20) { w = 200; h = 100; }
+                      
+                      let bcWidth = 1.2;
+                      let bcHeight = 40;
+                      let bcFontSize = 10;
+                      if (is40x20) { bcWidth = 1.2; bcHeight = 30; bcFontSize = 8; }
+                      if (is60x40 || is80x50) { bcWidth = 1.8; bcHeight = 50; bcFontSize = 12; }
                       
                       return (
-                        <div className="text-center flex flex-col items-center justify-center">
+                        <div 
+                          className="border border-zinc-200 shadow-sm flex flex-col items-center justify-center bg-white p-2"
+                          style={{ width: `${w}px`, height: `${h}px` }}
+                        >
                           {t.showBarcodeName !== false && (
-                            <div className={`font-bold ${is40x20 ? 'text-[9px]' : 'text-[10px]'} mb-1 line-clamp-2 leading-tight uppercase`}>
+                            <div className={`font-bold ${is60x40 || is80x50 ? 'text-[12px]' : (is40x20 ? 'text-[9px]' : 'text-[10px]')} mb-1 line-clamp-2 leading-tight uppercase text-center`}>
                               {printingStock.name}
                             </div>
                           )}
                           {t.showBarcodeCode !== false && printingStock.code && (
-                            <div className={`font-medium text-gray-700 ${is40x20 ? 'text-[8px]' : 'text-[9px]'} mb-0.5 line-clamp-1 leading-tight uppercase`}>
+                            <div className={`font-medium text-gray-700 ${is60x40 || is80x50 ? 'text-[10px]' : (is40x20 ? 'text-[8px]' : 'text-[9px]')} mb-0.5 line-clamp-1 leading-tight uppercase`}>
                               {printingStock.code}
                             </div>
                           )}
                           {t.showBarcodePrice !== false && (
-                            <div className={`font-black ${is40x20 ? 'text-xs' : 'text-sm'} mb-1`}>
+                            <div className={`font-black ${is60x40 || is80x50 ? 'text-lg' : (is40x20 ? 'text-xs' : 'text-sm')} mb-1`}>
                               {printingStock.salesPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
                             </div>
                           )}
-                          <div className="flex justify-center w-full mt-1">
+                          <div className="flex justify-center w-full mt-1 overflow-hidden">
                             <Barcode 
                               value={barcodeValue} 
                               format={t.barcodeFormat || "CODE128"} 
-                              width={is40x20 ? 1.2 : 1.5} 
-                              height={is40x20 ? 30 : 40} 
-                              fontSize={is40x20 ? 8 : 10}
+                              width={bcWidth} 
+                              height={bcHeight} 
+                              fontSize={bcFontSize}
                               margin={0}
                               background="transparent"
                             />
@@ -821,7 +840,112 @@ export default function StoklarView({
               </button>
               <button 
                 onClick={() => {
-                  window.print();
+                  const t = printTemplates.find(tpl => tpl.id === selectedTemplateId);
+                  if (!t) return;
+                  
+                  const printContent = document.getElementById('printable-barcode-content');
+                  if (printContent) {
+                    const iframe = document.createElement('iframe');
+                    iframe.style.position = 'fixed';
+                    iframe.style.right = '0';
+                    iframe.style.bottom = '0';
+                    iframe.style.width = '0';
+                    iframe.style.height = '0';
+                    iframe.style.border = '0';
+                    document.body.appendChild(iframe);
+                    
+                    const iframeDoc = iframe.contentWindow?.document;
+                    if (iframeDoc) {
+                      const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+                        .map(s => s.outerHTML)
+                        .join('\n');
+                        
+                      const clone = printContent.cloneNode(true) as HTMLElement;
+                      clone.style.display = 'flex';
+                      
+                      let pw = '40mm';
+                      let ph = '30mm';
+                      if (t.paperSize === 'etiket_60x40') { pw = '60mm'; ph = '40mm'; }
+                      else if (t.paperSize === 'etiket_40x60') { pw = '40mm'; ph = '60mm'; }
+                      else if (t.paperSize === 'etiket_80x50') { pw = '80mm'; ph = '50mm'; }
+                      else if (t.paperSize === 'etiket_40x20') { pw = '40mm'; ph = '20mm'; }
+                      
+                      iframeDoc.open();
+                      iframeDoc.write(`
+                        <html>
+                          <head>
+                            ${styles}
+                            <style>
+                              @page { size: ${pw} ${ph}; margin: 0 !important; }
+                              html, body { 
+                                margin: 0 !important; 
+                                padding: 0 !important; 
+                                width: ${pw} !important; 
+                                height: ${ph} !important;
+                                max-width: ${pw} !important;
+                                max-height: ${ph} !important;
+                                background: white !important; 
+                                -webkit-print-color-adjust: exact !important; 
+                                print-color-adjust: exact !important; 
+                                overflow: hidden !important;
+                                display: flex !important;
+                                align-items: center !important;
+                                justify-content: center !important;
+                                box-sizing: border-box !important;
+                              }
+                              * { 
+                                color: #000 !important; 
+                                box-sizing: border-box !important;
+                              }
+                              #printable-barcode-content { 
+                                margin: 0 !important; 
+                                padding: 1.5mm !important;
+                                width: ${pw} !important;
+                                height: ${ph} !important;
+                                max-width: ${pw} !important;
+                                max-height: ${ph} !important;
+                                overflow: hidden !important;
+                                display: flex !important;
+                                flex-direction: column !important;
+                                align-items: center !important;
+                                justify-content: center !important;
+                                page-break-inside: avoid !important;
+                                page-break-before: avoid !important;
+                                page-break-after: avoid !important;
+                              }
+                              #printable-barcode-content svg {
+                                max-width: 100% !important;
+                                height: auto !important;
+                                display: block !important;
+                                shape-rendering: crispEdges !important;
+                              }
+                              #printable-barcode-content svg * {
+                                shape-rendering: crispEdges !important;
+                              }
+                            </style>
+                          </head>
+                          <body>
+                            ${clone.outerHTML}
+                          </body>
+                        </html>
+                      `);
+                      iframeDoc.close();
+                      
+                      iframe.onload = () => {
+                        setTimeout(() => {
+                          iframe.contentWindow?.focus();
+                          iframe.contentWindow?.print();
+                          setTimeout(() => {
+                            if (document.body.contains(iframe)) {
+                              document.body.removeChild(iframe);
+                            }
+                          }, 1000);
+                        }, 250);
+                      };
+                    }
+                  } else {
+                    window.print();
+                  }
                 }}
                 disabled={printTemplates.length === 0}
                 className="px-4 py-2 rounded text-xs font-bold bg-teal-500 hover:bg-teal-600 text-black transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -843,31 +967,52 @@ export default function StoklarView({
             
             const barcodeValue = printingStock.barcode || printingStock.code || '1234567890';
             const is40x20 = t.paperSize === 'etiket_40x20';
+            const is60x40 = t.paperSize === 'etiket_60x40';
+            const is40x60 = t.paperSize === 'etiket_40x60';
+            const is80x50 = t.paperSize === 'etiket_80x50';
+            
+            let w = '40mm';
+            let h = '30mm';
+            if (is60x40) { w = '60mm'; h = '40mm'; }
+            if (is40x60) { w = '40mm'; h = '60mm'; }
+            if (is80x50) { w = '80mm'; h = '50mm'; }
+            if (is40x20) { w = '40mm'; h = '20mm'; }
+
+            const widthStyle = { width: w, height: h };
+            
+            let bcWidth = 1.2;
+            let bcHeight = 60;
+            let bcFontSize = 10;
+            
+            if (is40x20) { bcWidth = 1; bcHeight = 35; bcFontSize = 8; }
+            if (is60x40) { bcWidth = 1.8; bcHeight = 80; bcFontSize = 14; }
+            if (is80x50) { bcWidth = 2.2; bcHeight = 100; bcFontSize = 16; }
+            if (is40x60) { bcWidth = 1; bcHeight = 100; bcFontSize = 12; }
             
             return (
-              <div className={`text-center ${is40x20 ? 'w-[40mm] h-[20mm]' : 'w-[40mm] h-[30mm]'} flex flex-col items-center justify-center overflow-hidden`}>
+              <div id="printable-barcode-content" className="text-center flex flex-col items-center justify-center overflow-hidden" style={widthStyle}>
                 {t.showBarcodeName !== false && (
-                  <div className={`font-bold ${is40x20 ? 'text-[7px]' : 'text-[8px]'} mb-0.5 leading-tight uppercase line-clamp-1`}>
+                  <div className={`font-bold ${is60x40 || is80x50 ? 'text-[12px]' : (is40x20 ? 'text-[9px]' : 'text-[10px]')} mb-0.5 leading-tight uppercase line-clamp-1`}>
                     {printingStock.name}
                   </div>
                 )}
                 {t.showBarcodeCode !== false && printingStock.code && (
-                  <div className={`font-medium text-gray-700 ${is40x20 ? 'text-[6px]' : 'text-[7px]'} mb-0.5 line-clamp-1 leading-tight uppercase`}>
+                  <div className={`font-medium text-gray-700 ${is60x40 || is80x50 ? 'text-[11px]' : (is40x20 ? 'text-[8px]' : 'text-[9px]')} mb-0.5 line-clamp-1 leading-tight uppercase`}>
                     {printingStock.code}
                   </div>
                 )}
                 {t.showBarcodePrice !== false && (
-                  <div className={`font-black ${is40x20 ? 'text-[10px]' : 'text-[12px]'} mb-0.5`}>
+                  <div className={`font-black ${is60x40 || is80x50 ? 'text-[16px]' : (is40x20 ? 'text-[12px]' : 'text-[14px]')} mb-0.5`}>
                     {printingStock.salesPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
                   </div>
                 )}
-                <div className="flex justify-center w-full">
+                <div className="flex justify-center w-full px-1">
                   <Barcode 
                     value={barcodeValue} 
                     format={t.barcodeFormat || "CODE128"} 
-                    width={is40x20 ? 1 : 1.2} 
-                    height={is40x20 ? 20 : 30} 
-                    fontSize={is40x20 ? 6 : 8}
+                    width={bcWidth} 
+                    height={bcHeight} 
+                    fontSize={bcFontSize}
                     margin={0}
                     background="transparent"
                   />
