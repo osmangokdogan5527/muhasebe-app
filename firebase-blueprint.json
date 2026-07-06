@@ -1,0 +1,337 @@
+{
+  "entities": {
+    "Cari": {
+      "title": "Cari",
+      "description": "Cari hesap bilgileri (Müşteri veya Tedarikçi)",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["customer", "supplier", "both"]
+        },
+        "phone": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "address": {
+          "type": "string"
+        },
+        "balance": {
+          "type": "number"
+        },
+        "openingBalance": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "name", "code", "type", "balance", "openingBalance", "createdAt"]
+    },
+    "Stock": {
+      "title": "Stock",
+      "description": "Stok / Hizmet kartı bilgileri",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string",
+          "enum": ["Adet", "KG", "Litre", "Metre", "Kutu", "Hizmet"]
+        },
+        "purchasePrice": {
+          "type": "number"
+        },
+        "salesPrice": {
+          "type": "number"
+        },
+        "taxRate": {
+          "type": "number"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "minQuantity": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "name", "unit", "purchasePrice", "salesPrice", "taxRate", "quantity", "createdAt"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "İşlem ve fatura kayıtları",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "invoiceNo": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["sale", "purchase", "collection", "payment"]
+        },
+        "cariId": {
+          "type": "string"
+        },
+        "cariName": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number"
+        },
+        "account": {
+          "type": "string",
+          "enum": ["cash", "bank", ""]
+        },
+        "description": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "type", "cariId", "cariName", "date", "amount", "account", "createdAt"]
+    },
+    "CekSenet": {
+      "title": "CekSenet",
+      "description": "Alınan ve verilen çek ile senetlerin takibi",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["receivable", "payable"]
+        },
+        "docType": {
+          "type": "string",
+          "enum": ["cheque", "note"]
+        },
+        "portfolioNo": {
+          "type": "string"
+        },
+        "serialNo": {
+          "type": "string"
+        },
+        "debtor": {
+          "type": "string"
+        },
+        "cariId": {
+          "type": "string"
+        },
+        "cariName": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["TRY", "USD", "EUR"]
+        },
+        "issueDate": {
+          "type": "string"
+        },
+        "dueDate": {
+          "type": "string"
+        },
+        "bankName": {
+          "type": "string"
+        },
+        "bankBranch": {
+          "type": "string"
+        },
+        "accountNo": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["portfolio", "collected", "paid", "endorsed", "unpaid"]
+        },
+        "description": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "type", "docType", "portfolioNo", "serialNo", "debtor", "cariId", "cariName", "amount", "currency", "issueDate", "dueDate", "status", "createdAt"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Gider ve masraf kayıtları",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Elektrik", "Su", "Doğalgaz", "Kira", "Muhasebe Gideri", "Maaş/Personel", "Yemek/Mutfak", "Ulaşım/Yakıt", "Diğer"]
+        },
+        "amount": {
+          "type": "number"
+        },
+        "date": {
+          "type": "string"
+        },
+        "account": {
+          "type": "string",
+          "enum": ["cash", "bank"]
+        },
+        "description": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["TRY", "USD", "EUR"]
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "title", "category", "amount", "date", "account", "currency", "createdAt"]
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "Çalışan bilgileri",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "hireDate": {
+          "type": "string"
+        },
+        "baseSalary": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["TRY", "USD", "EUR"]
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "name", "role", "hireDate", "baseSalary", "currency", "isActive", "createdAt"]
+    },
+    "EmployeeTransaction": {
+      "title": "EmployeeTransaction",
+      "description": "Çalışan maaş tahakkuk, ödeme ve avans hareketleri",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "employeeId": {
+          "type": "string"
+        },
+        "employeeName": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["accrual", "payment", "advance"]
+        },
+        "amount": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["TRY", "USD", "EUR"]
+        },
+        "date": {
+          "type": "string"
+        },
+        "account": {
+          "type": "string",
+          "enum": ["cash", "bank", ""]
+        },
+        "description": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "employeeId", "employeeName", "type", "amount", "currency", "date", "account", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/cariler/{cariId}": {
+      "schema": "Cari",
+      "description": "Kullanıcıya özel cari hesaplar koleksiyonu"
+    },
+    "/users/{userId}/stoklar/{stockId}": {
+      "schema": "Stock",
+      "description": "Kullanıcıya özel stok ve hizmet kartları koleksiyonu"
+    },
+    "/users/{userId}/islemler/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Kullanıcıya özel faturalar ve kasa/banka hareketleri koleksiyonu"
+    },
+    "/users/{userId}/ceksenet/{ceksenetId}": {
+      "schema": "CekSenet",
+      "description": "Kullanıcıya özel çek ve senet takibi koleksiyonu"
+    },
+    "/users/{userId}/giderler/{expenseId}": {
+      "schema": "Expense",
+      "description": "Kullanıcıya özel masraflar ve giderler koleksiyonu"
+    },
+    "/users/{userId}/calisanlar/{employeeId}": {
+      "schema": "Employee",
+      "description": "Kullanıcıya özel çalışan listesi"
+    },
+    "/users/{userId}/calisanIslemler/{transactionId}": {
+      "schema": "EmployeeTransaction",
+      "description": "Kullanıcıya özel çalışan cari hareketleri"
+    }
+  }
+}

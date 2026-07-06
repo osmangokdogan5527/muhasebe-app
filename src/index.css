@@ -1,0 +1,429 @@
+@import "tailwindcss";
+
+html {
+  font-size: var(--app-font-size, 16px);
+}
+
+@theme {
+  --color-teal-50: var(--accent-50);
+  --color-teal-100: var(--accent-100);
+  --color-teal-200: var(--accent-200);
+  --color-teal-300: var(--accent-300);
+  --color-teal-400: var(--accent-400);
+  --color-teal-500: var(--accent-500);
+  --color-teal-600: var(--accent-600);
+  --color-teal-700: var(--accent-700);
+  --color-teal-800: var(--accent-800);
+  --color-teal-900: var(--accent-900);
+  --color-teal-950: var(--accent-950);
+}
+
+/* 
+  =========================================
+  HIGH FIDELITY LIGHT THEME OVERRIDES 
+  =========================================
+*/
+:root {
+  --app-font-size: 16px;
+  --bg-primary: #f8fafc;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --bg-input: #f1f5f9;
+  --bg-input-focus: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --chart-grid: #f1f5f9;
+  --chart-axis: #94a3b8;
+}
+
+/* Force light scrollbar */
+html {
+  color-scheme: light !important;
+}
+
+/* App-wide general background override - flat, solid clean slate light color */
+body,
+.bg-\[\#050505\] {
+  background-color: #f8fafc !important;
+  color: var(--text-primary) !important;
+  background-image: none !important;
+}
+
+/* Sidebar Override: Solid modern white side layout, gorgeous soft right-border & shadow */
+.bg-\[\#080808\] {
+  background-color: var(--bg-sidebar) !important;
+  border-right: 1px solid var(--border-color) !important;
+  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.01) !important;
+}
+
+/* Sidebar header / footer borders */
+.border-b.border-white\/10 {
+  border-bottom: 1px solid var(--border-color) !important;
+}
+.border-t.border-white\/10 {
+  border-top: 1px solid var(--border-color) !important;
+}
+
+/* Bottom user profile & sync footer wrapper in sidebar */
+.bg-black\/40 {
+  background-color: #fafbfe !important;
+  border-top: 1px solid var(--border-color) !important;
+}
+
+/* Sidebar user pill background override */
+.bg-\[\#111111\] {
+  background-color: var(--bg-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Inactive nav buttons overrides in sidebar */
+main .hover\:bg-white\/5:hover {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+  color: var(--text-primary) !important;
+}
+main .text-white\/50 {
+  color: var(--text-muted) !important;
+}
+main .hover\:text-white:hover {
+  color: var(--text-primary) !important;
+}
+
+/* Primary Accent Buttons: High visibility white-text styling */
+.bg-teal-500 {
+  background-color: var(--color-teal-500) !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1) !important;
+  border: none !important;
+}
+.bg-teal-500:hover {
+  background-color: var(--color-teal-600) !important;
+}
+
+/* Sidebar selected tabs text style */
+.bg-teal-500.text-black {
+  color: #ffffff !important;
+}
+
+/* 
+  Card overrides: Transmute dark cards into floating bright white boxes
+  with soft borders and high-end depth shadows
+*/
+.bg-\[\#0a0a0a\],
+.bg-\[\#0d0d0d\],
+.bg-\[\#0f0f0f\],
+.bg-\[\#111111\],
+.bg-\[\#121212\],
+.bg-\[\#151515\],
+.bg-white\/5 {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.03), 0 2px 8px -1px rgba(15, 23, 42, 0.01) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Specific highlight boxes in subcomponents (like transaction lists or table rows) */
+.bg-white\/5:hover {
+  background-color: rgba(15, 23, 42, 0.02) !important;
+}
+
+/* Table border overrides */
+.border-white\/10,
+.border-white\/5,
+.border-white\/20,
+.border-white\/30 {
+  border-color: var(--border-color) !important;
+}
+
+/* Inputs, Select items and Textareas styling */
+input,
+select,
+textarea,
+.bg-\[\#0c0c0c\] {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 10px !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  background-color: var(--bg-card) !important;
+  border-color: var(--color-teal-500) !important;
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.15) !important;
+}
+
+/* Override input placeholder colors for readability */
+::placeholder {
+  color: #94a3b8 !important;
+  opacity: 0.8 !important;
+}
+
+/* Ensure options inside selector tags show nicely in light mode */
+option {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Text Overrides - Complete palette mapping for modern dark-to-light translation */
+main .bg-rose-600 {
+  color: #ffffff !important;
+}
+main .bg-teal-600 {
+  color: #ffffff !important;
+}
+main .text-white {
+  color: var(--text-primary) !important;
+}
+main .text-white\/95,
+main .text-white\/90 {
+  color: var(--text-primary) !important;
+}
+main .text-\[\#e0e0e0\] {
+  color: var(--text-primary) !important;
+}
+main .text-white\/80 {
+  color: var(--text-primary) !important;
+}
+main .text-white\/70 {
+  color: var(--text-secondary) !important;
+}
+main .text-white\/60 {
+  color: var(--text-secondary) !important;
+}
+main .text-white\/50 {
+  color: var(--text-muted) !important;
+}
+main .text-white\/40 {
+  color: var(--text-muted) !important;
+}
+main .text-white\/30 {
+  color: var(--text-muted-light, #94a3b8) !important;
+}
+main .text-white\/20 {
+  color: var(--text-muted-lighter, #cbd5e1) !important;
+}
+main .text-white\/10 {
+  color: var(--text-muted-lightest, #cbd5e1) !important;
+}
+
+/* System Alerts / Online / Offline states */
+.text-teal-400 {
+  color: var(--color-teal-600) !important;
+}
+.text-teal-300 {
+  color: var(--color-teal-700) !important;
+}
+.text-teal-200 {
+  color: var(--color-teal-800) !important;
+}
+.text-teal-500 {
+  color: var(--color-teal-500) !important;
+}
+.text-teal-600 {
+  color: var(--color-teal-600) !important;
+}
+.text-teal-700 {
+  color: var(--color-teal-700) !important;
+}
+
+/* Soft accent pill backgrounds */
+.bg-teal-500\/10,
+.bg-teal-500\/15,
+.bg-teal-500\/20 {
+  background-color: color-mix(in srgb, var(--color-teal-500) 10%, transparent) !important;
+  color: var(--color-teal-700) !important;
+}
+
+.border-teal-500\/30,
+.border-teal-500\/20,
+.border-teal-500\/15,
+.border-teal-500\/10 {
+  border-color: color-mix(in srgb, var(--color-teal-500) 25%, transparent) !important;
+}
+
+/* Dynamic shadows based on theme color */
+.shadow-\[0_0_12px_rgba\(45\,212\,191\,0\.2\)\] {
+  box-shadow: 0 0 12px color-mix(in srgb, var(--color-teal-500) 20%, transparent) !important;
+}
+.shadow-\[0_0_8px_rgba\(45\,212\,191\,0\.2\)\] {
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-teal-500) 20%, transparent) !important;
+}
+.shadow-\[0_0_12px_rgba\(45\,212\,191\,0\.15\)\] {
+  box-shadow: 0 0 12px color-mix(in srgb, var(--color-teal-500) 15%, transparent) !important;
+}
+
+/* Red accents */
+.bg-red-500\/10 {
+  background-color: rgba(244, 63, 94, 0.08) !important;
+  color: #e11d48 !important;
+}
+.text-red-400 {
+  color: #e11d48 !important;
+}
+
+/* Green Accents */
+.bg-green-500\/10 {
+  background-color: rgba(16, 185, 129, 0.08) !important;
+  color: #059669 !important;
+}
+.text-green-400 {
+  color: #059669 !important;
+}
+
+/* Mobile responsive navigation overrides */
+header.lg\:hidden {
+  background-color: var(--bg-sidebar) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+header.lg\:hidden span {
+  color: var(--text-primary) !important;
+}
+header.lg\:hidden button {
+  color: var(--text-secondary) !important;
+}
+
+/* Fixed Mobile Bottom Bar Override */
+nav.fixed.bottom-0 {
+  background-color: var(--bg-sidebar) !important;
+  border-top: 1px solid var(--border-color) !important;
+  box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.03) !important;
+}
+nav.fixed.bottom-0 button {
+  color: var(--text-muted) !important;
+}
+nav.fixed.bottom-0 button.text-teal-400,
+nav.fixed.bottom-0 button.text-teal-400 span {
+  color: var(--color-teal-600) !important;
+}
+
+/* Mobile menu slide-out drawer */
+.fixed.inset-0.z-30.bg-black\/80 + div {
+  background-color: var(--bg-sidebar) !important;
+  border-right: 1px solid var(--border-color) !important;
+}
+.fixed.inset-0.z-30.bg-black\/80 + div span,
+.fixed.inset-0.z-30.bg-black\/80 + div button {
+  color: var(--text-primary) !important;
+}
+
+/* Floating Modals or Add Dialogs: pure white backgrounds, clean headings */
+.fixed.inset-0.z-50.bg-black\/80 {
+  background-color: rgba(15, 23, 42, 0.5) !important;
+  backdrop-filter: blur(4px) !important;
+}
+.fixed.inset-0.z-50 .bg-\[\#0c0c0c\],
+.fixed.inset-0.z-50 .bg-\[\#0a0a0a\] {
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Dialog Header/Footer backgrounds */
+.bg-white\/5.p-4.border-t {
+  background-color: var(--bg-primary) !important;
+  border-top: 1px solid var(--border-color) !important;
+}
+
+/* Dashboard Widget Background Colors via CSS Variables */
+main .dashboard-wrapper[data-theme="dark"] {
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-muted: rgba(255, 255, 255, 0.5);
+  --text-muted-light: rgba(255, 255, 255, 0.3);
+  --text-muted-lighter: rgba(255, 255, 255, 0.2);
+  --text-muted-lightest: rgba(255, 255, 255, 0.1);
+  --widget-border: rgba(255, 255, 255, 0.05);
+  --border-color: rgba(255, 255, 255, 0.05);
+}
+main .dashboard-wrapper[data-theme="light"] {
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --widget-border: rgba(15, 23, 42, 0.06);
+}
+
+main .dashboard-wrapper .bg-\[\#111111\],
+main .dashboard-wrapper .bg-zinc-950,
+main .dashboard-wrapper .bg-zinc-950\/50,
+main .dashboard-wrapper .bg-zinc-900\/50,
+main .dashboard-wrapper .bg-\[\#0b0c0e\] {
+  background-color: var(--widget-bg) !important;
+  border: 1px solid var(--widget-border) !important;
+}
+main .dashboard-wrapper .bg-\[\#111111\]\/80,
+main .dashboard-wrapper .bg-\[\#121316\] {
+  background-color: var(--widget-header-bg) !important;
+  border-bottom: 1px solid var(--widget-border) !important;
+}
+
+/* Modern Layout Enhancements for Dashboard */
+main .dashboard-wrapper .rounded-xl {
+  border-radius: 1.5rem !important;
+}
+main .dashboard-wrapper .rounded-lg {
+  border-radius: 1.25rem !important;
+}
+main .dashboard-wrapper .shadow-xl {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+}
+main .dashboard-wrapper .shadow-lg {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+main .dashboard-wrapper .shadow-lg:hover {
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5) !important;
+  transform: translateY(-2px);
+}
+main .dashboard-wrapper h3.italic.font-light {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif !important;
+  font-style: normal !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.05em !important;
+}
+main .dashboard-wrapper .uppercase.tracking-\[0\.2em\] {
+  letter-spacing: 0.05em !important;
+  font-weight: 800 !important;
+}
+main .dashboard-wrapper[data-theme="dark"] .bg-white\/5 {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  box-shadow: none !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+main .dashboard-wrapper[data-theme="dark"] .bg-white\/5:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+main .dashboard-wrapper[data-theme="light"] .bg-white\/5 {
+  background-color: var(--bg-input) !important;
+  box-shadow: none !important;
+  border-color: rgba(15, 23, 42, 0.04) !important;
+}
+main .dashboard-wrapper[data-theme="light"] .bg-white\/5:hover {
+  background-color: color-mix(in srgb, var(--bg-input) 85%, black) !important;
+}
+
+/* Focus and active list borders */
+.border-teal-500 {
+  border-color: var(--color-teal-500) !important;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+

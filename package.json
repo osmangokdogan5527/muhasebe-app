@@ -1,0 +1,107 @@
+{
+  "name": "storm-on-muhasebe",
+  "author": "Osman Gökdoğan",
+  "description": "Ön Muhasebe ve Stok Takip Programı",
+  "private": true,
+  "version": "1.5.1",
+  "type": "module",
+  "main": "electron-main.cjs",
+  "scripts": {
+    "dev": "vite --port=3000 --host=0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview",
+    "clean": "rm -rf dist server.js",
+    "lint": "tsc --noEmit",
+    "electron:dev": "electron .",
+    "electron:start": "concurrently \"npm run dev\" \"electron .\"",
+    "electron:build": "vite build && electron-builder --win"
+  },
+  "build": {
+    "appId": "com.onmuhasebe.app",
+    "productName": "Storm Ön Muhasebe",
+    "compression": "maximum",
+    "npmRebuild": true,
+    "buildDependenciesFromSource": true,
+    "win": {
+      "icon": "public/icon.png",
+      "artifactName": "Storm.On.Muhasebe.Setup.${version}.${ext}",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ]
+    },
+    "mac": {
+      "icon": "public/icon.icns"
+    },
+    "linux": {
+      "icon": "public/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Storm Ön Muhasebe",
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false,
+      "perMachine": true
+    },
+    "files": [
+      "dist/**/*",
+      "electron-main.cjs",
+      "preload.js",
+      "package.json",
+      "!src/**/*",
+      "!public/**/*",
+      "!.git/**/*",
+      "!.github/**/*",
+      "!.aistudio/**/*",
+      "!assets/**/*",
+      "!README.md",
+      "!AGENTS.md",
+      "!.env*",
+      "!tsconfig*.json",
+      "!vite.config.ts",
+      "!node_modules/.cache/**/*",
+      "!node_modules/**/*.map",
+      "!node_modules/**/*.md"
+    ],
+    "directories": {
+      "output": "dist-electron"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "osmangokdogan5527",
+        "repo": "muhasebe-app"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "concurrently": "^10.0.3",
+    "electron": "^42.5.0",
+    "electron-builder": "^26.15.3",
+    "firebase": "^12.15.0",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^0.546.0",
+    "react": "^19.0.1",
+    "react-barcode": "^1.6.1",
+    "react-dom": "^19.0.1",
+    "recharts": "^3.9.0",
+    "sharp": "^0.35.3",
+    "tailwindcss": "^4.1.14",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.3",
+    "xlsx": "^0.18.5"
+  }
+}
