@@ -29,6 +29,11 @@ export interface PrintTemplateConfig {
   showBarcodePrice?: boolean;
   showBarcodeName?: boolean;
   showBarcodeCode?: boolean;
+  showImage?: boolean; // Show product image on barcode
+
+  // Custom Text
+  showCustomText?: boolean;
+  customTextContent?: string;
 }
 
 const DEFAULT_TEMPLATES: PrintTemplateConfig[] = [
@@ -86,6 +91,8 @@ const DEFAULT_TEMPLATES: PrintTemplateConfig[] = [
     showBarcodePrice: true,
     showBarcodeName: true,
     showBarcodeCode: true,
+    showCustomText: false,
+    customTextContent: '',
   },
   {
     id: "default-barkod-40x60",
@@ -107,6 +114,8 @@ const DEFAULT_TEMPLATES: PrintTemplateConfig[] = [
     showBarcodePrice: true,
     showBarcodeName: true,
     showBarcodeCode: true,
+    showCustomText: false,
+    customTextContent: '',
   }
 ];
 
@@ -210,6 +219,8 @@ export default function TemplateDesignerView() {
       showBarcodePrice: true,
       showBarcodeName: true,
       showBarcodeCode: true,
+      showCustomText: false,
+      customTextContent: '',
     };
     saveTemplates([...templates, newTemplate]);
     setActiveTemplateId(newTemplate.id);
@@ -328,14 +339,24 @@ export default function TemplateDesignerView() {
           >
             {activeTemplate.type === 'barkod' ? (
               <div className="flex flex-col items-center justify-center h-full text-center p-2">
+                {activeTemplate.showImage && (
+                  <div className="w-16 h-16 bg-slate-200 border border-slate-300 rounded mb-1 flex items-center justify-center shrink-0">
+                    <ImageIcon size={24} className="text-slate-400" />
+                  </div>
+                )}
                 {activeTemplate.showBarcodeName && (
-                  <div className="font-bold text-slate-900 text-[10px] md:text-xs mb-1 line-clamp-2 leading-tight">
+                  <div className="font-bold text-slate-900 text-[10px] md:text-xs mb-1 w-full px-1 text-center whitespace-nowrap truncate leading-tight">
                     ÖRNEK ÜRÜN ADI - SİYAH
                   </div>
                 )}
                 {activeTemplate.showBarcodeCode !== false && (
-                  <div className="font-medium text-slate-700 text-[8px] md:text-[10px] mb-0.5 line-clamp-1 leading-tight">
+                  <div className="font-medium text-slate-700 text-[8px] md:text-[10px] mb-0.5 w-full px-1 text-center whitespace-nowrap truncate leading-tight">
                     STK-10001
+                  </div>
+                )}
+                {activeTemplate.showCustomText && activeTemplate.customTextContent && (
+                  <div className="font-medium text-slate-800 text-[9px] md:text-[11px] mb-0.5 w-full px-1 text-center whitespace-nowrap truncate leading-tight">
+                    {activeTemplate.customTextContent}
                   </div>
                 )}
                 {activeTemplate.showBarcodePrice && (
@@ -619,6 +640,28 @@ export default function TemplateDesignerView() {
                     checked={activeTemplate.showBarcodePrice !== false} 
                     onChange={(v) => handleUpdateActiveTemplate({ showBarcodePrice: v })} 
                   />
+                  <SwitchRow 
+                    label="Ürün Resmi Görünsün" 
+                    checked={activeTemplate.showImage || false} 
+                    onChange={(v) => handleUpdateActiveTemplate({ showImage: v })} 
+                  />
+                  <SwitchRow 
+                    label="Özel Metin Görünsün" 
+                    checked={activeTemplate.showCustomText || false} 
+                    onChange={(v) => handleUpdateActiveTemplate({ showCustomText: v })} 
+                  />
+                  {activeTemplate.showCustomText && (
+                    <div className="pt-2">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Özel Metin İçeriği</label>
+                      <input 
+                        type="text" 
+                        value={activeTemplate.customTextContent || ''}
+                        onChange={(e) => handleUpdateActiveTemplate({ customTextContent: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                        placeholder="Örn: %100 Pamuk, Yerli Üretim vs."
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

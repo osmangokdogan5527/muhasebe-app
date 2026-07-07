@@ -255,17 +255,17 @@ const StormLogo = ({
   );
 };
 
-const APP_VERSION = '1.5.3';
+const APP_VERSION = '1.5.4';
 
 const CHANGELOG = {
-  version: '1.5.3',
+  version: '1.5.4',
   features: [
-    "Barkod yazdırma çıktılarında çizgilerin kaymasını ve silikleşmesini engelleyen yüksek keskinlikli (crisp-edges) SVG render motoru entegre edildi.",
-    "Tüm barkod etiket boyutları (40x20, 60x40, 80x50, 40x60) için milimetrik marj ve hizalama optimizasyonları yapıldı."
+    "Barkod ve şablon tasarımcısı üzerindeki tüm yazı alanlarının (ürün adı, stok kodu, özel metin) tek satıra sabitlenmesi (truncate/whitespace-nowrap) sağlandı.",
+    "Baskı çıktısı alanında ve şablon önizlemesinde taşmaların tamamen engellenmesi amacıyla milimetrik hizalama ve ortalama özellikleri eklendi."
   ],
   fixes: [
-    "Dinamik etiket yazı boyutları, barkod çizgi genişlikleri ve oranları güncellenerek tam milimetrik uyumluluk sağlandı.",
-    "Uygulama versiyonu v1.5.3 olarak güncellendi ve tüm web/masaüstü üretim derleme süreçleri başarıyla tamamlandı."
+    "Kullanıcı basımlarında (stok barkod baskısı) yazıların alt satıra kayma ve tasarım düzenini bozma hatası giderildi.",
+    "Uygulama versiyonu v1.5.4 olarak güncellendi ve tüm web/masaüstü üretim derleme süreçleri başarıyla tamamlandı."
   ]
 };
 
@@ -465,6 +465,16 @@ export const PIN_ACCOUNTS = [
 ];
 
 const changelogData = [
+  {
+    version: "1.5.4",
+    date: "07.07.2026",
+    changes: [
+      "Kullanıcı basımlarında (Stoklar barkod basımı ve şablon tasarımcısı önizlemesi) yer alan ürün adı, stok kodu ve özel metin alanlarının tamamı tek satıra sabitlendi (whitespace-nowrap / truncate).",
+      "Uzun metinlerin etiketin dışına taşarak ya da alt satıra inerek şablon yapısını ve barkod çizgisini ezmesi engellendi; taşan kısımlar otomatik olarak kırpılıp (...) şeklinde kısaltıldı.",
+      "Tüm yazı etiketleri için milimetrik ortalama ve genişlik kısıtlaması (full-width ve padding koruması) eklenerek mükemmel hizalama standartlaştırıldı.",
+      "Uygulama versiyonu v1.5.4 olarak güncellendi ve tüm masaüstü/web üretim derleme süreçleri tamamlandı."
+    ]
+  },
   {
     version: "1.5.3",
     date: "06.07.2026",

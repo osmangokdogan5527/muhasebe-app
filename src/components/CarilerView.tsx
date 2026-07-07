@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Users,
   AlertCircle,
+  Image as ImageIcon,
 } from "lucide-react";
 
 interface CarilerViewProps {
@@ -80,6 +81,7 @@ export default function CarilerView({
     currency: "TRY" as "TRY" | "USD" | "EUR",
     taxOffice: "",
     taxNo: "",
+    imageUrl: "",
   });
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -137,6 +139,7 @@ export default function CarilerView({
           currency: (aiPrefilledData.currency && ["TRY", "USD", "EUR"].includes(aiPrefilledData.currency)) ? aiPrefilledData.currency : "TRY",
           taxOffice: aiPrefilledData.taxOffice || "",
           taxNo: aiPrefilledData.taxNo || "",
+          imageUrl: "",
         });
         setFormError("");
         setIsModalOpen(true);
@@ -163,6 +166,7 @@ export default function CarilerView({
       currency: "TRY",
       taxOffice: "",
       taxNo: "",
+      imageUrl: "",
     });
     setFormError("");
     setIsModalOpen(true);
@@ -183,9 +187,22 @@ export default function CarilerView({
       currency: cari.currency || "TRY",
       taxOffice: cari.taxOffice || "",
       taxNo: cari.taxNo || "",
+      imageUrl: cari.imageUrl || "",
     });
     setFormError("");
     setIsModalOpen(true);
+  };
+
+  // Handle image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, imageUrl: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   // Handle form submission
@@ -217,6 +234,7 @@ export default function CarilerView({
           currency: formData.currency,
           taxOffice: formData.taxOffice,
           taxNo: formData.taxNo,
+          imageUrl: formData.imageUrl,
           createdAt: editingCari.createdAt || new Date().toISOString(),
         };
         await saveCari(updatedCari, editingCari.id);
@@ -234,6 +252,7 @@ export default function CarilerView({
           currency: formData.currency,
           taxOffice: formData.taxOffice,
           taxNo: formData.taxNo,
+          imageUrl: formData.imageUrl,
           createdAt: new Date().toISOString(),
         };
         await saveCari(newCari);
@@ -517,18 +536,31 @@ export default function CarilerView({
                         className={`hover:bg-white/[0.02] transition ${cari.isActive === false ? "opacity-60" : ""}`}
                       >
                         <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <div className="font-bold text-white/95 text-sm">
-                              {cari.name}
-                            </div>
-                            {cari.isActive === false && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] uppercase font-mono font-bold tracking-wider bg-red-500/20 text-red-400">
-                                PASİF
-                              </span>
+                          <div className="flex items-center gap-3">
+                            {cari.imageUrl ? (
+                              <div className="w-10 h-10 rounded-full overflow-hidden bg-white/5 border border-white/10 shrink-0">
+                                <img src={cari.imageUrl} alt={cari.name} className="w-full h-full object-cover" />
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/20 shrink-0 uppercase font-bold text-sm">
+                                {cari.name.charAt(0)}
+                              </div>
                             )}
-                          </div>
-                          <div className="text-[10px] text-white/40 mt-1 font-mono tracking-wider">
-                            {cari.code}
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <div className="font-bold text-white/95 text-sm">
+                                  {cari.name}
+                                </div>
+                                {cari.isActive === false && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] uppercase font-mono font-bold tracking-wider bg-red-500/20 text-red-400">
+                                    PASİF
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-white/40 mt-1 font-mono tracking-wider">
+                                {cari.code}
+                              </div>
+                            </div>
                           </div>
                         </td>
                         <td className="p-4">
@@ -687,19 +719,30 @@ export default function CarilerView({
                   >
                     <div>
                       <div className="flex justify-between items-start gap-2">
-                        <div>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <div className="font-bold text-white/90 text-sm leading-tight">
-                              {cari.name}
+                        <div className="flex gap-3 items-start">
+                          {cari.imageUrl ? (
+                            <div className="w-12 h-12 rounded-full overflow-hidden bg-white/5 border border-white/10 shrink-0">
+                              <img src={cari.imageUrl} alt={cari.name} className="w-full h-full object-cover" />
                             </div>
-                            {cari.isActive === false && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] uppercase font-mono font-bold tracking-wider bg-red-500/20 text-red-400">
-                                PASİF
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[10px] text-white/40 mt-1 font-mono tracking-wider">
-                            {cari.code}
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/20 shrink-0 uppercase font-bold text-lg">
+                              {cari.name.charAt(0)}
+                            </div>
+                          )}
+                          <div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <div className="font-bold text-white/90 text-sm leading-tight">
+                                {cari.name}
+                              </div>
+                              {cari.isActive === false && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] uppercase font-mono font-bold tracking-wider bg-red-500/20 text-red-400">
+                                  PASİF
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-white/40 mt-1 font-mono tracking-wider">
+                              {cari.code}
+                            </div>
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-1 shrink-0">
@@ -878,6 +921,40 @@ export default function CarilerView({
               )}
 
               <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">Profil Resmi</label>
+                  <div className="flex items-center gap-4">
+                    {formData.imageUrl ? (
+                      <div className="relative w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-white/5 shrink-0">
+                        <img src={formData.imageUrl} alt="Profil" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setFormData({...formData, imageUrl: ''})}
+                          className="absolute inset-0 bg-black/50 text-white opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 rounded-full border border-white/10 border-dashed flex items-center justify-center bg-white/5 text-white/20 shrink-0">
+                        <ImageIcon size={20} />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <label className="cursor-pointer bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded text-xs font-semibold transition inline-block">
+                        Resim Seç
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={handleImageUpload}
+                        />
+                      </label>
+                      <p className="text-[10px] text-white/40 mt-1">Önerilen: Kare, JPG/PNG.</p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="col-span-2">
                   <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">
                     Cari Ünvanı / Adı Soyadı *

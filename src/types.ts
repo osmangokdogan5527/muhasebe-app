@@ -29,6 +29,7 @@ export interface Cari {
   currency?: "TRY" | "USD" | "EUR";
   taxOffice?: string;
   taxNo?: string;
+  imageUrl?: string; // Profil/Logo resmi
 }
 
 export interface Stock {
@@ -42,6 +43,7 @@ export interface Stock {
   quantity: number;
   minQuantity: number;
   barcode?: string; // Optional barcode support
+  imageUrl?: string; // Product image
   createdAt: string;
 }
 

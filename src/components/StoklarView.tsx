@@ -16,7 +16,10 @@ import {
   TrendingUp, 
   TrendingDown,
   Layers,
-  AlertCircle
+  AlertCircle,
+  Image as ImageIcon,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface StoklarViewProps {
@@ -58,6 +61,7 @@ export default function StoklarView({
     name: '',
     code: '',
     barcode: '',
+    imageUrl: '',
     unit: 'Adet' as 'Adet' | 'KG' | 'Litre' | 'Metre' | 'Kutu' | 'Hizmet',
     purchasePrice: 0,
     salesPrice: 0,
@@ -115,6 +119,7 @@ export default function StoklarView({
           name: aiPrefilledData.urunAdi || '',
           code: aiPrefilledData.code || `STK-${String(stoklar.length + 1).padStart(4, '0')}`,
           barcode: aiPrefilledData.barcode || '',
+          imageUrl: '',
           unit: (aiPrefilledData.unit && ['Adet', 'KG', 'Litre', 'Metre', 'Kutu', 'Hizmet'].includes(aiPrefilledData.unit))
             ? aiPrefilledData.unit as any
             : 'Adet',
@@ -141,6 +146,7 @@ export default function StoklarView({
       name: '',
       code: `STK-${String(stoklar.length + 1).padStart(4, '0')}`,
       barcode: '',
+      imageUrl: '',
       unit: 'Adet',
       purchasePrice: 0,
       salesPrice: 0,
@@ -159,6 +165,7 @@ export default function StoklarView({
       name: stock.name,
       code: stock.code,
       barcode: stock.barcode || '',
+      imageUrl: stock.imageUrl || '',
       unit: stock.unit,
       purchasePrice: stock.purchasePrice,
       salesPrice: stock.salesPrice,
@@ -191,6 +198,7 @@ export default function StoklarView({
           name: formData.name,
           code: formData.code,
           barcode: formData.barcode,
+          imageUrl: formData.imageUrl,
           unit: formData.unit,
           purchasePrice: formData.purchasePrice,
           salesPrice: formData.salesPrice,
@@ -205,6 +213,7 @@ export default function StoklarView({
           name: formData.name,
           code: formData.code,
           barcode: formData.barcode,
+          imageUrl: formData.imageUrl,
           unit: formData.unit,
           purchasePrice: formData.purchasePrice,
           salesPrice: formData.salesPrice,
@@ -239,6 +248,44 @@ export default function StoklarView({
   // Format currency helper
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(val);
+  };
+
+  const handleExportBarTender = (stock: Stock) => {
+    const activeTemplate = printTemplates.find(tpl => tpl.id === selectedTemplateId);
+    const customText = activeTemplate?.showCustomText ? (activeTemplate.customTextContent || '') : '';
+    
+    // Excel/BarTender friendly CSV with BOM to support Turkish characters perfectly
+    const headers = ['UrunAdi', 'StokKodu', 'Barkod', 'Fiyat', 'Birim', 'OzelMetin'];
+    const row = [
+      `"${stock.name.replace(/"/g, '""')}"`,
+      `"${stock.code.replace(/"/g, '""')}"`,
+      `"${(stock.barcode || stock.code).replace(/"/g, '""')}"`,
+      `"${stock.salesPrice}"`,
+      `"${stock.unit}"`,
+      `"${customText.replace(/"/g, '""')}"`
+    ];
+
+    const csvContent = "\uFEFF" + [headers.join(';'), row.join(';')].join('\n'); // Semicolon separated is standard for Turkish Excel
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `bartender_${stock.code}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, imageUrl: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
@@ -396,12 +443,25 @@ export default function StoklarView({
                     return (
                       <tr key={stok.id} className="hover:bg-white/[0.02] transition">
                         <td className="p-4">
-                          <div className="font-bold text-white/95 text-sm">{stok.name}</div>
-                          <div className="text-[10px] text-white/40 mt-1 font-mono tracking-wider flex items-center gap-2">
-                            <span>{stok.code}</span>
-                            {stok.barcode && (
-                              <span className="text-teal-400/70">| Barkod: {stok.barcode}</span>
+                          <div className="flex items-center gap-3">
+                            {stok.imageUrl ? (
+                              <div className="w-10 h-10 rounded overflow-hidden bg-white/5 border border-white/10 shrink-0">
+                                <img src={stok.imageUrl} alt={stok.name} className="w-full h-full object-cover" />
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded bg-white/5 border border-white/10 flex items-center justify-center text-white/20 shrink-0">
+                                <Package size={16} />
+                              </div>
                             )}
+                            <div>
+                              <div className="font-bold text-white/95 text-sm">{stok.name}</div>
+                              <div className="text-[10px] text-white/40 mt-1 font-mono tracking-wider flex items-center gap-2">
+                                <span>{stok.code}</span>
+                                {stok.barcode && (
+                                  <span className="text-teal-400/70">| Barkod: {stok.barcode}</span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </td>
                         <td className="p-4">
@@ -476,13 +536,24 @@ export default function StoklarView({
                   <div key={stok.id} className="p-4 bg-white/[0.01] rounded-lg border border-white/5 flex flex-col gap-3 justify-between">
                     <div>
                       <div className="flex justify-between items-start gap-2">
-                        <div>
-                          <div className="font-bold text-white/90 text-sm leading-tight">{stok.name}</div>
-                          <div className="text-[10px] text-white/40 mt-1 font-mono tracking-wider flex items-center gap-2 flex-wrap">
-                            <span>{stok.code}</span>
-                            {stok.barcode && (
-                              <span className="text-teal-400/70">| Barkod: {stok.barcode}</span>
-                            )}
+                        <div className="flex gap-3 items-start">
+                          {stok.imageUrl ? (
+                            <div className="w-12 h-12 rounded overflow-hidden bg-white/5 border border-white/10 shrink-0">
+                              <img src={stok.imageUrl} alt={stok.name} className="w-full h-full object-cover" />
+                            </div>
+                          ) : (
+                            <div className="w-12 h-12 rounded bg-white/5 border border-white/10 flex items-center justify-center text-white/20 shrink-0">
+                              <Package size={20} />
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-bold text-white/90 text-sm leading-tight">{stok.name}</div>
+                            <div className="text-[10px] text-white/40 mt-1 font-mono tracking-wider flex items-center gap-2 flex-wrap">
+                              <span>{stok.code}</span>
+                              {stok.barcode && (
+                                <span className="text-teal-400/70">| Barkod: {stok.barcode}</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <span className="text-[9px] font-mono tracking-wider font-semibold text-white/60 bg-white/5 border border-white/10 px-2 py-0.5 rounded">{stok.unit}</span>
@@ -577,6 +648,40 @@ export default function StoklarView({
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                     className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded text-xs focus:outline-hidden focus:border-teal-500"
                   />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">Ürün Resmi</label>
+                  <div className="flex items-center gap-4">
+                    {formData.imageUrl ? (
+                      <div className="relative w-16 h-16 rounded overflow-hidden border border-white/10 bg-white/5 shrink-0">
+                        <img src={formData.imageUrl} alt="Ürün" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setFormData({...formData, imageUrl: ''})}
+                          className="absolute top-0 right-0 bg-red-500 text-white p-0.5 rounded-bl"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 rounded border border-white/10 border-dashed flex items-center justify-center bg-white/5 text-white/20 shrink-0">
+                        <ImageIcon size={20} />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <label className="cursor-pointer bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded text-xs font-semibold transition inline-block">
+                        Resim Seç
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={handleImageUpload}
+                        />
+                      </label>
+                      <p className="text-[10px] text-white/40 mt-1">Önerilen: 500x500px, PNG veya JPG.</p>
+                    </div>
+                  </div>
                 </div>
 
                 <div>
@@ -750,7 +855,7 @@ export default function StoklarView({
               {printTemplates.length === 0 ? (
                 <div className="text-center p-4 border border-white/10 rounded bg-white/5">
                   <p className="text-xs text-white/60 mb-2">Henüz bir barkod şablonu oluşturmadınız.</p>
-                  <p className="text-[10px] text-white/40">Sol menüdeki <b>Ayarlar &gt; Baskı & Şablon Tasarımcısı</b> bölümünden yeni bir barkod şablonu ekleyebilirsiniz.</p>
+                  <p className="text-[10px] text-white/40">Sol menüdeki <b>Ayarlar &gt; Baskı &amp; Şablon Tasarımcısı</b> bölümünden yeni bir barkod şablonu ekleyebilirsiniz.</p>
                 </div>
               ) : (
                 <>
@@ -797,14 +902,26 @@ export default function StoklarView({
                           className="border border-zinc-200 shadow-sm flex flex-col items-center justify-center bg-white p-2"
                           style={{ width: `${w}px`, height: `${h}px` }}
                         >
+                          {t.showImage && printingStock.imageUrl && (
+                            <img 
+                              src={printingStock.imageUrl} 
+                              alt="Ürün Resmi" 
+                              className={`object-cover mb-0.5 rounded ${is60x40 || is80x50 ? 'w-12 h-12' : (is40x20 ? 'w-6 h-6' : 'w-8 h-8')}`}
+                            />
+                          )}
                           {t.showBarcodeName !== false && (
-                            <div className={`font-bold ${is60x40 || is80x50 ? 'text-[12px]' : (is40x20 ? 'text-[9px]' : 'text-[10px]')} mb-1 line-clamp-2 leading-tight uppercase text-center`}>
+                            <div className={`font-bold ${is60x40 || is80x50 ? 'text-[12px]' : (is40x20 ? 'text-[9px]' : 'text-[10px]')} mb-1 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
                               {printingStock.name}
                             </div>
                           )}
                           {t.showBarcodeCode !== false && printingStock.code && (
-                            <div className={`font-medium text-gray-700 ${is60x40 || is80x50 ? 'text-[10px]' : (is40x20 ? 'text-[8px]' : 'text-[9px]')} mb-0.5 line-clamp-1 leading-tight uppercase`}>
+                            <div className={`font-medium text-gray-700 ${is60x40 || is80x50 ? 'text-[10px]' : (is40x20 ? 'text-[8px]' : 'text-[9px]')} mb-0.5 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
                               {printingStock.code}
+                            </div>
+                          )}
+                          {t.showCustomText && t.customTextContent && (
+                            <div className={`font-medium text-gray-800 ${is60x40 || is80x50 ? 'text-[11px]' : (is40x20 ? 'text-[9px]' : 'text-[10px]')} mb-0.5 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
+                              {t.customTextContent}
                             </div>
                           )}
                           {t.showBarcodePrice !== false && (
@@ -831,13 +948,24 @@ export default function StoklarView({
               )}
             </div>
 
-            <div className="p-4 border-t border-white/5 bg-white/[0.01] flex justify-end gap-2">
-              <button 
-                onClick={() => setIsPrintModalOpen(false)}
-                className="px-4 py-2 rounded text-xs font-semibold text-white/70 hover:bg-white/5 transition"
+            <div className="p-4 border-t border-white/5 bg-white/[0.01] flex justify-between items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleExportBarTender(printingStock)}
+                disabled={printTemplates.length === 0}
+                className="px-3 py-2 rounded text-xs font-semibold bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="BarTender programına bağlamak için Excel/CSV veri dosyası indirir."
               >
-                İptal
+                <FileSpreadsheet size={14} />
+                BarTender Aktar
               </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setIsPrintModalOpen(false)}
+                  className="px-4 py-2 rounded text-xs font-semibold text-white/70 hover:bg-white/5 transition"
+                >
+                  İptal
+                </button>
               <button 
                 onClick={() => {
                   const t = printTemplates.find(tpl => tpl.id === selectedTemplateId);
@@ -956,6 +1084,7 @@ export default function StoklarView({
             </div>
           </div>
         </div>
+      </div>
       )}
 
       {/* Hidden Print Area */}
@@ -991,14 +1120,27 @@ export default function StoklarView({
             
             return (
               <div id="printable-barcode-content" className="text-center flex flex-col items-center justify-center overflow-hidden" style={widthStyle}>
+                {t.showImage && printingStock.imageUrl && (
+                  <img 
+                    src={printingStock.imageUrl} 
+                    alt="Ürün Resmi" 
+                    className={`object-cover mb-0.5 rounded-sm filter grayscale ${is60x40 || is80x50 ? 'w-14 h-14' : (is40x20 ? 'w-6 h-6' : 'w-10 h-10')}`}
+                    style={{ WebkitFilter: 'grayscale(100%)', mixBlendMode: 'multiply' }}
+                  />
+                )}
                 {t.showBarcodeName !== false && (
-                  <div className={`font-bold ${is60x40 || is80x50 ? 'text-[12px]' : (is40x20 ? 'text-[9px]' : 'text-[10px]')} mb-0.5 leading-tight uppercase line-clamp-1`}>
+                  <div className={`font-bold ${is60x40 || is80x50 ? 'text-[12px]' : (is40x20 ? 'text-[9px]' : 'text-[10px]')} mb-0.5 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
                     {printingStock.name}
                   </div>
                 )}
                 {t.showBarcodeCode !== false && printingStock.code && (
-                  <div className={`font-medium text-gray-700 ${is60x40 || is80x50 ? 'text-[11px]' : (is40x20 ? 'text-[8px]' : 'text-[9px]')} mb-0.5 line-clamp-1 leading-tight uppercase`}>
+                  <div className={`font-medium text-gray-700 ${is60x40 || is80x50 ? 'text-[11px]' : (is40x20 ? 'text-[8px]' : 'text-[9px]')} mb-0.5 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
                     {printingStock.code}
+                  </div>
+                )}
+                {t.showCustomText && t.customTextContent && (
+                  <div className={`font-medium text-gray-800 ${is60x40 || is80x50 ? 'text-[12px]' : (is40x20 ? 'text-[9px]' : 'text-[10px]')} mb-0.5 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
+                    {t.customTextContent}
                   </div>
                 )}
                 {t.showBarcodePrice !== false && (
