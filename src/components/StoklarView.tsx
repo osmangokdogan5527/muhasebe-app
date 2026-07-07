@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Barcode from 'react-barcode';
+import { toPng } from 'html-to-image';
 import { Stock } from '../types';
 import { saveStock, deleteStock } from '../firebase';
 import { compressImage } from '../utils/imageCompressor';
@@ -948,14 +949,14 @@ export default function StoklarView({
                             </div>
                           )}
                           <div className="flex justify-center w-full mt-1 overflow-hidden barcode-svg-container">
-                            <Barcode 
+                            <Barcode renderer="img" 
                               value={barcodeValue} 
                               format={t.barcodeFormat || "CODE128"} 
                               width={bcWidth} 
                               height={bcHeight} 
                               fontSize={bcFontSize}
                               margin={0}
-                              background="transparent"
+                              background="#ffffff"
                             />
                           </div>
                         </div>
@@ -967,16 +968,45 @@ export default function StoklarView({
             </div>
 
             <div className="p-4 border-t border-white/5 bg-white/[0.01] flex justify-between items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleExportBarTender(printingStock)}
-                disabled={printTemplates.length === 0}
-                className="px-3 py-2 rounded text-xs font-semibold bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="BarTender programına bağlamak için Excel/CSV veri dosyası indirir."
-              >
-                <FileSpreadsheet size={14} />
-                BarTender Aktar
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleExportBarTender(printingStock)}
+                  disabled={printTemplates.length === 0}
+                  className="px-3 py-2 rounded text-xs font-semibold bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="BarTender programına bağlamak için Excel/CSV veri dosyası indirir."
+                >
+                  <FileSpreadsheet size={14} />
+                  BarTender Aktar (CSV)
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const printContent = document.getElementById('printable-barcode-content');
+                    if (printContent) {
+                      try {
+                        const dataUrl = await toPng(printContent, {
+                          pixelRatio: 4, // Ultra high resolution for ultra sharp print/save
+                          backgroundColor: '#ffffff'
+                        });
+                        const link = document.createElement('a');
+                        link.download = `barkod_${printingStock.code || 'etiket'}.png`;
+                        link.href = dataUrl;
+                        link.click();
+                      } catch (err) {
+                        console.error('Resim kaydetme hatası:', err);
+                        alert('Görsel oluşturulurken bir hata oluştu.');
+                      }
+                    }
+                  }}
+                  disabled={printTemplates.length === 0}
+                  className="px-3 py-2 rounded text-xs font-semibold bg-sky-600/20 hover:bg-sky-600/30 text-sky-400 border border-sky-500/20 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Barkod etiketini yüksek çözünürlüklü PNG resmi olarak indirir."
+                >
+                  <Download size={14} />
+                  Resim Olarak İndir (PNG)
+                </button>
+              </div>
               <div className="flex gap-2">
                 <button 
                   onClick={() => setIsPrintModalOpen(false)}
@@ -985,120 +1015,94 @@ export default function StoklarView({
                   İptal
                 </button>
               <button 
-                onClick={() => {
+                onClick={async () => {
                   const t = printTemplates.find(tpl => tpl.id === selectedTemplateId);
                   if (!t) return;
                   
                   const printContent = document.getElementById('printable-barcode-content');
                   if (printContent) {
-                    const iframe = document.createElement('iframe');
-                    iframe.style.position = 'fixed';
-                    iframe.style.right = '0';
-                    iframe.style.bottom = '0';
-                    iframe.style.width = '0';
-                    iframe.style.height = '0';
-                    iframe.style.border = '0';
-                    document.body.appendChild(iframe);
-                    
-                    const iframeDoc = iframe.contentWindow?.document;
-                    if (iframeDoc) {
-                      const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
-                        .map(s => s.outerHTML)
-                        .join('\n');
-                        
-                      const clone = printContent.cloneNode(true) as HTMLElement;
-                      clone.style.display = 'flex';
-                      
-                      // Optimize cloned SVGs for print crispness and scaling
-                      const clonedSvgs = clone.querySelectorAll('svg');
-                      clonedSvgs.forEach(svg => {
-                        svg.setAttribute('preserveAspectRatio', 'none');
-                        svg.querySelectorAll('*').forEach(child => {
-                          child.setAttribute('vector-effect', 'non-scaling-stroke');
-                        });
+                    try {
+                      // Generate pristine high-res flat image to avoid printer driver SVG/CSS bugs
+                      const dataUrl = await toPng(printContent, {
+                        pixelRatio: 4, // 4x resolution for absolute crispness on thermal printers
+                        backgroundColor: '#ffffff'
                       });
+
+                      const iframe = document.createElement('iframe');
+                      iframe.style.position = 'fixed';
+                      iframe.style.right = '0';
+                      iframe.style.bottom = '0';
+                      iframe.style.width = '0';
+                      iframe.style.height = '0';
+                      iframe.style.border = '0';
+                      document.body.appendChild(iframe);
                       
-                      let pw = '40mm';
-                      let ph = '30mm';
-                      if (t.paperSize === 'etiket_60x40') { pw = '60mm'; ph = '40mm'; }
-                      else if (t.paperSize === 'etiket_40x60') { pw = '40mm'; ph = '60mm'; }
-                      else if (t.paperSize === 'etiket_80x50') { pw = '80mm'; ph = '50mm'; }
-                      else if (t.paperSize === 'etiket_40x20') { pw = '40mm'; ph = '20mm'; }
-                      
-                      iframeDoc.open();
-                      iframeDoc.write(`
-                        <html>
-                          <head>
-                            ${styles}
-                            <style>
-                              @page { size: ${pw} ${ph}; margin: 0 !important; }
-                              html, body { 
-                                margin: 0 !important; 
-                                padding: 0 !important; 
-                                width: ${pw} !important; 
-                                height: ${ph} !important;
-                                max-width: ${pw} !important;
-                                max-height: ${ph} !important;
-                                background: white !important; 
-                                -webkit-print-color-adjust: exact !important; 
-                                print-color-adjust: exact !important; 
-                                overflow: hidden !important;
-                                display: flex !important;
-                                align-items: center !important;
-                                justify-content: center !important;
-                                box-sizing: border-box !important;
-                              }
-                              * { 
-                                color: #000 !important; 
-                                box-sizing: border-box !important;
-                              }
-                              #printable-barcode-content { 
-                                margin: 0 !important; 
-                                padding: 1.5mm !important;
-                                width: ${pw} !important;
-                                height: ${ph} !important;
-                                max-width: ${pw} !important;
-                                max-height: ${ph} !important;
-                                overflow: hidden !important;
-                                display: flex !important;
-                                flex-direction: column !important;
-                                align-items: center !important;
-                                justify-content: center !important;
-                                page-break-inside: avoid !important;
-                                page-break-before: avoid !important;
-                                page-break-after: avoid !important;
-                              }
-                              #printable-barcode-content svg {
-                                max-width: 100% !important;
-                                height: auto !important;
-                                display: block !important;
-                                shape-rendering: crispEdges !important;
-                              }
-                              #printable-barcode-content svg * {
-                                shape-rendering: crispEdges !important;
-                                stroke: #000 !important;
-                                fill: #000 !important;
-                              }
-                            </style>
-                          </head>
-                          <body>
-                            ${clone.outerHTML}
-                          </body>
-                        </html>
-                      `);
-                      iframeDoc.close();
-                      
-                      iframe.onload = () => {
-                        setTimeout(() => {
-                          iframe.contentWindow?.focus();
-                          iframe.contentWindow?.print();
+                      const iframeDoc = iframe.contentWindow?.document;
+                      if (iframeDoc) {
+                        let pw = '40mm';
+                        let ph = '30mm';
+                        if (t.paperSize === 'etiket_60x40') { pw = '60mm'; ph = '40mm'; }
+                        else if (t.paperSize === 'etiket_40x60') { pw = '40mm'; ph = '60mm'; }
+                        else if (t.paperSize === 'etiket_80x50') { pw = '80mm'; ph = '50mm'; }
+                        else if (t.paperSize === 'etiket_40x20') { pw = '40mm'; ph = '20mm'; }
+                        
+                        iframeDoc.open();
+                        iframeDoc.write(`
+                          <html>
+                            <head>
+                              <title>Barkod Yazdır</title>
+                              <style>
+                                @page { 
+                                  size: ${pw} ${ph}; 
+                                  margin: 0 !important; 
+                                }
+                                html, body { 
+                                  margin: 0 !important; 
+                                  padding: 0 !important; 
+                                  width: ${pw} !important; 
+                                  height: ${ph} !important;
+                                  max-width: ${pw} !important;
+                                  max-height: ${ph} !important;
+                                  background: white !important; 
+                                  overflow: hidden !important;
+                                  display: flex !important;
+                                  align-items: center !important;
+                                  justify-content: center !important;
+                                  box-sizing: border-box !important;
+                                }
+                                img {
+                                  width: 100% !important;
+                                  height: 100% !important;
+                                  object-fit: contain !important;
+                                  image-rendering: pixelated !important;
+                                  image-rendering: crisp-edges !important;
+                                  -webkit-print-color-adjust: exact !important; 
+                                  print-color-adjust: exact !important; 
+                                }
+                              </style>
+                            </head>
+                            <body>
+                              <img src="${dataUrl}" alt="Barkod Etiketi" />
+                            </body>
+                          </html>
+                        `);
+                        iframeDoc.close();
+                        
+                        iframe.onload = () => {
                           setTimeout(() => {
-                            if (document.body.contains(iframe)) {
-                              document.body.removeChild(iframe);
-                            }
-                          }, 1000);
-                        }, 250);
-                      };
+                            iframe.contentWindow?.focus();
+                            iframe.contentWindow?.print();
+                            setTimeout(() => {
+                              if (document.body.contains(iframe)) {
+                                document.body.removeChild(iframe);
+                              }
+                            }, 1000);
+                          }, 250);
+                        };
+                      }
+                    } catch (err) {
+                      console.error('Yazdırma hazırlama hatası:', err);
+                      alert('Yazdırma işlemi hazırlanırken bir hata oluştu. Lütfen tekrar deneyin.');
                     }
                   } else {
                     window.print();
@@ -1178,14 +1182,14 @@ export default function StoklarView({
                   </div>
                 )}
                 <div className="flex justify-center w-full px-1 barcode-svg-container">
-                  <Barcode 
+                  <Barcode renderer="img" 
                     value={barcodeValue} 
                     format={t.barcodeFormat || "CODE128"} 
                     width={bcWidth} 
                     height={bcHeight} 
                     fontSize={bcFontSize}
                     margin={0}
-                    background="transparent"
+                    background="#ffffff"
                   />
                 </div>
               </div>

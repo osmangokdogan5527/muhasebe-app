@@ -19,7 +19,12 @@ import {
   Plus,
   ArrowRightLeft,
   X,
-  Activity
+  Activity,
+  Terminal,
+  RefreshCw,
+  Edit,
+  Trash2,
+  Lock
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -35,8 +40,6 @@ import {
   Legend
 } from 'recharts';
 
-import HesaplarDetayView from './HesaplarDetayView';
-
 interface KasaViewProps {
   islemler: Transaction[];
   expenses: Expense[];
@@ -46,18 +49,221 @@ interface KasaViewProps {
 }
 
 export default function KasaView({ islemler, expenses, employeeTransactions = [], bankAccounts = [], accountTransactions = [] }: KasaViewProps) {
-  const [viewMode, setViewMode] = useState<'genel' | 'detayli'>('genel');
   const [selectedCurrency, setSelectedCurrency] = useState<'TRY' | 'USD' | 'EUR'>('TRY');
-  const [accountFilter, setAccountFilter] = useState<'all' | 'cash' | 'bank'>('all');
+  const [accountFilter, setAccountFilter] = useState<'all' | 'cash' | 'bank' | 'pos'>('all');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'month'>('all');
+
+  // Transaction / Transfer Modal States
+  const [isTxModalOpen, setIsTxModalOpen] = useState(false);
+  const [txType, setTxType] = useState<'giris' | 'cikis' | 'transfer'>('giris');
+  const [txSourceAcc, setTxSourceAcc] = useState('');
+  const [txTargetAcc, setTxTargetAcc] = useState('');
+  const [txAmount, setTxAmount] = useState<string | number>('');
+  const [txTargetAmount, setTxTargetAmount] = useState<string | number>('');
+  const [txDesc, setTxDesc] = useState('');
+  const [crossRate, setCrossRate] = useState<string | number>('');
+  const [isFetchingRate, setIsFetchingRate] = useState(false);
+
+  // New Account Modal States
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
+  const [accName, setAccName] = useState('');
+  const [accType, setAccType] = useState<'kasa' | 'banka' | 'pos'>('banka');
+  const [accCurrency, setAccCurrency] = useState<'TRY' | 'USD' | 'EUR'>('TRY');
+  const [accInitBal, setAccInitBal] = useState<string | number>('0');
+
+  const isDefaultAccount = (id: string) => id === 'merkez_kasa' || id === 'merkez_banka' || id === 'merkez_pos';
+
+  const handleSaveAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingAccount) {
+      await saveBankAccount({
+        ...editingAccount,
+        name: accName,
+        type: accType,
+        currency: accCurrency,
+        initialBalance: Number(accInitBal),
+      }, editingAccount.id);
+    } else {
+      await saveBankAccount({
+        name: accName,
+        type: accType,
+        currency: accCurrency,
+        initialBalance: Number(accInitBal),
+        createdAt: new Date().toISOString()
+      });
+    }
+    setIsAccountModalOpen(false);
+    setEditingAccount(null);
+    setAccName('');
+    setAccInitBal('0');
+  };
+
+  const openEditAccountModal = (acc: BankAccount) => {
+    setEditingAccount(acc);
+    setAccName(acc.name);
+    setAccType(acc.type);
+    setAccCurrency(acc.currency);
+    setAccInitBal(acc.initialBalance || 0);
+    setIsAccountModalOpen(true);
+  };
+
+  const sourceAccData = useMemo(() => bankAccounts.find(a => a.id === txSourceAcc), [bankAccounts, txSourceAcc]);
+  const targetAccData = useMemo(() => bankAccounts.find(a => a.id === txTargetAcc), [bankAccounts, txTargetAcc]);
+  const isCrossCurrency = useMemo(() => txType === 'transfer' && sourceAccData && targetAccData && sourceAccData.currency !== targetAccData.currency, [txType, sourceAccData, targetAccData]);
+
+  const fetchLiveRate = async (sourceCur: string, targetCur: string) => {
+    if (!sourceCur || !targetCur || sourceCur === targetCur) return;
+    setIsFetchingRate(true);
+    try {
+      const response = await fetch('https://open.er-api.com/v6/latest/' + sourceCur);
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.rates && data.rates[targetCur]) {
+          const rate = Number(data.rates[targetCur].toFixed(4));
+          setCrossRate(rate);
+          if (txAmount && Number(txAmount) > 0) {
+            setTxTargetAmount((Number(txAmount) * rate).toFixed(2));
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Kur alınamadı:', e);
+    } finally {
+      setIsFetchingRate(false);
+    }
+  };
+
+  const handleSaveTx = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amountNum = Number(txAmount);
+    if (!txSourceAcc || amountNum <= 0) return;
+
+    if (txType === 'transfer') {
+      if (!txTargetAcc || txSourceAcc === txTargetAcc) return;
+      
+      const sourceData = bankAccounts.find(a => a.id === txSourceAcc);
+      const targetData = bankAccounts.find(a => a.id === txTargetAcc);
+      let targetAmountFinal = amountNum;
+      
+      if (sourceData && targetData && sourceData.currency !== targetData.currency) {
+        const tAmount = Number(txTargetAmount);
+        if (tAmount <= 0) return;
+        targetAmountFinal = tAmount;
+      }
+
+      // Source transfer out
+      await saveAccountTransaction({
+        accountId: txSourceAcc,
+        type: 'transfer_out',
+        amount: amountNum,
+        date: new Date().toISOString().split('T')[0],
+        description: txDesc || 'Hesaplar arası transfer',
+        targetAccountId: txTargetAcc,
+        createdAt: new Date().toISOString()
+      });
+      
+      // Target transfer in
+      await saveAccountTransaction({
+        accountId: txTargetAcc,
+        type: 'transfer_in',
+        amount: targetAmountFinal,
+        date: new Date().toISOString().split('T')[0],
+        description: txDesc || 'Hesaplar arası transfer',
+        targetAccountId: txSourceAcc,
+        createdAt: new Date().toISOString()
+      });
+    } else {
+      // giris or cikis
+      await saveAccountTransaction({
+        accountId: txSourceAcc,
+        type: txType,
+        amount: amountNum,
+        date: new Date().toISOString().split('T')[0],
+        description: txDesc || (txType === 'giris' ? 'Manuel Giriş' : 'Manuel Çıkış'),
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    setIsTxModalOpen(false);
+    setTxAmount('');
+    setTxTargetAmount('');
+    setTxDesc('');
+  };
+
+  React.useEffect(() => {
+    if (txType === 'transfer' && crossRate && Number(crossRate) > 0 && txAmount && Number(txAmount) > 0) {
+      setTxTargetAmount((Number(txAmount) * Number(crossRate)).toFixed(2));
+    }
+  }, [txAmount, crossRate, txType]);
+
+  // Find active account details
+  const activeAccount = useMemo(() => {
+    if (selectedAccountId === 'all') return null;
+    return bankAccounts.find(a => a.id === selectedAccountId) || null;
+  }, [selectedAccountId, bankAccounts]);
 
   // Format currency helper
   const formatCurrency = (val: number, cur: string = selectedCurrency) => {
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: cur }).format(val);
   };
 
-  // Compute Cash and Bank balances for ALL currencies
+  // Compute calculated balance for each BankAccount based on all transactions
+  const accountBalances = useMemo(() => {
+    const map: Record<string, number> = {};
+
+    // Initialize with initial balances
+    bankAccounts.forEach(acc => {
+      map[acc.id] = acc.initialBalance || 0;
+    });
+
+    // 1. Manual transactions & transfers
+    accountTransactions.forEach(tx => {
+      if (map[tx.accountId] !== undefined) {
+        if (tx.type === 'giris' || tx.type === 'transfer_in') {
+          map[tx.accountId] += tx.amount;
+        } else if (tx.type === 'cikis' || tx.type === 'transfer_out') {
+          map[tx.accountId] -= tx.amount;
+        }
+      }
+    });
+
+    // 2. Commercial / Invoice transactions (islemler)
+    islemler.forEach(islem => {
+      const targetId = islem.bankAccountId || (islem.account === 'cash' ? 'merkez_kasa' : islem.account === 'bank' ? 'merkez_banka' : islem.account === 'pos' ? 'merkez_pos' : '');
+      if (map[targetId] !== undefined) {
+        if (islem.type === 'collection' || islem.type === 'sale' || islem.type === 'purchase_return') {
+          map[targetId] += islem.amount;
+        } else if (islem.type === 'payment' || islem.type === 'purchase' || islem.type === 'sale_return') {
+          map[targetId] -= islem.amount;
+        }
+      }
+    });
+
+    // 3. Expenses
+    expenses.forEach(exp => {
+      const targetId = exp.bankAccountId || (exp.account === 'cash' ? 'merkez_kasa' : exp.account === 'bank' ? 'merkez_banka' : exp.account === 'pos' ? 'merkez_pos' : '');
+      if (map[targetId] !== undefined) {
+        map[targetId] -= exp.amount;
+      }
+    });
+
+    // 4. Employee Transactions
+    employeeTransactions.forEach(etx => {
+      if (etx.type === 'payment' || etx.type === 'advance') {
+        const targetId = etx.bankAccountId || (etx.account === 'cash' ? 'merkez_kasa' : etx.account === 'bank' ? 'merkez_banka' : etx.account === 'pos' ? 'merkez_pos' : '');
+        if (map[targetId] !== undefined) {
+          map[targetId] -= etx.amount;
+        }
+      }
+    });
+
+    return map;
+  }, [bankAccounts, accountTransactions, islemler, expenses, employeeTransactions]);
+
+  // Compute Cash, Bank, POS combined balances by currency for the cards and footer
   const balances = useMemo(() => {
     const res = {
       TRY: { cash: 0, bank: 0, pos: 0 },
@@ -65,47 +271,35 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
       EUR: { cash: 0, bank: 0, pos: 0 }
     };
 
-    // 1. Process islemler (Sales, Purchases, Collections, Payments, Returns)
-    islemler.forEach(islem => {
-      const cur = (islem.currency || 'TRY') as 'TRY' | 'USD' | 'EUR';
+    bankAccounts.forEach(acc => {
+      const cur = acc.currency as 'TRY' | 'USD' | 'EUR';
       if (!res[cur]) return;
 
-      const amt = islem.amount || 0;
-      const acc = islem.account; // 'cash' | 'bank' | 'pos' | ''
-
-      if (acc === 'cash' || acc === 'bank' || acc === 'pos') {
-        if (islem.type === 'sale' || islem.type === 'collection' || islem.type === 'purchase_return') {
-          res[cur][acc] += amt;
-        } else if (islem.type === 'purchase' || islem.type === 'payment' || islem.type === 'sale_return') {
-          res[cur][acc] -= amt;
-        }
-      }
-    });
-
-    // 2. Process expenses (which includes synced employee payments/advances)
-    expenses.forEach(exp => {
-      const cur = (exp.currency || 'TRY') as 'TRY' | 'USD' | 'EUR';
-      if (!res[cur]) return;
-
-      const amt = exp.amount || 0;
-      const acc = exp.account; // 'cash' | 'bank' | 'pos'
-
-      if (acc === 'cash' || acc === 'bank' || acc === 'pos') {
-        res[cur][acc] -= amt;
-      }
+      const typeKey = acc.type === 'kasa' ? 'cash' : acc.type === 'banka' ? 'bank' : 'pos';
+      const bal = accountBalances[acc.id] || 0;
+      res[cur][typeKey] += bal;
     });
 
     return res;
-  }, [islemler, expenses]);
+  }, [bankAccounts, accountBalances]);
 
-  // Merge and normalize all Cash/Bank movements (Transactions & Expenses)
+  // Merge and normalize all Cash/Bank/POS movements chronologically
   const allMovements = useMemo(() => {
     const list: any[] = [];
 
-    // Add islemler
+    // Helper to resolve bankAccountId from legacy type or explicit value
+    const getAccountId = (explicitId: string | undefined, type: 'cash' | 'bank' | 'pos') => {
+      if (explicitId) return explicitId;
+      if (type === 'cash') return 'merkez_kasa';
+      if (type === 'bank') return 'merkez_banka';
+      if (type === 'pos') return 'merkez_pos';
+      return '';
+    };
+
+    // 1. Add islemler
     islemler.forEach(islem => {
       const acc = islem.account;
-      if (acc !== 'cash' && acc !== 'bank' && acc !== 'pos') return; // only cash/bank/pos movements
+      if (acc !== 'cash' && acc !== 'bank' && acc !== 'pos') return;
 
       const isIncoming = islem.type === 'sale' || islem.type === 'collection' || islem.type === 'purchase_return';
       let title = islem.cariName || 'Bilinmeyen Cari';
@@ -118,6 +312,8 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
       else if (islem.type === 'sale_return') categoryName = 'Satış İade';
       else if (islem.type === 'purchase_return') categoryName = 'Alış İade';
 
+      const accountId = getAccountId(islem.bankAccountId, acc);
+
       list.push({
         id: `islem-${islem.id}`,
         date: islem.date,
@@ -125,6 +321,7 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
         description: islem.description || '',
         category: categoryName,
         account: acc,
+        accountId: accountId,
         type: isIncoming ? 'in' : 'out',
         amount: islem.amount,
         currency: islem.currency || 'TRY',
@@ -132,10 +329,12 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
       });
     });
 
-    // Add expenses
+    // 2. Add expenses
     expenses.forEach(exp => {
       const acc = exp.account;
       if (acc !== 'cash' && acc !== 'bank' && acc !== 'pos') return;
+
+      const accountId = getAccountId(exp.bankAccountId, acc);
 
       list.push({
         id: `expense-${exp.id}`,
@@ -144,10 +343,71 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
         description: exp.description || '',
         category: exp.category || 'Diğer Gider',
         account: acc,
+        accountId: accountId,
         type: 'out',
         amount: exp.amount,
         currency: exp.currency || 'TRY',
         rawType: 'expense'
+      });
+    });
+
+    // 3. Add employeeTransactions
+    employeeTransactions.forEach(etx => {
+      const acc = etx.account;
+      if (acc !== 'cash' && acc !== 'bank' && acc !== 'pos') return;
+      if (etx.type !== 'payment' && etx.type !== 'advance') return;
+
+      const accountId = getAccountId(etx.bankAccountId, acc);
+
+      list.push({
+        id: `employee-${etx.id}`,
+        date: etx.date,
+        title: `${etx.employeeName} (${etx.type === 'payment' ? 'Maaş Ödemesi' : 'Avans Ödemesi'})`,
+        description: etx.description || '',
+        category: etx.type === 'payment' ? 'Personel Maaş/Avans' : 'Personel Avans',
+        account: acc,
+        accountId: accountId,
+        type: 'out',
+        amount: etx.amount,
+        currency: etx.currency || 'TRY',
+        rawType: 'employee_tx'
+      });
+    });
+
+    // 4. Add accountTransactions (manual inputs & transfers)
+    accountTransactions.forEach(tx => {
+      const accInfo = bankAccounts.find(a => a.id === tx.accountId);
+      if (!accInfo) return;
+
+      const isIncoming = tx.type === 'giris' || tx.type === 'transfer_in';
+      let cat = 'Manuel İşlem';
+      if (tx.type === 'transfer_in' || tx.type === 'transfer_out') {
+        cat = 'Hesap Transferi';
+      }
+
+      let title = '';
+      if (tx.type === 'giris') title = 'Manuel Para Girişi';
+      else if (tx.type === 'cikis') title = 'Manuel Para Çıkışı';
+      else if (tx.type === 'transfer_out') {
+        const targetAcc = bankAccounts.find(a => a.id === tx.targetAccountId);
+        title = `Transfere Giden → ${targetAcc ? targetAcc.name : 'Bilinmeyen Hesap'}`;
+      } else if (tx.type === 'transfer_in') {
+        const sourceAcc = bankAccounts.find(a => a.id === tx.targetAccountId);
+        title = `Transferden Gelen ← ${sourceAcc ? sourceAcc.name : 'Bilinmeyen Hesap'}`;
+      }
+
+      list.push({
+        id: `acc-tx-${tx.id}`,
+        date: tx.date,
+        title,
+        description: tx.description || '',
+        category: cat,
+        account: accInfo.type === 'kasa' ? 'cash' : accInfo.type === 'banka' ? 'bank' : 'pos',
+        accountId: tx.accountId,
+        type: isIncoming ? 'in' : 'out',
+        amount: tx.amount,
+        currency: accInfo.currency,
+        rawType: tx.type
       });
     });
 
@@ -157,7 +417,7 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
       if (dateCompare !== 0) return dateCompare;
       return b.id.localeCompare(a.id);
     });
-  }, [islemler, expenses]);
+  }, [islemler, expenses, employeeTransactions, accountTransactions, bankAccounts]);
 
   // Filtered movements based on filters
   const filteredMovements = useMemo(() => {
@@ -168,8 +428,12 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
       // 1. Currency filter
       if (m.currency !== selectedCurrency) return false;
 
-      // 2. Account filter
-      if (accountFilter !== 'all' && m.account !== accountFilter) return false;
+      // 2. Account filter (Specific selected account OR broad account filter)
+      if (selectedAccountId !== 'all') {
+        if (m.accountId !== selectedAccountId) return false;
+      } else {
+        if (accountFilter !== 'all' && m.account !== accountFilter) return false;
+      }
 
       // 3. Search filter
       if (searchTerm) {
@@ -186,7 +450,7 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
 
       return true;
     });
-  }, [allMovements, selectedCurrency, accountFilter, searchTerm, dateFilter]);
+  }, [allMovements, selectedCurrency, accountFilter, selectedAccountId, searchTerm, dateFilter]);
 
   // Cash flow summary statistics for active filters
   const flowStats = useMemo(() => {
@@ -232,139 +496,541 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
         </div>
         <div className="flex flex-col md:flex-row gap-3">
           <div className="flex bg-white/5 p-1 rounded-lg border border-white/5 gap-1">
-            <button
-              onClick={() => setViewMode('genel')}
-              className={`px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-md transition cursor-pointer flex items-center gap-2 ${
-                viewMode === 'genel' ? 'bg-teal-500/20 text-teal-400' : 'text-white/60 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Activity size={14} /> Genel Akış
-            </button>
-            <button
-              onClick={() => setViewMode('detayli')}
-              className={`px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-md transition cursor-pointer flex items-center gap-2 ${
-                viewMode === 'detayli' ? 'bg-teal-500/20 text-teal-400' : 'text-white/60 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Wallet size={14} /> Hesaplar & Transfer
-            </button>
+            {(['TRY', 'USD', 'EUR'] as const).map((cur) => (
+              <button
+                key={cur}
+                id={`tab-kasa-cur-${cur}`}
+                onClick={() => setSelectedCurrency(cur)}
+                className={`px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-md transition cursor-pointer ${
+                  selectedCurrency === cur 
+                    ? 'bg-teal-500 text-black shadow-[0_0_8px_rgba(45,212,191,0.2)]'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {cur === 'TRY' ? '₺ TL' : cur === 'USD' ? '$ USD' : '€ EUR'}
+              </button>
+            ))}
           </div>
-          {viewMode === 'genel' && (
-            <div className="flex bg-white/5 p-1 rounded-lg border border-white/5 gap-1">
-              {(['TRY', 'USD', 'EUR'] as const).map((cur) => (
+        </div>
+      </div>
+
+      {/* 📱 1. Master Account Switcher & Tabs Hub */}
+      <div className="bg-[#111111] border border-white/5 p-6 rounded-xl shadow-lg space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pb-4 border-b border-zinc-100">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-teal-50 text-teal-600 rounded-lg">
+                  <Activity size={18} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-zinc-900 uppercase tracking-wider">HESAP SEÇİMİ VE EKSTRE ANALİZİ</h3>
+                  <p className="text-[11px] text-zinc-500 mt-0.5">Grafikleri, dönem akışını ve işlem dökümünü filtrelemek için bir hesap seçin.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 self-end sm:self-auto">
                 <button
-                  key={cur}
-                  id={`tab-kasa-cur-${cur}`}
-                  onClick={() => setSelectedCurrency(cur)}
-                  className={`px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-md transition cursor-pointer ${
-                    selectedCurrency === cur 
-                      ? 'bg-teal-500 text-black shadow-[0_0_8px_rgba(45,212,191,0.2)]'
-                      : 'text-white/60 hover:text-white hover:bg-white/5'
-                  }`}
+                  onClick={() => {
+                    setEditingAccount(null);
+                    setAccName('');
+                    setAccType('banka');
+                    setAccCurrency('TRY');
+                    setAccInitBal('0');
+                    setIsAccountModalOpen(true);
+                  }}
+                  className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 text-white text-[11px] font-bold uppercase tracking-wider rounded-lg border border-white/10 cursor-pointer transition-all shadow-sm flex items-center gap-1.5"
                 >
-                  {cur === 'TRY' ? '₺ TL' : cur === 'USD' ? '$ USD' : '€ EUR'}
+                  <Plus size={13} /> YENİ HESAP
                 </button>
-              ))}
+                <button
+                  onClick={() => {
+                    setTxType('giris');
+                    setIsTxModalOpen(true);
+                  }}
+                  className="px-3.5 py-1.5 bg-[#8b1a1a] hover:bg-[#721515] text-white text-[11px] font-bold uppercase tracking-wider rounded-lg cursor-pointer transition-all shadow-sm flex items-center gap-1.5"
+                >
+                  <ArrowRightLeft size={13} /> İŞLEM / TRANSFER
+                </button>
+              </div>
+            </div>
+
+            {/* 1. Tüm Hesaplar Genel Bar */}
+            <div className="flex items-center justify-between p-3.5 bg-zinc-50 rounded-xl border border-zinc-150">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${selectedAccountId === 'all' ? 'bg-teal-600 text-white shadow-sm' : 'bg-white text-zinc-400 border border-zinc-200'}`}>
+                  <Activity size={16} />
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-400 block font-bold">GENEL AKIŞ SEÇENEĞİ</span>
+                  <span className="text-xs font-bold text-zinc-800 block">Tüm Kasa, Banka ve POS Hareketleri Birleşik</span>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedAccountId('all');
+                  setAccountFilter('all');
+                }}
+                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg border transition-all cursor-pointer ${
+                  selectedAccountId === 'all'
+                    ? 'bg-teal-600 text-white border-teal-600 shadow-md shadow-teal-600/10'
+                    : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-100 hover:text-zinc-950'
+                }`}
+              >
+                {selectedAccountId === 'all' ? 'SEÇİLİ (AKTİF)' : 'TÜMÜNÜ AKTİFLEŞTİR'} ({formatCurrency(balances[selectedCurrency].cash + balances[selectedCurrency].bank + balances[selectedCurrency].pos)})
+              </button>
+            </div>
+
+            {/* Symmetrical Grid of Columns */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Column 1: Nakit Kasaları */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
+                  <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Wallet size={14} className="text-amber-500" /> NAKİT KASALARI
+                  </span>
+                  <span className="text-[10px] font-mono bg-amber-50 text-amber-700 px-2.5 py-0.5 rounded-full font-bold">
+                    {formatCurrency(balances[selectedCurrency].cash)}
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                  {bankAccounts.filter(acc => acc.type === 'kasa').map(acc => {
+                    const isSelected = selectedAccountId === acc.id;
+                    const bal = accountBalances[acc.id] || 0;
+                    return (
+                      <div
+                        key={acc.id}
+                        onClick={() => {
+                          setSelectedAccountId(acc.id);
+                          setSelectedCurrency(acc.currency);
+                          setAccountFilter('cash');
+                        }}
+                        className={`w-full p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer flex items-center justify-between group ${
+                          isSelected
+                            ? 'bg-amber-50 border-amber-400 text-amber-900 shadow-sm font-semibold'
+                            : 'bg-white border-zinc-200 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50'
+                        }`}
+                      >
+                        <div className="truncate flex items-center gap-2.5">
+                          <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? 'bg-amber-500/20 text-amber-700' : 'bg-zinc-100 text-zinc-500 group-hover:bg-zinc-200/80'}`}>
+                            <Wallet size={14} />
+                          </div>
+                          <div className="truncate">
+                            <span className="text-xs block font-bold text-zinc-800 truncate">{acc.name}</span>
+                            <span className="text-[10px] text-zinc-400 font-mono block mt-0.5">{acc.currency} • Nakit</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          <span className="text-xs font-mono font-bold text-zinc-700">
+                            {formatCurrency(bal, acc.currency)}
+                          </span>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditAccountModal(acc);
+                              }}
+                              className="text-zinc-400 hover:text-teal-600 p-1 rounded hover:bg-zinc-100 transition"
+                              title="Düzenle"
+                            >
+                              <Edit size={13} />
+                            </button>
+                            {isDefaultAccount(acc.id) ? (
+                              <span 
+                                className="text-zinc-200 cursor-not-allowed p-1"
+                                title="Merkez hesaplar silinemez"
+                              >
+                                <Lock size={13} />
+                              </span>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (window.confirm('Bu hesabı silmek istediğinize emin misiniz?')) {
+                                    deleteBankAccount(acc.id);
+                                  }
+                                }}
+                                className="text-zinc-400 hover:text-rose-600 p-1 rounded hover:bg-zinc-100 transition"
+                                title="Sil"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {bankAccounts.filter(acc => acc.type === 'kasa').length === 0 && (
+                    <div className="p-4 border border-dashed border-zinc-200 rounded-xl text-center text-zinc-400 text-xs italic">
+                      Kayıtlı kasa bulunamadı.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Column 2: Banka Hesapları */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
+                  <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <CreditCard size={14} className="text-blue-500" /> BANKA HESAPLARI
+                  </span>
+                  <span className="text-[10px] font-mono bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full font-bold">
+                    {formatCurrency(balances[selectedCurrency].bank)}
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                  {bankAccounts.filter(acc => acc.type === 'banka').map(acc => {
+                    const isSelected = selectedAccountId === acc.id;
+                    const bal = accountBalances[acc.id] || 0;
+                    return (
+                      <div
+                        key={acc.id}
+                        onClick={() => {
+                          setSelectedAccountId(acc.id);
+                          setSelectedCurrency(acc.currency);
+                          setAccountFilter('bank');
+                        }}
+                        className={`w-full p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer flex items-center justify-between group ${
+                          isSelected
+                            ? 'bg-blue-50 border-blue-400 text-blue-900 shadow-sm font-semibold'
+                            : 'bg-white border-zinc-200 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50'
+                        }`}
+                      >
+                        <div className="truncate flex items-center gap-2.5">
+                          <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? 'bg-blue-500/20 text-blue-700' : 'bg-zinc-100 text-zinc-500 group-hover:bg-zinc-200/80'}`}>
+                            <CreditCard size={14} />
+                          </div>
+                          <div className="truncate">
+                            <span className="text-xs block font-bold text-zinc-800 truncate">{acc.name}</span>
+                            <span className="text-[10px] text-zinc-400 font-mono block mt-0.5">{acc.currency} • Vadesiz</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          <span className="text-xs font-mono font-bold text-zinc-700">
+                            {formatCurrency(bal, acc.currency)}
+                          </span>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditAccountModal(acc);
+                              }}
+                              className="text-zinc-400 hover:text-teal-600 p-1 rounded hover:bg-zinc-100 transition"
+                              title="Düzenle"
+                            >
+                              <Edit size={13} />
+                            </button>
+                            {isDefaultAccount(acc.id) ? (
+                              <span 
+                                className="text-zinc-200 cursor-not-allowed p-1"
+                                title="Merkez hesaplar silinemez"
+                              >
+                                <Lock size={13} />
+                              </span>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (window.confirm('Bu hesabı silmek istediğinize emin misiniz?')) {
+                                    deleteBankAccount(acc.id);
+                                  }
+                                }}
+                                className="text-zinc-400 hover:text-rose-600 p-1 rounded hover:bg-zinc-100 transition"
+                                title="Sil"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {bankAccounts.filter(acc => acc.type === 'banka').length === 0 && (
+                    <div className="p-4 border border-dashed border-zinc-200 rounded-xl text-center text-zinc-400 text-xs italic">
+                      Kayıtlı banka bulunamadı.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Column 3: POS Cihazları */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
+                  <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Terminal size={14} className="text-purple-500" /> POS CİHAZLARI
+                  </span>
+                  <span className="text-[10px] font-mono bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded-full font-bold">
+                    {formatCurrency(balances[selectedCurrency].pos)}
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                  {bankAccounts.filter(acc => acc.type === 'pos').map(acc => {
+                    const isSelected = selectedAccountId === acc.id;
+                    const bal = accountBalances[acc.id] || 0;
+                    return (
+                      <div
+                        key={acc.id}
+                        onClick={() => {
+                          setSelectedAccountId(acc.id);
+                          setSelectedCurrency(acc.currency);
+                          setAccountFilter('pos');
+                        }}
+                        className={`w-full p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer flex items-center justify-between group ${
+                          isSelected
+                            ? 'bg-purple-50 border-purple-400 text-purple-900 shadow-sm font-semibold'
+                            : 'bg-white border-zinc-200 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50'
+                        }`}
+                      >
+                        <div className="truncate flex items-center gap-2.5">
+                          <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? 'bg-purple-500/20 text-purple-700' : 'bg-zinc-100 text-zinc-500 group-hover:bg-zinc-200/80'}`}>
+                            <Terminal size={14} />
+                          </div>
+                          <div className="truncate">
+                            <span className="text-xs block font-bold text-zinc-800 truncate">{acc.name}</span>
+                            <span className="text-[10px] text-zinc-400 font-mono block mt-0.5">{acc.currency} • POS</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          <span className="text-xs font-mono font-bold text-zinc-700">
+                            {formatCurrency(bal, acc.currency)}
+                          </span>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditAccountModal(acc);
+                              }}
+                              className="text-zinc-400 hover:text-teal-600 p-1 rounded hover:bg-zinc-100 transition"
+                              title="Düzenle"
+                            >
+                              <Edit size={13} />
+                            </button>
+                            {isDefaultAccount(acc.id) ? (
+                              <span 
+                                className="text-zinc-200 cursor-not-allowed p-1"
+                                title="Merkez hesaplar silinemez"
+                              >
+                                <Lock size={13} />
+                              </span>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (window.confirm('Bu hesabı silmek istediğinize emin misiniz?')) {
+                                    deleteBankAccount(acc.id);
+                                  }
+                                }}
+                                className="text-zinc-400 hover:text-rose-600 p-1 rounded hover:bg-zinc-100 transition"
+                                title="Sil"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {bankAccounts.filter(acc => acc.type === 'pos').length === 0 && (
+                    <div className="p-4 border border-dashed border-zinc-200 rounded-xl text-center text-zinc-400 text-xs italic">
+                      Kayıtlı POS bulunamadı.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ⚡ 2. Active Account Focus Banner */}
+          {selectedAccountId !== 'all' && activeAccount && (
+            <div className="bg-teal-500/10 border border-teal-500/20 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-md animate-fadeIn">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-teal-500/20 rounded-lg text-teal-400">
+                  {activeAccount.type === 'kasa' ? <Wallet size={16} /> : activeAccount.type === 'banka' ? <CreditCard size={16} /> : <Terminal size={16} />}
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-teal-300 uppercase tracking-wider flex items-center gap-2">
+                    FİLTRE AKTİF: <span className="font-mono bg-teal-500/15 px-1.5 py-0.5 rounded text-white">{activeAccount.name}</span>
+                  </h4>
+                  <p className="text-[10px] text-white/60 mt-0.5 uppercase tracking-wide font-mono">
+                    Grafikler, dönem nakit akışı ve kasa defteri ekstre tablosu şu anda sadece bu hesaba ait verileri göstermektedir.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedAccountId('all');
+                  setAccountFilter('all');
+                }}
+                className="px-3 py-1.5 bg-teal-500 hover:bg-teal-400 text-black text-[10px] font-bold uppercase tracking-wider rounded-lg cursor-pointer transition-colors whitespace-nowrap shadow-md shadow-teal-500/10"
+              >
+                Filtreyi Temizle
+              </button>
             </div>
           )}
-        </div>
-      </div>
 
-      {viewMode === 'genel' ? (
-        <>
-          {/* Account Balances Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Total Cash Register (Kasa) */}
-        <div className="bg-[#111111] border border-white/5 p-6 rounded-lg flex flex-col justify-between shadow-lg relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 text-teal-500/5 transition-transform duration-500 group-hover:scale-110 pointer-events-none">
-            <Wallet size={120} />
-          </div>
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[10px] text-white/40 uppercase tracking-widest block font-mono font-bold">MERKEZ KASA MEVCUDU</span>
-              <h3 className="text-3xl font-light italic tracking-tight text-white mt-2" style={{ fontFamily: 'Georgia, serif' }}>
-                {formatCurrency(balances[selectedCurrency].cash)}
-              </h3>
-            </div>
-            <div className="p-2.5 bg-teal-500/10 text-teal-400 rounded-lg border border-teal-500/15">
-              <Wallet size={18} />
-            </div>
-          </div>
-          <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-[10px] text-white/50 font-mono">
-            <span>Nakit Para Toplamı</span>
-            <span className="text-teal-400 font-bold">AKTİF</span>
-          </div>
-        </div>
+          {/* 📊 3. Primary Financial Summary Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Card 1: Cash Register (Kasa) */}
+            {(() => {
+              const isCardDisabled = selectedAccountId !== 'all' && activeAccount?.type !== 'kasa';
+              const cardTitle = selectedAccountId !== 'all' && activeAccount?.type === 'kasa' 
+                ? `${activeAccount.name.toUpperCase()} BAKİYESİ` 
+                : "TOPLAM KASA MEVCUDU";
+              const cardValue = selectedAccountId !== 'all' && activeAccount?.type === 'kasa'
+                ? (accountBalances[activeAccount.id] || 0)
+                : balances[selectedCurrency].cash;
+              const cardSubtext = selectedAccountId !== 'all' && activeAccount?.type === 'kasa'
+                ? "Seçili Kasa Hesabı"
+                : "Nakit Para Toplamı";
 
-        {/* Total Bank accounts (Banka) */}
-        <div className="bg-[#111111] border border-white/5 p-6 rounded-lg flex flex-col justify-between shadow-lg relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 text-teal-500/5 transition-transform duration-500 group-hover:scale-110 pointer-events-none">
-            <CreditCard size={120} />
-          </div>
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[10px] text-white/40 uppercase tracking-widest block font-mono font-bold">BANKA HESAPLARI MEVCUDU</span>
-              <h3 className="text-3xl font-light italic tracking-tight text-white mt-2" style={{ fontFamily: 'Georgia, serif' }}>
-                {formatCurrency(balances[selectedCurrency].bank)}
-              </h3>
-            </div>
-            <div className="p-2.5 bg-teal-500/10 text-teal-400 rounded-lg border border-teal-500/15">
-              <CreditCard size={18} />
-            </div>
-          </div>
-          <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-[10px] text-white/50 font-mono">
-            <span>Vadeli/Vadesiz Toplamı</span>
-            <span className="text-teal-400 font-bold">LİKİT</span>
-          </div>
-        </div>
+              return (
+                <div 
+                  onClick={() => {
+                    if (isCardDisabled) {
+                      // Click disabled card to clear filter and set account type to cash
+                      setSelectedAccountId('all');
+                      setAccountFilter('cash');
+                    } else {
+                      setAccountFilter('cash');
+                      setSelectedAccountId('all');
+                    }
+                    document.getElementById('kasa-defteri-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className={`bg-[#111111] border p-6 rounded-lg flex flex-col justify-between shadow-lg relative overflow-hidden group cursor-pointer active:scale-[0.99] transition-all duration-300 hover:shadow-[0_0_20px_rgba(245,158,11,0.05)] ${
+                    isCardDisabled 
+                      ? 'opacity-25 hover:opacity-55 grayscale-[25%] border-dashed border-white/5 hover:border-amber-500/20' 
+                      : 'border-white/5 hover:border-amber-500/30'
+                  }`}
+                  title={isCardDisabled ? "Kasa filtresine dönmek için tıklayın" : "Kasa dökümünü listelemek için tıklayın"}
+                >
+                  <div className="absolute top-0 right-0 p-8 text-amber-500/5 transition-transform duration-500 group-hover:scale-110 pointer-events-none">
+                    <Wallet size={120} />
+                  </div>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-[10px] text-white/40 uppercase tracking-widest block font-mono font-bold">{cardTitle}</span>
+                      <h3 className="text-3xl font-light italic tracking-tight text-white mt-2 group-hover:text-amber-300 transition-colors" style={{ fontFamily: 'Georgia, serif' }}>
+                        {formatCurrency(cardValue, selectedAccountId !== 'all' && activeAccount?.type === 'kasa' ? activeAccount.currency : selectedCurrency)}
+                      </h3>
+                    </div>
+                    <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-lg border border-amber-500/15 group-hover:bg-amber-500/20 group-hover:border-amber-500/30 transition-all">
+                      <Wallet size={18} />
+                    </div>
+                  </div>
+                  <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-[10px] text-white/50 font-mono">
+                    <span>{cardSubtext}</span>
+                    <span className="text-amber-400 font-bold group-hover:underline flex items-center gap-1">
+                      {isCardDisabled ? "FİLTREYİ SIFIRLA ↺" : "DETAYLARI LİSTELE →"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
 
-        {/* Total Combined */}
-        <div className="bg-[#111111] border border-white/5 p-6 rounded-lg flex flex-col justify-between shadow-lg relative overflow-hidden group bg-gradient-to-br from-[#111111] to-[#152321]">
-          <div className="absolute top-0 right-0 p-8 text-teal-400/5 transition-transform duration-500 group-hover:scale-110 pointer-events-none">
-            <DollarSign size={120} />
-          </div>
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[10px] text-teal-400 uppercase tracking-widest block font-mono font-bold">TOPLAM NAKİT MEVCUDU</span>
-              <h3 className="text-3xl font-bold tracking-tight text-teal-400 mt-2" style={{ fontFamily: 'Georgia, serif' }}>
-                {formatCurrency(balances[selectedCurrency].cash + balances[selectedCurrency].bank + balances[selectedCurrency].pos)}
-              </h3>
-            </div>
-            <div className="p-2.5 bg-teal-500/20 text-teal-400 rounded-lg border border-teal-500/30 shadow-[0_0_12px_rgba(45,212,191,0.15)]">
-              <DollarSign size={18} />
-            </div>
-          </div>
-          <div className="mt-6 pt-4 border-t border-teal-500/10 flex items-center justify-between text-[10px] text-white/50 font-mono">
-            <span>Kasa + Banka + POS Birleşik</span>
-            <span className="text-teal-400 font-bold font-mono">NET REZERV</span>
-          </div>
-        </div>
-      </div>
+            {/* Card 2: Bank Accounts (Banka) */}
+            {(() => {
+              const isCardDisabled = selectedAccountId !== 'all' && activeAccount?.type !== 'banka';
+              const cardTitle = selectedAccountId !== 'all' && activeAccount?.type === 'banka' 
+                ? `${activeAccount.name.toUpperCase()} BAKİYESİ` 
+                : "BANKA HESAPLARI MEVCUDU";
+              const cardValue = selectedAccountId !== 'all' && activeAccount?.type === 'banka'
+                ? (accountBalances[activeAccount.id] || 0)
+                : balances[selectedCurrency].bank;
+              const cardSubtext = selectedAccountId !== 'all' && activeAccount?.type === 'banka'
+                ? "Seçili Banka Hesabı"
+                : "Vadeli/Vadesiz Toplamı";
 
-      {/* Multi-Currency Mini Grid */}
-      <div className="bg-[#111111] p-4 rounded-xl border border-white/5 flex flex-wrap justify-between gap-4 shadow-sm text-xs text-white/50">
-        <span className="font-mono uppercase tracking-widest font-bold text-white/30 flex items-center gap-2">
-          <CheckCircle2 size={13} className="text-teal-500" />
-          Tüm Döviz Cinsleri Nakit Dağılımı:
-        </span>
-        <div className="flex gap-6 flex-wrap">
-          <div>
-            <span className="font-bold text-white/70">₺ TRY: </span>
-            <span className="font-mono text-white/90 font-bold">{formatCurrency(balances.TRY.cash + balances.TRY.bank + balances.TRY.pos, 'TRY')}</span>
-            <span className="text-white/30 text-[10px] ml-1.5">(Kasa: {formatCurrency(balances.TRY.cash, 'TRY')} / Banka: {formatCurrency(balances.TRY.bank, 'TRY')} / POS: {formatCurrency(balances.TRY.pos, 'TRY')})</span>
+              return (
+                <div 
+                  onClick={() => {
+                    if (isCardDisabled) {
+                      setSelectedAccountId('all');
+                      setAccountFilter('bank');
+                    } else {
+                      setAccountFilter('bank');
+                      setSelectedAccountId('all');
+                    }
+                    document.getElementById('kasa-defteri-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className={`bg-[#111111] border p-6 rounded-lg flex flex-col justify-between shadow-lg relative overflow-hidden group cursor-pointer active:scale-[0.99] transition-all duration-300 hover:shadow-[0_0_20px_rgba(59,130,246,0.05)] ${
+                    isCardDisabled 
+                      ? 'opacity-25 hover:opacity-55 grayscale-[25%] border-dashed border-white/5 hover:border-blue-500/20' 
+                      : 'border-white/5 hover:border-blue-500/30'
+                  }`}
+                  title={isCardDisabled ? "Banka filtresine dönmek için tıklayın" : "Banka dökümünü listelemek için tıklayın"}
+                >
+                  <div className="absolute top-0 right-0 p-8 text-blue-500/5 transition-transform duration-500 group-hover:scale-110 pointer-events-none">
+                    <CreditCard size={120} />
+                  </div>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-[10px] text-white/40 uppercase tracking-widest block font-mono font-bold">{cardTitle}</span>
+                      <h3 className="text-3xl font-light italic tracking-tight text-white mt-2 group-hover:text-blue-300 transition-colors" style={{ fontFamily: 'Georgia, serif' }}>
+                        {formatCurrency(cardValue, selectedAccountId !== 'all' && activeAccount?.type === 'banka' ? activeAccount.currency : selectedCurrency)}
+                      </h3>
+                    </div>
+                    <div className="p-2.5 bg-blue-500/10 text-blue-400 rounded-lg border border-blue-500/15 group-hover:bg-blue-500/20 group-hover:border-blue-500/30 transition-all">
+                      <CreditCard size={18} />
+                    </div>
+                  </div>
+                  <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-[10px] text-white/50 font-mono">
+                    <span>{cardSubtext}</span>
+                    <span className="text-blue-400 font-bold group-hover:underline flex items-center gap-1">
+                      {isCardDisabled ? "FİLTREYİ SIFIRLA ↺" : "DETAYLARI LİSTELE →"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Card 3: Combined / Selected Net Cash */}
+            {(() => {
+              const cardTitle = selectedAccountId !== 'all' && activeAccount
+                ? `SEÇİLİ HESAP REZERVİ` 
+                : "TOPLAM NAKİT MEVCUDU";
+              const cardValue = selectedAccountId !== 'all' && activeAccount
+                ? (accountBalances[activeAccount.id] || 0)
+                : balances[selectedCurrency].cash + balances[selectedCurrency].bank + balances[selectedCurrency].pos;
+              const cardSubtext = selectedAccountId !== 'all' && activeAccount
+                ? `${activeAccount.name} Net Bakiye`
+                : "Kasa + Banka + POS Birleşik";
+
+              return (
+                <div 
+                  onClick={() => {
+                    setSelectedAccountId('all');
+                    setAccountFilter('all');
+                    document.getElementById('kasa-defteri-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="bg-[#111111] border border-white/5 p-6 rounded-lg flex flex-col justify-between shadow-lg relative overflow-hidden group cursor-pointer active:scale-[0.99] transition-all duration-300 hover:shadow-[0_0_20px_rgba(45,212,191,0.05)]"
+                  title="Tüm nakit hareketleri listesini görmek için tıklayın"
+                >
+                  <div className="absolute top-0 right-0 p-8 text-teal-400/5 transition-transform duration-500 group-hover:scale-110 pointer-events-none">
+                    <DollarSign size={120} />
+                  </div>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-[10px] text-teal-400 uppercase tracking-widest block font-mono font-bold">{cardTitle}</span>
+                      <h3 className="text-3xl font-bold tracking-tight text-teal-400 mt-2 group-hover:text-teal-300 transition-colors" style={{ fontFamily: 'Georgia, serif' }}>
+                        {formatCurrency(cardValue, selectedAccountId !== 'all' && activeAccount ? activeAccount.currency : selectedCurrency)}
+                      </h3>
+                    </div>
+                    <div className="p-2.5 bg-teal-500/20 text-teal-400 rounded-lg border border-teal-500/30 shadow-[0_0_12px_rgba(45,212,191,0.15)] group-hover:bg-teal-500/30 transition-all">
+                      <DollarSign size={18} />
+                    </div>
+                  </div>
+                  <div className="mt-6 pt-4 border-t border-teal-500/10 flex items-center justify-between text-[10px] text-white/50 font-mono">
+                    <span>{cardSubtext}</span>
+                    <span className="text-teal-400 font-bold font-mono group-hover:underline flex items-center gap-1">
+                      {selectedAccountId !== 'all' ? "TÜM HESAPLARA DÖN ↺" : "TÜM HAREKETLERİ GÖR →"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
-          <div>
-            <span className="font-bold text-white/70">$ USD: </span>
-            <span className="font-mono text-white/90 font-bold">{formatCurrency(balances.USD.cash + balances.USD.bank + balances.USD.pos, 'USD')}</span>
-            <span className="text-white/30 text-[10px] ml-1.5">(Kasa: {formatCurrency(balances.USD.cash, 'USD')} / Banka: {formatCurrency(balances.USD.bank, 'USD')} / POS: {formatCurrency(balances.USD.pos, 'USD')})</span>
-          </div>
-          <div>
-            <span className="font-bold text-white/70">€ EUR: </span>
-            <span className="font-mono text-white/90 font-bold">{formatCurrency(balances.EUR.cash + balances.EUR.bank + balances.EUR.pos, 'EUR')}</span>
-            <span className="text-white/30 text-[10px] ml-1.5">(Kasa: {formatCurrency(balances.EUR.cash, 'EUR')} / Banka: {formatCurrency(balances.EUR.bank, 'EUR')} / POS: {formatCurrency(balances.EUR.pos, 'EUR')})</span>
-          </div>
-        </div>
-      </div>
+
+
 
       {/* Cash Flow Summary & Outflow Analysis */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -514,7 +1180,7 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
       </div>
 
       {/* Interactive Cash Ledger */}
-      <div className="bg-[#111111] border border-white/5 rounded-lg shadow-lg overflow-hidden flex flex-col">
+      <div id="kasa-defteri-section" className="bg-[#111111] border border-white/5 rounded-lg shadow-lg overflow-hidden flex flex-col scroll-mt-6">
         {/* Table Filters Toolbar */}
         <div className="p-5 border-b border-white/5 bg-white/[0.01] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
@@ -539,14 +1205,34 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
 
             {/* Account filter */}
             <select
-              value={accountFilter}
-              onChange={(e) => setAccountFilter(e.target.value as any)}
+              value={selectedAccountId !== 'all' ? selectedAccountId : accountFilter}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'all' || val === 'cash' || val === 'bank' || val === 'pos') {
+                  setAccountFilter(val as any);
+                  setSelectedAccountId('all');
+                } else {
+                  setSelectedAccountId(val);
+                  const found = bankAccounts.find(a => a.id === val);
+                  if (found) {
+                    setAccountFilter(found.type === 'kasa' ? 'cash' : found.type === 'banka' ? 'bank' : 'pos');
+                    setSelectedCurrency(found.currency);
+                  }
+                }
+              }}
               className="bg-white/5 border border-white/10 focus:border-teal-500 focus:ring-teal-500 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white/80 cursor-pointer"
             >
-              <option value="all" className="bg-[#111111] text-white">Tüm Hesaplar</option>
-              <option value="cash" className="bg-[#111111] text-white">Sadece Kasa</option>
-              <option value="bank" className="bg-[#111111] text-white">Sadece Banka</option>
-              <option value="pos" className="bg-[#111111] text-white">Sadece POS</option>
+              <optgroup label="Genel Gruplar" className="bg-[#111111] text-white">
+                <option value="all">Tüm Hesaplar</option>
+                <option value="cash">Sadece Kasa</option>
+                <option value="bank">Sadece Banka</option>
+                <option value="pos">Sadece POS</option>
+              </optgroup>
+              <optgroup label="Özel Hesaplar" className="bg-[#111111] text-white">
+                {bankAccounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>{acc.name} ({acc.currency})</option>
+                ))}
+              </optgroup>
             </select>
 
             {/* Date filter */}
@@ -599,7 +1285,7 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
                             ? 'bg-purple-500/10 text-purple-400 border border-purple-500/10'
                             : 'bg-blue-500/10 text-blue-400 border border-blue-500/10'
                         }`}>
-                          {m.account === 'cash' ? 'Kasa' : m.account === 'pos' ? 'POS' : 'Banka'}
+                          {bankAccounts.find(a => a.id === m.accountId)?.name || (m.account === 'cash' ? 'Kasa' : m.account === 'pos' ? 'POS' : 'Banka')}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 whitespace-nowrap">
@@ -643,15 +1329,193 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
           </table>
         </div>
       </div>
-        </>
-      ) : (
-        <HesaplarDetayView 
-          bankAccounts={bankAccounts} 
-          accountTransactions={accountTransactions} 
-          islemler={islemler}
-          expenses={expenses}
-          employeeTransactions={employeeTransactions}
-        />
+
+      {isAccountModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#151515] rounded-2xl shadow-2xl w-full max-w-md border border-white/10 animate-fade-in overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-white/5 bg-white/[0.02]">
+              <h3 className="font-bold text-white flex items-center gap-2 text-sm uppercase tracking-wider">
+                {editingAccount ? (
+                  <>
+                    <Edit size={16} className="text-teal-500" /> Hesabı Düzenle
+                  </>
+                ) : (
+                  <>
+                    <Plus size={16} className="text-teal-500" /> Yeni Kasa / Banka / POS
+                  </>
+                )}
+              </h3>
+              <button onClick={() => { setIsAccountModalOpen(false); setEditingAccount(null); }} className="text-white/40 hover:text-white transition"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSaveAccount} className="p-6 space-y-5 text-left">
+              <div>
+                <label className="block text-[11px] font-semibold text-white/50 mb-1.5 uppercase tracking-wider">Hesap Adı</label>
+                <input type="text" required value={accName} onChange={e => setAccName(e.target.value)} className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all outline-none" placeholder="Örn: Garanti TL Hesabı" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-semibold text-white/50 mb-1.5 uppercase tracking-wider">Tür</label>
+                  <select 
+                    value={accType} 
+                    onChange={e => setAccType(e.target.value as any)} 
+                    className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all outline-none"
+                  >
+                    <option value="banka">Banka Hesabı</option>
+                    <option value="kasa">Nakit Kasa</option>
+                    <option value="pos">POS Hesabı</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-white/50 mb-1.5 uppercase tracking-wider">Para Birimi</label>
+                  <select 
+                    value={accCurrency} 
+                    onChange={e => setAccCurrency(e.target.value as any)} 
+                    className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all outline-none"
+                  >
+                    <option value="TRY">TRY (₺)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-white/50 mb-1.5 uppercase tracking-wider">Açılış Bakiyesi</label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 text-sm font-mono">{accCurrency === 'TRY' ? '₺' : accCurrency === 'USD' ? '$' : '€'}</span>
+                  <input type="number" required value={accInitBal} onChange={e => setAccInitBal(e.target.value)} className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg pl-8 pr-3.5 py-2.5 text-sm text-white font-mono focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all outline-none" placeholder="0.00" />
+                </div>
+              </div>
+              <div className="pt-4 flex justify-end gap-3 mt-2 border-t border-white/5">
+                <button type="button" onClick={() => { setIsAccountModalOpen(false); setEditingAccount(null); }} className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition">İptal</button>
+                <button type="submit" className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition shadow-lg shadow-teal-500/20">
+                  {editingAccount ? 'Değişiklikleri Kaydet' : 'Hesabı Oluştur'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isTxModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#151515] rounded-2xl shadow-2xl w-full max-w-md border border-white/10 animate-fade-in overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-white/5 bg-white/[0.02]">
+              <h3 className="font-bold text-white flex items-center gap-2 text-sm uppercase tracking-wider">
+                <ArrowRightLeft size={16} className="text-teal-500" /> İşlem / Transfer
+              </h3>
+              <button onClick={() => setIsTxModalOpen(false)} className="text-white/40 hover:text-white transition"><X size={20} /></button>
+            </div>
+            <div className="p-4 border-b border-white/5 flex gap-2 bg-[#0a0a0a]/50">
+              <button onClick={() => setTxType('giris')} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${txType === 'giris' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>Para Girişi</button>
+              <button onClick={() => setTxType('cikis')} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${txType === 'cikis' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>Para Çıkışı</button>
+              <button onClick={() => setTxType('transfer')} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${txType === 'transfer' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>Transfer</button>
+            </div>
+            <form onSubmit={handleSaveTx} className="p-6 space-y-5 text-left">
+              <div>
+                <label className="block text-[11px] font-semibold text-white/50 mb-1.5 uppercase tracking-wider">{txType === 'transfer' ? 'Gönderen Hesap' : 'İşlem Yapılacak Hesap'}</label>
+                <select required value={txSourceAcc} onChange={e => setTxSourceAcc(e.target.value)} className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all outline-none">
+                  <option value="">Seçiniz...</option>
+                  {bankAccounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}
+                </select>
+              </div>
+              
+              {txType === 'transfer' && (
+                <div className="animate-fade-in relative">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-white/20"><ArrowRightLeft size={16} className="rotate-90" /></div>
+                  <label className="block text-[11px] font-semibold text-white/50 mb-1.5 uppercase tracking-wider mt-2">Alıcı Hesap</label>
+                  <select required value={txTargetAcc} onChange={e => setTxTargetAcc(e.target.value)} className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all outline-none">
+                    <option value="">Seçiniz...</option>
+                    {bankAccounts.filter(a => a.id !== txSourceAcc).map(a => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[11px] font-semibold text-white/50 mb-1.5 uppercase tracking-wider">Tutar</label>
+                <div className="relative">
+                  <input type="number" required min="0.01" step="0.01" value={txAmount} onChange={e => setTxAmount(e.target.value)} className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white font-mono focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all outline-none" placeholder="0.00" />
+                </div>
+              </div>
+
+              {isCrossCurrency && (
+                <div className="animate-fade-in space-y-4">
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <label className="block text-[11px] font-semibold text-white/50 mb-1.5 uppercase tracking-wider">
+                        Döviz Kuru ({sourceAccData?.currency} / {targetAccData?.currency})
+                      </label>
+                      <input 
+                        type="number" 
+                        min="0.0001" 
+                        step="0.0001" 
+                        value={crossRate} 
+                        onChange={e => {
+                          setCrossRate(e.target.value);
+                          if (txAmount && Number(txAmount) > 0 && e.target.value && Number(e.target.value) > 0) {
+                            setTxTargetAmount((Number(txAmount) * Number(e.target.value)).toFixed(2));
+                          }
+                        }} 
+                        className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white font-mono focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all outline-none" 
+                        placeholder="Örn: 34.50" 
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => fetchLiveRate(sourceAccData?.currency || '', targetAccData?.currency || '')}
+                      disabled={isFetchingRate}
+                      className="h-[42px] px-3 bg-teal-500/20 text-teal-400 border border-teal-500/30 rounded-lg hover:bg-teal-500/30 transition flex items-center gap-2"
+                      title="Güncel Ortalama Kuru Getir"
+                    >
+                      <RefreshCw size={16} className={isFetchingRate ? 'animate-spin' : ''} />
+                      <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline">Kur Getir</span>
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-teal-400 mb-1.5 uppercase tracking-wider">
+                      Hedef Hesaba Geçecek Tutar ({targetAccData?.currency})
+                    </label>
+                    <input 
+                      type="number" 
+                      required 
+                      min="0.01" 
+                      step="0.01" 
+                      value={txTargetAmount} 
+                      onChange={e => {
+                        setTxTargetAmount(e.target.value);
+                        if (txAmount && Number(txAmount) > 0 && e.target.value && Number(e.target.value) > 0) {
+                          setCrossRate((Number(e.target.value) / Number(txAmount)).toFixed(4));
+                        }
+                      }} 
+                      className="w-full bg-teal-500/10 border border-teal-500/30 rounded-lg px-3.5 py-2.5 text-sm text-white font-mono focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all outline-none" 
+                      placeholder="0.00" 
+                    />
+                  </div>
+                  
+                  {txAmount && txTargetAmount && (
+                    <div className="mt-2 p-3 bg-teal-500/10 border border-teal-500/20 rounded-lg text-xs">
+                      <span className="text-teal-400 font-bold block mb-1">Döviz Çeviri Özeti:</span>
+                      1 {sourceAccData?.currency} ≈ <span className="font-mono text-white">{(Number(txTargetAmount) / Number(txAmount)).toFixed(4)} {targetAccData?.currency}</span><br/>
+                      1 {targetAccData?.currency} ≈ <span className="font-mono text-white">{(Number(txAmount) / Number(txTargetAmount)).toFixed(4)} {sourceAccData?.currency}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[11px] font-semibold text-white/50 mb-1.5 uppercase tracking-wider">Açıklama / Sebep</label>
+                <input type="text" value={txDesc} onChange={e => setTxDesc(e.target.value)} placeholder="Opsiyonel..." className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all outline-none" />
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3 mt-2 border-t border-white/5">
+                <button type="button" onClick={() => setIsTxModalOpen(false)} className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition">İptal</button>
+                <button type="submit" className={`px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white rounded-lg transition shadow-lg ${txType === 'giris' ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20' : txType === 'cikis' ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-500/20' : 'bg-blue-600 hover:bg-blue-500 shadow-blue-500/20'}`}>
+                  İşlemi Tamamla
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

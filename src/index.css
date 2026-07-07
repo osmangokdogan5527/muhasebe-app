@@ -432,7 +432,8 @@ main .dashboard-wrapper[data-theme="light"] .bg-white\/5:hover {
   HIGH-FIDELITY BARKOD VE SVG ÇIKTI OPTİMİZASYONU
   =========================================
 */
-.barcode-svg-container svg {
+.barcode-svg-container svg, 
+.barcode-svg-container img {
   shape-rendering: crispEdges !important;
   image-rendering: pixelated !important;
   image-rendering: crisp-edges !important;

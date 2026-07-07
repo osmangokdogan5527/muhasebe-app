@@ -256,19 +256,16 @@ const StormLogo = ({
   );
 };
 
-const APP_VERSION = '1.5.5';
+const APP_VERSION = '1.5.6';
 
 const CHANGELOG = {
-  version: '1.5.5',
+  version: '1.5.6',
   features: [
-    "Storm AI Asistanına sesli komut özelliği (Mikrofon ile sesli yazdırma) eklendi; artık doğrudan konuşarak veri girişi ve komut parsing yapılabilir.",
-    "Storm AI hızlı ekleme yetenekleri genişletilerek müşteri oluşturma ve tedarikçi ekleme komutları tamamen entegre edildi.",
-    "Kasa & Banka Detay görünümünde Kasa, Banka ve POS hesaplarının düzenlenmesi/güncellenmesi özelliği eklendi.",
-    "Merkez Kasa, Merkez Banka ve Merkez POS gibi ana hesaplar silmeye karşı kilitlendi (Lock simgesiyle) ve yapısı korunarak isim güncellemesine açıldı."
+    "Barkod yazdırma (Print) işleminde termal yazıcılarda (Zebra, Xprinter vb.) oluşan 'siyah blok' / 'büyük siyah kutu' hatası düzeltildi.",
+    "Barkod çizicisi SVG'den Base64 Img formatına geçirilerek yazıcı kaynaklı CSS çakışmaları ve vektörel gerilmeler tamamen engellendi."
   ],
   fixes: [
-    "Kasa & Banka listesindeki varsayılan ana hesapların yanlışlıkla silinmesi veya bozulması hatası tamamen giderildi.",
-    "Yapay zeka asistanının sesli tanıma entegrasyonu (Speech-to-Text / Web Speech API) tarayıcı uyumluluğu ile sorunsuz hale getirildi."
+    "Uygulama versiyonu v1.5.6 olarak güncellendi ve tüm masaüstü/web üretim derleme süreçleri başarıyla tamamlandı."
   ]
 };
 
@@ -469,6 +466,16 @@ export const PIN_ACCOUNTS = [
 
 const changelogData = [
   {
+    version: "1.5.6",
+    date: "07.07.2026",
+    changes: [
+      "Barkod yazdırma işleminde etiket yazıcılarında (Zebra vb.) ortaya çıkan barkodların 'siyah büyük kutu' şeklinde çıkması sorunu çözüldü.",
+      "React-Barcode altyapısı SVG modundan Base64 Image (canvas rasterizasyonu) formatına geçirilerek yazdırma anında CSS ve vektörel gerilme sorunları önlendi.",
+      "Tasarım SVG optimizasyonu kuralları barkod görselleri (img) için esnetildi, böylece termal baskılarda pürüzsüz sonuç alındı.",
+      "Uygulama versiyonu v1.5.6 olarak güncellendi ve tüm masaüstü/web üretim derleme süreçleri başarıyla tamamlandı."
+    ]
+  },
+  {
     version: "1.5.5",
     date: "07.07.2026",
     changes: [
@@ -528,91 +535,6 @@ const changelogData = [
       "Geometrik ve Kristal desen isimleri sadeleştirilerek menü tasarımları optimize edildi.",
       "Kullanılmayan atıl kodlar, eski taslak dosyaları ve geçici logo dönüştürücüleri temizlenerek masaüstü (.exe) paket boyutu ve bellek (RAM) tüketimi minimize edildi.",
       "Masaüstü derleme (electron-builder) ayarları, kaynak kodları ve gereksiz kütüphaneleri dışlayarak hafifletildi."
-    ]
-  },
-  {
-    version: "1.4.9",
-    date: "02.07.2026",
-    changes: [
-      "Kişiselleştirme ayarlarındaki yan menü deseni, modern 3D Geometrik Desen (Yeni Arka Plan) olarak güncellendi.",
-      "Versiyon 1.4.9'a yükseltildi ve otomatik güncelleme (Auto-Updater) test edildi."
-    ]
-  },
-  {
-    version: "1.4.8",
-    date: "01.07.2026",
-    changes: [
-      "Masaüstü uygulaması için özel logo entegre edildi.",
-      "Kişiselleştirme ayarlarına yeni 'Topografya' deseni eklendi.",
-      "Hata ve sistem loglarının takibi için Telegram entegrasyonu test edildi ve iyileştirildi."
-    ]
-  },
-  {
-    version: "1.4.7",
-    date: "01.07.2026",
-    changes: [
-      "Satıştan İade ve Alıştan İade işlemleri eklendi.",
-      "Gereksiz dosyalar temizlendi ve uygulama paket (exe) boyutu optimize edildi.",
-      "Electron build yapılandırması optimize edilerek daha hızlı açılış ve düşük bellek tüketimi sağlandı."
-    ]
-  },
-  {
-    version: "1.4.6",
-    date: "30.06.2026",
-    changes: [
-      "Şablon Tasarımına Stok Kartları için Barkod Etiketi oluşturma seçeneği eklendi.",
-      "Standart A4 ve Termal yazıcılar için (EAN-13, CODE128) format desteği getirildi."
-    ]
-  },
-  {
-    version: "1.4.5",
-    date: "30.06.2026",
-    changes: [
-      "Stok ve Hızlı Satış ekranları için Barkod Okuyucu desteği eklendi.",
-      "Stok eklerken otomatik barkod numarası oluşturma (Oluştur butonu) özelliği getirildi.",
-      "Hızlı satış ve fatura oluşturma ekranlarına barkod okutarak hızlıca ürün ekleme özelliği entegre edildi."
-    ]
-  },
-  {
-    version: "1.4.4",
-    date: "30.06.2026",
-    changes: [
-      "Kullanıcıların sistemdeki hataları ve istekleri bildirebileceği Hata / İstek Bildir modülü eklendi.",
-      "Yönetici panelinde sistem hataları ve kullanıcı geri bildirimlerini yönetmek için yeni arayüz oluşturuldu."
-    ]
-  },
-  {
-    version: "1.4.3",
-    date: "30.06.2026",
-    changes: [
-      "Tüm modüllere POS (Kredi Kartı) tahsilat ve ödeme seçenekleri eklendi.",
-      "Kasa bölümüne POS hesapları için özel filtreleme eklendi.",
-      "Hesap bakiyeleri hesaplamaları POS ödemelerini destekleyecek şekilde güncellendi."
-    ]
-  },
-  {
-    version: "1.4.2",
-    date: "30.06.2026",
-    changes: [
-      "Yapay Zeka asistan ikonu güncellendi (Yapay Zeka temasını daha fazla ön plana çıkaran ikonlar).",
-      "Arayüz temaları sadeleştirildi ve arayüz rengi beyaz (Light mode) destekli hale getirildi.",
-      "Gereksiz renk temaları kaldırılarak arayüz daha derli toplu hale getirildi."
-    ]
-  },
-  {
-    version: "1.4.1",
-    date: "30.06.2026",
-    changes: [
-      "Hesaplar arası çapraz döviz transferi ve kur çevirici eklendi.",
-      "Tahsilat ve Ödeme makbuzlarında detaylı Kasa/Banka seçimi eklendi."
-    ]
-  },
-  {
-    version: "1.4.0",
-    date: "30.06.2026",
-    changes: [
-      "Kredi Takip Yönetimi modülü eklendi: Banka kredileri ve finansman ödemeleri takip edilebilir hale getirildi.",
-      "Kredi listeleme, ekleme ve aktif/kapanmış durum kontrolleri gerçek zamanlı veritabanına bağlandı."
     ]
   }
 ];
@@ -3409,9 +3331,9 @@ export default function App() {
                         }`}
                         style={isActive ? { backgroundColor: 'color-mix(in srgb, var(--accent-500) 15%, transparent)' } : {}}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="scale-90 transform-origin-left"><StormIconWrapper iconElement={def.icon} isActive={isActive} /></div>
-                          <span>{def.label}</span>
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="scale-90 transform-origin-left shrink-0"><StormIconWrapper iconElement={def.icon} isActive={isActive} /></div>
+                          <span className="whitespace-nowrap truncate">{def.label}</span>
                         </div>
                         <div 
                           onClick={(e) => {
@@ -3481,8 +3403,8 @@ export default function App() {
                     }`}
                     style={isActive ? { backgroundColor: 'color-mix(in srgb, var(--accent-500) 15%, transparent)' } : {}}
                   >
-                    <div className="scale-90 transform-origin-left"><StormIconWrapper iconElement={def.icon} isActive={isActive} /></div>
-                    <span>{def.label}</span>
+                    <div className="scale-90 transform-origin-left shrink-0"><StormIconWrapper iconElement={def.icon} isActive={isActive} /></div>
+                    <span className="whitespace-nowrap truncate">{def.label}</span>
                   </button>
                 )}
               </div>
@@ -3609,9 +3531,9 @@ export default function App() {
                             }`}
                             style={isActive ? { backgroundColor: 'color-mix(in srgb, var(--accent-500) 15%, transparent)' } : {}}
                           >
-                            <div className="flex items-center gap-2.5">
-                              <div className="scale-90 transform-origin-left"><StormIconWrapper iconElement={def.icon} isActive={isActive} /></div>
-                              <span>{def.label}</span>
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="scale-90 transform-origin-left shrink-0"><StormIconWrapper iconElement={def.icon} isActive={isActive} /></div>
+                              <span className="whitespace-nowrap truncate">{def.label}</span>
                             </div>
                             <ChevronDown size={14} className={`transition-transform duration-200 ${isIslemlerSubMenuOpen ? 'rotate-180' : ''}`} />
                           </button>
@@ -3674,8 +3596,8 @@ export default function App() {
                           }`}
                           style={isActive ? { backgroundColor: 'color-mix(in srgb, var(--accent-500) 15%, transparent)' } : {}}
                         >
-                          <div className="scale-90 transform-origin-left"><StormIconWrapper iconElement={def.icon} isActive={isActive} /></div>
-                          <span>{def.label}</span>
+                          <div className="scale-90 transform-origin-left shrink-0"><StormIconWrapper iconElement={def.icon} isActive={isActive} /></div>
+                          <span className="whitespace-nowrap truncate">{def.label}</span>
                         </button>
                       )}
                     </div>

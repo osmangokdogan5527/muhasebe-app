@@ -1938,7 +1938,9 @@ export default function IslemlerView({
                       <div className="flex justify-between mb-8">
                         <div className="text-sm">
                           <div className="font-bold text-slate-900 mb-1">Sayın,</div>
-                          <div className="text-slate-700">{selectedPrintTransaction.cariName}</div>
+                          <div className="font-extrabold text-base md:text-lg text-slate-900 tracking-wide uppercase">
+                            {selectedPrintTransaction.cariName?.toLocaleUpperCase('tr-TR')}
+                          </div>
                           {currentCariForPrint && (
                             <div className="text-xs text-slate-500 mt-1 whitespace-pre-line font-sans">
                               {currentCariForPrint.address && <p>{currentCariForPrint.address}</p>}

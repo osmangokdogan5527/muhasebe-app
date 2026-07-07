@@ -376,14 +376,14 @@ export default function TemplateDesignerView() {
                   </div>
                 )}
                 <div className="flex justify-center w-full mt-1 barcode-svg-container">
-                  <Barcode 
+                  <Barcode renderer="img" 
                     value={activeTemplate.barcodeFormat === 'EAN13' ? "8691234567890" : "STK-10001"} 
                     format={activeTemplate.barcodeFormat || "CODE128"} 
                     width={['etiket_40x20', 'etiket_40x60'].includes(activeTemplate.paperSize) ? 1 : 2} 
                     height={activeTemplate.paperSize === 'etiket_40x20' ? 30 : 50} 
                     fontSize={activeTemplate.paperSize === 'etiket_40x20' ? 8 : 12}
                     margin={0}
-                    background="transparent"
+                    background="#ffffff"
                   />
                 </div>
               </div>
@@ -425,7 +425,9 @@ export default function TemplateDesignerView() {
                 <div className="flex justify-between mb-8">
                   <div className="text-sm">
                     <div className="font-bold text-slate-900 mb-1">Sayın,</div>
-                    <div className="text-slate-700">{mockCustomer.name}</div>
+                    <div className="font-extrabold text-base md:text-lg text-slate-900 tracking-wide uppercase">
+                      {mockCustomer.name.toLocaleUpperCase('tr-TR')}
+                    </div>
                     <div className="text-xs text-slate-500 mt-1">{mockCustomer.address}</div>
                   </div>
                   <div className="text-right text-xs">
