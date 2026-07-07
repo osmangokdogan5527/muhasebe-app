@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Loader2, Sparkles, AlertCircle, Settings, Bot } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, AlertCircle, Settings, Bot, Mic, MicOff } from 'lucide-react';
+
+const SpeechRecognition = typeof window !== 'undefined' ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) : null;
 
 interface AiAssistantProps {
   apiKey: string;
@@ -33,7 +35,56 @@ export default function AiAssistant({ apiKey, onNavigateToSettings, onCommandPar
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  const startListening = () => {
+    if (!SpeechRecognition) {
+      alert("Tarayıcınız ses tanımayı desteklemiyor veya mikrofon izni verilmedi.");
+      return;
+    }
+
+    try {
+      const rec = new SpeechRecognition();
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.lang = 'tr-TR';
+
+      rec.onstart = () => {
+        setIsListening(true);
+      };
+
+      rec.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        if (transcript) {
+          setInput(prev => prev + (prev ? ' ' : '') + transcript);
+        }
+      };
+
+      rec.onerror = (event: any) => {
+        console.error("Speech recognition error:", event.error);
+        setIsListening(false);
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = rec;
+      rec.start();
+    } catch (error) {
+      console.error("Failed to start speech recognition:", error);
+      setIsListening(false);
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsListening(false);
+  };
 
   useEffect(() => {
     // Set a random example on mount
@@ -258,17 +309,33 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
 
               {/* Input Area */}
               <form onSubmit={handleSubmit} className="p-3 bg-white border-t border-slate-200 flex gap-2">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Bir işlem yazın..."
-                  className="flex-1 bg-slate-50 border border-slate-200 focus:border-teal-500 outline-none rounded-xl px-4 py-2 text-sm text-slate-900 transition"
-                  disabled={isTyping}
-                />
+                <div className="relative flex-1 flex items-center">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder={isListening ? "Dinleniyor, konuşabilirsiniz..." : "Bir işlem veya sesli komut yazın..."}
+                    className={`w-full bg-slate-50 border border-slate-200 focus:border-teal-500 outline-none rounded-xl pl-4 pr-10 py-2.5 text-sm text-slate-900 transition ${isListening ? 'border-red-400 focus:border-red-500 bg-red-50/20' : ''}`}
+                    disabled={isTyping}
+                  />
+                  {SpeechRecognition && (
+                    <button
+                      type="button"
+                      onClick={isListening ? stopListening : startListening}
+                      className={`absolute right-2.5 p-1.5 rounded-lg transition-all ${
+                        isListening 
+                          ? 'text-red-500 hover:bg-red-100 bg-red-50 animate-pulse' 
+                          : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                      }`}
+                      title={isListening ? "Dinlemeyi Durdur" : "Sesle Yazdır"}
+                    >
+                      <Mic size={16} className={isListening ? "animate-bounce text-red-600" : ""} />
+                    </button>
+                  )}
+                </div>
                 <button
                   type="submit"
-                  disabled={!input.trim() || isTyping}
+                  disabled={!input.trim() || isTyping || isListening}
                   className="w-10 h-10 bg-teal-600 hover:bg-teal-700 text-white rounded-xl flex items-center justify-center transition disabled:opacity-50 disabled:hover:bg-teal-600"
                 >
                   {isTyping ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BankAccount, AccountTransaction, Transaction, Expense, EmployeeTransaction } from '../types';
 import { saveBankAccount, saveAccountTransaction, deleteBankAccount } from '../firebase';
-import { Plus, ArrowRightLeft, DollarSign, Wallet, CreditCard, X, TrendingUp, TrendingDown, Trash2, RefreshCw, Terminal } from 'lucide-react';
+import { Plus, ArrowRightLeft, DollarSign, Wallet, CreditCard, X, TrendingUp, TrendingDown, Trash2, RefreshCw, Terminal, Lock, Edit } from 'lucide-react';
 
 interface Props {
   bankAccounts: BankAccount[];
@@ -13,6 +13,7 @@ interface Props {
 
 export default function HesaplarDetayView({ bankAccounts, accountTransactions, islemler = [], expenses = [], employeeTransactions = [] }: Props) {
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [txType, setTxType] = useState<'giris' | 'cikis' | 'transfer'>('giris');
 
@@ -71,16 +72,47 @@ export default function HesaplarDetayView({ bankAccounts, accountTransactions, i
     return bal;
   };
 
+  const isDefaultAccount = (id: string) => id === 'merkez_kasa' || id === 'merkez_banka' || id === 'merkez_pos';
+
+  const openNewAccountModal = () => {
+    setEditingAccount(null);
+    setAccName('');
+    setAccType('banka');
+    setAccCurrency('TRY');
+    setAccInitBal('0');
+    setIsAccountModalOpen(true);
+  };
+
+  const openEditAccountModal = (acc: BankAccount) => {
+    setEditingAccount(acc);
+    setAccName(acc.name);
+    setAccType(acc.type);
+    setAccCurrency(acc.currency);
+    setAccInitBal(acc.initialBalance || 0);
+    setIsAccountModalOpen(true);
+  };
+
   const handleSaveAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    await saveBankAccount({
-      name: accName,
-      type: accType,
-      currency: accCurrency,
-      initialBalance: Number(accInitBal),
-      createdAt: new Date().toISOString()
-    });
+    if (editingAccount) {
+      await saveBankAccount({
+        ...editingAccount,
+        name: accName,
+        type: accType,
+        currency: accCurrency,
+        initialBalance: Number(accInitBal),
+      }, editingAccount.id);
+    } else {
+      await saveBankAccount({
+        name: accName,
+        type: accType,
+        currency: accCurrency,
+        initialBalance: Number(accInitBal),
+        createdAt: new Date().toISOString()
+      });
+    }
     setIsAccountModalOpen(false);
+    setEditingAccount(null);
     setAccName('');
     setAccInitBal('0');
   };
@@ -182,7 +214,7 @@ export default function HesaplarDetayView({ bankAccounts, accountTransactions, i
           <p className="text-white/40 text-[10px] uppercase tracking-widest font-mono">Çoklu para birimi kasa ve banka hesapları takibi</p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
-          <button onClick={() => setIsAccountModalOpen(true)} className="flex-1 md:flex-none justify-center bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+          <button onClick={openNewAccountModal} className="flex-1 md:flex-none justify-center bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
             <Plus size={16} /> Yeni Hesap
           </button>
           <button onClick={() => { setTxType('giris'); setIsTxModalOpen(true); }} className="flex-1 md:flex-none justify-center bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
@@ -222,17 +254,35 @@ export default function HesaplarDetayView({ bankAccounts, accountTransactions, i
               </div>
               <div className="mt-4 flex justify-between items-center">
                 <span className="text-[10px] text-teal-400 font-bold uppercase tracking-wider bg-teal-400/10 px-2 py-1 rounded">Aktif</span>
-                <button 
-                  onClick={() => {
-                    if (window.confirm('Bu hesabı silmek istediğinize emin misiniz?')) {
-                      deleteBankAccount(acc.id);
-                    }
-                  }}
-                  className="text-white/20 hover:text-rose-400 transition"
-                  title="Hesabı Sil"
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => openEditAccountModal(acc)}
+                    className="text-white/20 hover:text-teal-400 transition p-1"
+                    title="Hesabı Düzenle"
+                  >
+                    <Edit size={15} />
+                  </button>
+                  {isDefaultAccount(acc.id) ? (
+                    <span 
+                      className="text-white/10 cursor-not-allowed p-1"
+                      title="Merkez hesaplar silinemez"
+                    >
+                      <Lock size={15} />
+                    </span>
+                  ) : (
+                    <button 
+                      onClick={() => {
+                        if (window.confirm('Bu hesabı silmek istediğinize emin misiniz?')) {
+                          deleteBankAccount(acc.id);
+                        }
+                      }}
+                      className="text-white/20 hover:text-rose-400 transition p-1"
+                      title="Hesabı Sil"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -244,7 +294,15 @@ export default function HesaplarDetayView({ bankAccounts, accountTransactions, i
           <div className="bg-[#151515] rounded-2xl shadow-2xl w-full max-w-md border border-white/10 animate-fade-in overflow-hidden">
             <div className="flex items-center justify-between p-5 border-b border-white/5 bg-white/[0.02]">
               <h3 className="font-bold text-white flex items-center gap-2 text-sm uppercase tracking-wider">
-                <Plus size={16} className="text-teal-500" /> Yeni Kasa / Banka / POS
+                {editingAccount ? (
+                  <>
+                    <Edit size={16} className="text-teal-500" /> Hesabı Düzenle
+                  </>
+                ) : (
+                  <>
+                    <Plus size={16} className="text-teal-500" /> Yeni Kasa / Banka / POS
+                  </>
+                )}
               </h3>
               <button onClick={() => setIsAccountModalOpen(false)} className="text-white/40 hover:text-white transition"><X size={20} /></button>
             </div>
@@ -256,7 +314,12 @@ export default function HesaplarDetayView({ bankAccounts, accountTransactions, i
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-semibold text-white/50 mb-1.5 uppercase tracking-wider">Tür</label>
-                  <select value={accType} onChange={e => setAccType(e.target.value as any)} className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all outline-none">
+                  <select 
+                    value={accType} 
+                    onChange={e => setAccType(e.target.value as any)} 
+                    disabled={editingAccount ? isDefaultAccount(editingAccount.id) : false}
+                    className={`w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all outline-none ${editingAccount && isDefaultAccount(editingAccount.id) ? 'opacity-50 cursor-not-allowed bg-white/[0.02]' : ''}`}
+                  >
                     <option value="banka">Banka Hesabı</option>
                     <option value="kasa">Nakit Kasa</option>
                     <option value="pos">POS Hesabı</option>
@@ -264,7 +327,12 @@ export default function HesaplarDetayView({ bankAccounts, accountTransactions, i
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-white/50 mb-1.5 uppercase tracking-wider">Para Birimi</label>
-                  <select value={accCurrency} onChange={e => setAccCurrency(e.target.value as any)} className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all outline-none">
+                  <select 
+                    value={accCurrency} 
+                    onChange={e => setAccCurrency(e.target.value as any)} 
+                    disabled={editingAccount ? isDefaultAccount(editingAccount.id) : false}
+                    className={`w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all outline-none ${editingAccount && isDefaultAccount(editingAccount.id) ? 'opacity-50 cursor-not-allowed bg-white/[0.02]' : ''}`}
+                  >
                     <option value="TRY">TRY (₺)</option>
                     <option value="USD">USD ($)</option>
                     <option value="EUR">EUR (€)</option>
@@ -280,7 +348,9 @@ export default function HesaplarDetayView({ bankAccounts, accountTransactions, i
               </div>
               <div className="pt-4 flex justify-end gap-3 mt-2 border-t border-white/5">
                 <button type="button" onClick={() => setIsAccountModalOpen(false)} className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition">İptal</button>
-                <button type="submit" className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition shadow-lg shadow-teal-500/20">Hesabı Oluştur</button>
+                <button type="submit" className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition shadow-lg shadow-teal-500/20">
+                  {editingAccount ? 'Güncelle' : 'Hesabı Oluştur'}
+                </button>
               </div>
             </form>
           </div>

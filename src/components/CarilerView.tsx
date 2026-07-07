@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Cari, Transaction } from "../types";
 import { saveCari, deleteCari } from "../firebase";
+import { compressImage } from "../utils/imageCompressor";
 import {
   Plus,
   Search,
@@ -194,14 +195,20 @@ export default function CarilerView({
   };
 
   // Handle image upload
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, imageUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedBase64 = await compressImage(file, 300, 300, 0.7);
+        setFormData({ ...formData, imageUrl: compressedBase64 });
+      } catch (err) {
+        console.error("Resim sıkıştırma hatası:", err);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setFormData({ ...formData, imageUrl: reader.result as string });
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 

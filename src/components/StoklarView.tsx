@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Barcode from 'react-barcode';
 import { Stock } from '../types';
 import { saveStock, deleteStock } from '../firebase';
+import { compressImage } from '../utils/imageCompressor';
 import { 
   Plus, 
   Search, 
@@ -138,6 +139,17 @@ export default function StoklarView({
       }
     }
   }, [aiPrefilledData, stoklar.length, onClearAiPrefilledData]);
+
+  // Optimize all barcode SVGs on the screen for maximum crispness
+  useEffect(() => {
+    const svgs = document.querySelectorAll('.barcode-svg-container svg');
+    svgs.forEach(svg => {
+      svg.setAttribute('preserveAspectRatio', 'none');
+      svg.querySelectorAll('*').forEach(child => {
+        child.setAttribute('vector-effect', 'non-scaling-stroke');
+      });
+    });
+  }, [printingStock, selectedTemplateId, isPrintModalOpen]);
 
   // Open modal for creating new Stock item
   const handleOpenCreateModal = () => {
@@ -277,14 +289,20 @@ export default function StoklarView({
     document.body.removeChild(link);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, imageUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedBase64 = await compressImage(file, 300, 300, 0.7);
+        setFormData({ ...formData, imageUrl: compressedBase64 });
+      } catch (err) {
+        console.error("Resim sıkıştırma hatası:", err);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setFormData({ ...formData, imageUrl: reader.result as string });
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -891,11 +909,11 @@ export default function StoklarView({
                       if (is80x50) { w = 400; h = 250; }
                       if (is40x20) { w = 200; h = 100; }
                       
-                      let bcWidth = 1.2;
+                      let bcWidth = 1;
                       let bcHeight = 40;
                       let bcFontSize = 10;
-                      if (is40x20) { bcWidth = 1.2; bcHeight = 30; bcFontSize = 8; }
-                      if (is60x40 || is80x50) { bcWidth = 1.8; bcHeight = 50; bcFontSize = 12; }
+                      if (is40x20) { bcWidth = 1; bcHeight = 30; bcFontSize = 8; }
+                      if (is60x40 || is80x50) { bcWidth = 2; bcHeight = 50; bcFontSize = 12; }
                       
                       return (
                         <div 
@@ -929,7 +947,7 @@ export default function StoklarView({
                               {printingStock.salesPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
                             </div>
                           )}
-                          <div className="flex justify-center w-full mt-1 overflow-hidden">
+                          <div className="flex justify-center w-full mt-1 overflow-hidden barcode-svg-container">
                             <Barcode 
                               value={barcodeValue} 
                               format={t.barcodeFormat || "CODE128"} 
@@ -991,6 +1009,15 @@ export default function StoklarView({
                       const clone = printContent.cloneNode(true) as HTMLElement;
                       clone.style.display = 'flex';
                       
+                      // Optimize cloned SVGs for print crispness and scaling
+                      const clonedSvgs = clone.querySelectorAll('svg');
+                      clonedSvgs.forEach(svg => {
+                        svg.setAttribute('preserveAspectRatio', 'none');
+                        svg.querySelectorAll('*').forEach(child => {
+                          child.setAttribute('vector-effect', 'non-scaling-stroke');
+                        });
+                      });
+                      
                       let pw = '40mm';
                       let ph = '30mm';
                       if (t.paperSize === 'etiket_60x40') { pw = '60mm'; ph = '40mm'; }
@@ -1049,6 +1076,8 @@ export default function StoklarView({
                               }
                               #printable-barcode-content svg * {
                                 shape-rendering: crispEdges !important;
+                                stroke: #000 !important;
+                                fill: #000 !important;
                               }
                             </style>
                           </head>
@@ -1109,13 +1138,13 @@ export default function StoklarView({
 
             const widthStyle = { width: w, height: h };
             
-            let bcWidth = 1.2;
+            let bcWidth = 1;
             let bcHeight = 60;
             let bcFontSize = 10;
             
             if (is40x20) { bcWidth = 1; bcHeight = 35; bcFontSize = 8; }
-            if (is60x40) { bcWidth = 1.8; bcHeight = 80; bcFontSize = 14; }
-            if (is80x50) { bcWidth = 2.2; bcHeight = 100; bcFontSize = 16; }
+            if (is60x40) { bcWidth = 2; bcHeight = 80; bcFontSize = 14; }
+            if (is80x50) { bcWidth = 2; bcHeight = 100; bcFontSize = 16; }
             if (is40x60) { bcWidth = 1; bcHeight = 100; bcFontSize = 12; }
             
             return (
@@ -1148,7 +1177,7 @@ export default function StoklarView({
                     {printingStock.salesPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
                   </div>
                 )}
-                <div className="flex justify-center w-full px-1">
+                <div className="flex justify-center w-full px-1 barcode-svg-container">
                   <Barcode 
                     value={barcodeValue} 
                     format={t.barcodeFormat || "CODE128"} 

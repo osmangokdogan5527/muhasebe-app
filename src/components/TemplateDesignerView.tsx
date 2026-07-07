@@ -167,6 +167,17 @@ export default function TemplateDesignerView() {
     }
   }, []);
 
+  // Optimize all barcode SVGs on the screen for maximum crispness
+  useEffect(() => {
+    const svgs = document.querySelectorAll('.barcode-svg-container svg');
+    svgs.forEach(svg => {
+      svg.setAttribute('preserveAspectRatio', 'none');
+      svg.querySelectorAll('*').forEach(child => {
+        child.setAttribute('vector-effect', 'non-scaling-stroke');
+      });
+    });
+  }, [activeTemplateId, templates]);
+
   const handleSaveCompanySettings = () => {
     const existing = localStorage.getItem('storm_muhasebe_print_settings');
     let parsed = {};
@@ -364,13 +375,13 @@ export default function TemplateDesignerView() {
                     125,00 ₺
                   </div>
                 )}
-                <div className="flex justify-center w-full mt-1">
+                <div className="flex justify-center w-full mt-1 barcode-svg-container">
                   <Barcode 
                     value={activeTemplate.barcodeFormat === 'EAN13' ? "8691234567890" : "STK-10001"} 
                     format={activeTemplate.barcodeFormat || "CODE128"} 
-                    width={1.5} 
-                    height={40} 
-                    fontSize={10}
+                    width={['etiket_40x20', 'etiket_40x60'].includes(activeTemplate.paperSize) ? 1 : 2} 
+                    height={activeTemplate.paperSize === 'etiket_40x20' ? 30 : 50} 
+                    fontSize={activeTemplate.paperSize === 'etiket_40x20' ? 8 : 12}
                     margin={0}
                     background="transparent"
                   />

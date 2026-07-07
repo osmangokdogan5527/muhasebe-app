@@ -3,7 +3,7 @@
   "author": "Osman Gökdoğan",
   "description": "Ön Muhasebe ve Stok Takip Programı",
   "private": true,
-  "version": "1.5.4",
+  "version": "1.5.5",
   "type": "module",
   "main": "electron-main.cjs",
   "scripts": {
@@ -66,6 +66,12 @@
       "!.env*",
       "!tsconfig*.json",
       "!vite.config.ts",
+      "!firestore.rules",
+      "!firebase-blueprint.json",
+      "!firebase-applet-config.json",
+      "!metadata.json",
+      "!.gitignore",
+      "!package-lock.json",
       "!node_modules/.cache/**/*",
       "!node_modules/**/*.map",
       "!node_modules/**/*.md"
@@ -82,8 +88,7 @@
     ]
   },
   "dependencies": {
-    "electron-updater": "^6.8.9",
-    "png-to-ico": "^3.0.2"
+    "electron-updater": "^6.8.9"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.14",
@@ -99,7 +104,6 @@
     "react-barcode": "^1.6.1",
     "react-dom": "^19.0.1",
     "recharts": "^3.9.0",
-    "sharp": "^0.35.3",
     "tailwindcss": "^4.1.14",
     "typescript": "~5.8.2",
     "vite": "^6.2.3",

@@ -24,7 +24,8 @@ import {
   updatePassword,
   reauthenticateWithGoogle,
   signInAnonymously,
-  setActiveUser
+  setActiveUser,
+  saveBankAccount
 } from './firebase';
 import DashboardView from './components/DashboardView';
 import CarilerView from './components/CarilerView';
@@ -104,7 +105,7 @@ const StormLogo = ({
     delete cleanedStyle.filter;
   }
 
-  const currentLogoTheme = logoTheme || localStorage.getItem('storm_muhasebe_logo_theme') || 'red';
+  const currentLogoTheme = logoTheme || localStorage.getItem('storm_muhasebe_logo_theme') || 'theme';
   const currentActiveTheme = theme || localStorage.getItem('kolay_hesap_accent_theme') || 'red';
 
   const effectiveTheme = currentLogoTheme === 'theme' ? currentActiveTheme : currentLogoTheme;
@@ -122,7 +123,7 @@ const StormLogo = ({
   let currentPattern = sidebarPattern || localStorage.getItem('storm_muhasebe_sidebar_pattern') || 'crystal';
   if (currentPattern === 'circles') currentPattern = 'flame';
   if (currentPattern === 'waves') currentPattern = 'chain';
-  const savedOpacity = sidebarPatternOpacity !== undefined ? sidebarPatternOpacity : parseFloat(localStorage.getItem('storm_muhasebe_sidebar_pattern_opacity') || '0.02');
+  const savedOpacity = sidebarPatternOpacity !== undefined ? sidebarPatternOpacity : parseFloat(localStorage.getItem('storm_muhasebe_sidebar_pattern_opacity') || '0.75');
   
   // Set texture opacity inside logo to be subtle but beautiful
   const opacity = Math.min(0.24, Math.max(0.08, savedOpacity * 5));
@@ -255,17 +256,19 @@ const StormLogo = ({
   );
 };
 
-const APP_VERSION = '1.5.4';
+const APP_VERSION = '1.5.5';
 
 const CHANGELOG = {
-  version: '1.5.4',
+  version: '1.5.5',
   features: [
-    "Barkod ve şablon tasarımcısı üzerindeki tüm yazı alanlarının (ürün adı, stok kodu, özel metin) tek satıra sabitlenmesi (truncate/whitespace-nowrap) sağlandı.",
-    "Baskı çıktısı alanında ve şablon önizlemesinde taşmaların tamamen engellenmesi amacıyla milimetrik hizalama ve ortalama özellikleri eklendi."
+    "Storm AI Asistanına sesli komut özelliği (Mikrofon ile sesli yazdırma) eklendi; artık doğrudan konuşarak veri girişi ve komut parsing yapılabilir.",
+    "Storm AI hızlı ekleme yetenekleri genişletilerek müşteri oluşturma ve tedarikçi ekleme komutları tamamen entegre edildi.",
+    "Kasa & Banka Detay görünümünde Kasa, Banka ve POS hesaplarının düzenlenmesi/güncellenmesi özelliği eklendi.",
+    "Merkez Kasa, Merkez Banka ve Merkez POS gibi ana hesaplar silmeye karşı kilitlendi (Lock simgesiyle) ve yapısı korunarak isim güncellemesine açıldı."
   ],
   fixes: [
-    "Kullanıcı basımlarında (stok barkod baskısı) yazıların alt satıra kayma ve tasarım düzenini bozma hatası giderildi.",
-    "Uygulama versiyonu v1.5.4 olarak güncellendi ve tüm web/masaüstü üretim derleme süreçleri başarıyla tamamlandı."
+    "Kasa & Banka listesindeki varsayılan ana hesapların yanlışlıkla silinmesi veya bozulması hatası tamamen giderildi.",
+    "Yapay zeka asistanının sesli tanıma entegrasyonu (Speech-to-Text / Web Speech API) tarayıcı uyumluluğu ile sorunsuz hale getirildi."
   ]
 };
 
@@ -466,6 +469,18 @@ export const PIN_ACCOUNTS = [
 
 const changelogData = [
   {
+    version: "1.5.5",
+    date: "07.07.2026",
+    changes: [
+      "Storm AI Yapay Zeka Asistanına mikrofon ile sesli komut / sesli yazma özelliği entegre edildi; doğrudan konuşarak veri girişi ve akıllı parsing desteği sağlandı.",
+      "Storm AI hızlı ekleme ve form öndoldurma yetenekleri genişletilerek müşteri oluşturma ve tedarikçi ekleme komutları tamamen desteklendi.",
+      "Kasa & Banka modülüne mevcut Kasa, Banka ve POS hesaplarının düzenlenmesi/güncellenmesi desteği eklendi.",
+      "Varsayılan ana hesaplar (Merkez Kasa, Merkez Banka, Merkez POS) için silme engelleme kilidi getirildi ve güvenli isim güncellemesi sağlandı.",
+      "Eksik veya silinmiş varsayılan ana hesapların uygulama yüklenirken otomatik olarak kontrol edilip eklenmesi (oto-tohumlama) sistemi kuruldu.",
+      "Uygulama versiyonu v1.5.5 olarak güncellendi ve tüm web/masaüstü üretim derleme süreçleri başarıyla tamamlandı."
+    ]
+  },
+  {
     version: "1.5.4",
     date: "07.07.2026",
     changes: [
@@ -615,7 +630,7 @@ export default function App() {
   });
 
   const [activeLogoTheme, setActiveLogoTheme] = useState<string>(() => {
-    return localStorage.getItem('storm_muhasebe_logo_theme') || 'red';
+    return localStorage.getItem('storm_muhasebe_logo_theme') || 'theme';
   });
 
   const [appFontSize, setAppFontSize] = useState<'small' | 'medium' | 'large'>(() => {
@@ -623,7 +638,7 @@ export default function App() {
   });
 
   const [sidebarBg, setSidebarBg] = useState<string>(() => {
-    return localStorage.getItem('storm_muhasebe_sidebar_bg') || '#ffffff';
+    return localStorage.getItem('storm_muhasebe_sidebar_bg') || '#1e293b';
   });
 
   const [sidebarPattern, setSidebarPattern] = useState<string>(() => {
@@ -631,11 +646,11 @@ export default function App() {
   });
 
   const [sidebarPatternOpacity, setSidebarPatternOpacity] = useState<number>(() => {
-    return parseFloat(localStorage.getItem('storm_muhasebe_sidebar_pattern_opacity') || '0.02');
+    return parseFloat(localStorage.getItem('storm_muhasebe_sidebar_pattern_opacity') || '0.75');
   });
 
   const [sidebarPatternColor, setSidebarPatternColor] = useState<'white' | 'black' | 'theme'>(() => {
-    return (localStorage.getItem('storm_muhasebe_sidebar_pattern_color') as 'white' | 'black' | 'theme') || 'white';
+    return (localStorage.getItem('storm_muhasebe_sidebar_pattern_color') as 'white' | 'black' | 'theme') || 'theme';
   });
 
   const [hiddenTabs, setHiddenTabs] = useState<string[]>(() => {
@@ -918,14 +933,14 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const required = ['dashboard', 'cariler', 'stoklar', 'islemler', 'ceksenet', 'masraflar', 'kasa', 'krediler', 'calisanlar', 'raporlar', 'ayarlar'];
+          const required = ['dashboard', 'cariler', 'kasa', 'islemler', 'stoklar', 'masraflar', 'calisanlar', 'ceksenet', 'krediler', 'raporlar', 'ayarlar'];
           const filtered = parsed.filter((t: string) => required.includes(t));
           const missing = required.filter((t: string) => !filtered.includes(t));
           return [...filtered, ...missing];
         }
       } catch (e) {}
     }
-    return ['dashboard', 'cariler', 'stoklar', 'islemler', 'ceksenet', 'masraflar', 'kasa', 'krediler', 'calisanlar', 'raporlar', 'ayarlar'];
+    return ['dashboard', 'cariler', 'kasa', 'islemler', 'stoklar', 'masraflar', 'calisanlar', 'ceksenet', 'krediler', 'raporlar', 'ayarlar'];
   });
 
   const moveTab = (index: number, direction: 'up' | 'down') => {
@@ -1365,10 +1380,33 @@ export default function App() {
       checkLoadingFinished();
     });
 
-    const unsubscribeBankAccounts = subscribeBankAccounts((data) => {
-      setBankAccounts(data);
-      bankAccountsLoaded = true;
-      checkLoadingFinished();
+    let isSeeding = false;
+    const unsubscribeBankAccounts = subscribeBankAccounts(async (data) => {
+      const missingDefaults = [];
+      const hasKasa = data.some(acc => acc.id === 'merkez_kasa');
+      const hasBanka = data.some(acc => acc.id === 'merkez_banka');
+      const hasPos = data.some(acc => acc.id === 'merkez_pos');
+      
+      if (!hasKasa) missingDefaults.push({ id: 'merkez_kasa', name: 'MERKEZ KASA', type: 'kasa', currency: 'TRY', initialBalance: 0, isDefault: true, createdAt: new Date().toISOString() });
+      if (!hasBanka) missingDefaults.push({ id: 'merkez_banka', name: 'MERKEZ BANKA', type: 'banka', currency: 'TRY', initialBalance: 0, isDefault: true, createdAt: new Date().toISOString() });
+      if (!hasPos) missingDefaults.push({ id: 'merkez_pos', name: 'MERKEZ POS', type: 'pos', currency: 'TRY', initialBalance: 0, isDefault: true, createdAt: new Date().toISOString() });
+
+      if (missingDefaults.length > 0 && !isSeeding) {
+        isSeeding = true;
+        try {
+          for (const acc of missingDefaults) {
+            await saveBankAccount(acc, acc.id);
+          }
+        } catch (e) {
+          console.error("Default bank accounts seed error:", e);
+        } finally {
+          isSeeding = false;
+        }
+      } else {
+        setBankAccounts(data);
+        bankAccountsLoaded = true;
+        checkLoadingFinished();
+      }
     });
 
     const unsubscribeAccountTransactions = subscribeAccountTransactions((data) => {
@@ -2345,11 +2383,30 @@ export default function App() {
                 <span>Ayarlar Tarayıcıya Otomatik Kaydedilir</span>
                 <button
                   onClick={() => {
-                    const defaultOrder = ['dashboard', 'cariler', 'stoklar', 'islemler', 'ceksenet', 'masraflar', 'kasa', 'calisanlar', 'ayarlar'];
+                    const defaultOrder = ['dashboard', 'cariler', 'kasa', 'islemler', 'stoklar', 'masraflar', 'calisanlar', 'ceksenet', 'krediler', 'raporlar', 'ayarlar'];
                     setTabOrder(defaultOrder);
                     setHiddenTabs([]);
                     localStorage.setItem('storm_muhasebe_tab_order', JSON.stringify(defaultOrder));
                     localStorage.setItem('storm_muhasebe_hidden_tabs', JSON.stringify([]));
+                    
+                    // Also reset visual settings to user requested defaults
+                    setActiveTheme('red');
+                    localStorage.setItem('kolay_hesap_accent_theme', 'red');
+                    
+                    setActiveLogoTheme('theme');
+                    localStorage.setItem('storm_muhasebe_logo_theme', 'theme');
+                    
+                    setSidebarBg('#1e293b');
+                    localStorage.setItem('storm_muhasebe_sidebar_bg', '#1e293b');
+                    
+                    setSidebarPattern('crystal');
+                    localStorage.setItem('storm_muhasebe_sidebar_pattern', 'crystal');
+                    
+                    setSidebarPatternOpacity(0.75);
+                    localStorage.setItem('storm_muhasebe_sidebar_pattern_opacity', '0.75');
+                    
+                    setSidebarPatternColor('theme');
+                    localStorage.setItem('storm_muhasebe_sidebar_pattern_color', 'theme');
                   }}
                   className="text-teal-600 hover:text-teal-700 font-bold transition uppercase tracking-widest text-[9px] hover:underline"
                 >

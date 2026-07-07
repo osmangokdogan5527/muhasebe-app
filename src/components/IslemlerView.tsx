@@ -1777,7 +1777,7 @@ export default function IslemlerView({
                             if (iframeDoc) {
                               const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
                                 .map(s => s.outerHTML)
-                                .join('\\n');
+                                .join('\n');
                                 
                               const clone = printContent.cloneNode(true) as HTMLElement;
                               clone.style.transform = 'none';
@@ -1899,192 +1899,166 @@ export default function IslemlerView({
                     >
                       <div style={{ zoom: textScale }}>
                         {/* Header Logo & Address */}
-                      <div className="flex justify-between items-start border-b border-zinc-200 pb-5 mb-5">
-                        <div className="space-y-2">
+                      <div className="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-6">
+                        <div className="max-w-[50%]">
                           {/* Changeable Logo renderer */}
                           {activeTemplate?.showLogo !== false && (
-                            printSettings.logoType === 'image' && printSettings.logoImageUrl ? (
-                              <div className="flex items-center">
-                                <img src={printSettings.logoImageUrl} alt={printSettings.companyName} className="h-10 max-w-[200px] object-contain" referrerPolicy="no-referrer" />
-                              </div>
-                            ) : (
-                              <h2 className="text-xl font-extrabold tracking-tight uppercase text-zinc-900 leading-none">{printSettings.companyName || 'LOGO'}</h2>
-                            )
+                            <div className="mb-3">
+                              {printSettings.logoType === 'image' && printSettings.logoImageUrl ? (
+                                <img src={printSettings.logoImageUrl} alt={printSettings.companyName} className="h-12 max-w-[200px] object-contain" referrerPolicy="no-referrer" />
+                              ) : (
+                                <h2 className="text-2xl font-extrabold tracking-tight uppercase text-zinc-900 leading-none">{printSettings.companyName || 'LOGO'}</h2>
+                              )}
+                            </div>
                           )}
                           
                           {activeTemplate?.showCompanyAddress !== false && (
-                            <div className="text-xs text-zinc-600 max-w-sm font-sans leading-relaxed">
-                              <p className="whitespace-pre-line">{printSettings.companyAddress}</p>
-                              <p className="mt-1 font-bold">{printSettings.companyPhone}</p>
+                            <div className="text-[10px] text-slate-600 leading-tight whitespace-pre-line font-sans">
+                              {activeTemplate?.showLogo === false && <strong className="text-sm text-slate-900 block mb-1">{printSettings.companyName}</strong>}
+                              <p>{printSettings.companyAddress}</p>
+                              <p className="mt-1 font-bold">Tel: {printSettings.companyPhone}</p>
                             </div>
                           )}
                         </div>
 
                         {/* Document Details (Tarih, No) */}
-                        <div className="text-right text-xs text-zinc-800 space-y-1 font-mono">
-                          <div>
-                            <span className="text-zinc-400 font-sans uppercase text-[10px] tracking-wider block font-bold">Belge Tarihi</span>
-                            <span className="font-bold">{selectedPrintTransaction.date}</span>
+                        <div className="text-right">
+                          <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
+                            {dynamicPrintVars?.title || 'BELGE'}
+                          </h1>
+                          <div className="text-xs text-slate-500 mt-2 font-mono">
+                            Tarih: {selectedPrintTransaction.date}
+                            <br />
+                            Belge No / Seri: {selectedPrintTransaction.invoiceNo || `INV-${Math.floor(Math.random() * 10000)}`}
                           </div>
-                          {selectedPrintTransaction.invoiceNo && (
-                            <div className="pt-1">
-                              <span className="text-zinc-400 font-sans uppercase text-[10px] tracking-wider block font-bold">Belge No / Seri</span>
-                              <span className="font-bold">{selectedPrintTransaction.invoiceNo}</span>
-                            </div>
-                          )}
                         </div>
-                      </div>
-
-                      {/* Centered Document Title */}
-                      <div className="text-center my-6 space-y-1">
-                        <h1 className="text-lg font-extrabold uppercase tracking-[0.25em] text-black border-y border-zinc-200 py-2.5">
-                          {dynamicPrintVars?.title}
-                        </h1>
-                        <p className="text-[11px] text-zinc-500 italic font-sans">
-                          {selectedPrintTransaction.type === 'sale' && 'Satış işlemine ait bilgiler aşağıdaki gibidir.'}
-                          {selectedPrintTransaction.type === 'purchase' && 'Alış işlemine ait bilgiler aşağıdaki gibidir.'}
-                          {selectedPrintTransaction.type === 'sale_return' && 'Satıştan iade işlemine ait bilgiler aşağıdaki gibidir.'}
-                          {selectedPrintTransaction.type === 'purchase_return' && 'Alıştan iade işlemine ait bilgiler aşağıdaki gibidir.'}
-                          {selectedPrintTransaction.type === 'collection' && 'Tahsilat işlemine ait bilgiler aşağıdaki gibidir.'}
-                          {selectedPrintTransaction.type === 'payment' && 'Ödeme işlemine ait bilgiler aşağıdaki gibidir.'}
-                        </p>
                       </div>
 
                       {/* Customer Account / Recipient */}
-                      <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-b border-zinc-100 py-4">
-                        <div>
-                          <div className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Müşteri / Cari Hesap</div>
-                          <div className="text-base font-extrabold text-zinc-900 mt-0.5">{selectedPrintTransaction.cariName}</div>
+                      <div className="flex justify-between mb-8">
+                        <div className="text-sm">
+                          <div className="font-bold text-slate-900 mb-1">Sayın,</div>
+                          <div className="text-slate-700">{selectedPrintTransaction.cariName}</div>
                           {currentCariForPrint && (
-                            <div className="text-xs text-zinc-600 mt-1 space-y-0.5 font-sans">
-                              {currentCariForPrint.phone && <p><strong>Tel:</strong> {currentCariForPrint.phone}</p>}
-                              {currentCariForPrint.email && <p><strong>E-posta:</strong> {currentCariForPrint.email}</p>}
+                            <div className="text-xs text-slate-500 mt-1 whitespace-pre-line font-sans">
+                              {currentCariForPrint.address && <p>{currentCariForPrint.address}</p>}
+                              {(currentCariForPrint.taxOffice || currentCariForPrint.taxNo) && (
+                                <p className="mt-1">
+                                  {currentCariForPrint.taxOffice ? `${currentCariForPrint.taxOffice} V.D.` : ""}
+                                  {currentCariForPrint.taxNo ? ` / No: ${currentCariForPrint.taxNo}` : ""}
+                                </p>
+                              )}
+                              {currentCariForPrint.phone && <p>Tel: {currentCariForPrint.phone}</p>}
                             </div>
                           )}
                         </div>
-                        {currentCariForPrint && (currentCariForPrint.address || currentCariForPrint.taxOffice || currentCariForPrint.taxNo) && (
-                          <div className="sm:text-right text-xs text-zinc-600 space-y-1 font-sans">
-                            <div className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Fatura & Adres Bilgileri</div>
-                            {currentCariForPrint.address && <p className="whitespace-pre-line mt-0.5">{currentCariForPrint.address}</p>}
-                            {(currentCariForPrint.taxOffice || currentCariForPrint.taxNo) && (
-                              <p className="font-mono text-[10px] font-semibold text-zinc-700 bg-zinc-50 border border-zinc-100 px-2 py-0.5 rounded-sm inline-block mt-1">
-                                {currentCariForPrint.taxOffice ? `${currentCariForPrint.taxOffice} V.D.` : ""}
-                                {currentCariForPrint.taxNo ? ` / No: ${currentCariForPrint.taxNo}` : ""}
-                              </p>
-                            )}
-                          </div>
-                        )}
+                        <div className="text-right text-xs">
+                          {activeTemplate?.showValidityDate && (
+                            <div className="text-slate-600 mb-1">
+                              Geçerlilik Tarihi: <span className="font-bold">{new Date(Date.now() + 7 * 86400000).toLocaleDateString('tr-TR')}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Itemized Table */}
-                      <div className="mb-6">
-                        <table className="w-full text-left text-xs border-collapse">
-                          <thead>
-                            <tr className="border-t-2 border-b-2 border-zinc-900 font-bold text-zinc-800">
-                              <th className="py-2.5 w-8">#</th>
-                              <th className="py-2.5">Açıklama</th>
-                              <th className="py-2.5 text-center w-20">Miktar</th>
-                              {activeTemplate?.showUnitPrice !== false && <th className="py-2.5 text-right w-24">Fiyat</th>}
-                              {activeTemplate?.showDiscountRate && <th className="py-2.5 text-center w-16">İnd.</th>}
-                              {activeTemplate?.showVatRate && <th className="py-2.5 text-center w-16">KDV</th>}
-                              {activeTemplate?.showExVatAmount && <th className="py-2.5 text-right w-24">Tutar (KDV Hariç)</th>}
-                              <th className="py-2.5 text-right w-28">Toplam</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-zinc-200">
-                            {selectedPrintTransaction.items && selectedPrintTransaction.items.length > 0 ? (
-                              selectedPrintTransaction.items.map((item, idx) => (
-                                <tr key={idx} className="text-zinc-800">
-                                  <td className="py-2.5 font-semibold text-zinc-400">{idx + 1}</td>
-                                  <td className="py-2.5 font-bold uppercase">{item.stockName}</td>
-                                  <td className="py-2.5 text-center text-zinc-600 font-medium">
-                                    {item.quantity} {item.unit || 'Adet'}
-                                  </td>
-                                  {activeTemplate?.showUnitPrice !== false && (
-                                    <td className="py-2.5 text-right font-mono">
-                                      {formatPrintCurrency(item.price, selectedPrintTransaction.currency || 'TRY')}
-                                    </td>
-                                  )}
-                                  {activeTemplate?.showDiscountRate && (
-                                    <td className="py-2.5 text-center text-zinc-600 font-mono">%0</td>
-                                  )}
-                                  {activeTemplate?.showVatRate && (
-                                    <td className="py-2.5 text-center text-zinc-600 font-mono">%{item.taxRate || 0}</td>
-                                  )}
-                                  {activeTemplate?.showExVatAmount && (
-                                    <td className="py-2.5 text-right font-mono">
-                                      {formatPrintCurrency(item.price * item.quantity, selectedPrintTransaction.currency || 'TRY')}
-                                    </td>
-                                  )}
-                                  <td className="py-2.5 text-right font-bold font-mono">
-                                    {formatPrintCurrency(item.total, selectedPrintTransaction.currency || 'TRY')}
-                                  </td>
-                                </tr>
-                              ))
-                            ) : (
-                              /* Receipts fallback (collection or payment) */
-                              <tr className="text-zinc-800">
-                                <td className="py-3 font-semibold text-zinc-400">1</td>
-                                <td className="py-3 font-bold uppercase">
-                                  {selectedPrintTransaction.type === 'collection' ? 'Tahsilat Makbuzu' : 'Ödeme Makbuzu'}
-                                  <span className="block text-[10px] text-zinc-500 font-normal normal-case mt-0.5">
-                                    {selectedPrintTransaction.description || 'Cari hesaba yansıtılan finans hareketi.'}
-                                  </span>
+                      <table className="w-full text-left text-xs mb-8">
+                        <thead className="bg-slate-100 border-y border-slate-300">
+                          <tr>
+                            <th className="py-2 px-2 font-bold text-slate-700">Ürün / Hizmet</th>
+                            <th className="py-2 px-2 font-bold text-slate-700 text-center">Miktar</th>
+                            {activeTemplate?.showUnitPrice !== false && <th className="py-2 px-2 font-bold text-slate-700 text-right">Birim Fiyat</th>}
+                            {activeTemplate?.showDiscountRate && <th className="py-2 px-2 font-bold text-slate-700 text-center">İndirim</th>}
+                            {activeTemplate?.showVatRate && <th className="py-2 px-2 font-bold text-slate-700 text-center">KDV</th>}
+                            {activeTemplate?.showExVatAmount && <th className="py-2 px-2 font-bold text-slate-700 text-right">KDV Hariç</th>}
+                            <th className="py-2 px-2 font-bold text-slate-700 text-right">Toplam</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedPrintTransaction.items && selectedPrintTransaction.items.length > 0 ? (
+                            selectedPrintTransaction.items.map((item, idx) => (
+                              <tr key={idx} className="border-b border-slate-100">
+                                <td className="py-2 px-2 text-slate-800">
+                                  {item.stockName}
                                 </td>
-                                <td className="py-3 text-center text-zinc-600 font-mono">1 Adet</td>
+                                <td className="py-2 px-2 text-slate-600 text-center">
+                                  {item.quantity} {item.unit || 'Adet'}
+                                </td>
                                 {activeTemplate?.showUnitPrice !== false && (
-                                  <td className="py-3 text-right font-mono">
-                                    {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
+                                  <td className="py-2 px-2 text-slate-600 text-right font-mono">
+                                    {formatPrintCurrency(item.price, selectedPrintTransaction.currency || 'TRY')}
                                   </td>
                                 )}
-                                {activeTemplate?.showDiscountRate && <td className="py-3"></td>}
-                                {activeTemplate?.showVatRate && <td className="py-3"></td>}
-                                {activeTemplate?.showExVatAmount && <td className="py-3"></td>}
-                                <td className="py-3 text-right font-bold font-mono">
-                                  {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
+                                {activeTemplate?.showDiscountRate && (
+                                  <td className="py-2 px-2 text-slate-600 text-center font-mono">%0</td>
+                                )}
+                                {activeTemplate?.showVatRate && (
+                                  <td className="py-2 px-2 text-slate-600 text-center font-mono">%{item.taxRate || 0}</td>
+                                )}
+                                {activeTemplate?.showExVatAmount && (
+                                  <td className="py-2 px-2 text-slate-600 text-right font-mono">
+                                    {formatPrintCurrency(item.price * item.quantity, selectedPrintTransaction.currency || 'TRY')}
+                                  </td>
+                                )}
+                                <td className="py-2 px-2 font-bold text-slate-900 text-right font-mono">
+                                  {formatPrintCurrency(item.total, selectedPrintTransaction.currency || 'TRY')}
                                 </td>
                               </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                            ))
+                          ) : (
+                            /* Receipts fallback (collection or payment) */
+                            <tr className="border-b border-slate-100">
+                              <td className="py-2 px-2 text-slate-800">
+                                {selectedPrintTransaction.type === 'collection' ? 'Tahsilat Makbuzu' : 'Ödeme Makbuzu'}
+                                <div className="text-[10px] text-slate-500 mt-0.5">
+                                  {selectedPrintTransaction.description || 'Cari hesaba yansıtılan finans hareketi.'}
+                                </div>
+                              </td>
+                              <td className="py-2 px-2 text-slate-600 text-center font-mono">1 Adet</td>
+                              {activeTemplate?.showUnitPrice !== false && (
+                                <td className="py-2 px-2 text-slate-600 text-right font-mono">
+                                  {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
+                                </td>
+                              )}
+                              {activeTemplate?.showDiscountRate && <td className="py-2 px-2"></td>}
+                              {activeTemplate?.showVatRate && <td className="py-2 px-2"></td>}
+                              {activeTemplate?.showExVatAmount && <td className="py-2 px-2"></td>}
+                              <td className="py-2 px-2 font-bold text-slate-900 text-right font-mono">
+                                {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
 
                       {/* Summary (Bakiye & Toplam) */}
-                      <div className="flex justify-between items-start border-t border-zinc-200 pt-4 mb-8">
-                        {/* Left: Customer Balance info */}
-                        <div>
+                      <div className="flex justify-between mb-12">
+                        <div className="w-1/2 flex flex-col justify-end">
                           {dynamicPrintVars?.showBalance && currentCariForPrint && (
-                            <div className="text-zinc-700 bg-zinc-50 p-3 rounded-lg border border-zinc-100 font-medium">
-                              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block mb-0.5 font-sans">Müşteri Hesap Bakiyesi</span>
-                              <span className="text-xs font-bold text-zinc-800 font-mono">
-                                Güncel bakiyeniz: {formatPrintCurrency(currentCariForPrint.balance, currentCariForPrint.currency || 'TRY')}
-                              </span>
+                            <div className="text-xs text-slate-600 border border-slate-200 p-3 rounded bg-slate-50 inline-block w-max font-mono">
+                              Güncel Bakiye: <span className="font-bold text-slate-900">{formatPrintCurrency(currentCariForPrint.balance, currentCariForPrint.currency || 'TRY')}</span>
+                            </div>
+                          )}
+                          {dynamicPrintVars?.notes && activeTemplate?.showFooter !== false && (
+                            <div className="mt-4">
+                              <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-wider mb-1">AÇIKLAMA</h4>
+                              <p className="text-xs text-zinc-500 leading-relaxed whitespace-pre-line font-sans">
+                                {dynamicPrintVars.notes}
+                              </p>
                             </div>
                           )}
                         </div>
-
-                        {/* Right: Total Amount */}
-                        <div className="text-right">
-                          <div className="text-zinc-400 uppercase text-[10px] tracking-widest font-bold">Toplam Tutar</div>
-                          <div className="text-xl font-black text-black font-mono mt-1">
-                            {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
+                        <div className="w-64">
+                          <div className="flex justify-between py-1 text-sm border-b border-slate-200 font-bold">
+                            <span className="text-slate-900 uppercase">Toplam Tutar:</span>
+                            <span className="text-slate-900 font-mono">{formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}</span>
                           </div>
                         </div>
                       </div>
 
-                      {/* Explanation Notes Footer */}
-                      {dynamicPrintVars?.notes && activeTemplate?.showFooter !== false && (
-                        <div className="border-t border-zinc-100 pt-4 mt-8">
-                          <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-wider">Açıklama</h4>
-                          <p className="text-xs text-zinc-500 leading-relaxed mt-1.5 whitespace-pre-line">
-                            {dynamicPrintVars.notes}
-                          </p>
-                        </div>
-                      )}
-
                       {/* Subtle footer credit */}
                       {activeTemplate?.showFooter !== false && (
-                        <div className="text-center text-[9px] text-zinc-400 mt-16 pt-4 border-t border-zinc-100 font-mono uppercase tracking-widest">
+                        <div className="text-[10px] text-slate-500 text-center font-mono uppercase tracking-widest pt-4">
                           On Muhasebe Bilgi Sistemi Tarafından Üretilmiştir.
                         </div>
                       )}
