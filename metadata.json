@@ -1,6 +1,6 @@
 {
   "name": "STORM MUHASEBE",
   "description": "Web tabanlı, mobil uyumlu, stok ve cari takibi ile raporlama sunan basit bulut muhasebe uygulaması.",
-  "requestFramePermissions": ["camera", "microphone"],
+  "requestFramePermissions": ["camera", "microphone", "speech-recognition"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

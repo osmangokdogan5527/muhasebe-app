@@ -967,13 +967,17 @@ export default function StoklarView({
                       const is60x40 = t.paperSize === 'etiket_60x40';
                       const is40x60 = t.paperSize === 'etiket_40x60';
                       const is80x50 = t.paperSize === 'etiket_80x50';
+                      const isOzel = t.paperSize === 'etiket_ozel';
                       
                       let w = 200; // 40mm scaled x5
                       let h = 150; // 30mm scaled x5
-                      if (is60x40) { w = 300; h = 200; }
-                      if (is40x60) { w = 200; h = 300; }
-                      if (is80x50) { w = 400; h = 250; }
-                      if (is40x20) { w = 200; h = 100; }
+                      if (isOzel) {
+                        w = (t.customWidthCm || 6) * 50;
+                        h = (t.customHeightCm || 4) * 50;
+                      } else if (is60x40) { w = 300; h = 200; }
+                      else if (is40x60) { w = 200; h = 300; }
+                      else if (is80x50) { w = 400; h = 250; }
+                      else if (is40x20) { w = 200; h = 100; }
                       
                       let bcWidth = 1;
                       let bcHeight = 40;
@@ -981,50 +985,145 @@ export default function StoklarView({
                       if (is40x20) { bcWidth = 1; bcHeight = 30; bcFontSize = 8; }
                       if (is60x40 || is80x50) { bcWidth = 2; bcHeight = 50; bcFontSize = 12; }
                       
+                      const imgSize = (t.barcodeImageSize || 64) * 0.5;
+                      const imgEl = (t.showImage && printingStock.imageUrl) ? (
+                        <img 
+                          key="img"
+                          src={printingStock.imageUrl} 
+                          alt="Ürün Resmi" 
+                          className="object-cover rounded filter grayscale"
+                          style={{ 
+                            width: `${imgSize}px`, 
+                            height: `${imgSize}px`,
+                            WebkitFilter: 'grayscale(100%)', 
+                            mixBlendMode: 'multiply' 
+                          }}
+                        />
+                      ) : null;
+                      
+                      const nameEl = t.showBarcodeName !== false ? (
+                        <div 
+                          key="name" 
+                          className="font-bold text-center whitespace-nowrap truncate leading-tight uppercase w-full px-1 text-black"
+                          style={{
+                            fontSize: t.barcodeNameSize ? `${t.barcodeNameSize * 0.5}px` : (is60x40 || is80x50 ? '12px' : '10px'),
+                          }}
+                        >
+                          {printingStock.name}
+                        </div>
+                      ) : null;
+                      
+                      const codeEl = (t.showBarcodeCode !== false && printingStock.code) ? (
+                        <div 
+                          key="code" 
+                          className="font-medium text-gray-700 text-center whitespace-nowrap truncate leading-tight uppercase w-full px-1"
+                          style={{
+                            fontSize: t.barcodeCodeSize ? `${t.barcodeCodeSize * 0.5}px` : (is60x40 || is80x50 ? '10px' : '9px'),
+                          }}
+                        >
+                          {printingStock.code}
+                        </div>
+                      ) : null;
+                      
+                      const customEl = (t.showCustomText && t.customTextContent) ? (
+                        <div 
+                          key="custom" 
+                          className="font-medium text-gray-800 text-center whitespace-nowrap truncate leading-tight uppercase w-full px-1"
+                          style={{
+                            fontSize: t.barcodeCustomTextSize ? `${t.barcodeCustomTextSize * 0.5}px` : (is60x40 || is80x50 ? '11px' : '10px'),
+                          }}
+                        >
+                          {t.customTextContent}
+                        </div>
+                      ) : null;
+                      
+                      const priceEl = t.showBarcodePrice !== false ? (
+                        <div 
+                          key="price" 
+                          className="font-black text-center text-black"
+                          style={{
+                            fontSize: t.barcodePriceSize ? `${t.barcodePriceSize * 0.5}px` : (is60x40 || is80x50 ? '16px' : '14px'),
+                          }}
+                        >
+                          {printingStock.salesPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                        </div>
+                      ) : null;
+                      
+                      const barcodeEl = (
+                        <div key="barcode" className="flex justify-center w-full overflow-hidden barcode-svg-container">
+                          <Barcode renderer="img" 
+                            value={barcodeValue} 
+                            format={t.barcodeFormat || "CODE128"} 
+                            width={t.barcodeWidthScale ? t.barcodeWidthScale * 0.5 : bcWidth} 
+                            height={t.barcodeHeight ? t.barcodeHeight * 0.5 : bcHeight} 
+                            fontSize={t.barcodeFontSize ? t.barcodeFontSize * 0.5 : bcFontSize}
+                            margin={0}
+                            background="#ffffff"
+                            displayValue={true}
+                          />
+                        </div>
+                      );
+
+                      const elements = [];
+                      if (t.imagePosition === 'top') elements.push(imgEl);
+                      if (t.barcodePosition === 'top') elements.push(barcodeEl);
+                      elements.push(nameEl, codeEl, customEl, priceEl);
+                      if (t.barcodePosition !== 'top') elements.push(barcodeEl);
+                      if (t.imagePosition === 'bottom') elements.push(imgEl);
+
+                      const filteredElements = elements.filter(Boolean);
+
+                      if (isOzel) {
+                        const renderOzelPreviewItem = (key: string, el: React.ReactNode) => {
+                          if (!el) return null;
+                          const positions = t.customPositions || {};
+                          const pos = positions[key] || { x: 50, y: 50 };
+                          return (
+                            <div 
+                              key={key} 
+                              className="absolute"
+                              style={{
+                                left: `${pos.x}%`,
+                                top: `${pos.y}%`,
+                                transform: 'translate(-50%, -50%)',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {el}
+                            </div>
+                          );
+                        };
+
+                        return (
+                          <div 
+                            className="border border-zinc-200 shadow-sm bg-white relative overflow-hidden"
+                            style={{ 
+                              width: `${w}px`, 
+                              height: `${h}px`,
+                              padding: t.barcodePadding !== undefined ? `${t.barcodePadding * 0.5}px` : '8px'
+                            }}
+                          >
+                            {t.showImage && renderOzelPreviewItem('image', imgEl)}
+                            {t.showBarcodeName !== false && renderOzelPreviewItem('name', nameEl)}
+                            {t.showBarcodeCode !== false && renderOzelPreviewItem('code', codeEl)}
+                            {(t.showCustomText && t.customTextContent) && renderOzelPreviewItem('customText', customEl)}
+                            {t.showBarcodePrice !== false && renderOzelPreviewItem('price', priceEl)}
+                            {renderOzelPreviewItem('barcode', barcodeEl)}
+                          </div>
+                        );
+                      }
+
                       return (
                         <div 
-                          className="border border-zinc-200 shadow-sm flex flex-col items-center justify-center bg-white p-2"
-                          style={{ width: `${w}px`, height: `${h}px` }}
+                          className="border border-zinc-200 shadow-sm flex flex-col items-center justify-center bg-white"
+                          style={{ 
+                            width: `${w}px`, 
+                            height: `${h}px`,
+                            padding: t.barcodePadding !== undefined ? `${t.barcodePadding * 0.5}px` : '8px',
+                            gap: t.barcodeGap !== undefined ? `${t.barcodeGap * 0.5}px` : '4px'
+                          }}
                         >
-                          {t.showImage && printingStock.imageUrl && (
-                            <img 
-                              src={printingStock.imageUrl} 
-                              alt="Ürün Resmi" 
-                              className={`object-cover mb-0.5 rounded ${is60x40 || is80x50 ? 'w-12 h-12' : (is40x20 ? 'w-6 h-6' : 'w-8 h-8')}`}
-                            />
-                          )}
-                          {t.showBarcodeName !== false && (
-                            <div className={`font-bold ${is60x40 || is80x50 ? 'text-[12px]' : (is40x20 ? 'text-[9px]' : 'text-[10px]')} mb-1 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
-                              {printingStock.name}
-                            </div>
-                          )}
-                          {t.showBarcodeCode !== false && printingStock.code && (
-                            <div className={`font-medium text-gray-700 ${is60x40 || is80x50 ? 'text-[10px]' : (is40x20 ? 'text-[8px]' : 'text-[9px]')} mb-0.5 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
-                              {printingStock.code}
-                            </div>
-                          )}
-                          {t.showCustomText && t.customTextContent && (
-                            <div className={`font-medium text-gray-800 ${is60x40 || is80x50 ? 'text-[11px]' : (is40x20 ? 'text-[9px]' : 'text-[10px]')} mb-0.5 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
-                              {t.customTextContent}
-                            </div>
-                          )}
-                          {t.showBarcodePrice !== false && (
-                            <div className={`font-black ${is60x40 || is80x50 ? 'text-lg' : (is40x20 ? 'text-xs' : 'text-sm')} mb-1`}>
-                              {printingStock.salesPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
-                            </div>
-                          )}
-                          <div className="flex justify-center w-full mt-1 overflow-hidden barcode-svg-container">
-                            <Barcode renderer="img" 
-                              value={barcodeValue} 
-                              format={t.barcodeFormat || "CODE128"} 
-                              width={bcWidth} 
-                              height={bcHeight} 
-                              fontSize={bcFontSize}
-                              margin={0}
-                              background="#ffffff"
-                              displayValue={true}
-                            />
-                          </div>
+                          {filteredElements}
                         </div>
                       );
                     })()}
@@ -1097,7 +1196,10 @@ export default function StoklarView({
                       if (iframeDoc) {
                         let pw = '40mm';
                         let ph = '30mm';
-                        if (t.paperSize === 'etiket_60x40') { pw = '60mm'; ph = '40mm'; }
+                        if (t.paperSize === 'etiket_ozel') {
+                          pw = `${(t.customWidthCm || 6) * 10}mm`;
+                          ph = `${(t.customHeightCm || 4) * 10}mm`;
+                        } else if (t.paperSize === 'etiket_60x40') { pw = '60mm'; ph = '40mm'; }
                         else if (t.paperSize === 'etiket_40x60') { pw = '40mm'; ph = '60mm'; }
                         else if (t.paperSize === 'etiket_80x50') { pw = '80mm'; ph = '50mm'; }
                         else if (t.paperSize === 'etiket_40x20') { pw = '40mm'; ph = '20mm'; }
@@ -1189,66 +1291,170 @@ export default function StoklarView({
             const is40x60 = t.paperSize === 'etiket_40x60';
             const is80x50 = t.paperSize === 'etiket_80x50';
             
+            const isOzel = t.paperSize === 'etiket_ozel';
+            
             let w = 400; // default 40x30 (scaled to pixels)
             let h = 300;
-            if (is60x40) { w = 600; h = 400; }
-            if (is40x60) { w = 400; h = 600; }
-            if (is80x50) { w = 800; h = 500; }
-            if (is40x20) { w = 400; h = 200; }
+            if (isOzel) {
+              w = Math.round((t.customWidthCm || 6) * 100);
+              h = Math.round((t.customHeightCm || 4) * 100);
+            } else if (is60x40) { w = 600; h = 400; }
+            else if (is40x60) { w = 400; h = 600; }
+            else if (is80x50) { w = 800; h = 500; }
+            else if (is40x20) { w = 400; h = 200; }
 
             const widthStyle = { width: `${w}px`, height: `${h}px`, backgroundColor: '#ffffff' };
             
-            let bcWidth = 2;
-            let bcHeight = 80;
-            let bcFontSize = 16;
+            const scaleFactor = 2.65;
+            const imgSize = (t.barcodeImageSize || 64) * scaleFactor;
             
-            if (is40x20) { bcWidth = 2; bcHeight = 50; bcFontSize = 14; }
-            if (is60x40) { bcWidth = 3; bcHeight = 110; bcFontSize = 20; }
-            if (is80x50) { bcWidth = 4; bcHeight = 140; bcFontSize = 24; }
-            if (is40x60) { bcWidth = 2; bcHeight = 160; bcFontSize = 20; }
+            const imgEl = (t.showImage && printingStock.imageUrl) ? (
+              <img 
+                key="img"
+                src={printingStock.imageUrl} 
+                alt="Ürün Resmi" 
+                className="object-cover rounded-sm filter grayscale"
+                style={{ 
+                  width: `${imgSize}px`, 
+                  height: `${imgSize}px`,
+                  WebkitFilter: 'grayscale(100%)', 
+                  mixBlendMode: 'multiply' 
+                }}
+              />
+            ) : null;
             
-            return (
-              <div id="printable-barcode-content" className="text-center flex flex-col items-center justify-center overflow-hidden bg-white text-black p-4" style={widthStyle}>
-                {t.showImage && printingStock.imageUrl && (
-                  <img 
-                    src={printingStock.imageUrl} 
-                    alt="Ürün Resmi" 
-                    className={`object-cover mb-1 rounded-sm filter grayscale ${is60x40 || is80x50 ? 'w-24 h-24' : (is40x20 ? 'w-12 h-12' : 'w-20 h-20')}`}
-                    style={{ WebkitFilter: 'grayscale(100%)', mixBlendMode: 'multiply' }}
-                  />
-                )}
-                {t.showBarcodeName !== false && (
-                  <div className={`font-bold ${is60x40 || is80x50 || is40x60 ? 'text-[24px]' : (is40x20 ? 'text-[16px]' : 'text-[20px]')} mb-1 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
-                    {printingStock.name}
+            const nameEl = t.showBarcodeName !== false ? (
+              <div 
+                key="name" 
+                className="font-bold w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase text-black"
+                style={{
+                  fontSize: `${(t.barcodeNameSize || 12) * scaleFactor}px`
+                }}
+              >
+                {printingStock.name}
+              </div>
+            ) : null;
+            
+            const codeEl = (t.showBarcodeCode !== false && printingStock.code) ? (
+              <div 
+                key="code" 
+                className="font-medium text-gray-700 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase"
+                style={{
+                  fontSize: `${(t.barcodeCodeSize || 10) * scaleFactor}px`
+                }}
+              >
+                {printingStock.code}
+              </div>
+            ) : null;
+            
+            const customEl = (t.showCustomText && t.customTextContent) ? (
+              <div 
+                key="custom" 
+                className="font-medium text-gray-800 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase"
+                style={{
+                  fontSize: `${(t.barcodeCustomTextSize || 11) * scaleFactor}px`
+                }}
+              >
+                {t.customTextContent}
+              </div>
+            ) : null;
+            
+            const priceEl = t.showBarcodePrice !== false ? (
+              <div 
+                key="price" 
+                className="font-black text-black text-center"
+                style={{
+                  fontSize: `${(t.barcodePriceSize || 14) * scaleFactor}px`
+                }}
+              >
+                {printingStock.salesPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+              </div>
+            ) : null;
+            
+            const bcWidth = (t.barcodeWidthScale || (['etiket_40x20', 'etiket_40x60'].includes(t.paperSize) ? 1 : 2)) * scaleFactor;
+            const bcHeight = (t.barcodeHeight || (t.paperSize === 'etiket_40x20' ? 30 : 50)) * scaleFactor;
+            const bcFontSize = (t.barcodeFontSize || (t.paperSize === 'etiket_40x20' ? 8 : 12)) * scaleFactor;
+
+            const barcodeEl = (
+              <div key="barcode" className="flex justify-center w-full barcode-svg-container">
+                <Barcode renderer="img" 
+                  value={barcodeValue} 
+                  format={t.barcodeFormat || "CODE128"} 
+                  width={bcWidth} 
+                  height={bcHeight} 
+                  fontSize={bcFontSize}
+                  margin={0}
+                  background="#ffffff"
+                  displayValue={true}
+                />
+              </div>
+            );
+
+            const elements = [];
+            if (t.imagePosition === 'top') elements.push(imgEl);
+            if (t.barcodePosition === 'top') elements.push(barcodeEl);
+            elements.push(nameEl, codeEl, customEl, priceEl);
+            if (t.barcodePosition !== 'top') elements.push(barcodeEl);
+            if (t.imagePosition === 'bottom') elements.push(imgEl);
+
+            const filteredElements = elements.filter(Boolean);
+
+            const finalPadding = (t.barcodePadding !== undefined ? t.barcodePadding : 8) * scaleFactor;
+            const finalGap = (t.barcodeGap !== undefined ? t.barcodeGap : 4) * scaleFactor;
+
+            if (isOzel) {
+              const renderOzelPrintItem = (key: string, el: React.ReactNode) => {
+                if (!el) return null;
+                const positions = t.customPositions || {};
+                const pos = positions[key] || { x: 50, y: 50 };
+                return (
+                  <div 
+                    key={key} 
+                    style={{
+                      position: 'absolute',
+                      left: `${pos.x}%`,
+                      top: `${pos.y}%`,
+                      transform: 'translate(-50%, -50%)',
+                      whiteSpace: 'nowrap',
+                      margin: 0,
+                      padding: 0
+                    }}
+                  >
+                    {el}
                   </div>
-                )}
-                {t.showBarcodeCode !== false && printingStock.code && (
-                  <div className={`font-medium text-gray-700 ${is60x40 || is80x50 || is40x60 ? 'text-[20px]' : (is40x20 ? 'text-[14px]' : 'text-[18px]')} mb-1 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
-                    {printingStock.code}
-                  </div>
-                )}
-                {t.showCustomText && t.customTextContent && (
-                  <div className={`font-medium text-gray-800 ${is60x40 || is80x50 || is40x60 ? 'text-[22px]' : (is40x20 ? 'text-[15px]' : 'text-[19px]')} mb-1 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
-                    {t.customTextContent}
-                  </div>
-                )}
-                {t.showBarcodePrice !== false && (
-                  <div className={`font-black ${is60x40 || is80x50 || is40x60 ? 'text-[32px]' : (is40x20 ? 'text-[22px]' : 'text-[28px]')} mb-1`}>
-                    {printingStock.salesPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
-                  </div>
-                )}
-                <div className="flex justify-center w-full px-2 barcode-svg-container">
-                  <Barcode renderer="img" 
-                    value={barcodeValue} 
-                    format={t.barcodeFormat || "CODE128"} 
-                    width={bcWidth} 
-                    height={bcHeight} 
-                    fontSize={bcFontSize}
-                    margin={0}
-                    background="#ffffff"
-                    displayValue={true}
-                  />
+                );
+              };
+
+              return (
+                <div 
+                  id="printable-barcode-content" 
+                  className="bg-white text-black relative overflow-hidden" 
+                  style={{
+                    ...widthStyle,
+                    padding: `${finalPadding}px`
+                  }}
+                >
+                  {t.showImage && renderOzelPrintItem('image', imgEl)}
+                  {t.showBarcodeName !== false && renderOzelPrintItem('name', nameEl)}
+                  {t.showBarcodeCode !== false && renderOzelPrintItem('code', codeEl)}
+                  {(t.showCustomText && t.customTextContent) && renderOzelPrintItem('customText', customEl)}
+                  {t.showBarcodePrice !== false && renderOzelPrintItem('price', priceEl)}
+                  {renderOzelPrintItem('barcode', barcodeEl)}
                 </div>
+              );
+            }
+
+            return (
+              <div 
+                id="printable-barcode-content" 
+                className="text-center flex flex-col items-center justify-center overflow-hidden bg-white text-black" 
+                style={{
+                  ...widthStyle,
+                  padding: `${finalPadding}px`,
+                  gap: `${finalGap}px`
+                }}
+              >
+                {filteredElements}
               </div>
             );
           })()}

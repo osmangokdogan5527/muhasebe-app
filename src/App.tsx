@@ -259,19 +259,16 @@ const StormLogo = ({
   );
 };
 
-const APP_VERSION = '1.5.8';
+const APP_VERSION = '1.6.0';
 
 const CHANGELOG = {
-  version: '1.5.8',
+  version: '1.6.0',
   features: [
-    "Storm AI mikrofon ve ses tanıma sistemi kesintisiz (continuous) hale getirilerek uzun konuşmaların kesilmeden aktarılması sağlandı.",
-    "Hata / İstek Bildirim penceresi tamamen modernize edildi, daha okunaklı ve şık bir açık tema arayüzü ile yeniden tasarlandı.",
-    "Hata bildirimlerine veya yeni isteklere ekran görüntüsü/resim ekleme desteği getirildi.",
-    "Yüklenen resimlerin boyutunu otomatik optimize eden akıllı görsel sıkıştırma algoritması entegre edildi.",
-    "Yönetici Panelinde (Admin Dashboard) gönderilen geri bildirimlere eklenen ekran görüntülerini tam ekran pürüzsüz inceleyebilmek için gelişmiş görsel zoom (lightbox) özelliği eklendi."
+    "Özel Boyutlandırma (cm) özelliği ile barkod etiketleri artık milimetrik olarak özelleştirilebilir.",
+    "Sürükle-bırak kılavuz çizgileri ve hassas koordinat ayarları (%) eklendi."
   ],
   fixes: [
-    "Mikrofon açıkken konuşma algılanmadığında (no-speech) veya sessizlik anında ortaya çıkan rahatsız edici tarayıcı uyarı ve hata pencereleri giderildi, sistem arka planda kararlı çalışacak şekilde sessizleştirildi."
+    "Barkod yazdırma şablonları ve önizleme bileşenleri yeni dinamik boyutlandırmaya tam uyumlu hale getirildi."
   ]
 };
 
@@ -472,94 +469,13 @@ export const PIN_ACCOUNTS = [
 
 const changelogData = [
   {
-    version: "1.5.8",
+    version: "1.6.0",
     date: "08.07.2026",
     changes: [
-      "Storm AI yapay zeka asistanı kesintisiz (continuous) mikrofon dinleme özelliği ile güçlendirildi.",
-      "Ses algılanamadığında (no-speech) çıkan gereksiz uyarı bildirimleri kaldırılarak asistan deneyimi kararlı hale getirildi.",
-      "Hata / İstek Bildirimi modülü tamamen yenilenerek ekran görüntüsü/resim yükleme desteği eklendi.",
-      "Yüklenen resimleri performansı korumak için optimize eden istemci tarafı sıkıştırma algoritması (compressImage) uygulandı.",
-      "Yönetici Panelinde (Admin Dashboard) gönderilen geri bildirim görsellerini tam ekran pürüzsüz incelemek için visual zoom (lightbox) entegre edildi."
-    ]
-  },
-  {
-    version: "1.5.7",
-    date: "08.07.2026",
-    changes: [
-      "v1.5.7 sürüm hazırlıklarına başlandı.",
-      "Bundan sonraki tüm sistem ayarları, geliştirmeler ve hata düzeltmeleri bu sürüm altında taslak olarak yapılandırılacaktır."
-    ]
-  },
-  {
-    version: "1.5.6",
-    date: "07.07.2026",
-    changes: [
-      "Barkod yazdırma işleminde etiket yazıcılarında (Zebra vb.) ortaya çıkan barkodların 'siyah büyük kutu' şeklinde çıkması sorunu çözüldü.",
-      "React-Barcode altyapısı SVG modundan Base64 Image (canvas rasterizasyonu) formatına geçirilerek yazdırma anında CSS ve vektörel gerilme sorunları önlendi.",
-      "Tasarım SVG optimizasyonu kuralları barkod görselleri (img) için esnetildi, böylece termal baskılarda pürüzsüz sonuç alındı.",
-      "Uygulama versiyonu v1.5.6 olarak güncellendi ve tüm masaüstü/web üretim derleme süreçleri başarıyla tamamlandı."
-    ]
-  },
-  {
-    version: "1.5.5",
-    date: "07.07.2026",
-    changes: [
-      "Storm AI Yapay Zeka Asistanına mikrofon ile sesli komut / sesli yazma özelliği entegre edildi; doğrudan konuşarak veri girişi ve akıllı parsing desteği sağlandı.",
-      "Storm AI hızlı ekleme ve form öndoldurma yetenekleri genişletilerek müşteri oluşturma ve tedarikçi ekleme komutları tamamen desteklendi.",
-      "Kasa & Banka modülüne mevcut Kasa, Banka ve POS hesaplarının düzenlenmesi/güncellenmesi desteği eklendi.",
-      "Varsayılan ana hesaplar (Merkez Kasa, Merkez Banka, Merkez POS) için silme engelleme kilidi getirildi ve güvenli isim güncellemesi sağlandı.",
-      "Eksik veya silinmiş varsayılan ana hesapların uygulama yüklenirken otomatik olarak kontrol edilip eklenmesi (oto-tohumlama) sistemi kuruldu.",
-      "Uygulama versiyonu v1.5.5 olarak güncellendi ve tüm web/masaüstü üretim derleme süreçleri başarıyla tamamlandı."
-    ]
-  },
-  {
-    version: "1.5.4",
-    date: "07.07.2026",
-    changes: [
-      "Kullanıcı basımlarında (Stoklar barkod basımı ve şablon tasarımcısı önizlemesi) yer alan ürün adı, stok kodu ve özel metin alanlarının tamamı tek satıra sabitlendi (whitespace-nowrap / truncate).",
-      "Uzun metinlerin etiketin dışına taşarak ya da alt satıra inerek şablon yapısını ve barkod çizgisini ezmesi engellendi; taşan kısımlar otomatik olarak kırpılıp (...) şeklinde kısaltıldı.",
-      "Tüm yazı etiketleri için milimetrik ortalama ve genişlik kısıtlaması (full-width ve padding koruması) eklenerek mükemmel hizalama standartlaştırıldı.",
-      "Uygulama versiyonu v1.5.4 olarak güncellendi ve tüm masaüstü/web üretim derleme süreçleri tamamlandı."
-    ]
-  },
-  {
-    version: "1.5.3",
-    date: "06.07.2026",
-    changes: [
-      "Barkod yazdırma çıktılarında çizgilerin bozulmasını ve bulanıklaşmasını engelleyen yüksek keskinlikli (crisp-edges) SVG render teknolojisi entegre edildi.",
-      "Yazdırma şablonlarında sayfa kenar boşlukları (margins) ve hizalamalar tüm etiket boyutları (40x20, 60x40, 80x50, 40x60) için milimetrik olarak optimize edildi.",
-      "Dinamik yazı boyutları, barkod çizgisi yükseklikleri ve genişlik oranları güncellenerek etiket sınırlarına tam uyum sağlandı.",
-      "Uygulama versiyonu v1.5.3 olarak güncellendi ve tüm masaüstü/web üretim derleme süreçleri tamamlandı."
-    ]
-  },
-  {
-    version: "1.5.2",
-    date: "06.07.2026",
-    changes: [
-      "Barkod tasarımı için 40x60 mm (dikey) boyutunda yeni barkod etiketi şablonu eklendi.",
-      "Şablon Tasarımcısına 'Barkod Etiketi (40x60)' seçeneği ve dinamik kağıt boyutu desteği entegre edildi.",
-      "Masaüstü uygulaması için yüksek çözünürlüklü .ico formatında yeni uygulama simgesi (icon) oluşturuldu ve simge uyumluluk hataları giderildi.",
-      "Şablon derleyicisindeki mükerrer 'etiket_40x60' durum blokları temizlenerek üretim aşamasındaki (production build) hata giderildi.",
-      "Büyük boyutlu yedek (.zip) dosyaları ve derleme artıkları Git takibinden çıkarılarak GitHub senkronizasyonu optimize edildi."
-    ]
-  },
-  {
-    version: "1.5.1",
-    date: "06.07.2026",
-    changes: [
-      "Kişiselleştirme ayarlarındaki yan menü ve ana ekran arka plan desenlerinin tam ortalı durması ve ekran geneline eşit şekilde dağılması sağlandı.",
-      "SVG desen şablonlarındaki koordinat ve hizalama (offset/position) parametreleri optimize edilerek görsel kaymalar giderildi."
-    ]
-  },
-  {
-    version: "1.5.0",
-    date: "06.07.2026",
-    changes: [
-      "Yapay Zeka (AI) Asistanı üzerinden 'add_customer', 'add_supplier' ve 'add_product' komutlarıyla sesli/yazılı hızlı veri ekleme desteği eklendi.",
-      "Kristal arka plan deseni, arayüz renklerine dinamik olarak uyum sağlayacak şekilde tamamen yeniden tasarlandı.",
-      "Geometrik ve Kristal desen isimleri sadeleştirilerek menü tasarımları optimize edildi.",
-      "Kullanılmayan atıl kodlar, eski taslak dosyaları ve geçici logo dönüştürücüleri temizlenerek masaüstü (.exe) paket boyutu ve bellek (RAM) tüketimi minimize edildi.",
-      "Masaüstü derleme (electron-builder) ayarları, kaynak kodları ve gereksiz kütüphaneleri dışlayarak hafifletildi."
+      "Özel Boyutlandırma (cm) özelliği ile barkod etiketleri artık milimetrik olarak özelleştirilebilir.",
+      "Sürükle-bırak kılavuz çizgileri ve hassas koordinat ayarları (%) eklendi.",
+      "Tüm şablonlar, yazdırma pencereleri ve önizleme bileşenleri dinamik boyutlandırmaya tam uyumlu hale getirildi.",
+      "Mevcut sürüm v1.6.0 olarak güncellenerek üretim derleme süreçleri başarıyla tamamlandı."
     ]
   }
 ];
@@ -3229,51 +3145,106 @@ export default function App() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {feedbackList.map((feedback) => (
-                        <div key={feedback.id} className={`bg-white/5 border rounded-xl overflow-hidden transition-colors ${feedback.type === 'error' ? 'border-red-500/20' : 'border-teal-500/20'}`}>
-                          <div className="p-4 flex flex-col md:flex-row md:items-start justify-between gap-4">
-                            <div className="flex items-start gap-4 flex-1">
-                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${feedback.type === 'error' ? 'bg-red-500/10 text-red-500' : 'bg-teal-500/10 text-teal-500'}`}>
-                                {feedback.type === 'error' ? <AlertTriangle size={20} /> : <MessageSquare size={20} />}
-                              </div>
-                              <div className="flex-1">
-                                <p className="text-sm text-white/90 whitespace-pre-wrap leading-relaxed">{feedback.text}</p>
-                                {feedback.image && (
-                                  <div className="mt-3">
-                                    <span className="text-[10px] uppercase font-bold tracking-wider text-white/40 block mb-1">Ekli Görsel (Büyütmek için tıklayın):</span>
-                                    <div className="relative group max-w-[200px] aspect-video rounded-lg overflow-hidden border border-white/10 hover:border-teal-500/50 transition cursor-zoom-in">
-                                      <img 
-                                        src={feedback.image} 
-                                        alt="Ekli Görsel" 
-                                        onClick={() => setZoomImage(feedback.image)}
-                                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                                      />
+                      {feedbackList.map((feedback) => {
+                        const currentStatus = feedback.status || 'Okundu';
+                        return (
+                          <div key={feedback.id} className={`bg-white/5 border rounded-xl overflow-hidden transition-colors ${feedback.type === 'error' ? 'border-red-500/20' : 'border-teal-500/20'}`}>
+                            <div className="p-4 flex flex-col md:flex-row md:items-start justify-between gap-4">
+                              <div className="flex items-start gap-4 flex-1">
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${feedback.type === 'error' ? 'bg-red-500/10 text-red-500' : 'bg-teal-500/10 text-teal-500'}`}>
+                                  {feedback.type === 'error' ? <AlertTriangle size={20} /> : <MessageSquare size={20} />}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm text-white/90 whitespace-pre-wrap leading-relaxed">{feedback.text}</p>
+                                  {feedback.image && (
+                                    <div className="mt-3">
+                                      <span className="text-[10px] uppercase font-bold tracking-wider text-white/40 block mb-1">Ekli Görsel (Büyütmek için tıklayın):</span>
+                                      <div className="relative group max-w-[200px] aspect-video rounded-lg overflow-hidden border border-white/10 hover:border-teal-500/50 transition cursor-zoom-in">
+                                        <img 
+                                          src={feedback.image} 
+                                          alt="Ekli Görsel" 
+                                          onClick={() => setZoomImage(feedback.image)}
+                                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mt-3 text-xs text-white/40 font-mono">
+                                    <span>{feedback.date}</span>
+                                    <span>•</span>
+                                    <span className={feedback.type === 'error' ? 'text-red-400/70' : 'text-teal-400/70'}>{feedback.user}</span>
+                                    <span>•</span>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-white/30 text-[10px] uppercase font-bold tracking-wider">Durum:</span>
+                                      {currentStatus === 'Okundu' && (
+                                        <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-blue-500/10 border border-blue-500/20 text-blue-400">Okundu</span>
+                                      )}
+                                      {currentStatus === 'İşlemde' && (
+                                        <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 animate-pulse">İşlemde</span>
+                                      )}
+                                      {currentStatus === 'Tamamlandı' && (
+                                        <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">Tamamlandı</span>
+                                      )}
                                     </div>
                                   </div>
-                                )}
-                                <div className="flex items-center gap-3 mt-3 text-xs text-white/40 font-mono">
-                                  <span>{feedback.date}</span>
-                                  <span>•</span>
-                                  <span className={feedback.type === 'error' ? 'text-red-400/70' : 'text-teal-400/70'}>{feedback.user}</span>
+                                </div>
+                              </div>
+                              <div className="shrink-0 flex flex-col md:items-end items-start gap-3 justify-between">
+                                <div className="flex flex-col gap-1 w-full">
+                                  <span className="text-[9px] uppercase font-bold tracking-widest text-white/30 block mb-0.5 md:text-right">Durumu Güncelle</span>
+                                  <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-white/5">
+                                    <button
+                                      onClick={() => {
+                                        const newFeedbackList = feedbackList.map(f => f.id === feedback.id ? { ...f, status: 'Okundu' } : f);
+                                        localStorage.setItem('storm_feedback_logs', JSON.stringify(newFeedbackList));
+                                        setFeedbackList(newFeedbackList);
+                                      }}
+                                      className={`px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition cursor-pointer ${currentStatus === 'Okundu' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/25 shadow-sm' : 'text-white/40 hover:text-white/70 border border-transparent'}`}
+                                    >
+                                      Okundu
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        const newFeedbackList = feedbackList.map(f => f.id === feedback.id ? { ...f, status: 'İşlemde' } : f);
+                                        localStorage.setItem('storm_feedback_logs', JSON.stringify(newFeedbackList));
+                                        setFeedbackList(newFeedbackList);
+                                      }}
+                                      className={`px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition cursor-pointer ${currentStatus === 'İşlemde' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/25 shadow-sm' : 'text-white/40 hover:text-white/70 border border-transparent'}`}
+                                    >
+                                      İşlemde
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        const newFeedbackList = feedbackList.map(f => f.id === feedback.id ? { ...f, status: 'Tamamlandı' } : f);
+                                        localStorage.setItem('storm_feedback_logs', JSON.stringify(newFeedbackList));
+                                        setFeedbackList(newFeedbackList);
+                                      }}
+                                      className={`px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition cursor-pointer ${currentStatus === 'Tamamlandı' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/25 shadow-sm' : 'text-white/40 hover:text-white/70 border border-transparent'}`}
+                                    >
+                                      Tamamlandı
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 self-start md:self-end mt-1">
+                                  <button
+                                    onClick={(e) => {
+                                      if (confirm("Bu bildirimi silmek istediğinizden emin misiniz?")) {
+                                        const newFeedbackList = feedbackList.filter(f => f.id !== feedback.id);
+                                        localStorage.setItem('storm_feedback_logs', JSON.stringify(newFeedbackList));
+                                        setFeedbackList(newFeedbackList);
+                                      }
+                                    }}
+                                    className="p-2 bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-400 rounded transition cursor-pointer"
+                                    title="Bu Bildirimi Sil"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
                                 </div>
                               </div>
                             </div>
-                            <div className="shrink-0 flex items-center self-end md:self-start">
-                              <button
-                                onClick={(e) => {
-                                  const newFeedbackList = feedbackList.filter(f => f.id !== feedback.id);
-                                  localStorage.setItem('storm_feedback_logs', JSON.stringify(newFeedbackList));
-                                  setFeedbackList(newFeedbackList);
-                                }}
-                                className="p-2 bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-400 rounded transition cursor-pointer"
-                                title="Bu Bildirimi Sil"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )
                 )}
@@ -4259,7 +4230,8 @@ export default function App() {
                     text: feedbackText,
                     image: feedbackImage,
                     user: user?.displayName || 'Bilinmeyen Kullanıcı',
-                    date: new Date().toLocaleString('tr-TR')
+                    date: new Date().toLocaleString('tr-TR'),
+                    status: 'Okundu'
                   };
                   const existing = localStorage.getItem('storm_feedback_logs');
                   const parsed = existing ? JSON.parse(existing) : [];

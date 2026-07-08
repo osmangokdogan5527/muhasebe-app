@@ -40,12 +40,12 @@ export default function AiAssistant({ apiKey, onNavigateToSettings, onCommandPar
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Clear listening error automatically after 4 seconds
+  // Clear listening error automatically after 12 seconds
   useEffect(() => {
     if (listeningError) {
       const timer = setTimeout(() => {
         setListeningError(null);
-      }, 4000);
+      }, 12000);
       return () => clearTimeout(timer);
     }
   }, [listeningError]);
@@ -87,13 +87,30 @@ export default function AiAssistant({ apiKey, onNavigateToSettings, onCommandPar
           console.warn("Speech recognition info:", event.error);
         }
         setIsListening(false);
+
+        const isIframe = typeof window !== 'undefined' && window.self !== window.top;
+
         if (event.error === 'not-allowed') {
-          setListeningError("Mikrofon izni verilmedi.");
+          if (isIframe) {
+            setListeningError("Mikrofon izni alınamadı. Önizleme ekranında (Iframe) olduğunuz için tarayıcı güvenlik politikaları ses tanımayı engelliyor olabilir. Tam performans için lütfen sağ üstteki butonla uygulamayı 'Yeni Sekmede Aç'arak deneyin.");
+          } else {
+            setListeningError("Mikrofon izni verilmedi. Lütfen tarayıcınızın adres çubuğundaki kilit simgesine tıklayarak mikrofon erişimine izin verin.");
+          }
         } else if (event.error === 'no-speech') {
           // No-speech is a normal timeout event when user doesn't say anything.
           // Handle it silently to prevent disruptive warnings or validation alerts.
+        } else if (event.error === 'network') {
+          if (isIframe) {
+            setListeningError("Ses tanıma sunucu bağlantısı kurulamadı. Önizleme ekranı yerine lütfen uygulamayı sağ üstteki 'Yeni Sekmede Aç' butonuyla açıp orada deneyin.");
+          } else {
+            setListeningError("Ses tanıma için Google API bağlantısı kurulamadı. Lütfen internet bağlantınızı kontrol edin veya yazarak iletişim kurun.");
+          }
+        } else if (event.error === 'audio-capture') {
+          setListeningError("Ses kaydedilemedi. Mikrofon donanımınızı veya bağlantı kablolarınızı kontrol edin.");
+        } else if (event.error === 'aborted') {
+          setListeningError("Sesli asistan işlemi iptal edildi.");
         } else {
-          setListeningError(`Hata oluştu: ${event.error}`);
+          setListeningError(`Ses tanıma hatası (${event.error}). Lütfen uygulamayı yeni sekmede açarak mikrofon izniyle deneyin.`);
         }
       };
 
@@ -339,18 +356,27 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
 
               {/* Speech Recognition Error Notice Banner */}
               {listeningError && (
-                <div className="mx-3 mt-1 mb-2 px-3 py-2 bg-red-50 border border-red-100 rounded-xl flex items-center justify-between text-xs text-red-700 animate-fade-in shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle size={14} className="shrink-0 text-red-500" />
-                    <span className="font-medium">{listeningError}</span>
+                <div className="mx-3 mt-1 mb-2 px-3 py-2 bg-red-50 border border-red-100 rounded-xl flex items-start justify-between gap-3 text-xs text-red-700 animate-fade-in shadow-sm">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle size={14} className="shrink-0 text-red-500 mt-0.5" />
+                    <span className="font-medium leading-normal">{listeningError}</span>
                   </div>
                   <button 
                     type="button" 
                     onClick={() => setListeningError(null)}
-                    className="text-red-400 hover:text-red-600 font-bold text-[10px] uppercase tracking-wider cursor-pointer transition px-1.5 py-0.5 rounded-md hover:bg-red-100/50"
+                    className="text-red-400 hover:text-red-600 font-bold text-[10px] uppercase tracking-wider cursor-pointer transition px-1.5 py-0.5 rounded-md hover:bg-red-100/50 shrink-0 self-start mt-0.5"
                   >
                     Kapat
                   </button>
+                </div>
+              )}
+
+              {/* If in iframe, show a friendly tip about Open in New Tab for speech recognition */}
+              {typeof window !== 'undefined' && window.self !== window.top && !listeningError && (
+                <div className="mx-3 mt-1 mb-2 px-3 py-1.5 bg-amber-50/70 border border-amber-100 rounded-xl flex items-center justify-between gap-2 text-[10px] text-amber-800 animate-fade-in shadow-2xs">
+                  <span className="leading-tight">
+                    💡 <strong>Önizleme İpucu:</strong> Sesli komutların sorunsuz çalışması için uygulamayı sağ üstteki <strong>"Yeni Sekmede Aç"</strong> butonuyla açabilirsiniz.
+                  </span>
                 </div>
               )}
 

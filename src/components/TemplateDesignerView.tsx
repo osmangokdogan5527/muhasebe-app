@@ -7,8 +7,13 @@ export interface PrintTemplateConfig {
   name: string;
   type: 'satis' | 'alis' | 'iade' | 'teklif' | 'barkod';
   documentTitle: string;
-  paperSize: 'a4' | 'a4_yatay' | 'a5' | 'a5_yatay' | 'termal_80' | 'termal_58' | 'etiket_40x30' | 'etiket_60x40' | 'etiket_80x50' | 'etiket_40x20' | 'etiket_40x60';
+  paperSize: 'a4' | 'a4_yatay' | 'a5' | 'a5_yatay' | 'termal_80' | 'termal_58' | 'etiket_40x30' | 'etiket_60x40' | 'etiket_80x50' | 'etiket_40x20' | 'etiket_40x60' | 'etiket_ozel';
   textSize?: 'small' | 'normal' | 'large';
+  
+  customWidthCm?: number;
+  customHeightCm?: number;
+  snapToGrid?: boolean;
+  customPositions?: Record<string, { x: number; y: number }>;
   
   // General Settings
   showLogo: boolean;
@@ -30,6 +35,23 @@ export interface PrintTemplateConfig {
   showBarcodeName?: boolean;
   showBarcodeCode?: boolean;
   showImage?: boolean; // Show product image on barcode
+  
+  // Custom Barcode Scales
+  barcodeWidthScale?: number;
+  barcodeHeight?: number;
+  barcodeFontSize?: number;
+  
+  barcodePosition?: 'bottom' | 'top';
+  imagePosition?: 'top' | 'bottom';
+
+  // Granular sizing and spacing
+  barcodeImageSize?: number;
+  barcodeNameSize?: number;
+  barcodeCodeSize?: number;
+  barcodeCustomTextSize?: number;
+  barcodePriceSize?: number;
+  barcodePadding?: number;
+  barcodeGap?: number;
 
   // Custom Text
   showCustomText?: boolean;
@@ -122,6 +144,93 @@ const DEFAULT_TEMPLATES: PrintTemplateConfig[] = [
 export default function TemplateDesignerView() {
   const [templates, setTemplates] = useState<PrintTemplateConfig[]>([]);
   const [activeTemplateId, setActiveTemplateId] = useState<string>('');
+  const [draggingElement, setDraggingElement] = useState<string | null>(null);
+  const labelContainerRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!draggingElement) return;
+
+    const onGlobalMouseMove = (e: MouseEvent) => {
+      if (!labelContainerRef.current) return;
+      const rect = labelContainerRef.current.getBoundingClientRect();
+      let x = ((e.clientX - rect.left) / rect.width) * 100;
+      let y = ((e.clientY - rect.top) / rect.height) * 100;
+      
+      x = Math.max(0, Math.min(100, x));
+      y = Math.max(0, Math.min(100, y));
+      
+      const activeT = templates.find(t => t.id === activeTemplateId);
+      if (!activeT) return;
+      
+      if (activeT.snapToGrid !== false) {
+        x = Math.round(x / 2.5) * 2.5;
+        y = Math.round(y / 2.5) * 2.5;
+      }
+      
+      const currentPositions = activeT.customPositions || {};
+      const updatedPositions = {
+        ...currentPositions,
+        [draggingElement]: {
+          ...currentPositions[draggingElement],
+          x: parseFloat(x.toFixed(1)),
+          y: parseFloat(y.toFixed(1))
+        }
+      };
+      
+      const updated = templates.map(t => t.id === activeTemplateId ? { ...t, customPositions: updatedPositions } : t);
+      setTemplates(updated);
+      localStorage.setItem('storm_print_templates', JSON.stringify(updated));
+    };
+
+    const onGlobalTouchMove = (e: TouchEvent) => {
+      if (!labelContainerRef.current || e.touches.length === 0) return;
+      const touch = e.touches[0];
+      const rect = labelContainerRef.current.getBoundingClientRect();
+      let x = ((touch.clientX - rect.left) / rect.width) * 100;
+      let y = ((touch.clientY - rect.top) / rect.height) * 100;
+      
+      x = Math.max(0, Math.min(100, x));
+      y = Math.max(0, Math.min(100, y));
+      
+      const activeT = templates.find(t => t.id === activeTemplateId);
+      if (!activeT) return;
+      
+      if (activeT.snapToGrid !== false) {
+        x = Math.round(x / 2.5) * 2.5;
+        y = Math.round(y / 2.5) * 2.5;
+      }
+      
+      const currentPositions = activeT.customPositions || {};
+      const updatedPositions = {
+        ...currentPositions,
+        [draggingElement]: {
+          ...currentPositions[draggingElement],
+          x: parseFloat(x.toFixed(1)),
+          y: parseFloat(y.toFixed(1))
+        }
+      };
+      
+      const updated = templates.map(t => t.id === activeTemplateId ? { ...t, customPositions: updatedPositions } : t);
+      setTemplates(updated);
+      localStorage.setItem('storm_print_templates', JSON.stringify(updated));
+    };
+
+    const onGlobalMouseUp = () => {
+      setDraggingElement(null);
+    };
+
+    window.addEventListener('mousemove', onGlobalMouseMove);
+    window.addEventListener('mouseup', onGlobalMouseUp);
+    window.addEventListener('touchmove', onGlobalTouchMove, { passive: false });
+    window.addEventListener('touchend', onGlobalMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', onGlobalMouseMove);
+      window.removeEventListener('mouseup', onGlobalMouseUp);
+      window.removeEventListener('touchmove', onGlobalTouchMove);
+      window.removeEventListener('touchend', onGlobalMouseUp);
+    };
+  }, [draggingElement, activeTemplateId, templates]);
 
   const [companyName, setCompanyName] = useState('Firma Adı');
   const [companyAddress, setCompanyAddress] = useState('Firma Adresi');
@@ -302,6 +411,16 @@ export default function TemplateDesignerView() {
       case 'etiket_40x60': return { maxWidth: '151px', aspectRatio: '40 / 60', padding: '8px', minHeight: 'auto' };
       case 'etiket_40x30': return { maxWidth: '151px', aspectRatio: '40 / 30', padding: '8px', minHeight: 'auto' };
       case 'etiket_40x20': return { maxWidth: '151px', aspectRatio: '40 / 20', padding: '8px', minHeight: 'auto' };
+      case 'etiket_ozel': {
+        const w = activeTemplate.customWidthCm || 6;
+        const h = activeTemplate.customHeightCm || 4;
+        return { 
+          maxWidth: `${w * 50}px`, 
+          aspectRatio: `${w} / ${h}`, 
+          padding: `${activeTemplate.barcodePadding !== undefined ? activeTemplate.barcodePadding : 8}px`, 
+          minHeight: 'auto' 
+        };
+      }
       default: return { maxWidth: '794px', aspectRatio: '1 / 1.414', padding: '40px' };
     }
   };
@@ -319,8 +438,48 @@ export default function TemplateDesignerView() {
       case 'etiket_40x60': return 'ETİKET 40x60';
       case 'etiket_40x30': return 'ETİKET 40x30';
       case 'etiket_40x20': return 'ETİKET 40x20';
+      case 'etiket_ozel': return `ÖZEL ETİKET (${activeTemplate.customWidthCm || 6}x${activeTemplate.customHeightCm || 4}cm)`;
       default: return size;
     }
+  };
+
+  const renderDraggableItem = (key: string, label: string, element: React.ReactNode) => {
+    if (!element) return null;
+    const positions = activeTemplate.customPositions || {};
+    const pos = positions[key] || { x: 50, y: 50 };
+    const isDragging = draggingElement === key;
+    
+    return (
+      <div
+        key={key}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          setDraggingElement(key);
+        }}
+        onTouchStart={(e) => {
+          setDraggingElement(key);
+        }}
+        className={`absolute group cursor-grab select-none p-1.5 rounded-lg border border-transparent transition-all duration-100 ${
+          isDragging 
+            ? 'cursor-grabbing border-teal-500 bg-teal-50/70 shadow-lg scale-105 z-50 ring-2 ring-teal-500/20' 
+            : 'hover:border-dashed hover:border-teal-400 hover:bg-slate-50/50 hover:shadow-sm'
+        }`}
+        style={{
+          left: `${pos.x}%`,
+          top: `${pos.y}%`,
+          transform: 'translate(-50%, -50%)',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {/* Label Badge */}
+        <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 bg-teal-600 text-white text-[9px] font-semibold px-2 py-0.5 rounded shadow-sm pointer-events-none transition-opacity duration-150 z-50 flex items-center gap-1">
+          <span>{label}</span>
+          <span className="text-[8px] opacity-75">{pos.x}%, {pos.y}%</span>
+        </div>
+        
+        {element}
+      </div>
+    );
   };
 
   return (
@@ -345,49 +504,132 @@ export default function TemplateDesignerView() {
             className="bg-white shadow-2xl transition-all duration-300 origin-top shrink-0 relative flex flex-col"
             style={{
               width: '100%',
-              ...getPaperDimensions(activeTemplate.paperSize)
+              ...getPaperDimensions(activeTemplate.paperSize),
+              padding: activeTemplate.barcodePadding !== undefined ? `${activeTemplate.barcodePadding}px` : undefined
             }}
           >
-            {activeTemplate.type === 'barkod' ? (
-              <div className="flex flex-col items-center justify-center h-full text-center p-2">
-                {activeTemplate.showImage && (
-                  <div className="w-16 h-16 bg-slate-200 border border-slate-300 rounded mb-1 flex items-center justify-center shrink-0">
-                    <ImageIcon size={24} className="text-slate-400" />
-                  </div>
-                )}
-                {activeTemplate.showBarcodeName && (
-                  <div className="font-bold text-slate-900 text-[10px] md:text-xs mb-1 w-full px-1 text-center whitespace-nowrap truncate leading-tight">
-                    ÖRNEK ÜRÜN ADI - SİYAH
-                  </div>
-                )}
-                {activeTemplate.showBarcodeCode !== false && (
-                  <div className="font-medium text-slate-700 text-[8px] md:text-[10px] mb-0.5 w-full px-1 text-center whitespace-nowrap truncate leading-tight">
-                    STK-10001
-                  </div>
-                )}
-                {activeTemplate.showCustomText && activeTemplate.customTextContent && (
-                  <div className="font-medium text-slate-800 text-[9px] md:text-[11px] mb-0.5 w-full px-1 text-center whitespace-nowrap truncate leading-tight">
-                    {activeTemplate.customTextContent}
-                  </div>
-                )}
-                {activeTemplate.showBarcodePrice && (
-                  <div className="font-black text-slate-900 text-sm md:text-base mb-1">
-                    125,00 ₺
-                  </div>
-                )}
-                <div className="flex justify-center w-full mt-1 barcode-svg-container">
+            {activeTemplate.type === 'barkod' ? (() => {
+              const imgSize = activeTemplate.barcodeImageSize || 64;
+              const imgEl = activeTemplate.showImage ? (
+                <div 
+                  key="img" 
+                  className="bg-slate-200 border border-slate-300 rounded flex items-center justify-center shrink-0"
+                  style={{
+                    width: `${imgSize}px`,
+                    height: `${imgSize}px`,
+                  }}
+                >
+                  <ImageIcon size={Math.max(16, imgSize * 0.4)} className="text-slate-400" />
+                </div>
+              ) : null;
+              
+              const nameEl = activeTemplate.showBarcodeName ? (
+                <div 
+                  key="name" 
+                  className="font-bold text-slate-900 w-full px-1 text-center whitespace-nowrap truncate leading-tight"
+                  style={{
+                    fontSize: activeTemplate.barcodeNameSize ? `${activeTemplate.barcodeNameSize}px` : undefined,
+                  }}
+                >
+                  ÖRNEK ÜRÜN ADI - SİYAH
+                </div>
+              ) : null;
+              
+              const codeEl = activeTemplate.showBarcodeCode !== false ? (
+                <div 
+                  key="code" 
+                  className="font-medium text-slate-700 w-full px-1 text-center whitespace-nowrap truncate leading-tight"
+                  style={{
+                    fontSize: activeTemplate.barcodeCodeSize ? `${activeTemplate.barcodeCodeSize}px` : undefined,
+                  }}
+                >
+                  STK-10001
+                </div>
+              ) : null;
+              
+              const customEl = (activeTemplate.showCustomText && activeTemplate.customTextContent) ? (
+                <div 
+                  key="custom" 
+                  className="font-medium text-slate-800 w-full px-1 text-center whitespace-nowrap truncate leading-tight"
+                  style={{
+                    fontSize: activeTemplate.barcodeCustomTextSize ? `${activeTemplate.barcodeCustomTextSize}px` : undefined,
+                  }}
+                >
+                  {activeTemplate.customTextContent}
+                </div>
+              ) : null;
+              
+              const priceEl = activeTemplate.showBarcodePrice ? (
+                <div 
+                  key="price" 
+                  className="font-black text-slate-900"
+                  style={{
+                    fontSize: activeTemplate.barcodePriceSize ? `${activeTemplate.barcodePriceSize}px` : undefined,
+                  }}
+                >
+                  125,00 ₺
+                </div>
+              ) : null;
+              
+              const barcodeEl = (
+                <div key="barcode" className="flex justify-center w-full barcode-svg-container">
                   <Barcode renderer="img" 
                     value={activeTemplate.barcodeFormat === 'EAN13' ? "8691234567890" : "STK-10001"} 
                     format={activeTemplate.barcodeFormat || "CODE128"} 
-                    width={['etiket_40x20', 'etiket_40x60'].includes(activeTemplate.paperSize) ? 1 : 2} 
-                    height={activeTemplate.paperSize === 'etiket_40x20' ? 30 : 50} 
-                    fontSize={activeTemplate.paperSize === 'etiket_40x20' ? 8 : 12}
+                    width={activeTemplate.barcodeWidthScale || (['etiket_40x20', 'etiket_40x60'].includes(activeTemplate.paperSize) ? 1 : 2)} 
+                    height={activeTemplate.barcodeHeight || (activeTemplate.paperSize === 'etiket_40x20' ? 30 : 50)} 
+                    fontSize={activeTemplate.barcodeFontSize || (activeTemplate.paperSize === 'etiket_40x20' ? 8 : 12)}
                     margin={0}
                     background="#ffffff"
                   />
                 </div>
-              </div>
-            ) : (
+              );
+
+              const elements = [];
+              if (activeTemplate.imagePosition === 'top') elements.push(imgEl);
+              if (activeTemplate.barcodePosition === 'top') elements.push(barcodeEl);
+              elements.push(nameEl, codeEl, customEl, priceEl);
+              if (activeTemplate.barcodePosition !== 'top') elements.push(barcodeEl);
+              if (activeTemplate.imagePosition === 'bottom') elements.push(imgEl);
+
+               const filteredElements = elements.filter(Boolean);
+
+              if (activeTemplate.paperSize === 'etiket_ozel') {
+                return (
+                  <div 
+                    ref={labelContainerRef}
+                    className="relative w-full h-full select-none"
+                    style={{
+                      backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
+                      backgroundSize: '12px 12px',
+                      backgroundColor: '#ffffff',
+                      height: '100%',
+                      border: '2px dashed #0f766e',
+                      borderRadius: '8px',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {activeTemplate.showImage && renderDraggableItem('image', 'Ürün Resmi', imgEl)}
+                    {activeTemplate.showBarcodeName !== false && renderDraggableItem('name', 'Ürün Adı', nameEl)}
+                    {activeTemplate.showBarcodeCode !== false && renderDraggableItem('code', 'Ürün Kodu', codeEl)}
+                    {(activeTemplate.showCustomText && activeTemplate.customTextContent) && renderDraggableItem('customText', 'Özel Metin', customEl)}
+                    {activeTemplate.showBarcodePrice !== false && renderDraggableItem('price', 'Fiyat', priceEl)}
+                    {renderDraggableItem('barcode', 'Barkod Çizgisi', barcodeEl)}
+                  </div>
+                );
+              }
+
+              return (
+                <div 
+                  className="flex flex-col items-center justify-center h-full w-full text-center"
+                  style={{ 
+                    gap: activeTemplate.barcodeGap !== undefined ? `${activeTemplate.barcodeGap}px` : '4px' 
+                  }}
+                >
+                  {filteredElements}
+                </div>
+              );
+            })() : (
               <>
                 {/* Header */}
                 <div className="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-6">
@@ -574,20 +816,46 @@ export default function TemplateDesignerView() {
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Kağıt Boyutu</label>
                   <select 
                     value={activeTemplate.paperSize}
-                    onChange={(e) => handleUpdateActiveTemplate({ paperSize: e.target.value as any })}
+                    onChange={(e) => {
+                      const newSize = e.target.value as any;
+                      const updates: Partial<PrintTemplateConfig> = { paperSize: newSize };
+                      if (newSize === 'etiket_ozel') {
+                        updates.customWidthCm = activeTemplate.customWidthCm || 6;
+                        updates.customHeightCm = activeTemplate.customHeightCm || 4;
+                        if (!activeTemplate.customPositions) {
+                          updates.customPositions = {
+                            image: { x: 50, y: 15 },
+                            name: { x: 50, y: 35 },
+                            code: { x: 50, y: 50 },
+                            customText: { x: 50, y: 62 },
+                            price: { x: 50, y: 74 },
+                            barcode: { x: 50, y: 88 }
+                          };
+                        }
+                      }
+                      handleUpdateActiveTemplate(updates);
+                    }}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
                   >
-                    <option value="a4">A4 Dikey</option>
-                    <option value="a4_yatay">A4 Yatay</option>
-                    <option value="a5">A5 Dikey</option>
-                    <option value="a5_yatay">A5 Yatay</option>
-                    <option value="termal_80">Termal Rulo (80mm)</option>
-                    <option value="termal_58">Termal Rulo (58mm)</option>
-                    <option value="etiket_80x50">Barkod Etiketi (80x50mm)</option>
-                    <option value="etiket_60x40">Barkod Etiketi (60x40mm)</option>
-                    <option value="etiket_40x60">Barkod Etiketi (40x60mm)</option>
-                    <option value="etiket_40x30">Barkod Etiketi (40x30mm)</option>
-                    <option value="etiket_40x20">Barkod Etiketi (40x20mm)</option>
+                    {activeTemplate.type !== 'barkod' ? (
+                      <>
+                        <option value="a4">A4 Dikey</option>
+                        <option value="a4_yatay">A4 Yatay</option>
+                        <option value="a5">A5 Dikey</option>
+                        <option value="a5_yatay">A5 Yatay</option>
+                        <option value="termal_80">Termal Rulo (80mm)</option>
+                        <option value="termal_58">Termal Rulo (58mm)</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="etiket_80x50">Barkod Etiketi (80x50mm)</option>
+                        <option value="etiket_60x40">Barkod Etiketi (60x40mm)</option>
+                        <option value="etiket_40x60">Barkod Etiketi (40x60mm)</option>
+                        <option value="etiket_40x30">Barkod Etiketi (40x30mm)</option>
+                        <option value="etiket_40x20">Barkod Etiketi (40x20mm)</option>
+                        <option value="etiket_ozel">Özel Boyutlandırma (cm)</option>
+                      </>
+                    )}
                   </select>
                 </div>
                 <div>
@@ -658,6 +926,156 @@ export default function TemplateDesignerView() {
                     checked={activeTemplate.showImage || false} 
                     onChange={(v) => handleUpdateActiveTemplate({ showImage: v })} 
                   />
+                  <div className="grid grid-cols-3 gap-3 pt-2 pb-2">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1" title="Çizgi Kalınlığı Çarpanı">Çizgi Kalınlığı (En)</label>
+                      <input 
+                        type="number" 
+                        min="1" max="5" step="0.5"
+                        value={activeTemplate.barcodeWidthScale || (['etiket_40x20', 'etiket_40x60'].includes(activeTemplate.paperSize) ? 1 : 2)}
+                        onChange={(e) => handleUpdateActiveTemplate({ barcodeWidthScale: parseFloat(e.target.value) || 1 })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1" title="Barkod Yüksekliği (px)">Barkod Yüksekliği (Boy)</label>
+                      <input 
+                        type="number" 
+                        min="20" max="200" step="5"
+                        value={activeTemplate.barcodeHeight || (activeTemplate.paperSize === 'etiket_40x20' ? 30 : 50)}
+                        onChange={(e) => handleUpdateActiveTemplate({ barcodeHeight: parseInt(e.target.value) || 50 })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1" title="Yazı Boyutu (Eğer yazdırılıyorsa)">Yazı Boyutu</label>
+                      <input 
+                        type="number" 
+                        min="8" max="36" step="1"
+                        value={activeTemplate.barcodeFontSize || (activeTemplate.paperSize === 'etiket_40x20' ? 8 : 12)}
+                        onChange={(e) => handleUpdateActiveTemplate({ barcodeFontSize: parseInt(e.target.value) || 12 })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 pt-2 pb-2 border-t border-slate-100">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Barkod Çizgisi Konumu</label>
+                      <select 
+                        value={activeTemplate.barcodePosition || 'bottom'}
+                        onChange={(e) => handleUpdateActiveTemplate({ barcodePosition: e.target.value as any })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                      >
+                        <option value="bottom">Alt Kısımda</option>
+                        <option value="top">Üst Kısımda (Başta)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Ürün Resmi Konumu</label>
+                      <select 
+                        value={activeTemplate.imagePosition || 'top'}
+                        onChange={(e) => handleUpdateActiveTemplate({ imagePosition: e.target.value as any })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                      >
+                        <option value="top">Üst Kısımda</option>
+                        <option value="bottom">Alt Kısımda (Sonda)</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-3 border-t border-slate-100 space-y-3">
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">İçerik ve Taslak Boyutları</h4>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      {activeTemplate.showImage && (
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Resim Boyutu (px)</label>
+                          <input 
+                            type="number" 
+                            min="20" max="200" step="5"
+                            value={activeTemplate.barcodeImageSize || 64}
+                            onChange={(e) => handleUpdateActiveTemplate({ barcodeImageSize: parseInt(e.target.value) || 64 })}
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          />
+                        </div>
+                      )}
+                      
+                      {activeTemplate.showBarcodeName && (
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Ürün Adı Boyutu (px)</label>
+                          <input 
+                            type="number" 
+                            min="8" max="36" step="1"
+                            value={activeTemplate.barcodeNameSize || 12}
+                            onChange={(e) => handleUpdateActiveTemplate({ barcodeNameSize: parseInt(e.target.value) || 12 })}
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          />
+                        </div>
+                      )}
+
+                      {activeTemplate.showBarcodeCode !== false && (
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Ürün Kodu Boyutu (px)</label>
+                          <input 
+                            type="number" 
+                            min="8" max="24" step="1"
+                            value={activeTemplate.barcodeCodeSize || 10}
+                            onChange={(e) => handleUpdateActiveTemplate({ barcodeCodeSize: parseInt(e.target.value) || 10 })}
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          />
+                        </div>
+                      )}
+
+                      {activeTemplate.showBarcodePrice && (
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Fiyat Boyutu (px)</label>
+                          <input 
+                            type="number" 
+                            min="8" max="48" step="1"
+                            value={activeTemplate.barcodePriceSize || 14}
+                            onChange={(e) => handleUpdateActiveTemplate({ barcodePriceSize: parseInt(e.target.value) || 14 })}
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          />
+                        </div>
+                      )}
+
+                      {activeTemplate.showCustomText && (
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Özel Metin Boyutu (px)</label>
+                          <input 
+                            type="number" 
+                            min="8" max="24" step="1"
+                            value={activeTemplate.barcodeCustomTextSize || 11}
+                            onChange={(e) => handleUpdateActiveTemplate({ barcodeCustomTextSize: parseInt(e.target.value) || 11 })}
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          />
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Dış Kenar Boşluğu (px)</label>
+                        <input 
+                          type="number" 
+                          min="0" max="40" step="1"
+                          value={activeTemplate.barcodePadding !== undefined ? activeTemplate.barcodePadding : 8}
+                          onChange={(e) => handleUpdateActiveTemplate({ barcodePadding: parseInt(e.target.value) === 0 ? 0 : (parseInt(e.target.value) || 8) })}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Öğeler Arası Boşluk (px)</label>
+                        <input 
+                          type="number" 
+                          min="0" max="30" step="1"
+                          value={activeTemplate.barcodeGap !== undefined ? activeTemplate.barcodeGap : 4}
+                          onChange={(e) => handleUpdateActiveTemplate({ barcodeGap: parseInt(e.target.value) === 0 ? 0 : (parseInt(e.target.value) || 4) })}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   <SwitchRow 
                     label="Özel Metin Görünsün" 
                     checked={activeTemplate.showCustomText || false} 
@@ -673,6 +1091,134 @@ export default function TemplateDesignerView() {
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
                         placeholder="Örn: %100 Pamuk, Yerli Üretim vs."
                       />
+                    </div>
+                  )}
+
+                  {activeTemplate.paperSize === 'etiket_ozel' && (
+                    <div className="p-3.5 bg-teal-50/50 rounded-xl border border-teal-100 space-y-4 pt-4 mt-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-extrabold text-teal-800 uppercase tracking-wider">MİLİMETRİK BOYUTLANDIRMA (CM)</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleUpdateActiveTemplate({
+                              customPositions: {
+                                image: { x: 50, y: 15 },
+                                name: { x: 50, y: 35 },
+                                code: { x: 50, y: 50 },
+                                customText: { x: 50, y: 62 },
+                                price: { x: 50, y: 74 },
+                                barcode: { x: 50, y: 88 }
+                              }
+                            });
+                          }}
+                          className="text-[10px] font-bold text-teal-600 hover:text-teal-800 transition-colors bg-white px-2.5 py-1 rounded-lg border border-teal-200/60 shadow-xs"
+                        >
+                          Hizalamaları Sıfırla
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Etiket Eni (cm)</label>
+                          <input 
+                            type="number" 
+                            min="1" max="25" step="0.1"
+                            value={activeTemplate.customWidthCm || 6}
+                            onChange={(e) => handleUpdateActiveTemplate({ customWidthCm: parseFloat(e.target.value) || 6 })}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Etiket Boyu (cm)</label>
+                          <input 
+                            type="number" 
+                            min="1" max="25" step="0.1"
+                            value={activeTemplate.customHeightCm || 4}
+                            onChange={(e) => handleUpdateActiveTemplate({ customHeightCm: parseFloat(e.target.value) || 4 })}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-1">
+                        <input
+                          type="checkbox"
+                          id="snap-to-grid"
+                          checked={activeTemplate.snapToGrid !== false}
+                          onChange={(e) => handleUpdateActiveTemplate({ snapToGrid: e.target.checked })}
+                          className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-slate-300"
+                        />
+                        <label htmlFor="snap-to-grid" className="text-xs font-bold text-slate-600 cursor-pointer">
+                          Kılavuz Çizgilerine Yapış (Snap Grid)
+                        </label>
+                      </div>
+
+                      <div className="pt-2 border-t border-teal-100/60 space-y-3">
+                        <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Hassas Koordinat Ayarları (%)</span>
+                        
+                        <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+                          {[
+                            { key: 'image', label: 'Ürün Resmi', active: activeTemplate.showImage },
+                            { key: 'name', label: 'Ürün Adı', active: activeTemplate.showBarcodeName !== false },
+                            { key: 'code', label: 'Ürün Kodu', active: activeTemplate.showBarcodeCode !== false },
+                            { key: 'customText', label: 'Özel Metin', active: activeTemplate.showCustomText && activeTemplate.customTextContent },
+                            { key: 'price', label: 'Fiyat', active: activeTemplate.showBarcodePrice !== false },
+                            { key: 'barcode', label: 'Barkod Çizgisi', active: true }
+                          ].filter(item => item.active).map(item => {
+                            const pos = (activeTemplate.customPositions || {})[item.key] || { x: 50, y: 50 };
+                            return (
+                              <div key={item.key} className="bg-white p-2.5 rounded-lg border border-slate-100 space-y-1.5 shadow-2xs">
+                                <span className="text-[11px] font-bold text-slate-700">{item.label}</span>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <div className="flex justify-between text-[9px] font-semibold text-slate-500">
+                                      <span>Yatay (X)</span>
+                                      <span>{pos.x}%</span>
+                                    </div>
+                                    <input
+                                      type="range"
+                                      min="0" max="100" step="0.5"
+                                      value={pos.x}
+                                      onChange={(e) => {
+                                        const currentPositions = activeTemplate.customPositions || {};
+                                        handleUpdateActiveTemplate({
+                                          customPositions: {
+                                            ...currentPositions,
+                                            [item.key]: { ...pos, x: parseFloat(e.target.value) }
+                                          }
+                                        });
+                                      }}
+                                      className="w-full accent-teal-600 h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                  </div>
+                                  <div>
+                                    <div className="flex justify-between text-[9px] font-semibold text-slate-500">
+                                      <span>Dikey (Y)</span>
+                                      <span>{pos.y}%</span>
+                                    </div>
+                                    <input
+                                      type="range"
+                                      min="0" max="100" step="0.5"
+                                      value={pos.y}
+                                      onChange={(e) => {
+                                        const currentPositions = activeTemplate.customPositions || {};
+                                        handleUpdateActiveTemplate({
+                                          customPositions: {
+                                            ...currentPositions,
+                                            [item.key]: { ...pos, y: parseFloat(e.target.value) }
+                                          }
+                                        });
+                                      }}
+                                      className="w-full accent-teal-600 h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
