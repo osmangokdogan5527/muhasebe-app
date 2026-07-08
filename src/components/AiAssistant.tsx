@@ -36,18 +36,30 @@ export default function AiAssistant({ apiKey, onNavigateToSettings, onCommandPar
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [listeningError, setListeningError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
+  // Clear listening error automatically after 4 seconds
+  useEffect(() => {
+    if (listeningError) {
+      const timer = setTimeout(() => {
+        setListeningError(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [listeningError]);
+
   const startListening = () => {
+    setListeningError(null);
     if (!SpeechRecognition) {
-      alert("Tarayıcınız ses tanımayı desteklemiyor veya mikrofon izni verilmedi.");
+      setListeningError("Ses tanıma desteklenmiyor.");
       return;
     }
 
     try {
       const rec = new SpeechRecognition();
-      rec.continuous = false;
+      rec.continuous = true;
       rec.interimResults = false;
       rec.lang = 'tr-TR';
 
@@ -56,15 +68,33 @@ export default function AiAssistant({ apiKey, onNavigateToSettings, onCommandPar
       };
 
       rec.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (transcript) {
-          setInput(prev => prev + (prev ? ' ' : '') + transcript);
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const text = event.results[i][0].transcript;
+          if (text) {
+            finalTranscript += (finalTranscript ? ' ' : '') + text.trim();
+          }
+        }
+        if (finalTranscript) {
+          setInput(prev => prev + (prev ? ' ' : '') + finalTranscript);
         }
       };
 
       rec.onerror = (event: any) => {
-        console.error("Speech recognition error:", event.error);
+        if (event.error !== 'no-speech' && event.error !== 'not-allowed') {
+          console.error("Speech recognition error:", event.error);
+        } else {
+          console.warn("Speech recognition info:", event.error);
+        }
         setIsListening(false);
+        if (event.error === 'not-allowed') {
+          setListeningError("Mikrofon izni verilmedi.");
+        } else if (event.error === 'no-speech') {
+          // No-speech is a normal timeout event when user doesn't say anything.
+          // Handle it silently to prevent disruptive warnings or validation alerts.
+        } else {
+          setListeningError(`Hata oluştu: ${event.error}`);
+        }
       };
 
       rec.onend = () => {
@@ -307,15 +337,47 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
                 <div ref={messagesEndRef} />
               </div>
 
+              {/* Speech Recognition Error Notice Banner */}
+              {listeningError && (
+                <div className="mx-3 mt-1 mb-2 px-3 py-2 bg-red-50 border border-red-100 rounded-xl flex items-center justify-between text-xs text-red-700 animate-fade-in shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle size={14} className="shrink-0 text-red-500" />
+                    <span className="font-medium">{listeningError}</span>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setListeningError(null)}
+                    className="text-red-400 hover:text-red-600 font-bold text-[10px] uppercase tracking-wider cursor-pointer transition px-1.5 py-0.5 rounded-md hover:bg-red-100/50"
+                  >
+                    Kapat
+                  </button>
+                </div>
+              )}
+
               {/* Input Area */}
               <form onSubmit={handleSubmit} className="p-3 bg-white border-t border-slate-200 flex gap-2">
                 <div className="relative flex-1 flex items-center">
                   <input
                     type="text"
                     value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder={isListening ? "Dinleniyor, konuşabilirsiniz..." : "Bir işlem veya sesli komut yazın..."}
-                    className={`w-full bg-slate-50 border border-slate-200 focus:border-teal-500 outline-none rounded-xl pl-4 pr-10 py-2.5 text-sm text-slate-900 transition ${isListening ? 'border-red-400 focus:border-red-500 bg-red-50/20' : ''}`}
+                    onChange={(e) => {
+                      setInput(e.target.value);
+                      if (listeningError) setListeningError(null);
+                    }}
+                    placeholder={
+                      listeningError 
+                        ? listeningError 
+                        : isListening 
+                          ? "Dinleniyor, konuşabilirsiniz..." 
+                          : "Bir işlem veya sesli komut yazın..."
+                    }
+                    className={`w-full bg-slate-50 border border-slate-200 focus:border-teal-500 outline-none rounded-xl pl-4 pr-10 py-2.5 text-sm transition ${
+                      listeningError
+                        ? 'border-red-300 bg-red-50 text-red-700 placeholder-red-400 focus:border-red-500'
+                        : isListening 
+                          ? 'border-red-400 focus:border-red-500 bg-red-50/20 text-slate-900' 
+                          : 'text-slate-900'
+                    }`}
                     disabled={isTyping}
                   />
                   {SpeechRecognition && (

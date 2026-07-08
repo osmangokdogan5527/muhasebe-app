@@ -21,8 +21,10 @@ import {
   AlertCircle,
   Image as ImageIcon,
   Download,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Scan
 } from 'lucide-react';
+import BarcodeScannerModal from './BarcodeScannerModal';
 
 interface StoklarViewProps {
   stoklar: Stock[];
@@ -38,6 +40,9 @@ export default function StoklarView({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'critical' | 'instock' | 'outstock'>('all');
   
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannerTarget, setScannerTarget] = useState<'search' | 'form'>('search');
+
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStock, setEditingStock] = useState<Stock | null>(null);
@@ -57,6 +62,43 @@ export default function StoklarView({
       }
     }
   }, []);
+
+  // Handle physical barcode scanner input globally in StoklarView
+  useEffect(() => {
+    const handleHardwareScan = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const code = (customEvent.detail.code || '').trim();
+      if (!code) return;
+
+      if (isModalOpen) {
+        // If stock creation/editing form is open, fill barcode field
+        setFormData(prev => ({ ...prev, barcode: code }));
+      } else {
+        // If not in modal, use the scanned code as search term to filter stocks instantly
+        setSearchTerm(code);
+      }
+
+      // Electronic beep audio confirmation
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.12);
+      } catch (soundErr) {
+        console.warn('Scan sound play failed', soundErr);
+      }
+    };
+
+    window.addEventListener('global-hardware-barcode-scan', handleHardwareScan);
+    return () => {
+      window.removeEventListener('global-hardware-barcode-scan', handleHardwareScan);
+    };
+  }, [isModalOpen]);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -267,23 +309,23 @@ export default function StoklarView({
     const activeTemplate = printTemplates.find(tpl => tpl.id === selectedTemplateId);
     const customText = activeTemplate?.showCustomText ? (activeTemplate.customTextContent || '') : '';
     
-    // Excel/BarTender friendly CSV with BOM to support Turkish characters perfectly
+    // BarTender friendly TXT (Tab Separated) with BOM
     const headers = ['UrunAdi', 'StokKodu', 'Barkod', 'Fiyat', 'Birim', 'OzelMetin'];
     const row = [
-      `"${stock.name.replace(/"/g, '""')}"`,
-      `"${stock.code.replace(/"/g, '""')}"`,
-      `"${(stock.barcode || stock.code).replace(/"/g, '""')}"`,
-      `"${stock.salesPrice}"`,
-      `"${stock.unit}"`,
-      `"${customText.replace(/"/g, '""')}"`
+      stock.name.replace(/\t/g, ' ').replace(/\r?\n|\r/g, ' '),
+      stock.code.replace(/\t/g, ' '),
+      (stock.barcode || stock.code).replace(/\t/g, ' '),
+      stock.salesPrice.toString(),
+      stock.unit,
+      customText.replace(/\t/g, ' ').replace(/\r?\n|\r/g, ' ')
     ];
 
-    const csvContent = "\uFEFF" + [headers.join(';'), row.join(';')].join('\n'); // Semicolon separated is standard for Turkish Excel
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const txtContent = "\uFEFF" + [headers.join('\t'), row.join('\t')].join('\r\n');
+    const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `bartender_${stock.code}.csv`);
+    link.setAttribute('download', `bartender_${stock.code}.txt`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -370,8 +412,19 @@ export default function StoklarView({
             placeholder="Ürün adı veya stok kodu ile ara..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-white/30 focus:outline-hidden focus:border-teal-500 focus:bg-white/[0.08] transition"
+            className="w-full pl-11 pr-12 py-2.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-white/30 focus:outline-hidden focus:border-teal-500 focus:bg-white/[0.08] transition"
           />
+          <button
+            type="button"
+            onClick={() => {
+              setScannerTarget('search');
+              setIsScannerOpen(true);
+            }}
+            title="Kamera ile Barkod Tara"
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-white/10 text-teal-400 hover:text-teal-300 rounded-md transition cursor-pointer"
+          >
+            <Scan size={16} />
+          </button>
         </div>
         
         {/* Filters Grid */}
@@ -728,8 +781,20 @@ export default function StoklarView({
                     />
                     <button
                       type="button"
+                      onClick={() => {
+                        setScannerTarget('form');
+                        setIsScannerOpen(true);
+                      }}
+                      title="Kamera ile Barkod Tara"
+                      className="px-3 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 border border-teal-500/20 rounded transition text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Scan size={14} />
+                      <span>Tara</span>
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setFormData({...formData, barcode: Math.floor(Math.random() * 10000000000000).toString().padStart(13, '0')})}
-                      className="px-3 bg-white/10 hover:bg-white/20 text-white rounded transition text-xs font-semibold whitespace-nowrap"
+                      className="px-3 bg-white/10 hover:bg-white/20 text-white rounded transition text-xs font-semibold whitespace-nowrap cursor-pointer"
                     >
                       Oluştur
                     </button>
@@ -957,6 +1022,7 @@ export default function StoklarView({
                               fontSize={bcFontSize}
                               margin={0}
                               background="#ffffff"
+                              displayValue={true}
                             />
                           </div>
                         </div>
@@ -969,16 +1035,6 @@ export default function StoklarView({
 
             <div className="p-4 border-t border-white/5 bg-white/[0.01] flex justify-between items-center gap-2">
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleExportBarTender(printingStock)}
-                  disabled={printTemplates.length === 0}
-                  className="px-3 py-2 rounded text-xs font-semibold bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="BarTender programına bağlamak için Excel/CSV veri dosyası indirir."
-                >
-                  <FileSpreadsheet size={14} />
-                  BarTender Aktar (CSV)
-                </button>
                 <button
                   type="button"
                   onClick={async () => {
@@ -1122,7 +1178,7 @@ export default function StoklarView({
 
       {/* Hidden Print Area */}
       {isPrintModalOpen && printingStock && selectedTemplateId && (
-        <div className="hidden print:flex fixed inset-0 bg-white z-[9999] flex-col items-center justify-center text-black">
+        <div style={{ position: 'fixed', left: 0, top: 0, width: '0px', height: '0px', overflow: 'hidden', zIndex: -9999, pointerEvents: 'none' }}>
           {(() => {
             const t = printTemplates.find(tpl => tpl.id === selectedTemplateId);
             if (!t) return null;
@@ -1133,55 +1189,55 @@ export default function StoklarView({
             const is40x60 = t.paperSize === 'etiket_40x60';
             const is80x50 = t.paperSize === 'etiket_80x50';
             
-            let w = '40mm';
-            let h = '30mm';
-            if (is60x40) { w = '60mm'; h = '40mm'; }
-            if (is40x60) { w = '40mm'; h = '60mm'; }
-            if (is80x50) { w = '80mm'; h = '50mm'; }
-            if (is40x20) { w = '40mm'; h = '20mm'; }
+            let w = 400; // default 40x30 (scaled to pixels)
+            let h = 300;
+            if (is60x40) { w = 600; h = 400; }
+            if (is40x60) { w = 400; h = 600; }
+            if (is80x50) { w = 800; h = 500; }
+            if (is40x20) { w = 400; h = 200; }
 
-            const widthStyle = { width: w, height: h };
+            const widthStyle = { width: `${w}px`, height: `${h}px`, backgroundColor: '#ffffff' };
             
-            let bcWidth = 1;
-            let bcHeight = 60;
-            let bcFontSize = 10;
+            let bcWidth = 2;
+            let bcHeight = 80;
+            let bcFontSize = 16;
             
-            if (is40x20) { bcWidth = 1; bcHeight = 35; bcFontSize = 8; }
-            if (is60x40) { bcWidth = 2; bcHeight = 80; bcFontSize = 14; }
-            if (is80x50) { bcWidth = 2; bcHeight = 100; bcFontSize = 16; }
-            if (is40x60) { bcWidth = 1; bcHeight = 100; bcFontSize = 12; }
+            if (is40x20) { bcWidth = 2; bcHeight = 50; bcFontSize = 14; }
+            if (is60x40) { bcWidth = 3; bcHeight = 110; bcFontSize = 20; }
+            if (is80x50) { bcWidth = 4; bcHeight = 140; bcFontSize = 24; }
+            if (is40x60) { bcWidth = 2; bcHeight = 160; bcFontSize = 20; }
             
             return (
-              <div id="printable-barcode-content" className="text-center flex flex-col items-center justify-center overflow-hidden" style={widthStyle}>
+              <div id="printable-barcode-content" className="text-center flex flex-col items-center justify-center overflow-hidden bg-white text-black p-4" style={widthStyle}>
                 {t.showImage && printingStock.imageUrl && (
                   <img 
                     src={printingStock.imageUrl} 
                     alt="Ürün Resmi" 
-                    className={`object-cover mb-0.5 rounded-sm filter grayscale ${is60x40 || is80x50 ? 'w-14 h-14' : (is40x20 ? 'w-6 h-6' : 'w-10 h-10')}`}
+                    className={`object-cover mb-1 rounded-sm filter grayscale ${is60x40 || is80x50 ? 'w-24 h-24' : (is40x20 ? 'w-12 h-12' : 'w-20 h-20')}`}
                     style={{ WebkitFilter: 'grayscale(100%)', mixBlendMode: 'multiply' }}
                   />
                 )}
                 {t.showBarcodeName !== false && (
-                  <div className={`font-bold ${is60x40 || is80x50 ? 'text-[12px]' : (is40x20 ? 'text-[9px]' : 'text-[10px]')} mb-0.5 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
+                  <div className={`font-bold ${is60x40 || is80x50 || is40x60 ? 'text-[24px]' : (is40x20 ? 'text-[16px]' : 'text-[20px]')} mb-1 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
                     {printingStock.name}
                   </div>
                 )}
                 {t.showBarcodeCode !== false && printingStock.code && (
-                  <div className={`font-medium text-gray-700 ${is60x40 || is80x50 ? 'text-[11px]' : (is40x20 ? 'text-[8px]' : 'text-[9px]')} mb-0.5 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
+                  <div className={`font-medium text-gray-700 ${is60x40 || is80x50 || is40x60 ? 'text-[20px]' : (is40x20 ? 'text-[14px]' : 'text-[18px]')} mb-1 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
                     {printingStock.code}
                   </div>
                 )}
                 {t.showCustomText && t.customTextContent && (
-                  <div className={`font-medium text-gray-800 ${is60x40 || is80x50 ? 'text-[12px]' : (is40x20 ? 'text-[9px]' : 'text-[10px]')} mb-0.5 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
+                  <div className={`font-medium text-gray-800 ${is60x40 || is80x50 || is40x60 ? 'text-[22px]' : (is40x20 ? 'text-[15px]' : 'text-[19px]')} mb-1 w-full px-1 text-center whitespace-nowrap truncate leading-tight uppercase`}>
                     {t.customTextContent}
                   </div>
                 )}
                 {t.showBarcodePrice !== false && (
-                  <div className={`font-black ${is60x40 || is80x50 ? 'text-[16px]' : (is40x20 ? 'text-[12px]' : 'text-[14px]')} mb-0.5`}>
+                  <div className={`font-black ${is60x40 || is80x50 || is40x60 ? 'text-[32px]' : (is40x20 ? 'text-[22px]' : 'text-[28px]')} mb-1`}>
                     {printingStock.salesPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
                   </div>
                 )}
-                <div className="flex justify-center w-full px-1 barcode-svg-container">
+                <div className="flex justify-center w-full px-2 barcode-svg-container">
                   <Barcode renderer="img" 
                     value={barcodeValue} 
                     format={t.barcodeFormat || "CODE128"} 
@@ -1190,6 +1246,7 @@ export default function StoklarView({
                     fontSize={bcFontSize}
                     margin={0}
                     background="#ffffff"
+                    displayValue={true}
                   />
                 </div>
               </div>
@@ -1197,6 +1254,20 @@ export default function StoklarView({
           })()}
         </div>
       )}
+
+      <BarcodeScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={(code) => {
+          if (scannerTarget === 'search') {
+            setSearchTerm(code);
+          } else {
+            setFormData(prev => ({ ...prev, barcode: code }));
+          }
+        }}
+        title={scannerTarget === 'search' ? 'Stoklarda Barkod Ara' : 'Stok Kartı Barkodu Tara'}
+        multiScan={false}
+      />
     </div>
   );
 }

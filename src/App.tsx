@@ -64,6 +64,7 @@ import {
   EyeOff,
   KeyRound,
   BarChart3,
+  BarChart,
   Printer,
   FileText,
   Check,
@@ -81,8 +82,10 @@ import {
   FolderOpen,
   ShieldCheck,
   Landmark,
-  MessageSquare
+  MessageSquare,
+  Image as ImageIcon
 } from 'lucide-react';
+import { compressImage } from './utils/imageCompressor';
 
 const StormLogo = ({ 
   className = "", 
@@ -256,16 +259,19 @@ const StormLogo = ({
   );
 };
 
-const APP_VERSION = '1.5.6';
+const APP_VERSION = '1.5.8';
 
 const CHANGELOG = {
-  version: '1.5.6',
+  version: '1.5.8',
   features: [
-    "Barkod yazdırma (Print) işleminde termal yazıcılarda (Zebra, Xprinter vb.) oluşan 'siyah blok' / 'büyük siyah kutu' hatası düzeltildi.",
-    "Barkod çizicisi SVG'den Base64 Img formatına geçirilerek yazıcı kaynaklı CSS çakışmaları ve vektörel gerilmeler tamamen engellendi."
+    "Storm AI mikrofon ve ses tanıma sistemi kesintisiz (continuous) hale getirilerek uzun konuşmaların kesilmeden aktarılması sağlandı.",
+    "Hata / İstek Bildirim penceresi tamamen modernize edildi, daha okunaklı ve şık bir açık tema arayüzü ile yeniden tasarlandı.",
+    "Hata bildirimlerine veya yeni isteklere ekran görüntüsü/resim ekleme desteği getirildi.",
+    "Yüklenen resimlerin boyutunu otomatik optimize eden akıllı görsel sıkıştırma algoritması entegre edildi.",
+    "Yönetici Panelinde (Admin Dashboard) gönderilen geri bildirimlere eklenen ekran görüntülerini tam ekran pürüzsüz inceleyebilmek için gelişmiş görsel zoom (lightbox) özelliği eklendi."
   ],
   fixes: [
-    "Uygulama versiyonu v1.5.6 olarak güncellendi ve tüm masaüstü/web üretim derleme süreçleri başarıyla tamamlandı."
+    "Mikrofon açıkken konuşma algılanmadığında (no-speech) veya sessizlik anında ortaya çıkan rahatsız edici tarayıcı uyarı ve hata pencereleri giderildi, sistem arka planda kararlı çalışacak şekilde sessizleştirildi."
   ]
 };
 
@@ -465,6 +471,25 @@ export const PIN_ACCOUNTS = [
 ];
 
 const changelogData = [
+  {
+    version: "1.5.8",
+    date: "08.07.2026",
+    changes: [
+      "Storm AI yapay zeka asistanı kesintisiz (continuous) mikrofon dinleme özelliği ile güçlendirildi.",
+      "Ses algılanamadığında (no-speech) çıkan gereksiz uyarı bildirimleri kaldırılarak asistan deneyimi kararlı hale getirildi.",
+      "Hata / İstek Bildirimi modülü tamamen yenilenerek ekran görüntüsü/resim yükleme desteği eklendi.",
+      "Yüklenen resimleri performansı korumak için optimize eden istemci tarafı sıkıştırma algoritması (compressImage) uygulandı.",
+      "Yönetici Panelinde (Admin Dashboard) gönderilen geri bildirim görsellerini tam ekran pürüzsüz incelemek için visual zoom (lightbox) entegre edildi."
+    ]
+  },
+  {
+    version: "1.5.7",
+    date: "08.07.2026",
+    changes: [
+      "v1.5.7 sürüm hazırlıklarına başlandı.",
+      "Bundan sonraki tüm sistem ayarları, geliştirmeler ve hata düzeltmeleri bu sürüm altında taslak olarak yapılandırılacaktır."
+    ]
+  },
   {
     version: "1.5.6",
     date: "07.07.2026",
@@ -902,6 +927,9 @@ export default function App() {
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackType, setFeedbackType] = useState<'error' | 'feature'>('error');
   const [feedbackCompany, setFeedbackCompany] = useState('');
+  const [feedbackImage, setFeedbackImage] = useState<string | null>(null);
+  const [feedbackImageLoading, setFeedbackImageLoading] = useState(false);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [adminTab, setAdminTab] = useState<'errors' | 'feedback'>('errors');
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   // Init users from localStorage or predefined
@@ -992,6 +1020,53 @@ export default function App() {
       window.electronAPI.setAutoBackup(autoBackupEnabled);
     }
   }, [autoBackupEnabled]);
+
+  // Global hardware barcode scanner listener
+  useEffect(() => {
+    let buffer = '';
+    let lastKeyTime = Date.now();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const currentTime = Date.now();
+      const timeDiff = currentTime - lastKeyTime;
+      lastKeyTime = currentTime;
+
+      // Ignore standard modifier keys
+      if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        return;
+      }
+
+      // If it's a single printable character (length is 1), record it
+      if (e.key.length === 1) {
+        // If the typing speed is slow (> 50ms), reset the buffer to only keep the current character.
+        // Humans cannot type with < 50ms consistently. Hardware scanners type at < 15ms.
+        if (timeDiff > 50) {
+          buffer = e.key;
+        } else {
+          buffer += e.key;
+        }
+      } else if (e.key === 'Enter') {
+        // When Enter is pressed, if we have built up a rapid barcode sequence, trigger the event
+        if (buffer.length >= 4 && timeDiff < 50) {
+          e.preventDefault();
+          const scannedCode = buffer.trim();
+          buffer = '';
+          
+          const event = new CustomEvent('global-hardware-barcode-scan', {
+            detail: { code: scannedCode }
+          });
+          window.dispatchEvent(event);
+        } else {
+          buffer = '';
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true); // useCapture to intercept early before active inputs
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, []);
 
   const [aiInfoModalOpen, setAiInfoModalOpen] = useState(false);
   const [aiPrefilledData, setAiPrefilledData] = useState<{
@@ -1789,17 +1864,6 @@ export default function App() {
             <Bot size={15} />
             <span>Yapay Zeka (AI)</span>
           </button>
-          <button
-            onClick={() => setSettingsSubTab('updates')}
-            className={`flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
-              settingsSubTab === 'updates'
-                ? 'border-teal-600 text-teal-600 font-extrabold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <CloudLightning size={15} />
-            <span>Güncellemeler</span>
-          </button>
         </div>
 
         {settingsSubTab === 'general' && (
@@ -2556,109 +2620,6 @@ export default function App() {
           </div>
         )}
 
-        {settingsSubTab === 'updates' && (
-          <div className="grid grid-cols-1 gap-6 animate-fade-in">
-            <div className="bg-[#ffffff] p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
-                  <CloudLightning size={18} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Yazılım Güncellemeleri</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Sisteminizin her zaman en güncel ve güvenli sürümde çalıştığından emin olun</p>
-                </div>
-              </div>
-
-              <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between bg-slate-50 border border-slate-200 p-6 rounded-xl">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-sm font-bold text-slate-900">Mevcut Sürüm: v{APP_VERSION}</span>
-                    {updateStatus === 'downloaded' && (
-                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-widest rounded">
-                        Güncelleme Hazır
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-500 max-w-md">
-                    Uygulamanın yeni bir sürümü olup olmadığını kontrol edebilir ve güncellemeyi indirebilirsiniz. Yeni sürüm hazır olduğunda onayınızla kurulum yapılır.
-                  </p>
-                </div>
-
-                <div className="flex flex-col items-end gap-3 min-w-[200px] w-full md:w-auto">
-                  {updateStatus === 'idle' || updateStatus === 'not-available' ? (
-                    <button
-                      onClick={async () => {
-                        if (!window.electronAPI) {
-                          alert("Bu özellik yalnızca masaüstü uygulamasında (Electron) kullanılabilir.");
-                          return;
-                        }
-                        setUpdateStatus('checking');
-                        try {
-                          const result = await (window.electronAPI as any).checkForUpdatesManual();
-                          if (result.available) {
-                            setUpdateStatus('available');
-                          } else {
-                            setUpdateStatus('not-available');
-                            alert(result.error ? `Hata: ${result.error}` : "Şu an için yeni bir güncelleme bulunmuyor.");
-                          }
-                        } catch (err) {
-                          setUpdateStatus('idle');
-                          alert("Güncelleme kontrolü sırasında bir hata oluştu.");
-                        }
-                      }}
-                      className="w-full md:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <RotateCcw size={14} />
-                      Güncellemeleri Denetle
-                    </button>
-                  ) : updateStatus === 'checking' ? (
-                    <button disabled className="w-full md:w-auto px-5 py-2.5 bg-indigo-400 text-white text-xs font-bold uppercase tracking-wider rounded-xl cursor-not-allowed flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                      Kontrol Ediliyor...
-                    </button>
-                  ) : updateStatus === 'available' ? (
-                    <button
-                      onClick={() => {
-                        if (window.electronAPI) {
-                          window.electronAPI.downloadUpdate();
-                          setUpdateStatus('downloading');
-                        }
-                      }}
-                      className="w-full md:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <Download size={14} />
-                      Şimdi İndir
-                    </button>
-                  ) : updateStatus === 'downloading' ? (
-                    <div className="w-full md:w-auto flex flex-col gap-1 w-full">
-                      <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        <span>İndiriliyor...</span>
-                        <span>{Math.round(updatePercent)}%</span>
-                      </div>
-                      <div className="h-2 bg-slate-200 rounded-full overflow-hidden w-full">
-                        <div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${updatePercent}%` }} />
-                      </div>
-                    </div>
-                  ) : updateStatus === 'downloaded' ? (
-                    <button
-                      onClick={() => {
-                        if (window.electronAPI) {
-                          window.electronAPI.restartApp();
-                        }
-                      }}
-                      className="w-full md:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <RotateCcw size={14} />
-                      Yeniden Başlat & Kur
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-
-
-          </div>
-        )}
       </div>
 
       {/* AI Settings Info Modal */}
@@ -3017,6 +2978,103 @@ export default function App() {
             <CloudLightning size={16} className="text-teal-400 shrink-0" />
             Sürüm Notları & Güncellemeler
           </h3>
+
+          {/* Active Update Control Widget */}
+          <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 mb-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Mevcut Sürüm</span>
+                <span className="text-xs font-bold text-teal-400 font-mono">v{APP_VERSION}</span>
+              </div>
+              {updateStatus === 'downloaded' ? (
+                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-[9px] font-bold uppercase tracking-wider rounded border border-emerald-500/20 animate-pulse">
+                  Güncelleme Hazır
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 bg-teal-500/10 text-teal-400 text-[9px] font-semibold uppercase tracking-wider rounded border border-teal-500/10">
+                  En Güncel Sürüm
+                </span>
+              )}
+            </div>
+
+            <p className="text-[11px] text-white/60 leading-normal">
+              Uygulamanın yeni bir sürümü olup olmadığını kontrol edebilir ve güncellemeyi indirebilirsiniz. Yeni sürüm hazır olduğunda onayınızla kurulum yapılır.
+            </p>
+
+            <div className="pt-1">
+              {updateStatus === 'idle' || updateStatus === 'not-available' ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!window.electronAPI) {
+                      alert("Bu özellik yalnızca masaüstü uygulamasında (Electron) kullanılabilir.");
+                      return;
+                    }
+                    setUpdateStatus('checking');
+                    try {
+                      const result = await (window.electronAPI as any).checkForUpdatesManual();
+                      if (result.available) {
+                        setUpdateStatus('available');
+                      } else {
+                        setUpdateStatus('not-available');
+                        alert(result.error ? `Hata: ${result.error}` : "Şu an için yeni bir güncelleme bulunmuyor.");
+                      }
+                    } catch (err) {
+                      setUpdateStatus('idle');
+                      alert("Güncelleme kontrolü sırasında bir hata oluştu.");
+                    }
+                  }}
+                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(79,70,229,0.3)] hover:shadow-[0_4px_18px_rgba(79,70,229,0.5)]"
+                >
+                  <RotateCcw size={12} />
+                  Güncellemeleri Denetle
+                </button>
+              ) : updateStatus === 'checking' ? (
+                <button disabled className="w-full py-2 bg-indigo-500/40 text-white/50 text-[11px] font-bold uppercase tracking-wider rounded-lg cursor-not-allowed flex items-center justify-center gap-2 border border-indigo-500/20">
+                  <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  Kontrol Ediliyor...
+                </button>
+              ) : updateStatus === 'available' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.electronAPI) {
+                      window.electronAPI.downloadUpdate();
+                      setUpdateStatus('downloading');
+                    }
+                  }}
+                  className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(16,185,129,0.3)]"
+                >
+                  <Download size={12} />
+                  Şimdi İndir
+                </button>
+              ) : updateStatus === 'downloading' ? (
+                <div className="space-y-1.5 w-full">
+                  <div className="flex justify-between text-[10px] font-bold text-white/50 uppercase tracking-wider">
+                    <span>İndiriliyor...</span>
+                    <span>{Math.round(updatePercent)}%</span>
+                  </div>
+                  <div className="h-1.5 bg-white/5 rounded-full overflow-hidden w-full border border-white/5">
+                    <div className="h-full bg-indigo-500 transition-all duration-300 animate-pulse" style={{ width: `${updatePercent}%` }} />
+                  </div>
+                </div>
+              ) : updateStatus === 'downloaded' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.electronAPI) {
+                      window.electronAPI.restartApp();
+                    }
+                  }}
+                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(79,70,229,0.3)]"
+                >
+                  <RotateCcw size={12} />
+                  Yeniden Başlat & Kur
+                </button>
+              ) : null}
+            </div>
+          </div>
+
           <div className="space-y-6">
             {changelogData.map((log, idx) => (
               <div key={idx} className={`relative pl-4 border-l-2 ${idx === 0 ? 'border-teal-500' : 'border-white/20'}`}>
@@ -3180,6 +3238,19 @@ export default function App() {
                               </div>
                               <div className="flex-1">
                                 <p className="text-sm text-white/90 whitespace-pre-wrap leading-relaxed">{feedback.text}</p>
+                                {feedback.image && (
+                                  <div className="mt-3">
+                                    <span className="text-[10px] uppercase font-bold tracking-wider text-white/40 block mb-1">Ekli Görsel (Büyütmek için tıklayın):</span>
+                                    <div className="relative group max-w-[200px] aspect-video rounded-lg overflow-hidden border border-white/10 hover:border-teal-500/50 transition cursor-zoom-in">
+                                      <img 
+                                        src={feedback.image} 
+                                        alt="Ekli Görsel" 
+                                        onClick={() => setZoomImage(feedback.image)}
+                                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
                                 <div className="flex items-center gap-3 mt-3 text-xs text-white/40 font-mono">
                                   <span>{feedback.date}</span>
                                   <span>•</span>
@@ -3651,10 +3722,16 @@ export default function App() {
               setPendingCariId(cariId);
               setActiveTab('islemler');
             }}
+            aiPrefilledData={aiPrefilledData}
+            onClearAiPrefilledData={() => setAiPrefilledData(null)}
           />
         </div>
         <div className={activeTab === 'stoklar' ? 'block animate-fade-in' : 'hidden'}>
-          <StoklarView stoklar={stoklar} />
+          <StoklarView 
+            stoklar={stoklar} 
+            aiPrefilledData={aiPrefilledData}
+            onClearAiPrefilledData={() => setAiPrefilledData(null)}
+          />
         </div>
         <div className={activeTab === 'islemler' ? 'block animate-fade-in' : 'hidden'}>
           <IslemlerView 
@@ -4048,34 +4125,46 @@ export default function App() {
       
       {/* Feedback Modal */}
       {showFeedbackModal && (
-        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
-          <div className="bg-[#0c0c0c] border border-white/10 w-full max-w-md rounded-2xl shadow-2xl flex flex-col animate-fade-in p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
-                <MessageSquare size={18} className="text-teal-400" />
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 w-full max-w-md rounded-2xl shadow-2xl flex flex-col animate-fade-in p-6 text-slate-800">
+            <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100">
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                <MessageSquare size={18} className="text-teal-600" />
                 Hata / İstek Bildir
               </h2>
-              <button onClick={() => setShowFeedbackModal(false)} className="text-white/40 hover:text-white transition cursor-pointer">
+              <button 
+                onClick={() => {
+                  setShowFeedbackModal(false);
+                  setFeedbackImage(null);
+                }} 
+                className="text-slate-400 hover:text-slate-600 transition cursor-pointer p-1 rounded-full hover:bg-slate-100"
+              >
                 <X size={20} />
               </button>
             </div>
             
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-white/60 uppercase tracking-widest mb-2 block">Bildirim Türü</label>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Bildirim Türü</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
+                    type="button"
                     onClick={() => setFeedbackType('error')}
-                    className={`p-3 rounded-lg border text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                      feedbackType === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-400' : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'
+                    className={`p-3 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                      feedbackType === 'error' 
+                        ? 'bg-red-50 border-red-200 text-red-600 shadow-sm' 
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
                     Hata Bildirimi
                   </button>
                   <button
+                    type="button"
                     onClick={() => setFeedbackType('feature')}
-                    className={`p-3 rounded-lg border text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                      feedbackType === 'feature' ? 'bg-teal-500/20 border-teal-500/50 text-teal-400' : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'
+                    className={`p-3 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                      feedbackType === 'feature' 
+                        ? 'bg-teal-50 border-teal-200 text-teal-600 shadow-sm' 
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
                     Yeni İstek
@@ -4084,23 +4173,91 @@ export default function App() {
               </div>
               
               <div>
-                <label className="text-xs font-bold text-white/60 uppercase tracking-widest mb-2 block">Detaylar</label>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Detaylar</label>
                 <textarea
                   value={feedbackText}
                   onChange={(e) => setFeedbackText(e.target.value)}
                   rows={4}
                   placeholder="Lütfen karşılaştığınız hatayı veya yeni özellik isteğinizi detaylıca açıklayın..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white placeholder-white/30 focus:border-teal-500/50 outline-none resize-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-slate-800 placeholder-slate-400 focus:border-teal-500 focus:bg-white outline-none resize-none transition-all"
                 ></textarea>
+              </div>
+
+              {/* Image Upload Area */}
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">
+                  Ekran Görüntüsü / Resim Ekle (İsteğe Bağlı)
+                </label>
+                
+                {feedbackImage ? (
+                  <div className="relative border border-slate-200 rounded-xl overflow-hidden bg-slate-50 p-2 flex items-center gap-3">
+                    <img 
+                      src={feedbackImage} 
+                      alt="Screenshot" 
+                      className="w-16 h-16 object-cover rounded-lg border border-slate-200"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-slate-700 truncate">Ekran Görüntüsü Hazır</p>
+                      <p className="text-[10px] text-slate-400 font-mono">Optimize edildi (Boyut: ~{Math.round(feedbackImage.length / 1024)} KB)</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFeedbackImage(null)}
+                      className="p-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg transition text-xs font-bold cursor-pointer shrink-0"
+                    >
+                      Kaldır
+                    </button>
+                  </div>
+                ) : (
+                  <label className="border-2 border-dashed border-slate-200 hover:border-teal-500 hover:bg-teal-50/10 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all bg-slate-50 text-slate-500">
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try {
+                            setFeedbackImageLoading(true);
+                            // Compress to max width/height 800px to keep it high quality but low storage footprint
+                            const compressed = await compressImage(file, 800, 800, 0.7);
+                            setFeedbackImage(compressed);
+                          } catch (err: any) {
+                            alert(err.message || "Resim sıkıştırılırken bir hata oluştu.");
+                          } finally {
+                            setFeedbackImageLoading(false);
+                          }
+                        }
+                      }}
+                      className="hidden" 
+                    />
+                    {feedbackImageLoading ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-5 h-5 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-xs font-medium text-slate-600">Resim optimize ediliyor...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <ImageIcon size={24} className="text-slate-400 mb-1.5" />
+                        <span className="text-xs font-medium text-slate-700">Resim yüklemek için tıklayın</span>
+                        <span className="text-[10px] text-slate-400 mt-0.5">Sadece resim dosyaları desteklenir</span>
+                      </>
+                    )}
+                  </label>
+                )}
               </div>
               
               <button
+                type="button"
                 onClick={() => {
-                  if (!feedbackText.trim()) return;
+                  if (!feedbackText.trim()) {
+                    alert("Lütfen detaylar kısmını doldurun.");
+                    return;
+                  }
                   const newFeedback = {
                     id: Date.now().toString(),
                     type: feedbackType,
                     text: feedbackText,
+                    image: feedbackImage,
                     user: user?.displayName || 'Bilinmeyen Kullanıcı',
                     date: new Date().toLocaleString('tr-TR')
                   };
@@ -4109,20 +4266,43 @@ export default function App() {
                   const updated = [newFeedback, ...parsed];
                   localStorage.setItem('storm_feedback_logs', JSON.stringify(updated));
                   
-                  // update state if admin panel is somehow listening to it, though it's separate
                   setFeedbackList(updated);
-                  
                   setShowFeedbackModal(false);
                   setFeedbackText('');
+                  setFeedbackImage(null);
                   setFeedbackType('error');
                   
                   alert("Bildiriminiz başarıyla iletildi. Teşekkür ederiz!");
                 }}
-                className="w-full py-3 bg-teal-500 hover:bg-teal-600 text-white font-bold text-sm uppercase tracking-widest rounded-xl transition-colors cursor-pointer"
+                disabled={feedbackImageLoading}
+                className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm uppercase tracking-widest rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Gönder
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Zoom Lightbox */}
+      {zoomImage && (
+        <div 
+          className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out animate-fade-in"
+          onClick={() => setZoomImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] flex flex-col justify-center items-center" onClick={(e) => e.stopPropagation()}>
+            <button 
+              onClick={() => setZoomImage(null)}
+              className="absolute -top-12 right-0 text-white/70 hover:text-white p-2 hover:bg-white/10 rounded-full transition cursor-pointer flex items-center gap-1.5 text-xs uppercase tracking-wider font-bold bg-black/40 backdrop-blur-sm px-3"
+            >
+              <X size={18} />
+              Kapat
+            </button>
+            <img 
+              src={zoomImage} 
+              alt="Zoomed Attachment" 
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl border border-white/10"
+            />
           </div>
         </div>
       )}

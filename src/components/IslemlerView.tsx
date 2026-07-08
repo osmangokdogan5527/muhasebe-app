@@ -29,8 +29,10 @@ import {
   Upload,
   Sparkles,
   ChevronDown,
-  Zap
+  Zap,
+  Scan
 } from 'lucide-react';
+import BarcodeScannerModal from './BarcodeScannerModal';
 
 interface IslemlerViewProps {
   islemler: Transaction[];
@@ -206,6 +208,7 @@ export default function IslemlerView({
   
   // Barcode State
   const [barcodeInput, setBarcodeInput] = useState('');
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // Form states
   const [invoiceNo, setInvoiceNo] = useState('');
@@ -283,6 +286,77 @@ export default function IslemlerView({
       setIsConvertedAmountEdited(false);
     }
   }, [selectedCariId, cariler]);
+
+  // Handle physical barcode scanner input globally
+  useEffect(() => {
+    const handleHardwareScan = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const code = (customEvent.detail.code || '').trim();
+      if (!code) return;
+
+      if (isModalOpen && ['sale', 'purchase', 'sale_return', 'purchase_return'].includes(modalType)) {
+        const scannedStock = stoklar.find(s => s.barcode === code || s.code === code);
+        if (scannedStock) {
+          const existingItemIndex = invoiceItems.findIndex(item => item.stockId === scannedStock.id);
+          if (existingItemIndex >= 0) {
+            const updatedItems = [...invoiceItems];
+            const item = updatedItems[existingItemIndex];
+            const newQty = (item.quantity || 0) + 1;
+            updatedItems[existingItemIndex] = {
+              ...item,
+              quantity: newQty,
+              total: newQty * item.price * (1 + item.taxRate / 100)
+            };
+            setInvoiceItems(updatedItems);
+          } else {
+            const price = modalType === 'sale' || modalType === 'sale_return' 
+              ? scannedStock.salesPrice 
+              : scannedStock.purchasePrice;
+            const emptyRowIndex = invoiceItems.findIndex(item => !item.stockId);
+            const newItem = {
+              stockId: scannedStock.id,
+              stockName: scannedStock.name,
+              quantity: 1,
+              unit: scannedStock.unit,
+              price: price,
+              taxRate: scannedStock.taxRate,
+              total: price * (1 + scannedStock.taxRate / 100)
+            };
+            if (emptyRowIndex >= 0) {
+              const updatedItems = [...invoiceItems];
+              updatedItems[emptyRowIndex] = newItem;
+              setInvoiceItems(updatedItems);
+            } else {
+              setInvoiceItems([...invoiceItems, newItem]);
+            }
+          }
+          setFormError('');
+
+          // Electronic beep audio confirmation
+          try {
+            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.12);
+          } catch (soundErr) {
+            console.warn('Scan sound play failed', soundErr);
+          }
+        } else {
+          setFormError(`"${code}" barkoduna sahip ürün bulunamadı.`);
+        }
+      }
+    };
+
+    window.addEventListener('global-hardware-barcode-scan', handleHardwareScan);
+    return () => {
+      window.removeEventListener('global-hardware-barcode-scan', handleHardwareScan);
+    };
+  }, [isModalOpen, modalType, invoiceItems, stoklar]);
 
   // Calculate default converted amount based on rate & currencies
   const invoiceTotals = useMemo(() => {
@@ -1396,9 +1470,17 @@ export default function IslemlerView({
                               handleBarcodeScan(e as any);
                             }
                           }}
-                          className="w-full pl-8 pr-3 py-1.5 bg-white/5 border border-white/10 text-white rounded text-[10px] font-mono focus:outline-hidden focus:border-teal-500 placeholder-white/30"
+                          className="w-full pl-8 pr-8 py-1.5 bg-white/5 border border-white/10 text-white rounded text-[10px] font-mono focus:outline-hidden focus:border-teal-500 placeholder-white/30"
                         />
                         <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/30" />
+                        <button
+                          type="button"
+                          onClick={() => setIsScannerOpen(true)}
+                          title="Kamera ile Barkod Oku"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-teal-400 hover:text-teal-300 rounded hover:bg-white/10 transition cursor-pointer"
+                        >
+                          <Scan size={12} />
+                        </button>
                       </div>
                       <button 
                         id="btn-add-row"
@@ -2072,6 +2154,52 @@ export default function IslemlerView({
             </div>
         );
       })()}
+
+      <BarcodeScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={(code) => {
+          const scannedStock = stoklar.find(s => s.barcode === code.trim() || s.code === code.trim());
+          if (scannedStock) {
+            const existingItemIndex = invoiceItems.findIndex(item => item.stockId === scannedStock.id);
+            if (existingItemIndex >= 0) {
+              const updatedItems = [...invoiceItems];
+              const item = updatedItems[existingItemIndex];
+              const newQty = (item.quantity || 0) + 1;
+              updatedItems[existingItemIndex] = {
+                ...item,
+                quantity: newQty,
+                total: newQty * item.price * (1 + item.taxRate / 100)
+              };
+              setInvoiceItems(updatedItems);
+            } else {
+              const price = modalType === 'sale' ? scannedStock.salesPrice : scannedStock.purchasePrice;
+              const emptyRowIndex = invoiceItems.findIndex(item => !item.stockId);
+              const newItem = {
+                stockId: scannedStock.id,
+                stockName: scannedStock.name,
+                quantity: 1,
+                unit: scannedStock.unit,
+                price: price,
+                taxRate: scannedStock.taxRate,
+                total: price * (1 + scannedStock.taxRate / 100)
+              };
+              if (emptyRowIndex >= 0) {
+                const updatedItems = [...invoiceItems];
+                updatedItems[emptyRowIndex] = newItem;
+                setInvoiceItems(updatedItems);
+              } else {
+                setInvoiceItems([...invoiceItems, newItem]);
+              }
+            }
+            setFormError('');
+          } else {
+            setFormError(`"${code}" barkoduna sahip ürün bulunamadı.`);
+          }
+        }}
+        title="Faturaya Ürün Barkodu Okut"
+        multiScan={true}
+      />
     </div>
   );
 }
