@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Loader2, Sparkles, AlertCircle, Settings, Bot, Mic, MicOff } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, AlertCircle, Settings, Bot, Mic } from 'lucide-react';
 
 const SpeechRecognition = typeof window !== 'undefined' ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) : null;
 

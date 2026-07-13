@@ -25,6 +25,7 @@ export default function BarcodeScannerModal({
   const [isContinuousMode, setIsContinuousMode] = useState(multiScan);
   const [lastScanned, setLastScanned] = useState<string>('');
   const [scanFeedback, setScanFeedback] = useState(false);
+  const [manualCode, setManualCode] = useState<string>('');
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const lastScanTimeRef = useRef<number>(0);
@@ -67,12 +68,12 @@ export default function BarcodeScannerModal({
           );
           setSelectedCameraId(rearCam ? rearCam.id : devices[0].id);
         } else {
-          setErrorMsg('Kamera bulunamadı. Lütfen cihazınızda kamera olduğundan ve izin verildiğinden emin olun.');
+          setErrorMsg('Aktif bir kamera bulunamadı. Lütfen cihazınızda kamera olduğundan emin olun veya alttaki manuel barkod alanını kullanın.');
         }
       })
       .catch((err) => {
         console.error('Kamera listeleme hatası:', err);
-        setErrorMsg('Kamera erişim izni alınamadı.');
+        setErrorMsg('Cihazda kamera donanımı bulunamadı veya kamera izinleri engellendi (Requested device not found). Aşağıdaki manuel barkod giriş alanını kullanarak işlemlerinize devam edebilirsiniz.');
       });
 
     return () => {
@@ -95,11 +96,11 @@ export default function BarcodeScannerModal({
       const scanner = new Html5Qrcode('barcode-reader-container');
       scannerRef.current = scanner;
 
-      // Configure a wider search box appropriate for linear 1D barcodes
+      // Configure a square search box appropriate for both QR codes and barcodes
       const width = window.innerWidth;
       const qrboxSize = width < 640 
-        ? { width: 260, height: 120 } 
-        : { width: 340, height: 160 };
+        ? { width: 220, height: 220 } 
+        : { width: 300, height: 300 };
 
       await scanner.start(
         cameraId,
@@ -309,6 +310,41 @@ export default function BarcodeScannerModal({
         {/* Controls Panel */}
         <div className="p-4 bg-white/[0.01] border-t border-white/5 space-y-4">
           
+          {/* Manuel Barkod Giriş Formu */}
+          <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 space-y-2">
+            <label className="block text-[10px] font-bold text-teal-400 uppercase tracking-wider font-mono">Manuel Barkod/QR Girişi</label>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (manualCode.trim()) {
+                const scannedVal = manualCode.trim();
+                setLastScanned(scannedVal);
+                playBeep();
+                setScanFeedback(true);
+                setTimeout(() => setScanFeedback(false), 450);
+                
+                onScan(scannedVal);
+                setManualCode('');
+                if (!isContinuousMode) {
+                  handleClose();
+                }
+              }
+            }} className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Barkod veya QR kod yazın..."
+                value={manualCode}
+                onChange={(e) => setManualCode(e.target.value)}
+                className="flex-1 px-3 py-1.5 bg-black/40 border border-white/10 text-white rounded-lg text-xs font-mono focus:outline-hidden focus:border-teal-500 placeholder-white/30"
+              />
+              <button
+                type="submit"
+                className="px-3 py-1.5 bg-teal-500/10 border border-teal-500/20 hover:bg-teal-500/20 text-teal-400 rounded-lg text-xs font-bold font-mono transition cursor-pointer"
+              >
+                Oku/Ekle
+              </button>
+            </form>
+          </div>
+
           <div className="flex items-center justify-between gap-3">
             {/* Camera Select dropdown */}
             {cameras.length > 0 && (

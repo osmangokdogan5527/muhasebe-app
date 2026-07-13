@@ -1,44 +1,54 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Cari, Transaction } from "../types";
-import { saveCari, deleteCari } from "../firebase";
+import { Cari, Transaction, Stock } from "../types";
+import { saveCari, deleteCari, createTransaction } from "../firebase";
 import { compressImage } from "../utils/imageCompressor";
 import {
   Plus,
   Search,
-  Filter,
   Phone,
   Mail,
   MapPin,
-  MoreVertical,
   Edit2,
   Trash2,
   FileText,
   X,
-  ArrowUpRight,
-  ArrowDownLeft,
-  ChevronRight,
   Users,
   AlertCircle,
+  AlertTriangle,
   Image as ImageIcon,
+  Save,
+  Calendar,
 } from "lucide-react";
 
 interface CarilerViewProps {
   cariler: Cari[];
   islemler: Transaction[];
+  stoklar?: Stock[];
+  bankAccounts?: any[];
   onQuickTransaction?: (
     type: "sale" | "purchase" | "collection" | "payment",
     cariId: string,
   ) => void;
   aiPrefilledData?: any;
   onClearAiPrefilledData?: () => void;
+  pendingAddCari?: boolean;
+  onCariAdded?: () => void;
+  selectedCariIdForDetails?: string | null;
+  onSelectCariForDetails?: (cariId: string | null) => void;
 }
 
 export default function CarilerView({
   cariler,
   islemler,
+  stoklar = [],
+  bankAccounts = [],
   onQuickTransaction,
   aiPrefilledData,
   onClearAiPrefilledData,
+  pendingAddCari,
+  onCariAdded,
+  selectedCariIdForDetails,
+  onSelectCariForDetails,
 }: CarilerViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<
@@ -48,26 +58,221 @@ export default function CarilerView({
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCari, setEditingCari] = useState<Cari | null>(null);
-  const [selectedCariForDetails, setSelectedCariForDetails] =
+  const [localSelectedCariForDetails, setLocalSelectedCariForDetails] =
     useState<Cari | null>(null);
 
-  // Load print settings from localStorage
-  const printSettings = useMemo(() => {
-    const DEFAULT_PRINT_SETTINGS = {
-      companyName: 'Firma Adı',
-      companyAddress: 'Firma Adresi',
-      companyPhone: '0555 555 55 55',
-      logoType: 'text',
-      logoImageUrl: '',
-    };
-    const saved = localStorage.getItem('storm_muhasebe_print_settings');
-    if (saved) {
-      try {
-        return { ...DEFAULT_PRINT_SETTINGS, ...JSON.parse(saved) };
-      } catch (e) {}
+  const selectedCariForDetails = useMemo(() => {
+    if (selectedCariIdForDetails !== undefined) {
+      if (!selectedCariIdForDetails) return null;
+      return cariler.find((c) => c.id === selectedCariIdForDetails) || null;
     }
-    return DEFAULT_PRINT_SETTINGS;
-  }, [selectedCariForDetails]);
+    return localSelectedCariForDetails;
+  }, [selectedCariIdForDetails, localSelectedCariForDetails, cariler]);
+
+  const setSelectedCariForDetails = (cari: Cari | null) => {
+    if (onSelectCariForDetails) {
+      onSelectCariForDetails(cari ? cari.id : null);
+    } else {
+      setLocalSelectedCariForDetails(cari);
+    }
+  };
+  const [ekstreType, setEkstreType] = useState<"summary" | "detailed">("summary");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+
+  const currentCari = useMemo(() => {
+    if (!selectedCariForDetails) return null;
+    return cariler.find((c) => c.id === selectedCariForDetails.id) || selectedCariForDetails;
+  }, [selectedCariForDetails, cariler]);
+
+  // Notes and Embedded Quick Transactions states
+  const [notesText, setNotesText] = useState("");
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+
+  const [quickTxType, setQuickTxType] = useState<"collection" | "payment" | "sale_return" | "purchase_return">("collection");
+  const [quickTxAmount, setQuickTxAmount] = useState("");
+  const [quickTxInvoiceNo, setQuickTxInvoiceNo] = useState("");
+  const [quickTxDate, setQuickTxDate] = useState(new Date().toISOString().substring(0, 10));
+  const [quickTxAccount, setQuickTxAccount] = useState<"cash" | "bank" | "pos" | "">("cash");
+  const [quickTxBankAccountId, setQuickTxBankAccountId] = useState("");
+  const [quickTxDescription, setQuickTxDescription] = useState("");
+  const [isSavingQuickTx, setIsSavingQuickTx] = useState(false);
+  const [quickTxError, setQuickTxError] = useState("");
+
+  // Product selection states for return transactions
+  const [quickTxStockId, setQuickTxStockId] = useState("");
+  const [quickTxQuantity, setQuickTxQuantity] = useState("1");
+  const [quickTxUnitPrice, setQuickTxUnitPrice] = useState("");
+
+  // Update prices and compute totals automatically when product or type changes
+  useEffect(() => {
+    if (quickTxType === "sale_return" || quickTxType === "purchase_return") {
+      const selectedStock = stoklar.find(s => s.id === quickTxStockId);
+      if (selectedStock) {
+        const price = quickTxType === "sale_return" ? selectedStock.salesPrice : selectedStock.purchasePrice;
+        setQuickTxUnitPrice(price.toString());
+        const qty = parseFloat(quickTxQuantity) || 1;
+        setQuickTxAmount((qty * price).toFixed(2));
+      } else {
+        setQuickTxUnitPrice("");
+        setQuickTxAmount("");
+      }
+    }
+  }, [quickTxStockId, quickTxType, stoklar]);
+
+  // Recalculate total amount when quantity or unit price is changed manually
+  useEffect(() => {
+    if (quickTxType === "sale_return" || quickTxType === "purchase_return") {
+      const qty = parseFloat(quickTxQuantity) || 0;
+      const price = parseFloat(quickTxUnitPrice) || 0;
+      if (qty > 0 && price > 0) {
+        setQuickTxAmount((qty * price).toFixed(2));
+      }
+    }
+  }, [quickTxQuantity, quickTxUnitPrice, quickTxType]);
+
+  // Populate Notes when currentCari changes
+  useEffect(() => {
+    if (currentCari) {
+      setNotesText(currentCari.notes || "");
+      setStartDate("");
+      setEndDate("");
+    } else {
+      setNotesText("");
+      setStartDate("");
+      setEndDate("");
+    }
+  }, [currentCari?.id]);
+
+  // Populate automatic Description when quickTxType changes
+  useEffect(() => {
+    if (quickTxType === "collection") {
+      setQuickTxDescription("Hızlı Tahsilat Girişi");
+    } else if (quickTxType === "payment") {
+      setQuickTxDescription("Hızlı Ödeme Girişi");
+    } else if (quickTxType === "sale_return") {
+      setQuickTxDescription("Hızlı Satıştan İade Girişi");
+    } else {
+      setQuickTxDescription("Hızlı Alıştan İade Girişi");
+    }
+  }, [quickTxType]);
+
+  // Filter accounts based on selected account type
+  const filteredAccountsForQuick = useMemo(() => {
+    return bankAccounts.filter((acc) => {
+      if (quickTxAccount === "cash") return acc.type === "kasa";
+      if (quickTxAccount === "bank") return acc.type === "banka";
+      if (quickTxAccount === "pos") return acc.type === "pos";
+      return false;
+    });
+  }, [bankAccounts, quickTxAccount]);
+
+  // Set default bank account ID when filteredAccounts changes
+  useEffect(() => {
+    if (filteredAccountsForQuick.length > 0) {
+      setQuickTxBankAccountId(filteredAccountsForQuick[0].id);
+    } else {
+      setQuickTxBankAccountId("");
+    }
+  }, [filteredAccountsForQuick]);
+
+  // Save notes handler
+  const handleSaveNotes = async () => {
+    if (!currentCari) return;
+    setIsSavingNotes(true);
+    try {
+      const { id, ...cariDataWithoutId } = currentCari;
+      await saveCari({
+        ...cariDataWithoutId,
+        notes: notesText,
+      }, id);
+    } catch (err) {
+      console.error("Not kaydedilirken hata oluştu:", err);
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
+
+  // Quick transaction save handler
+  const handleSaveQuickTx = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentCari) return;
+    const finalAmount = parseFloat(quickTxAmount);
+    if (isNaN(finalAmount) || finalAmount <= 0) {
+      setQuickTxError("Lütfen geçerli bir tutar girin.");
+      return;
+    }
+
+    // Validate product if it is a return transaction
+    let items = undefined;
+    const isReturn = quickTxType === "sale_return" || quickTxType === "purchase_return";
+    if (isReturn) {
+      if (!quickTxStockId) {
+        setQuickTxError("Lütfen iade edilecek ürünü seçin.");
+        return;
+      }
+      const selectedStock = stoklar.find(s => s.id === quickTxStockId);
+      if (!selectedStock) {
+        setQuickTxError("Seçilen ürün bulunamadı.");
+        return;
+      }
+      const qty = parseFloat(quickTxQuantity);
+      if (isNaN(qty) || qty <= 0) {
+        setQuickTxError("Lütfen geçerli bir miktar girin.");
+        return;
+      }
+      const price = parseFloat(quickTxUnitPrice) || 0;
+      const taxRateValue = selectedStock.taxRate || 0;
+      const itemTotal = qty * price * (1 + taxRateValue / 100);
+
+      items = [{
+        stockId: selectedStock.id,
+        stockName: selectedStock.name,
+        quantity: qty,
+        unit: selectedStock.unit || "Adet",
+        price: price,
+        taxRate: taxRateValue,
+        total: itemTotal
+      }];
+    }
+
+    setIsSavingQuickTx(true);
+    setQuickTxError("");
+
+    try {
+      await createTransaction({
+        type: quickTxType,
+        cariId: currentCari.id,
+        cariName: currentCari.name,
+        date: quickTxDate,
+        amount: finalAmount,
+        invoiceNo: quickTxInvoiceNo || "",
+        // If it is a return, there is no payment/kasa involved (it is open-account). "ödeme ne alaka" -> correct!
+        account: isReturn ? "" : quickTxAccount,
+        bankAccountId: isReturn ? "" : (quickTxBankAccountId || ""),
+        description: quickTxDescription || `${quickTxType === "collection" ? "Tahsilat" : quickTxType === "payment" ? "Ödeme" : quickTxType === "sale_return" ? "Satıştan İade" : "Alıştan İade"}`,
+        currency: currentCari.currency || "TRY",
+        exchangeRate: 1,
+        convertedAmount: finalAmount,
+        createdAt: new Date().toISOString(),
+        items: items
+      });
+
+      // Clear inputs upon success
+      setQuickTxAmount("");
+      setQuickTxInvoiceNo("");
+      if (isReturn) {
+        setQuickTxStockId("");
+        setQuickTxQuantity("1");
+        setQuickTxUnitPrice("");
+      }
+    } catch (err: any) {
+      console.error("Hızlı işlem kaydedilirken hata oluştu:", err);
+      setQuickTxError(err.message || "İşlem kaydedilemedi.");
+    } finally {
+      setIsSavingQuickTx(false);
+    }
+  };
 
   // Form state
   const [formData, setFormData] = useState({
@@ -86,6 +291,11 @@ export default function CarilerView({
   });
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Deletion states
+  const [deleteConfirmCari, setDeleteConfirmCari] = useState<Cari | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Filter and search Cariler
   const filteredCariler = useMemo(() => {
@@ -151,6 +361,16 @@ export default function CarilerView({
       }
     }
   }, [aiPrefilledData, cariler.length, onClearAiPrefilledData]);
+
+  // Open modal automatically when pendingAddCari is triggered
+  useEffect(() => {
+    if (pendingAddCari) {
+      handleOpenCreateModal();
+      if (onCariAdded) {
+        onCariAdded();
+      }
+    }
+  }, [pendingAddCari, onCariAdded]);
 
   // Open modal for creating new Cari
   const handleOpenCreateModal = () => {
@@ -276,44 +496,49 @@ export default function CarilerView({
   };
 
   // Handle deletion of Cari
-  const handleDelete = async (id: string, name: string) => {
-    if (
-      window.confirm(
-        `"${name}" unvanlı cariyi silmek istediğinize emin misiniz? (Bu cariye ait işlemler silinmeyecektir!)`,
-      )
-    ) {
-      try {
-        await deleteCari(id);
-        if (selectedCariForDetails?.id === id) {
-          setSelectedCariForDetails(null);
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Cari silinirken bir hata oluştu.");
+  const handleDelete = (cari: Cari) => {
+    setDeleteConfirmCari(cari);
+    setDeleteError(null);
+  };
+
+  const handleExecuteDelete = async () => {
+    if (!deleteConfirmCari) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteCari(deleteConfirmCari.id);
+      if (selectedCariForDetails?.id === deleteConfirmCari.id) {
+        setSelectedCariForDetails(null);
       }
+      setDeleteConfirmCari(null);
+    } catch (err: any) {
+      console.error(err);
+      setDeleteError("Cari silinirken bir hata oluştu. Lütfen tekrar deneyin.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   // Extract ledger details for the selected Cari
   const cariLedger = useMemo(() => {
-    if (!selectedCariForDetails) return [];
+    if (!currentCari) return [];
 
     // Filter and sort transactions related to selected Cari
     const relatedTransactions = islemler
-      .filter((t) => t.cariId === selectedCariForDetails.id)
+      .filter((t) => t.cariId === currentCari.id)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    let runningBalance = selectedCariForDetails.openingBalance;
+    let runningBalance = currentCari.openingBalance;
 
     return [
       {
         id: "opening",
-        date: selectedCariForDetails.createdAt?.substring(0, 10) || "Açılış",
+        date: currentCari.createdAt?.substring(0, 10) || "Açılış",
         type: "Açılış Bakiyesi",
         description: "Hesap açılış bakiyesi",
-        amount: Math.abs(selectedCariForDetails.openingBalance),
+        amount: Math.abs(currentCari.openingBalance),
         effect:
-          selectedCariForDetails.openingBalance >= 0
+          currentCari.openingBalance >= 0
             ? "borclandir"
             : "alacaklandir", // borclandir = owes us, alacaklandir = we owe
         balance: runningBalance,
@@ -342,6 +567,12 @@ export default function CarilerView({
         } else if (t.type === "payment") {
           runningBalance += effAmount;
           effect = "borclandir";
+        } else if (t.type === "sale_return") {
+          runningBalance -= effAmount;
+          effect = "alacaklandir";
+        } else if (t.type === "purchase_return") {
+          runningBalance += effAmount;
+          effect = "borclandir";
         }
 
         return {
@@ -354,7 +585,13 @@ export default function CarilerView({
                 ? "Alış Faturası"
                 : t.type === "collection"
                   ? "Tahsilat"
-                  : "Ödeme",
+                  : t.type === "payment"
+                    ? "Ödeme"
+                    : t.type === "sale_return"
+                      ? "Satıştan İade"
+                      : t.type === "purchase_return"
+                        ? "Alıştan İade"
+                        : t.type,
           invoiceNo: t.invoiceNo || "",
           description: t.description,
           amount: t.amount,
@@ -363,10 +600,66 @@ export default function CarilerView({
           currency: t.currency,
           effect,
           balance: runningBalance,
+          items: t.items,
         };
       }),
     ];
-  }, [selectedCariForDetails, islemler]);
+  }, [currentCari, islemler]);
+
+  // Filter ledger details by date range
+  const filteredCariLedger = useMemo(() => {
+    if (cariLedger.length === 0) return [];
+
+    let result = [...cariLedger];
+
+    if (startDate || endDate) {
+      let prevBalance = 0;
+      let hasPrevRows = false;
+
+      const filtered = result.filter((row) => {
+        const rowDate = row.date;
+
+        // Check if date is before start date
+        if (startDate && rowDate && rowDate < startDate && rowDate !== "Açılış") {
+          prevBalance = row.balance;
+          hasPrevRows = true;
+          return false;
+        }
+
+        // Check if date is after end date
+        if (endDate && rowDate && rowDate > endDate && rowDate !== "Açılış") {
+          return false;
+        }
+
+        return true;
+      });
+
+      if (hasPrevRows) {
+        const devredenRow = {
+          id: "carried_over",
+          date: startDate,
+          type: "Devreden Bakiye",
+          description: "Önceki dönemden devreden bakiye",
+          amount: Math.abs(prevBalance),
+          effect: prevBalance >= 0 ? ("borclandir" as const) : ("alacaklandir" as const),
+          balance: prevBalance,
+          invoiceNo: undefined as string | undefined,
+          convertedAmount: undefined as number | undefined,
+          exchangeRate: undefined as number | undefined,
+          currency: undefined as string | undefined,
+          items: [] as any[],
+        };
+
+        const cleanFiltered = filtered.filter((r) => r.id !== "opening");
+
+        return [devredenRow, ...cleanFiltered];
+      }
+
+      return filtered;
+    }
+
+    return result;
+  }, [cariLedger, startDate, endDate]);
 
   // Format currency helper
   const formatCurrency = (val: number, cur: string = "TRY") => {
@@ -554,10 +847,17 @@ export default function CarilerView({
                               </div>
                             )}
                             <div>
-                              <div className="flex items-center gap-2">
-                                <div className="font-bold text-white/95 text-sm">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedCariForDetails(cari);
+                                    setEkstreType("detailed");
+                                  }}
+                                  className="font-bold text-teal-400 hover:text-teal-300 text-sm hover:underline cursor-pointer transition text-left leading-tight"
+                                >
                                   {cari.name}
-                                </div>
+                                </button>
                                 {cari.isActive === false && (
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] uppercase font-mono font-bold tracking-wider bg-red-500/20 text-red-400">
                                     PASİF
@@ -683,14 +983,6 @@ export default function CarilerView({
                               </div>
                             )}
                             <button
-                              id={`btn-ekstre-${cari.id}`}
-                              onClick={() => setSelectedCariForDetails(cari)}
-                              title="Cari Ekstre / Detaylar"
-                              className="p-2 text-teal-400 hover:bg-white/5 rounded transition shrink-0"
-                            >
-                              <FileText size={16} />
-                            </button>
-                            <button
                               id={`btn-edit-cari-${cari.id}`}
                               onClick={() => handleOpenEditModal(cari)}
                               title="Düzenle"
@@ -700,7 +992,7 @@ export default function CarilerView({
                             </button>
                             <button
                               id={`btn-delete-cari-${cari.id}`}
-                              onClick={() => handleDelete(cari.id, cari.name)}
+                              onClick={() => handleDelete(cari)}
                               title="Sil"
                               className="p-2 text-red-400 hover:bg-white/5 rounded transition shrink-0"
                             >
@@ -738,9 +1030,16 @@ export default function CarilerView({
                           )}
                           <div>
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <div className="font-bold text-white/90 text-sm leading-tight">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedCariForDetails(cari);
+                                  setEkstreType("detailed");
+                                }}
+                                className="font-bold text-teal-400 hover:text-teal-300 text-sm hover:underline cursor-pointer transition text-left leading-tight"
+                              >
                                 {cari.name}
-                              </div>
+                              </button>
                               {cari.isActive === false && (
                                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] uppercase font-mono font-bold tracking-wider bg-red-500/20 text-red-400">
                                   PASİF
@@ -867,13 +1166,6 @@ export default function CarilerView({
                       </div>
                       <div className="flex gap-1">
                         <button
-                          id={`btn-mob-ekstre-${cari.id}`}
-                          onClick={() => setSelectedCariForDetails(cari)}
-                          className="p-2 text-teal-400 bg-white/5 hover:bg-white/10 rounded"
-                        >
-                          <FileText size={15} />
-                        </button>
-                        <button
                           id={`btn-mob-edit-${cari.id}`}
                           onClick={() => handleOpenEditModal(cari)}
                           className="p-2 text-amber-400 bg-white/5 hover:bg-white/10 rounded"
@@ -882,7 +1174,7 @@ export default function CarilerView({
                         </button>
                         <button
                           id={`btn-mob-delete-${cari.id}`}
-                          onClick={() => handleDelete(cari.id, cari.name)}
+                          onClick={() => handleDelete(cari)}
                           className="p-2 text-red-400 bg-white/5 hover:bg-white/10 rounded"
                         >
                           <Trash2 size={15} />
@@ -1211,74 +1503,142 @@ export default function CarilerView({
       )}
 
       {/* Cari Hesap Ekstresi (Ledger Drawer / Sheet) */}
-      {selectedCariForDetails && (
+      {selectedCariForDetails && currentCari && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/85 backdrop-blur-xs animate-fade-in">
-          <div className="bg-[#0c0c0c] border-l border-white/10 w-full max-w-2xl h-full shadow-2xl flex flex-col animate-slide-left">
+          <div className="bg-[#0c0c0c] border-l border-white/10 w-full max-w-5xl h-full shadow-2xl flex flex-col lg:flex-row animate-slide-left overflow-hidden">
+            
+            {/* Left Column (Ledger Table & Info - scrollable and printable) */}
             <div
               id="printable-invoice-content"
-              className="flex-1 overflow-y-auto flex flex-col bg-[#0c0c0c] print:bg-white print:text-black"
+              className="flex-1 overflow-y-auto flex flex-col bg-[#0c0c0c] print:bg-white print:text-black lg:border-r lg:border-white/5"
             >
               {/* Corporate Header - Visible only in Print or Top of Drawer */}
-              <div className="p-8 border-b border-white/5 print:border-black/10 flex justify-between items-start">
-                <div>
-                  <h1
-                    className="text-2xl font-bold tracking-tighter text-teal-400 print:text-black mb-1 font-sans"
-                  >
-                    {printSettings.companyName}
+              <div className="p-8 border-b border-white/5 print:border-black/10 flex justify-between items-start gap-6 flex-col md:flex-row">
+                <div className="flex-1">
+                  {/* Customer name is written BIG on the left side */}
+                  <h1 className="text-3xl font-extrabold tracking-tight text-white print:text-black mb-1 font-sans">
+                    {currentCari.name}
                   </h1>
-                  <p className="text-[10px] font-sans text-white/50 print:text-gray-600 uppercase tracking-widest whitespace-pre-line max-w-[250px]">
-                    {printSettings.companyAddress}
+                  
+                  {/* Account Code under the name */}
+                  <p className="text-xs text-teal-400 print:text-black font-mono uppercase tracking-wider mb-2">
+                    Hesap Kodu: {currentCari.code}
                   </p>
-                  <p className="text-[10px] font-sans text-white/50 print:text-gray-600 font-bold mt-1">
-                    Tel: {printSettings.companyPhone}
-                  </p>
-                  <p className="text-[10px] font-mono text-white/50 print:text-gray-600 mt-4 uppercase tracking-widest">
-                    Hesap Ekstresi
+
+                  {/* Buttons right under the name to switch summary vs detailed */}
+                  <div className="flex items-center gap-2 mt-4 hidden-print">
+                    <button
+                      id="btn-toggle-summary"
+                      type="button"
+                      onClick={() => setEkstreType("summary")}
+                      className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded transition cursor-pointer flex items-center gap-1.5 ${
+                        ekstreType === "summary"
+                          ? "bg-teal-500 text-black shadow-lg shadow-teal-500/25"
+                          : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      <FileText size={12} />
+                      Özet Ekstre
+                    </button>
+                    <button
+                      id="btn-toggle-detailed"
+                      type="button"
+                      onClick={() => setEkstreType("detailed")}
+                      className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded transition cursor-pointer flex items-center gap-1.5 ${
+                        ekstreType === "detailed"
+                          ? "bg-teal-500 text-black shadow-lg shadow-teal-500/25"
+                          : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      <FileText size={12} />
+                      Detaylı Ekstre
+                    </button>
+                  </div>
+
+                  {/* Statement type text for print */}
+                  <p className="text-[10px] font-mono text-white/50 print:text-gray-600 mt-4 uppercase tracking-widest font-bold">
+                    {ekstreType === "detailed" ? "Detaylı Cari Hesap Ekstresi" : "Özet Cari Hesap Ekstresi"}
                   </p>
                   <p className="text-[10px] font-mono text-white/50 print:text-gray-600">
                     Tarih: {new Date().toLocaleDateString("tr-TR")}
                   </p>
                 </div>
-                <div className="text-right">
-                  <h3
-                    className="text-xl font-light italic text-white/95 print:text-black tracking-tight"
-                    style={{ fontFamily: "Georgia, serif" }}
-                  >
-                    {selectedCariForDetails.name}
-                  </h3>
-                  <p className="text-[10px] text-white/50 print:text-gray-600 mt-1 font-mono uppercase tracking-wider">
-                    Hesap Kodu: {selectedCariForDetails.code}
-                  </p>
-                  <div className="mt-3 text-[10px] font-mono text-white/50 print:text-gray-600 space-y-0.5 text-right flex flex-col items-end">
-                    {selectedCariForDetails.phone && (
-                      <span>Tel: {selectedCariForDetails.phone}</span>
+
+                <div className="text-right flex flex-col items-end">
+                  <div className="text-[11px] font-mono text-white/75 print:text-black space-y-1 text-right flex flex-col items-end bg-white/5 print:bg-gray-100 p-3 rounded border border-white/5 print:border-black/10">
+                    <span className="text-[9px] text-white/40 print:text-gray-600 font-bold uppercase tracking-widest block border-b border-white/10 pb-1 mb-1">Cari Kart Detayları</span>
+                    {currentCari.phone && (
+                      <span><strong>Tel:</strong> {currentCari.phone}</span>
                     )}
-                    {selectedCariForDetails.email && (
-                      <span>E-posta: {selectedCariForDetails.email}</span>
+                    {currentCari.email && (
+                      <span><strong>E-posta:</strong> {currentCari.email}</span>
                     )}
-                    {selectedCariForDetails.taxOffice && (
-                      <span>V.D.: {selectedCariForDetails.taxOffice}</span>
+                    {currentCari.taxOffice && (
+                      <span><strong>V.D.:</strong> {currentCari.taxOffice}</span>
                     )}
-                    {selectedCariForDetails.taxNo && (
-                      <span>Vergi No: {selectedCariForDetails.taxNo}</span>
+                    {currentCari.taxNo && (
+                      <span><strong>Vergi No:</strong> {currentCari.taxNo}</span>
                     )}
-                    {selectedCariForDetails.address && (
-                      <span className="max-w-[200px] whitespace-pre-wrap">
-                        {selectedCariForDetails.address}
+                    {currentCari.address && (
+                      <span className="max-w-[200px] whitespace-pre-wrap text-left text-white/50 print:text-gray-700 block mt-1 text-[10px]">
+                        {currentCari.address}
                       </span>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Close Button - Desktop Only */}
+              {/* Close Button - Desktop Only (Hidden if we show sidebar anyway but kept for visual safety) */}
               <button
                 id="btn-close-ekstre"
                 onClick={() => setSelectedCariForDetails(null)}
-                className="hidden-print absolute top-4 right-4 p-2 text-white/40 hover:text-white hover:bg-white/5 rounded transition"
+                className="hidden-print lg:hidden absolute top-4 right-4 p-2 text-white/40 hover:text-white hover:bg-white/5 rounded transition"
               >
                 <X size={18} />
               </button>
+
+              {/* Date Filters Panel */}
+              <div className="hidden-print mx-6 mt-6 p-4 bg-white/[0.02] border border-white/5 rounded-lg flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-1.5 text-xs text-white/80">
+                  <Calendar size={14} className="text-teal-400" />
+                  <span className="font-bold uppercase tracking-wider text-[10px]">Tarih Aralığı Filtresi</span>
+                </div>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-white/40">Başlangıç:</span>
+                    <input
+                      id="filter-start-date"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="p-1.5 bg-[#141414] border border-white/10 rounded text-[11px] font-mono text-white focus:outline-none focus:border-teal-500/50"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-white/40">Bitiş:</span>
+                    <input
+                      id="filter-end-date"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="p-1.5 bg-[#141414] border border-white/10 rounded text-[11px] font-mono text-white focus:outline-none focus:border-teal-500/50"
+                    />
+                  </div>
+                  {(startDate || endDate) && (
+                    <button
+                      id="btn-clear-date-filter"
+                      type="button"
+                      onClick={() => {
+                        setStartDate("");
+                        setEndDate("");
+                      }}
+                      className="px-2.5 py-1.5 text-[9px] font-extrabold uppercase tracking-wider text-red-400 hover:text-red-300 bg-red-500/10 rounded transition cursor-pointer"
+                    >
+                      Sıfırla
+                    </button>
+                  )}
+                </div>
+              </div>
 
               {/* Ledger Transactions Table */}
               <div className="flex-1 p-6 print:p-8">
@@ -1297,7 +1657,22 @@ export default function CarilerView({
                   </div>
                 )}
 
-                {cariLedger.length > 1 && (
+                {cariLedger.length > 1 && filteredCariLedger.length === 0 && (
+                  <div className="text-center py-12 bg-white/[0.01] print:bg-gray-50 rounded-lg border border-dashed border-white/10 print:border-gray-300">
+                    <Calendar
+                      className="text-white/20 print:text-gray-400 mx-auto mb-2"
+                      size={32}
+                    />
+                    <span className="text-xs uppercase tracking-widest text-white/60 print:text-gray-600 font-medium">
+                      Filtreye Uygun İşlem Bulunamadı
+                    </span>
+                    <p className="text-[10px] text-white/30 print:text-gray-500 mt-1 uppercase tracking-widest font-mono">
+                      Seçilen tarih aralığında herhangi bir hesap hareketi bulunmamaktadır.
+                    </p>
+                  </div>
+                )}
+
+                {filteredCariLedger.length > 0 && (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs font-mono border-collapse">
                       <thead>
@@ -1324,8 +1699,7 @@ export default function CarilerView({
                         </tr>
                       </thead>
                       <tbody>
-                        {cariLedger.map((row, index) => {
-                          const isOpening = row.id === "opening";
+                        {filteredCariLedger.map((row, index) => {
                           const borcAmount =
                             row.effect === "borclandir"
                               ? row.convertedAmount && row.convertedAmount !== 0
@@ -1340,64 +1714,112 @@ export default function CarilerView({
                               : 0;
 
                           return (
-                            <tr
-                              key={row.id}
-                              className={`border-b border-white/5 print:border-black/10 ${index % 2 === 0 ? "bg-transparent" : "bg-white/[0.02] print:bg-gray-50"}`}
-                            >
-                              <td className="py-3 px-2 text-white/70 print:text-black whitespace-nowrap">
-                                {row.date}
-                              </td>
-                              <td className="py-3 px-2 text-white/90 print:text-black font-semibold">
-                                {row.type}
-                              </td>
-                              <td className="py-3 px-2 text-white/60 print:text-gray-800">
-                                {row.invoiceNo && (
-                                  <span className="text-teal-400 print:text-black font-bold mr-2">
-                                    #{row.invoiceNo}
-                                  </span>
-                                )}
-                                {row.description}
-                              </td>
-                              <td className="py-3 px-2 text-right text-teal-400 print:text-black font-semibold">
-                                {borcAmount > 0
-                                  ? formatCurrency(
-                                      borcAmount,
-                                      selectedCariForDetails.currency || "TRY",
-                                    )
-                                  : "-"}
-                              </td>
-                              <td className="py-3 px-2 text-right text-red-400 print:text-black font-semibold">
-                                {alacakAmount > 0
-                                  ? formatCurrency(
-                                      alacakAmount,
-                                      selectedCariForDetails.currency || "TRY",
-                                    )
-                                  : "-"}
-                              </td>
-                              <td
-                                className={`py-3 px-2 text-right font-bold ${row.balance > 0 ? "text-teal-400 print:text-black" : row.balance < 0 ? "text-red-400 print:text-black" : "text-white/50 print:text-gray-500"}`}
+                            <React.Fragment key={row.id || index}>
+                              <tr
+                                className={`border-b border-white/5 print:border-black/10 ${index % 2 === 0 ? "bg-transparent" : "bg-white/[0.02] print:bg-gray-50"}`}
                               >
-                                {formatCurrency(
-                                  row.balance,
-                                  selectedCariForDetails.currency || "TRY",
-                                )}
-                              </td>
-                              <td className="py-3 px-2 text-right text-[9px] text-white/40 print:text-gray-500">
-                                {row.convertedAmount &&
-                                row.exchangeRate &&
-                                row.exchangeRate !== 1 ? (
-                                  <span>
-                                    {formatCurrency(
-                                      row.amount,
-                                      row.currency || "TRY",
-                                    )}{" "}
-                                    <br /> (Kur: {row.exchangeRate})
-                                  </span>
-                                ) : (
-                                  "-"
-                                )}
-                              </td>
-                            </tr>
+                                <td className="py-3 px-2 text-white/70 print:text-black whitespace-nowrap">
+                                  {row.date}
+                                </td>
+                                <td className="py-3 px-2 text-white/90 print:text-black font-semibold">
+                                  {row.type}
+                                </td>
+                                <td className="py-3 px-2 text-white/60 print:text-gray-800">
+                                  {row.invoiceNo && (
+                                    <span className="text-teal-400 print:text-black font-bold mr-2">
+                                      #{row.invoiceNo}
+                                    </span>
+                                  )}
+                                  {row.description}
+                                </td>
+                                <td className="py-3 px-2 text-right text-teal-400 print:text-black font-semibold">
+                                  {borcAmount > 0
+                                    ? formatCurrency(
+                                        borcAmount,
+                                        currentCari.currency || "TRY",
+                                      )
+                                    : "-"}
+                                </td>
+                                <td className="py-3 px-2 text-right text-red-400 print:text-black font-semibold">
+                                  {alacakAmount > 0
+                                    ? formatCurrency(
+                                        alacakAmount,
+                                        currentCari.currency || "TRY",
+                                      )
+                                    : "-"}
+                                </td>
+                                <td
+                                  className={`py-3 px-2 text-right font-bold ${row.balance > 0 ? "text-teal-400 print:text-black" : row.balance < 0 ? "text-red-400 print:text-black" : "text-white/50 print:text-gray-500"}`}
+                                >
+                                  {formatCurrency(
+                                    row.balance,
+                                    currentCari.currency || "TRY",
+                                  )}
+                                </td>
+                                <td className="py-3 px-2 text-right text-[9px] text-white/40 print:text-gray-500">
+                                  {row.convertedAmount &&
+                                  row.exchangeRate &&
+                                  row.exchangeRate !== 1 ? (
+                                    <span>
+                                      {formatCurrency(
+                                        row.amount,
+                                        row.currency || "TRY",
+                                      )}{" "}
+                                      <br /> (Kur: {row.exchangeRate})
+                                    </span>
+                                  ) : (
+                                    "-"
+                                  )}
+                                </td>
+                              </tr>
+                              {/* Detailed items expander row */}
+                              {ekstreType === "detailed" && row.items && row.items.length > 0 && (
+                                <tr className="bg-slate-900/10 print:bg-slate-50 border-b border-white/5 print:border-black/10">
+                                  <td colSpan={7} className="py-3 px-4">
+                                    <div className="flex flex-col gap-2 pl-6">
+                                      <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-teal-400 print:text-teal-850">
+                                        <FileText size={12} className="text-teal-400 print:text-teal-700" />
+                                        <span>Fatura İçeriği (Kalemler)</span>
+                                      </div>
+                                      <div className="overflow-hidden rounded border border-white/10 print:border-black/15 bg-white/[0.02] print:bg-white shadow-inner">
+                                        <table className="w-full text-left text-[11px] font-sans border-collapse">
+                                          <thead>
+                                            <tr className="bg-white/5 print:bg-slate-100 text-white/50 print:text-gray-700 font-bold border-b border-white/10 print:border-black/15 uppercase tracking-wider text-[9px]">
+                                              <th className="py-2 px-3">Ürün / Hizmet Adı</th>
+                                              <th className="py-2 px-3 text-right">Miktar</th>
+                                              <th className="py-2 px-3 text-right">Birim Fiyat</th>
+                                              <th className="py-2 px-3 text-right">KDV Oranı</th>
+                                              <th className="py-2 px-3 text-right">KDV Dahil Toplam</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-white/5 print:divide-slate-200">
+                                            {row.items.map((item, idx) => (
+                                              <tr key={idx} className="hover:bg-white/[0.01] print:hover:bg-slate-50/50">
+                                                <td className="py-2 px-3 font-semibold text-white/80 print:text-black">
+                                                  {item.stockName}
+                                                </td>
+                                                <td className="py-2 px-3 text-right font-mono text-white/60 print:text-black">
+                                                  {item.quantity} {item.unit || "Adet"}
+                                                </td>
+                                                <td className="py-2 px-3 text-right font-mono text-white/60 print:text-black">
+                                                  {formatCurrency(item.price, currentCari.currency || "TRY")}
+                                                </td>
+                                                <td className="py-2 px-3 text-right font-mono text-white/40 print:text-black">
+                                                  %{item.taxRate}
+                                                </td>
+                                                <td className="py-2 px-3 text-right font-mono font-bold text-teal-400 print:text-black">
+                                                  {formatCurrency(item.total, currentCari.currency || "TRY")}
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
                           );
                         })}
                       </tbody>
@@ -1411,15 +1833,15 @@ export default function CarilerView({
                     <span>Toplam Borç:</span>
                     <span className="text-white/90 print:text-black font-semibold">
                       {formatCurrency(
-                        cariLedger.reduce(
+                        filteredCariLedger.reduce(
                           (sum, row) =>
                             sum +
-                            (row.effect === "borclandir"
+                            (row.id !== "carried_over" && row.effect === "borclandir"
                               ? row.convertedAmount || row.amount
                               : 0),
                           0,
                         ),
-                        selectedCariForDetails.currency || "TRY",
+                        currentCari.currency || "TRY",
                       )}
                     </span>
                   </div>
@@ -1427,18 +1849,38 @@ export default function CarilerView({
                     <span>Toplam Alacak:</span>
                     <span className="text-white/90 print:text-black font-semibold">
                       {formatCurrency(
-                        cariLedger.reduce(
+                        filteredCariLedger.reduce(
                           (sum, row) =>
                             sum +
-                            (row.effect === "alacaklandir"
+                            (row.id !== "carried_over" && row.effect === "alacaklandir"
                               ? row.convertedAmount || row.amount
                               : 0),
                           0,
                         ),
-                        selectedCariForDetails.currency || "TRY",
+                        currentCari.currency || "TRY",
                       )}
                     </span>
                   </div>
+
+                  {/* Period Balance (Dönem Sonu Bakiye) if filters are active */}
+                  {(startDate || endDate) && (
+                    <div className="flex justify-between w-64 text-xs font-mono text-white/60 print:text-gray-700 border-b border-white/5 pb-2 mb-1">
+                      <span>Dönem Sonu Bakiye:</span>
+                      <span className={`font-bold ${
+                        (filteredCariLedger[filteredCariLedger.length - 1]?.balance || 0) > 0
+                          ? "text-teal-400 print:text-black"
+                          : (filteredCariLedger[filteredCariLedger.length - 1]?.balance || 0) < 0
+                            ? "text-red-400 print:text-black"
+                            : "text-white/50 print:text-black"
+                      }`}>
+                        {formatCurrency(
+                          filteredCariLedger[filteredCariLedger.length - 1]?.balance || 0,
+                          currentCari.currency || "TRY",
+                        )}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="flex justify-between w-64 mt-2 pt-2 border-t border-white/10 print:border-black/20">
                     <span className="text-sm font-bold uppercase tracking-widest text-teal-400 print:text-black mt-1">
                       Güncel Bakiye:
@@ -1446,23 +1888,23 @@ export default function CarilerView({
                     <div className="text-right">
                       <span
                         className={`text-xl font-light italic block tracking-tight ${
-                          selectedCariForDetails.balance > 0
+                          currentCari.balance > 0
                             ? "text-teal-400 print:text-black"
-                            : selectedCariForDetails.balance < 0
+                            : currentCari.balance < 0
                               ? "text-red-400 print:text-black"
                               : "text-white/50 print:text-black"
                         }`}
                         style={{ fontFamily: "Georgia, serif" }}
                       >
                         {formatCurrency(
-                          selectedCariForDetails.balance,
-                          selectedCariForDetails.currency || "TRY",
+                          currentCari.balance,
+                          currentCari.currency || "TRY",
                         )}
                       </span>
                       <span className="text-[9px] text-white/40 print:text-gray-500 font-mono tracking-wider uppercase block">
-                        {selectedCariForDetails.balance > 0
+                        {currentCari.balance > 0
                           ? "(ALACAKLIYIZ / BORÇLU)"
-                          : selectedCariForDetails.balance < 0
+                          : currentCari.balance < 0
                             ? "(BORÇLUYUZ / ALACAKLI)"
                             : "KAPALI"}
                       </span>
@@ -1476,92 +1918,449 @@ export default function CarilerView({
                   halinde mutabık kalınmış sayılır.
                 </div>
               </div>
+
+              {/* Footer action inside Drawer */}
+              <div className="hidden-print p-6 border-t border-white/5 bg-white/[0.01] flex gap-3 mt-auto">
+                <button
+                  id="btn-print-ekstre"
+                  onClick={() => {
+                    const printContent = document.getElementById('printable-invoice-content');
+                    if (printContent) {
+                      const iframe = document.createElement('iframe');
+                      iframe.style.position = 'fixed';
+                      iframe.style.right = '0';
+                      iframe.style.bottom = '0';
+                      iframe.style.width = '0';
+                      iframe.style.height = '0';
+                      iframe.style.border = '0';
+                      document.body.appendChild(iframe);
+                      
+                      const iframeDoc = iframe.contentWindow?.document;
+                      if (iframeDoc) {
+                        const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+                          .map(s => s.outerHTML)
+                          .join('\\n');
+                          
+                        const clone = printContent.cloneNode(true) as HTMLElement;
+                        clone.style.transform = 'none';
+                        clone.style.position = 'static';
+                        clone.style.width = '100%';
+                        clone.style.height = 'auto';
+                        clone.style.minHeight = '0';
+                        clone.style.margin = '0';
+                        clone.style.padding = '20px';
+                        
+                        iframeDoc.open();
+                        iframeDoc.write(`
+                          <html>
+                            <head>
+                              ${styles}
+                              <style>
+                                @page { size: A4 portrait; margin: 0; }
+                                body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                /* Reset text colors for print inside iframe */
+                                * { color: black !important; border-color: #ddd !important; }
+                                .text-white\\/50, .text-white\\/40, .text-white\\/30 { color: #666 !important; }
+                              </style>
+                            </head>
+                            <body>
+                              ${clone.outerHTML}
+                            </body>
+                          </html>
+                        `);
+                        iframeDoc.close();
+                        
+                        iframe.onload = () => {
+                          setTimeout(() => {
+                            iframe.contentWindow?.focus();
+                            iframe.contentWindow?.print();
+                            setTimeout(() => {
+                              if (document.body.contains(iframe)) {
+                                document.body.removeChild(iframe);
+                              }
+                            }, 1000);
+                          }, 250);
+                        };
+                      }
+                    } else {
+                      setTimeout(() => {
+                        window.print();
+                      }, 250);
+                    }
+                  }}
+                  className="flex-1 bg-white/5 border border-white/10 hover:bg-white/10 text-white/85 text-[10px] uppercase tracking-widest font-semibold py-3 rounded-lg transition cursor-pointer text-center"
+                >
+                  Ekstre Yazdır
+                </button>
+                <button
+                  id="btn-close-ekstre-footer"
+                  onClick={() => setSelectedCariForDetails(null)}
+                  className="flex-1 bg-teal-500 hover:bg-teal-600 text-black text-[10px] uppercase tracking-widest font-bold py-3 rounded-lg transition cursor-pointer text-center"
+                >
+                  Kapat
+                </button>
+              </div>
             </div>
 
-            {/* Footer action inside Drawer */}
-            <div className="hidden-print p-6 border-t border-white/5 bg-white/[0.01] flex gap-3">
-              <button
-                id="btn-print-ekstre"
-                onClick={() => {
-                  const printContent = document.getElementById('printable-invoice-content');
-                  if (printContent) {
-                    const iframe = document.createElement('iframe');
-                    iframe.style.position = 'fixed';
-                    iframe.style.right = '0';
-                    iframe.style.bottom = '0';
-                    iframe.style.width = '0';
-                    iframe.style.height = '0';
-                    iframe.style.border = '0';
-                    document.body.appendChild(iframe);
-                    
-                    const iframeDoc = iframe.contentWindow?.document;
-                    if (iframeDoc) {
-                      const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
-                        .map(s => s.outerHTML)
-                        .join('\\n');
-                        
-                      const clone = printContent.cloneNode(true) as HTMLElement;
-                      clone.style.transform = 'none';
-                      clone.style.position = 'static';
-                      clone.style.width = '100%';
-                      clone.style.height = 'auto';
-                      clone.style.minHeight = '0';
-                      clone.style.margin = '0';
-                      clone.style.padding = '20px';
-                      
-                      iframeDoc.open();
-                      iframeDoc.write(`
-                        <html>
-                          <head>
-                            ${styles}
-                            <style>
-                              @page { size: A4 portrait; margin: 0; }
-                              body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                              /* Reset text colors for print inside iframe */
-                              * { color: black !important; border-color: #ddd !important; }
-                              .text-white\\/50, .text-white\\/40, .text-white\\/30 { color: #666 !important; }
-                            </style>
-                          </head>
-                          <body>
-                            ${clone.outerHTML}
-                          </body>
-                        </html>
-                      `);
-                      iframeDoc.close();
-                      
-                      iframe.onload = () => {
-                        setTimeout(() => {
-                          iframe.contentWindow?.focus();
-                          iframe.contentWindow?.print();
-                          setTimeout(() => {
-                            if (document.body.contains(iframe)) {
-                              document.body.removeChild(iframe);
-                            }
-                          }, 1000);
-                        }, 250);
-                      };
-                    }
-                  } else {
-                    setTimeout(() => {
-                      window.print();
-                    }, 250);
-                  }
-                }}
-                className="flex-1 bg-white/5 border border-white/10 hover:bg-white/10 text-white/85 text-[10px] uppercase tracking-widest font-semibold py-3 rounded-lg transition cursor-pointer text-center"
-              >
-                Ekstre Yazdır
-              </button>
-              <button
-                id="btn-close-ekstre-footer"
-                onClick={() => setSelectedCariForDetails(null)}
-                className="flex-1 bg-teal-500 hover:bg-teal-600 text-black text-[10px] uppercase tracking-widest font-bold py-3 rounded-lg transition cursor-pointer text-center"
-              >
-                Kapat
-              </button>
+            {/* Right Column (Sidebar: Customer Notes & Quick Transaction Entry Form) */}
+            <div className="hidden-print w-full lg:w-96 bg-white border-t lg:border-t-0 lg:border-l border-slate-200 p-6 flex flex-col gap-5 overflow-y-auto shrink-0">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                <h4 className="text-xs font-bold uppercase tracking-widest text-teal-600 font-sans">İşlem & Not Paneli</h4>
+                <button
+                  onClick={() => setSelectedCariForDetails(null)}
+                  className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded transition"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Customer Notes */}
+              <div className="space-y-3 bg-slate-50 border border-slate-200/85 p-4 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700">Cari Notları</span>
+                  <button
+                    type="button"
+                    onClick={handleSaveNotes}
+                    disabled={isSavingNotes || notesText === (currentCari.notes || "")}
+                    className="px-2.5 py-1 text-[9px] uppercase tracking-wider font-extrabold bg-teal-50 border border-teal-200/80 disabled:bg-slate-100 disabled:border-transparent text-teal-700 disabled:text-slate-400 hover:bg-teal-600 hover:text-white rounded transition cursor-pointer flex items-center gap-1"
+                  >
+                    <Save size={10} />
+                    {isSavingNotes ? "Kaydediliyor..." : "Kaydet"}
+                  </button>
+                </div>
+                <textarea
+                  value={notesText}
+                  onChange={(e) => setNotesText(e.target.value)}
+                  placeholder="Müşteri ile ilgili özel notlar, mutabakat detayları veya görüşme özetleri..."
+                  className="w-full h-24 p-3 bg-white border border-slate-200 rounded text-xs text-slate-800 placeholder-slate-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 focus:outline-none resize-none font-sans shadow-xs"
+                />
+              </div>
+
+              {/* Embedded Quick Transactions */}
+              <div className="space-y-3 bg-slate-50 border border-slate-200/85 p-4 rounded-lg flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700">Hızlı İşlem Girişi</span>
+                
+                {/* Tabs selection */}
+                <div className="grid grid-cols-2 gap-1.5 bg-slate-100 p-1.5 rounded-md border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setQuickTxType("collection")}
+                    className={`py-1.5 text-[9px] uppercase tracking-widest font-bold rounded transition cursor-pointer text-center ${quickTxType === "collection" ? "bg-blue-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/50"}`}
+                  >
+                    Tahsilat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuickTxType("payment")}
+                    className={`py-1.5 text-[9px] uppercase tracking-widest font-bold rounded transition cursor-pointer text-center ${quickTxType === "payment" ? "bg-red-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/50"}`}
+                  >
+                    Ödeme
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuickTxType("sale_return")}
+                    className={`py-1.5 text-[9px] uppercase tracking-widest font-bold rounded transition cursor-pointer text-center ${quickTxType === "sale_return" ? "bg-emerald-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/50"}`}
+                  >
+                    Satıştan İade
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuickTxType("purchase_return")}
+                    className={`py-1.5 text-[9px] uppercase tracking-widest font-bold rounded transition cursor-pointer text-center ${quickTxType === "purchase_return" ? "bg-orange-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/50"}`}
+                  >
+                    Alıştan İade
+                  </button>
+                </div>
+
+                {/* Form fields */}
+                <form onSubmit={handleSaveQuickTx} className="space-y-3 mt-1 flex flex-col">
+                  {quickTxError && (
+                    <div className="p-2.5 bg-red-50 border border-red-200 rounded text-[10px] text-red-600 font-semibold font-mono uppercase tracking-wider">
+                      {quickTxError}
+                    </div>
+                  )}
+
+                  {/* Conditional Product details for Return Transactions */}
+                  {(quickTxType === "sale_return" || quickTxType === "purchase_return") && (
+                    <>
+                      {/* Product selection */}
+                      <div>
+                        <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-1 font-mono font-semibold">İade Edilecek Ürün</label>
+                        <select
+                          value={quickTxStockId}
+                          required
+                          onChange={(e) => setQuickTxStockId(e.target.value)}
+                          className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 focus:outline-none shadow-sm"
+                        >
+                          <option value="">-- Ürün / Hizmet Seçin --</option>
+                          {stoklar.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name} ({s.code}) - Stok: {s.quantity} {s.unit}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Quantity & Unit Price */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-1 font-mono font-semibold">Miktar</label>
+                          <input
+                            type="number"
+                            step="any"
+                            required
+                            value={quickTxQuantity}
+                            onChange={(e) => setQuickTxQuantity(e.target.value)}
+                            placeholder="1"
+                            className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 focus:outline-none font-mono shadow-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-1 font-mono font-semibold">Birim Fiyat</label>
+                          <input
+                            type="number"
+                            step="any"
+                            required
+                            value={quickTxUnitPrice}
+                            onChange={(e) => setQuickTxUnitPrice(e.target.value)}
+                            placeholder="0.00"
+                            className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 focus:outline-none font-mono shadow-sm"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Amount */}
+                  <div>
+                    <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-1 font-mono font-semibold">
+                      {(quickTxType === "sale_return" || quickTxType === "purchase_return") ? "Toplam Tutar" : "Tutar"} ({currentCari.currency || "TRY"})
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      required
+                      value={quickTxAmount}
+                      onChange={(e) => setQuickTxAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs text-slate-800 font-mono focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 focus:outline-none shadow-sm"
+                    />
+                  </div>
+
+                  {/* Invoice/Receipt No */}
+                  <div>
+                    <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-1 font-mono">Evrak / Fatura No (İsteğe Bağlı)</label>
+                    <input
+                      type="text"
+                      value={quickTxInvoiceNo}
+                      onChange={(e) => setQuickTxInvoiceNo(e.target.value)}
+                      placeholder="Örn: FT-2026-001"
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs text-slate-800 uppercase focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 focus:outline-none font-mono shadow-sm"
+                    />
+                  </div>
+
+                  {/* Date */}
+                  <div>
+                    <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-1 font-mono">İşlem Tarihi</label>
+                    <input
+                      type="date"
+                      required
+                      value={quickTxDate}
+                      onChange={(e) => setQuickTxDate(e.target.value)}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 focus:outline-none font-mono shadow-sm"
+                    />
+                  </div>
+
+                  {/* Account choice - ONLY show for non-return payment/collection transactions */}
+                  {quickTxType !== "sale_return" && quickTxType !== "purchase_return" && (
+                    <>
+                      <div>
+                        <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-1 font-mono">İşlem Yeri / Hesap</label>
+                        <select
+                          value={quickTxAccount}
+                          onChange={(e) => setQuickTxAccount(e.target.value as any)}
+                          className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 focus:outline-none shadow-sm"
+                        >
+                          <option value="cash">Kasa (Nakit)</option>
+                          <option value="bank">Banka Hesabı</option>
+                          <option value="pos">POS Cihazı</option>
+                          <option value="">Açık Hesap (Vadeli / Ödenmedi)</option>
+                        </select>
+                      </div>
+
+                      {/* Account selection dropdown */}
+                      {quickTxAccount !== "" && filteredAccountsForQuick.length > 0 && (
+                        <div>
+                          <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-1 font-mono font-semibold">
+                            {quickTxAccount === "cash" ? "Kasa Seçimi" : quickTxAccount === "pos" ? "POS Seçimi" : "Banka Hesabı Seçimi"}
+                          </label>
+                          <select
+                            value={quickTxBankAccountId}
+                            onChange={(e) => setQuickTxBankAccountId(e.target.value)}
+                            className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 focus:outline-none shadow-sm"
+                          >
+                            {filteredAccountsForQuick.map((acc) => (
+                              <option key={acc.id} value={acc.id}>
+                                {acc.name} ({acc.currency})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Description */}
+                  <div>
+                    <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-1 font-mono font-semibold">Açıklama</label>
+                    <input
+                      type="text"
+                      value={quickTxDescription}
+                      onChange={(e) => setQuickTxDescription(e.target.value)}
+                      placeholder="İşlem açıklaması girin..."
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 focus:outline-none font-sans shadow-sm"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSavingQuickTx}
+                    className={`w-full py-3 rounded-lg text-[10px] uppercase tracking-widest font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md mt-4 text-white ${
+                      quickTxType === "collection"
+                        ? "bg-blue-600 hover:bg-blue-700 shadow-blue-600/15"
+                        : quickTxType === "payment"
+                          ? "bg-red-600 hover:bg-red-700 shadow-red-600/15"
+                          : quickTxType === "sale_return"
+                            ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/15"
+                            : "bg-orange-600 hover:bg-orange-700 shadow-orange-600/15"
+                    }`}
+                  >
+                    {isSavingQuickTx ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Kaydediliyor...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>İşlemi Kaydet</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
             </div>
+
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation / Block Modal */}
+      {deleteConfirmCari && (() => {
+        const balance = deleteConfirmCari.balance || 0;
+        const hasBalance = Math.abs(balance) > 0.001;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-fade-in">
+            <div className="bg-[#0c0c0c] rounded-lg border border-white/10 max-w-md w-full shadow-2xl overflow-hidden flex flex-col">
+              {/* Modal Header */}
+              <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-white/95 flex items-center gap-2">
+                  {hasBalance ? (
+                    <AlertTriangle size={16} className="text-amber-500 animate-pulse" />
+                  ) : (
+                    <Trash2 size={16} className="text-red-500" />
+                  )}
+                  {hasBalance ? "Cari Hesap Silinemez" : "Cari Hesabı Sil"}
+                </h3>
+                <button
+                  onClick={() => setDeleteConfirmCari(null)}
+                  className="p-1.5 text-white/40 hover:text-white hover:bg-white/5 rounded transition"
+                  disabled={isDeleting}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 space-y-4">
+                {deleteError && (
+                  <div className="p-3 bg-red-950/20 border border-red-500/20 rounded flex items-center gap-2 text-xs text-red-400 font-medium font-mono uppercase tracking-wider">
+                    <AlertCircle size={14} className="shrink-0" />
+                    <span>{deleteError}</span>
+                  </div>
+                )}
+
+                {hasBalance ? (
+                  <div className="space-y-3">
+                    <p className="text-xs text-white/70 leading-relaxed">
+                      <strong className="text-white font-semibold">{deleteConfirmCari.name}</strong> unvanlı cari hesabın mevcut bakiyesi bulunuyor:
+                    </p>
+                    <div className="bg-white/5 border border-white/5 p-4 rounded-lg text-center">
+                      <div 
+                        className={`text-xl font-bold ${balance > 0 ? 'text-teal-400' : 'text-red-400'}`}
+                        style={{ fontFamily: 'Georgia, serif' }}
+                      >
+                        {formatCurrency(balance, deleteConfirmCari.currency || "TRY")}
+                      </div>
+                      <div className="text-[10px] text-white/40 mt-1 uppercase tracking-wider font-mono">
+                        {balance > 0 ? "Alacaklıyız (Müşteri Borçlu)" : "Borçluyuz (Bizim Borcumuz)"}
+                      </div>
+                    </div>
+                    <p className="text-xs text-red-400/90 leading-relaxed font-medium bg-red-500/5 border border-red-500/10 p-3 rounded-lg">
+                      ⚠️ Güvenlik ve muhasebe tutarlılığı nedeniyle, bakiyesi sıfır (0) olmayan cari hesaplar silinemez. Lütfen önce bu cari hesaba ait tüm işlemleri silin veya bakiye sıfırlama işlemi yapın.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs text-white/70 leading-relaxed">
+                      <strong className="text-white font-semibold">{deleteConfirmCari.name}</strong> ({deleteConfirmCari.code}) unvanlı cari hesabı silmek istediğinize emin misiniz?
+                    </p>
+                    <p className="text-xs text-white/40 leading-relaxed font-mono uppercase tracking-wide">
+                      Bu işlem geri alınamaz. Cari hesaba ait tüm tanımlamalar kalıcı olarak silinecektir. (Varsa ilişkili işlemler sistemde kalmaya devam eder.)
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-5 border-t border-white/5 bg-white/[0.01] flex gap-3 justify-end">
+                {hasBalance ? (
+                  <button
+                    onClick={() => setDeleteConfirmCari(null)}
+                    className="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-black text-xs font-bold uppercase tracking-wider rounded-lg transition"
+                  >
+                    Anladım
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setDeleteConfirmCari(null)}
+                      className="px-4 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white/70 text-xs font-semibold uppercase tracking-wider rounded-lg transition"
+                      disabled={isDeleting}
+                    >
+                      Vazgeç
+                    </button>
+                    <button
+                      onClick={handleExecuteDelete}
+                      className="px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition flex items-center gap-1.5"
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <>
+                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Siliniyor...</span>
+                        </>
+                      ) : (
+                        <span>Evet, Sil</span>
+                      )}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

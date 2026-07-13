@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Cari, Transaction, Expense, EmployeeTransaction, BankAccount, AccountTransaction } from '../types';
+import { Transaction, Expense, EmployeeTransaction, BankAccount, AccountTransaction } from '../types';
 import { saveBankAccount, saveAccountTransaction, deleteBankAccount } from '../firebase';
 import { 
   Wallet, 
@@ -9,12 +9,7 @@ import {
   ArrowUpRight, 
   ArrowDownLeft, 
   Search, 
-  Filter, 
   DollarSign, 
-  Calendar,
-  Briefcase,
-  Users,
-  CheckCircle2,
   PieChart as ChartIcon,
   Plus,
   ArrowRightLeft,
@@ -31,13 +26,7 @@ import {
   PieChart, 
   Pie, 
   Cell, 
-  Tooltip, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid,
-  Legend
+  Tooltip
 } from 'recharts';
 
 interface KasaViewProps {
@@ -1068,7 +1057,7 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
                         paddingAngle={3}
                         dataKey="value"
                       >
-                        {flowStats.pieData.map((entry, index) => (
+                        {flowStats.pieData.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>

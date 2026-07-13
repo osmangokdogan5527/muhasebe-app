@@ -12,18 +12,14 @@ import {
   Wallet, 
   Layers, 
   Filter, 
-  RefreshCw, 
   ArrowUpRight, 
   ArrowDownLeft, 
   Search,
   PieChart as PieIcon,
-  CheckCircle,
   AlertTriangle,
   Percent,
   FileText,
   Share2,
-  Copy,
-  Send,
   Mail
 } from 'lucide-react';
 import { 
@@ -35,8 +31,6 @@ import {
   CartesianGrid, 
   Tooltip, 
   Legend, 
-  BarChart, 
-  Bar, 
   Cell, 
   PieChart, 
   Pie 
@@ -59,24 +53,22 @@ type ReportTab = 'ozet' | 'stok' | 'cari' | 'gelirgider' | 'kdvkarzarar' | 'cari
 const DASHBOARD_BG_COLORS = [
   { id: 'white', name: 'Saf Beyaz', bg: '#ffffff', headerBg: '#f8fafc', theme: 'light' },
   { id: 'default', name: 'Klasik Siyah', bg: '#111111', headerBg: '#11111180', theme: 'dark' },
-  { id: 'sampi10-blue', name: 'Sampi10 Mavisi', bg: '#22315b', headerBg: '#1a224080', theme: 'dark' },
-  { id: 'emerald', name: 'Koyu Orman', bg: '#022c22', headerBg: '#064e3b80', theme: 'dark' },
-  { id: 'storm-red', name: 'Storm Kırmızı', bg: '#b91c1c', headerBg: '#7f1d1d80', theme: 'dark' },
+  { id: 'sampi10-blue', name: 'Sadece Mavi', bg: '#22315b', headerBg: '#1a224080', theme: 'dark' },
 ];
 
 export default function RaporlarView({
   cariler,
   stoklar,
   islemler,
-  ceksenet,
+  ceksenet: _ceksenet,
   expenses,
   employeeTransactions = []
 }: RaporlarViewProps) {
-  const [widgetBgColor, setWidgetBgColor] = useState<string>(() => {
+  const widgetBgColor = (() => {
     const saved = localStorage.getItem("storm_muhasebe_widget_bg");
     if (saved === "midnight") return "white";
     return saved || "default";
-  });
+  })();
   
   const selectedColorDef = DASHBOARD_BG_COLORS.find(c => c.id === widgetBgColor) || DASHBOARD_BG_COLORS[0];
 
@@ -99,7 +91,6 @@ export default function RaporlarView({
   const [stockValuationType, setStockValuationType] = useState<'purchase' | 'sales'>('purchase');
   const [cariSearch, setCariSearch] = useState('');
   const [cariTypeFilter, setCariTypeFilter] = useState<'all' | 'customer' | 'supplier'>('all');
-  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState<string>('all');
   const [selectedCariId, setSelectedCariId] = useState<string>('');
 
   // Helpers to resolve date ranges based on preset
@@ -2026,7 +2017,7 @@ export default function RaporlarView({
                         paddingAngle={3}
                         dataKey="value"
                       >
-                        {incomeExpenseStats.categoryData.map((entry, index) => (
+                        {incomeExpenseStats.categoryData.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>

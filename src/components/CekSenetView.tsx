@@ -5,23 +5,15 @@ import {
   FileText, 
   Plus, 
   Search, 
-  SlidersHorizontal, 
   Trash2, 
-  CheckCircle2, 
   Clock, 
   AlertTriangle, 
   ArrowUpRight, 
   ArrowDownLeft, 
-  Building2, 
   User, 
-  Calendar,
   X,
-  CreditCard,
   Briefcase,
   Lock,
-  Check,
-  TrendingUp,
-  TrendingDown,
   RefreshCw,
   Wallet,
   AlertCircle
@@ -33,7 +25,7 @@ interface CekSenetViewProps {
   islemler: Transaction[];
 }
 
-export default function CekSenetView({ ceksenet, cariler, islemler }: CekSenetViewProps) {
+export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }: CekSenetViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'receivable' | 'payable'>('all');
   const [filterDocType, setFilterDocType] = useState<'all' | 'cheque' | 'note'>('all');
@@ -282,7 +274,7 @@ export default function CekSenetView({ ceksenet, cariler, islemler }: CekSenetVi
         convertedAmount: isMultiCurrency ? customConvertedAmount : undefined
       };
 
-      const cekSenetId = await saveCekSenet(payload);
+      await saveCekSenet(payload);
 
       // Optionally, create a Cari balance action (collection/payment) in islemler
       if (affectCariBalance) {

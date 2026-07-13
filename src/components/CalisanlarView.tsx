@@ -16,17 +16,12 @@ import {
   Trash2,
   X,
   TrendingDown,
-  TrendingUp,
-  FileText,
-  Briefcase,
   Phone,
   Mail,
   DollarSign,
-  CreditCard,
   Wallet,
   ArrowUpRight,
   ArrowDownLeft,
-  CheckCircle2,
   AlertCircle,
 } from "lucide-react";
 
@@ -57,9 +52,6 @@ export default function CalisanlarView({
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState<string>("all");
-  const [selectedCurrency, setSelectedCurrency] = useState<
-    "TRY" | "USD" | "EUR"
-  >("TRY");
 
   // Modals state
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
@@ -546,7 +538,7 @@ export default function CalisanlarView({
           <button
             id="add-tx-btn"
             onClick={() => handleOpenCreateTx()}
-            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-950 text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition cursor-pointer active:scale-98 border border-slate-700"
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-lg transition cursor-pointer active:scale-98"
           >
             <DollarSign size={15} />
             <span>Hak Ediş / Ödeme Yap</span>
@@ -686,6 +678,16 @@ export default function CalisanlarView({
             ))}
           </select>
         )}
+
+        {activeTab === "transactions" && (
+          <button
+            onClick={() => handleOpenCreateTx()}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 shrink-0 shadow-sm"
+          >
+            <Plus size={14} />
+            <span>Hak Ediş / Ödeme Ekle</span>
+          </button>
+        )}
       </div>
 
       {/* TAB CONTENT: EMPLOYEES */}
@@ -798,7 +800,7 @@ export default function CalisanlarView({
                       }}
                       className="text-[10px] font-bold uppercase tracking-wider text-teal-600 hover:bg-teal-50 px-2.5 py-1 rounded-lg transition"
                     >
-                      Maaş İşlemi
+                      Hak Ediş / Ödeme Yap
                     </button>
                     <button
                       onClick={(e) => handleOpenEditEmployee(emp, e)}
@@ -859,7 +861,17 @@ export default function CalisanlarView({
                       colSpan={7}
                       className="py-12 text-center text-slate-400 font-medium"
                     >
-                      Eşleşen hareket kaydı bulunamadı.
+                      <div className="flex flex-col items-center justify-center gap-2 py-4">
+                        <span className="font-semibold text-slate-500">Eşleşen hareket kaydı bulunamadı.</span>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenCreateTx()}
+                          className="mt-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-98"
+                        >
+                          <Plus size={14} />
+                          <span>İlk Hareketi Ekle (Hak Ediş / Ödeme)</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -1216,276 +1228,303 @@ export default function CalisanlarView({
               </button>
             </div>
 
-            <form
-              onSubmit={handleTxSubmit}
-              className="p-6 overflow-y-auto space-y-4 flex-1"
-            >
-              {formError && (
-                <div className="p-3 bg-rose-50 text-rose-600 rounded-lg border border-rose-100 text-xs font-bold">
-                  {formError}
+            {employees.length === 0 ? (
+              <div className="p-8 text-center space-y-4 flex flex-col items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center border border-amber-100 shadow-xs">
+                  <AlertCircle size={24} />
                 </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Select Employee */}
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Çalışan Personel *
-                  </label>
-                  <select
-                    required
-                    disabled={!!editingTx}
-                    value={txFormData.employeeId}
-                    onChange={(e) => {
-                      const empId = e.target.value;
-                      const emp = employees.find((x) => x.id === empId);
-                      setTxFormData({
-                        ...txFormData,
-                        employeeId: empId,
-                        amount: emp ? emp.baseSalary : 0,
-                        currency: emp ? emp.currency : "TRY",
-                      });
-                    }}
-                    className="w-full border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 cursor-pointer disabled:bg-slate-100 disabled:cursor-not-allowed"
-                  >
-                    <option value="">Personel Seçin...</option>
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name} ({emp.role} —{" "}
-                        {formatCurrency(emp.baseSalary, emp.currency)})
-                      </option>
-                    ))}
-                  </select>
+                <div className="space-y-1">
+                  <p className="text-sm font-extrabold text-slate-850 uppercase tracking-wide">
+                    Kayıtlı Personel Bulunmamaktadır
+                  </p>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                    Maaş hakedişi, ödeme veya avans kaydı girmek için önce "Personel Kartları" sekmesinden en az bir personel eklemeniz gerekmektedir.
+                  </p>
                 </div>
-
-                {/* Transaction Type */}
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    İşlem Türü *
-                  </label>
-                  <select
-                    value={txFormData.type}
-                    onChange={(e) => handleTxTypeChange(e.target.value as any)}
-                    className="w-full border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 cursor-pointer"
-                  >
-                    <option value="accrual">
-                      Maaş Hak Edişi (Borç Artışı)
-                    </option>
-                    <option value="payment">
-                      Maaş Ödemesi (Borç Kapanışı)
-                    </option>
-                    <option value="advance">Avans Ödemesi (Ön Ödeme)</option>
-                  </select>
-                </div>
-
-                {/* Date */}
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    İşlem Tarihi *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={txFormData.date}
-                    onChange={(e) =>
-                      setTxFormData({ ...txFormData, date: e.target.value })
-                    }
-                    className="w-full border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 font-mono"
-                  />
-                </div>
-
-                {/* Amount */}
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Tutar *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    step="0.01"
-                    min="0.01"
-                    placeholder="0.00"
-                    value={txFormData.amount || ""}
-                    onChange={(e) =>
-                      setTxFormData({
-                        ...txFormData,
-                        amount: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 font-mono"
-                  />
-                </div>
-
-                {/* Currency */}
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Para Birimi *
-                  </label>
-                  <select
-                    value={txFormData.currency}
-                    onChange={(e) =>
-                      setTxFormData({
-                        ...txFormData,
-                        currency: e.target.value as "TRY" | "USD" | "EUR",
-                      })
-                    }
-                    className="w-full border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 cursor-pointer"
-                  >
-                    <option value="TRY">₺ TRY</option>
-                    <option value="USD">$ USD</option>
-                    <option value="EUR">€ EUR</option>
-                  </select>
-                </div>
-
-                {/* Payment Account */}
-                {txFormData.type !== "accrual" && (
-                  <div className="md:col-span-2 space-y-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                        Ödeme Kaynağı (Nereden Ödendi) *
-                      </label>
-                      <select
-                        required
-                        value={txFormData.account}
-                        onChange={(e) =>
-                          setTxFormData({
-                            ...txFormData,
-                            account: e.target.value as any,
-                          })
-                        }
-                        className="w-full border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 cursor-pointer"
-                      >
-                        <option value="">Seçiniz...</option>
-                        <option value="cash">Kasa (Nakit)</option>
-                        <option value="bank">
-                          Banka (Banka Hesabı/Havale/EFT)
-                        </option>
-                        <option value="pos">POS (Kredi Kartı)</option>
-                        <option value="cek_portfoy">
-                          Portföyden Çek Ciro Et
-                        </option>
-                        <option value="cek_firma">
-                          Firma Çeki (Kendi Çekimiz) Yaz
-                        </option>
-                      </select>
-                    </div>
-
-                    {txFormData.account === "cek_portfoy" && (
-                      <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 space-y-3">
-                        <label className="block text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-1.5">
-                          Portföyden Çek Seçin *
-                        </label>
-                        <select
-                          required
-                          value={txFormData.selectedPortfolioCekId}
-                          onChange={(e) =>
-                            setTxFormData({
-                              ...txFormData,
-                              selectedPortfolioCekId: e.target.value,
-                            })
-                          }
-                          className="w-full border border-amber-200 focus:border-amber-500 focus:ring-amber-500 rounded-lg p-2.5 text-xs text-slate-900 bg-white cursor-pointer"
-                        >
-                          <option value="">Çek Seçiniz...</option>
-                          {portfolioCekler.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.amount} {c.currency} - Vade:{" "}
-                              {new Date(c.dueDate).toLocaleDateString("tr-TR")}{" "}
-                              (Banka: {c.bankName || "Belirtilmedi"})
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-[9px] text-amber-600 font-medium">
-                          Seçtiğiniz çekin tutarı ödeme tutarıyla eşleşmelidir.
-                        </p>
-                      </div>
-                    )}
-
-                    {txFormData.account === "cek_firma" && (
-                      <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1.5">
-                            Çek Vade Tarihi *
-                          </label>
-                          <input
-                            type="date"
-                            required
-                            value={txFormData.newCekDueDate}
-                            onChange={(e) =>
-                              setTxFormData({
-                                ...txFormData,
-                                newCekDueDate: e.target.value,
-                              })
-                            }
-                            className="w-full border border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-lg p-2.5 text-xs text-slate-900 bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1.5">
-                            Banka / Şube *
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            placeholder="Örn: Garanti BBVA"
-                            value={txFormData.newCekBank}
-                            onChange={(e) =>
-                              setTxFormData({
-                                ...txFormData,
-                                newCekBank: e.target.value,
-                              })
-                            }
-                            className="w-full border border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-lg p-2.5 text-xs text-slate-900 bg-white"
-                          />
-                        </div>
-                      </div>
-                    )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsTxModalOpen(false);
+                    handleOpenCreateEmployee();
+                  }}
+                  className="mt-2 inline-flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition cursor-pointer shadow-md hover:shadow-lg active:scale-98"
+                >
+                  <Plus size={14} />
+                  <span>Yeni Personel Ekle</span>
+                </button>
+              </div>
+            ) : (
+              <form
+                onSubmit={handleTxSubmit}
+                className="p-6 overflow-y-auto space-y-4 flex-1"
+              >
+                {formError && (
+                  <div className="p-3 bg-rose-50 text-rose-600 rounded-lg border border-rose-100 text-xs font-bold">
+                    {formError}
                   </div>
                 )}
 
-                {/* Description */}
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Açıklama / Not
-                  </label>
-                  <textarea
-                    placeholder="Örn: Haziran 2026 Maaş Ödemesi, Temmuz Avansı vb."
-                    value={txFormData.description}
-                    onChange={(e) =>
-                      setTxFormData({
-                        ...txFormData,
-                        description: e.target.value,
-                      })
-                    }
-                    rows={3}
-                    className="w-full border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50"
-                  />
-                </div>
-              </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Select Employee */}
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                      Çalışan Personel *
+                    </label>
+                    <select
+                      required
+                      disabled={!!editingTx}
+                      value={txFormData.employeeId}
+                      onChange={(e) => {
+                        const empId = e.target.value;
+                        const emp = employees.find((x) => x.id === empId);
+                        setTxFormData({
+                          ...txFormData,
+                          employeeId: empId,
+                          amount: emp ? emp.baseSalary : 0,
+                          currency: emp ? emp.currency : "TRY",
+                        });
+                      }}
+                      className="w-full border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 cursor-pointer disabled:bg-slate-100 disabled:cursor-not-allowed"
+                    >
+                      <option value="">Personel Seçin...</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.name} ({emp.role} —{" "}
+                          {formatCurrency(emp.baseSalary, emp.currency)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              {/* Actions Footer */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsTxModalOpen(false)}
-                  disabled={isSubmitting}
-                  className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 uppercase tracking-wider rounded-lg hover:bg-slate-50 transition cursor-pointer"
-                >
-                  Vazgeç
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-5 py-2 text-xs font-bold text-white uppercase tracking-wider bg-teal-600 hover:bg-teal-700 rounded-lg shadow-md hover:shadow-lg transition cursor-pointer flex items-center gap-2"
-                >
-                  {isSubmitting
-                    ? "Kaydediliyor..."
-                    : editingTx
-                      ? "Hareketi Kaydet"
-                      : "İşlemi Tamamla"}
-                </button>
-              </div>
-            </form>
+                  {/* Transaction Type */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                      İşlem Türü *
+                    </label>
+                    <select
+                      value={txFormData.type}
+                      onChange={(e) => handleTxTypeChange(e.target.value as any)}
+                      className="w-full border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 cursor-pointer"
+                    >
+                      <option value="accrual">
+                        Maaş Hak Edişi (Borç Artışı)
+                      </option>
+                      <option value="payment">
+                        Maaş Ödemesi (Borç Kapanışı)
+                      </option>
+                      <option value="advance">Avans Ödemesi (Ön Ödeme)</option>
+                    </select>
+                  </div>
+
+                  {/* Date */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                      İşlem Tarihi *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={txFormData.date}
+                      onChange={(e) =>
+                        setTxFormData({ ...txFormData, date: e.target.value })
+                      }
+                      className="w-full border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 font-mono"
+                    />
+                  </div>
+
+                  {/* Amount */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                      Tutar *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      step="0.01"
+                      min="0.01"
+                      placeholder="0.00"
+                      value={txFormData.amount || ""}
+                      onChange={(e) =>
+                        setTxFormData({
+                          ...txFormData,
+                          amount: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="w-full border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 font-mono"
+                    />
+                  </div>
+
+                  {/* Currency */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                      Para Birimi *
+                    </label>
+                    <select
+                      value={txFormData.currency}
+                      onChange={(e) =>
+                        setTxFormData({
+                          ...txFormData,
+                          currency: e.target.value as "TRY" | "USD" | "EUR",
+                        })
+                      }
+                      className="w-full border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 cursor-pointer"
+                    >
+                      <option value="TRY">₺ TRY</option>
+                      <option value="USD">$ USD</option>
+                      <option value="EUR">€ EUR</option>
+                    </select>
+                  </div>
+
+                  {/* Payment Account */}
+                  {txFormData.type !== "accrual" && (
+                    <div className="md:col-span-2 space-y-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                          Ödeme Kaynağı (Nereden Ödendi) *
+                        </label>
+                        <select
+                          required
+                          value={txFormData.account}
+                          onChange={(e) =>
+                            setTxFormData({
+                              ...txFormData,
+                              account: e.target.value as any,
+                            })
+                          }
+                          className="w-full border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 cursor-pointer"
+                        >
+                          <option value="">Seçiniz...</option>
+                          <option value="cash">Kasa (Nakit)</option>
+                          <option value="bank">
+                            Banka (Banka Hesabı/Havale/EFT)
+                          </option>
+                          <option value="pos">POS (Kredi Kartı)</option>
+                          <option value="cek_portfoy">
+                            Portföyden Çek Ciro Et
+                          </option>
+                          <option value="cek_firma">
+                            Firma Çeki (Kendi Çekimiz) Yaz
+                          </option>
+                        </select>
+                      </div>
+
+                      {txFormData.account === "cek_portfoy" && (
+                        <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 space-y-3">
+                          <label className="block text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-1.5">
+                            Portföyden Çek Seçin *
+                          </label>
+                          <select
+                            required
+                            value={txFormData.selectedPortfolioCekId}
+                            onChange={(e) =>
+                              setTxFormData({
+                                ...txFormData,
+                                selectedPortfolioCekId: e.target.value,
+                              })
+                            }
+                            className="w-full border border-amber-200 focus:border-amber-500 focus:ring-amber-500 rounded-lg p-2.5 text-xs text-slate-900 bg-white cursor-pointer"
+                          >
+                            <option value="">Çek Seçiniz...</option>
+                            {portfolioCekler.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.amount} {c.currency} - Vade:{" "}
+                                {new Date(c.dueDate).toLocaleDateString("tr-TR")}{" "}
+                                (Banka: {c.bankName || "Belirtilmedi"})
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-[9px] text-amber-600 font-medium">
+                            Seçtiğiniz çekin tutarı ödeme tutarıyla eşleşmelidir.
+                          </p>
+                        </div>
+                      )}
+
+                      {txFormData.account === "cek_firma" && (
+                        <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1.5">
+                              Çek Vade Tarihi *
+                            </label>
+                            <input
+                              type="date"
+                              required
+                              value={txFormData.newCekDueDate}
+                              onChange={(e) =>
+                                setTxFormData({
+                                  ...txFormData,
+                                  newCekDueDate: e.target.value,
+                                })
+                              }
+                              className="w-full border border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-lg p-2.5 text-xs text-slate-900 bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1.5">
+                              Banka / Şube *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="Örn: Garanti BBVA"
+                              value={txFormData.newCekBank}
+                              onChange={(e) =>
+                                setTxFormData({
+                                  ...txFormData,
+                                  newCekBank: e.target.value,
+                                })
+                              }
+                              className="w-full border border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-lg p-2.5 text-xs text-slate-900 bg-white"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Description */}
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                      Açıklama / Not
+                    </label>
+                    <textarea
+                      placeholder="Örn: Haziran 2026 Maaş Ödemesi, Temmuz Avansı vb."
+                      value={txFormData.description}
+                      onChange={(e) =>
+                        setTxFormData({
+                          ...txFormData,
+                          description: e.target.value,
+                        })
+                      }
+                      rows={3}
+                      className="w-full border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50"
+                    />
+                  </div>
+                </div>
+
+                {/* Actions Footer */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsTxModalOpen(false)}
+                    disabled={isSubmitting}
+                    className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 uppercase tracking-wider rounded-lg hover:bg-slate-50 transition cursor-pointer"
+                  >
+                    Vazgeç
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-5 py-2 text-xs font-bold text-white uppercase tracking-wider bg-teal-600 hover:bg-teal-700 rounded-lg shadow-md hover:shadow-lg transition cursor-pointer flex items-center gap-2"
+                  >
+                    {isSubmitting
+                      ? "Kaydediliyor..."
+                      : editingTx
+                        ? "Hareketi Kaydet"
+                        : "İşlemi Tamamla"}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

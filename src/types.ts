@@ -30,6 +30,7 @@ export interface Cari {
   taxOffice?: string;
   taxNo?: string;
   imageUrl?: string; // Profil/Logo resmi
+  notes?: string;
 }
 
 export interface Stock {
@@ -199,3 +200,14 @@ export interface AccountTransaction {
   targetAccountId?: string;
   createdAt: string;
 }
+
+export interface KeyboardShortcut {
+  id: string;
+  name: string;
+  category: string;
+  key: string;
+  altKey: boolean;
+  ctrlKey: boolean;
+  shiftKey: boolean;
+}
+

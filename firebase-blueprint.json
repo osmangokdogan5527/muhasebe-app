@@ -36,6 +36,9 @@
         },
         "createdAt": {
           "type": "string"
+        },
+        "notes": {
+          "type": "string"
         }
       },
       "required": ["id", "name", "code", "type", "balance", "openingBalance", "createdAt"]

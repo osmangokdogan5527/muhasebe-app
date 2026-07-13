@@ -5,12 +5,10 @@ import {
   Plus, 
   Search, 
   Wallet, 
-  Calendar, 
   Edit2, 
   Trash2, 
   X, 
   TrendingDown, 
-  Tag, 
   FileText, 
   Zap, 
   Droplets, 
@@ -20,8 +18,6 @@ import {
   Utensils, 
   Car, 
   HelpCircle,
-  TrendingUp,
-  Briefcase,
   Phone
 } from 'lucide-react';
 

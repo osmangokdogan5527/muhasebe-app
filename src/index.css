@@ -44,12 +44,19 @@ html {
   color-scheme: light !important;
 }
 
-/* App-wide general background override - flat, solid clean slate light color */
+/* App-wide general background override - premium high-fidelity light-ambient with subtle patterns */
 body,
 .bg-\[\#050505\] {
-  background-color: #f8fafc !important;
+  background: 
+    /* Precise micro dot matrix */
+    radial-gradient(rgba(15, 23, 42, 0.012) 1.2px, transparent 1.2px),
+    /* Deep, premium off-white/metallic gradient base */
+    linear-gradient(135deg, #eff3f8 0%, #f7fafc 100%) !important;
+  background-size: 24px 24px, 100% 100% !important;
+  background-repeat: repeat, no-repeat !important;
+  background-attachment: fixed !important;
   color: var(--text-primary) !important;
-  background-image: none !important;
+  position: relative;
 }
 
 /* Sidebar Override: Solid modern white side layout, gorgeous soft right-border & shadow */
@@ -445,5 +452,128 @@ main .dashboard-wrapper[data-theme="light"] .bg-white\/5:hover {
   shape-rendering: crispEdges !important;
   vector-effect: non-scaling-stroke !important;
 }
+
+/* 
+  =========================================
+  PRISTINE TEXT COLORS FOR PRINT & BARCODE TEMPLATES
+  =========================================
+*/
+#printable-barcode-content .text-white,
+#printable-qr-label .text-white,
+.print-template-preview .text-white {
+  color: #ffffff !important;
+}
+
+.print-template-preview .text-white\/95,
+.print-template-preview .text-white\/90,
+#printable-barcode-content .text-white\/95,
+#printable-barcode-content .text-white\/90 {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.print-template-preview .text-white\/80 {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.print-template-preview .text-white\/70 {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.print-template-preview .text-white\/60 {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.print-template-preview .text-white\/50 {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* 
+  =========================================
+  DARK PANEL / SIDEBAR INPUT & SELECT THEME OVERRIDES
+  =========================================
+*/
+.dark-panel input,
+.dark-panel select,
+.dark-panel textarea {
+  background-color: #121212 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 10px !important;
+}
+
+.dark-panel input:focus,
+.dark-panel select:focus,
+.dark-panel textarea:focus {
+  background-color: #161616 !important;
+  border-color: var(--color-teal-500) !important;
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2) !important;
+}
+
+.dark-panel input::placeholder,
+.dark-panel textarea::placeholder {
+  color: rgba(255, 255, 255, 0.35) !important;
+  opacity: 1 !important;
+}
+
+.dark-panel select option {
+  background-color: #121212 !important;
+  color: #ffffff !important;
+}
+
+/* 
+  =========================================
+  HIGH-FIDELITY PRINTABLE INVOICE / LEDGER OVERRIDES
+  =========================================
+*/
+#printable-invoice-content {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+#printable-invoice-content .text-white\/95,
+#printable-invoice-content .text-white\/90,
+#printable-invoice-content .text-white {
+  color: #0f172a !important;
+}
+
+#printable-invoice-content .text-white\/80 {
+  color: #1e293b !important;
+}
+
+#printable-invoice-content .text-white\/70,
+#printable-invoice-content .text-white\/60 {
+  color: #334155 !important;
+}
+
+#printable-invoice-content .text-white\/50,
+#printable-invoice-content .text-white\/40,
+#printable-invoice-content .text-white\/30 {
+  color: #475569 !important;
+}
+
+#printable-invoice-content .text-white\/20 {
+  color: #94a3b8 !important;
+}
+
+#printable-invoice-content .text-teal-400 {
+  color: #0d9488 !important;
+}
+
+#printable-invoice-content .text-red-400 {
+  color: #dc2626 !important;
+}
+
+#printable-invoice-content .border-white\/5,
+#printable-invoice-content .border-white\/10 {
+  border-color: #e2e8f0 !important;
+}
+
+#printable-invoice-content .bg-white\/\[0\.02\],
+#printable-invoice-content .bg-white\/\[0\.01\] {
+  background-color: #f8fafc !important;
+}
+
+
+
 
 

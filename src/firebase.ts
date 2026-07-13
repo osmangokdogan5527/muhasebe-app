@@ -12,7 +12,6 @@ import {
   query,
   orderBy,
   runTransaction,
-  getDoc,
   getDocs,
   setLogLevel
 } from 'firebase/firestore';

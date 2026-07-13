@@ -10,7 +10,6 @@ import {
 } from "../types";
 import {
   TrendingUp,
-  TrendingDown,
   Users,
   Package,
   CreditCard,
@@ -111,9 +110,7 @@ const DEFAULT_WIDGET_ORDER = [
 const DASHBOARD_BG_COLORS = [
   { id: 'white', name: 'Saf Beyaz', bg: '#ffffff', headerBg: '#f8fafc', theme: 'light' },
   { id: 'default', name: 'Klasik Siyah', bg: '#111111', headerBg: '#11111180', theme: 'dark' },
-  { id: 'sampi10-blue', name: 'Sampi10 Mavisi', bg: '#22315b', headerBg: '#1a224080', theme: 'dark' },
-  { id: 'emerald', name: 'Koyu Orman', bg: '#022c22', headerBg: '#064e3b80', theme: 'dark' },
-  { id: 'storm-red', name: 'Storm Kırmızı', bg: '#b91c1c', headerBg: '#7f1d1d80', theme: 'dark' },
+  { id: 'sampi10-blue', name: 'Sadece Mavi', bg: '#22315b', headerBg: '#1a224080', theme: 'dark' },
 ];
 
 export default function DashboardView({

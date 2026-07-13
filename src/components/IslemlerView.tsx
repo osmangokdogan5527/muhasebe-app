@@ -1,38 +1,34 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Transaction, Cari, Stock, InvoiceItem, BankAccount } from '../types';
-import { createTransaction, removeTransaction, saveAccountTransaction } from '../firebase';
+import { createTransaction, removeTransaction } from '../firebase';
 import { 
-  Plus, 
   Search, 
-  FileText, 
   ArrowUpRight, 
   ArrowDownLeft, 
   Trash2, 
   X, 
-  Calendar, 
-  User, 
   CreditCard, 
   PlusCircle, 
   MinusCircle, 
-  DollarSign, 
   FileSpreadsheet,
   AlertCircle,
   FileCheck,
   AlertTriangle,
   Lock,
-  Globe,
   Printer,
   Edit,
-  Pencil,
   ZoomIn,
   ZoomOut,
-  Upload,
   Sparkles,
-  ChevronDown,
-  Zap,
-  Scan
+  Scan,
+  ShieldAlert,
+  Download
 } from 'lucide-react';
 import BarcodeScannerModal from './BarcodeScannerModal';
+import { parseScannedQrCode } from '../utils/formatters';
+import Barcode from 'react-barcode';
+import { jsPDF } from 'jspdf';
+import { toPng } from 'html-to-image';
 
 interface IslemlerViewProps {
   islemler: Transaction[];
@@ -51,6 +47,19 @@ interface IslemlerViewProps {
     kdv?: number;
   } | null;
   onClearAiPrefilledData?: () => void;
+  userRole?: 'admin' | 'employee';
+  actionPermissions?: {
+    delete_sale: boolean;
+    delete_payment: boolean;
+    delete_stock: boolean;
+    decrease_stock: boolean;
+    edit_sale?: boolean;
+    edit_payment?: boolean;
+    edit_stock?: boolean;
+  };
+  escalationPin?: string;
+  isSecurityActive?: boolean;
+  onViewCariDetails?: (cariId: string) => void;
 }
 
 export default function IslemlerView({ 
@@ -62,12 +71,34 @@ export default function IslemlerView({
   pendingCariId,
   onClearPendingIslemModal,
   aiPrefilledData,
-  onClearAiPrefilledData
+  onClearAiPrefilledData,
+  userRole = 'employee',
+  actionPermissions = { delete_sale: false, delete_payment: false, delete_stock: false, decrease_stock: false, edit_sale: false, edit_payment: false, edit_stock: false },
+  escalationPin = '1923',
+  isSecurityActive = false,
+  onViewCariDetails
 }: IslemlerViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'sale' | 'purchase' | 'collection' | 'payment' | 'sale_return' | 'purchase_return'>('all');
+  
+  // PIN Verification for restricted employee actions
+  const [pinVerificationAction, setPinVerificationAction] = useState<(() => void) | null>(null);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+
+  const checkPermissionAndExecute = (actionKey: 'delete_sale' | 'delete_payment' | 'edit_sale' | 'edit_payment', executeAction: () => void) => {
+    if (!isSecurityActive || userRole === 'admin' || actionPermissions[actionKey]) {
+      executeAction();
+    } else {
+      setPinVerificationAction(() => executeAction);
+      setPinInput('');
+      setPinError('');
+      setIsPinModalOpen(true);
+    }
+  };
+
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
-  const [isQuickDropdownOpen, setIsQuickDropdownOpen] = useState(false);
   
   // Print PDF Receipt states
   const [selectedPrintTransaction, setSelectedPrintTransaction] = useState<Transaction | null>(null);
@@ -75,6 +106,7 @@ export default function IslemlerView({
   const [selectedTemplateIdForPrint, setSelectedTemplateIdForPrint] = useState<string | null>(null);
   const [printPageSize, setPrintPageSize] = useState<string>('a4');
   const [previewScale, setPreviewScale] = useState<number>(0.6);
+  const [isPdfDownloading, setIsPdfDownloading] = useState(false);
 
   // Load print settings from localStorage
   const printSettings = useMemo(() => {
@@ -94,15 +126,15 @@ export default function IslemlerView({
     return DEFAULT_PRINT_SETTINGS;
   }, [selectedPrintTransaction]); // Recalculate when print modal opens
 
-  const templatesStr = localStorage.getItem('storm_print_templates');
   const printTemplates = useMemo(() => {
-    if (templatesStr) {
+    const saved = localStorage.getItem('storm_print_templates');
+    if (saved) {
       try {
-        return JSON.parse(templatesStr);
+        return JSON.parse(saved);
       } catch (e) {}
     }
     return [];
-  }, [templatesStr]);
+  }, [selectedPrintTransaction]);
 
   const activeTemplate = useMemo(() => {
     if (!selectedPrintTransaction) return null;
@@ -203,8 +235,108 @@ export default function IslemlerView({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'sale' | 'purchase' | 'collection' | 'payment' | 'sale_return' | 'purchase_return'>('sale');
   const [formError, setFormError] = useState('');
+  
+  const isInvoice = useMemo(() => ['sale', 'purchase', 'sale_return', 'purchase_return'].includes(modalType), [modalType]);
+
+  const theme = useMemo(() => {
+    switch (modalType) {
+      case 'sale':
+        return {
+          color: 'teal',
+          badge: 'Satış',
+          typeLabel: 'Gelir Belgesi',
+          bg: 'bg-emerald-500/10',
+          text: 'text-emerald-400',
+          border: 'border-emerald-500/20',
+          hover: 'hover:bg-emerald-600',
+          btnBg: 'bg-emerald-500',
+          focusRing: 'focus:border-emerald-500/50 focus:ring-emerald-500/20',
+          accentColor: '#10b981'
+        };
+      case 'purchase':
+        return {
+          color: 'rose',
+          badge: 'Alış',
+          typeLabel: 'Gider Belgesi',
+          bg: 'bg-rose-500/10',
+          text: 'text-rose-400',
+          border: 'border-rose-500/20',
+          hover: 'hover:bg-rose-600',
+          btnBg: 'bg-rose-500',
+          focusRing: 'focus:border-rose-500/50 focus:ring-rose-500/20',
+          accentColor: '#f43f5e'
+        };
+      case 'sale_return':
+        return {
+          color: 'amber',
+          badge: 'Satış İade',
+          typeLabel: 'Giriş/İade Belgesi',
+          bg: 'bg-amber-500/10',
+          text: 'text-amber-400',
+          border: 'border-amber-500/20',
+          hover: 'hover:bg-amber-600',
+          btnBg: 'bg-amber-500',
+          focusRing: 'focus:border-amber-500/50 focus:ring-amber-500/20',
+          accentColor: '#f59e0b'
+        };
+      case 'purchase_return':
+        return {
+          color: 'cyan',
+          badge: 'Alış İade',
+          typeLabel: 'Çıkış/İade Belgesi',
+          bg: 'bg-cyan-500/10',
+          text: 'text-cyan-400',
+          border: 'border-cyan-500/20',
+          hover: 'hover:bg-cyan-600',
+          btnBg: 'bg-cyan-500',
+          focusRing: 'focus:border-cyan-500/50 focus:ring-cyan-500/20',
+          accentColor: '#06b6d4'
+        };
+      case 'collection':
+        return {
+          color: 'teal',
+          badge: 'Tahsilat',
+          typeLabel: 'Kasa Girişi',
+          bg: 'bg-teal-500/10',
+          text: 'text-teal-400',
+          border: 'border-teal-500/20',
+          hover: 'hover:bg-teal-600',
+          btnBg: 'bg-teal-500',
+          focusRing: 'focus:border-teal-500/50 focus:ring-teal-500/20',
+          accentColor: '#14b8a6'
+        };
+      case 'payment':
+        return {
+          color: 'rose',
+          badge: 'Ödeme',
+          typeLabel: 'Kasa Çıkışı',
+          bg: 'bg-rose-500/10',
+          text: 'text-rose-400',
+          border: 'border-rose-500/20',
+          hover: 'hover:bg-rose-600',
+          btnBg: 'bg-rose-500',
+          focusRing: 'focus:border-rose-500/50 focus:ring-rose-500/20',
+          accentColor: '#f43f5e'
+        };
+      default:
+        return {
+          color: 'teal',
+          badge: 'İşlem',
+          typeLabel: 'Belge',
+          bg: 'bg-white/5',
+          text: 'text-white',
+          border: 'border-white/10',
+          hover: 'hover:bg-white/10',
+          btnBg: 'bg-white',
+          focusRing: 'focus:border-white/30',
+          accentColor: '#ffffff'
+        };
+    }
+  }, [modalType]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [deleteConfirmTransaction, setDeleteConfirmTransaction] = useState<Transaction | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Barcode State
   const [barcodeInput, setBarcodeInput] = useState('');
@@ -582,7 +714,8 @@ export default function IslemlerView({
     e.preventDefault();
     if (!barcodeInput.trim()) return;
 
-    const scannedStock = stoklar.find(s => s.barcode === barcodeInput.trim() || s.code === barcodeInput.trim());
+    const parsed = parseScannedQrCode(barcodeInput);
+    const scannedStock = stoklar.find(s => s.barcode === parsed || s.code === parsed);
     
     if (scannedStock) {
       // Check if already in invoice
@@ -627,7 +760,7 @@ export default function IslemlerView({
       }
       setBarcodeInput('');
     } else {
-      setFormError(`"${barcodeInput}" barkoduna sahip ürün bulunamadı.`);
+      setFormError(`"${parsed}" kodlu/barkodlu ürün bulunamadı.`);
     }
   };
 
@@ -639,46 +772,58 @@ export default function IslemlerView({
 
   // Handle transaction editing
   const handleEditTransaction = (islem: Transaction) => {
-    setEditingTransaction(islem);
-    setModalType(islem.type);
-    setFormError('');
-    setSelectedCariId(islem.cariId);
-    setTransactionDate(islem.date);
-    setAccount(islem.account || '');
-    setDescription(islem.description || '');
-    setInvoiceNo(islem.invoiceNo || '');
-    setIsMultiCurrency(!!(islem.currency && islem.currency !== 'TRY' && islem.exchangeRate));
-    setTransactionCurrency(islem.currency || 'TRY');
-    setExchangeRate(islem.exchangeRate || 1);
-    setCustomConvertedAmount(islem.convertedAmount || 0);
-    setIsConvertedAmountEdited(false);
+    const isSaleType = ['sale', 'sale_return'].includes(islem.type);
+    const actionKey = isSaleType ? 'edit_sale' : 'edit_payment';
 
-    if (['sale', 'purchase', 'sale_return', 'purchase_return'].includes(islem.type)) {
-      setInvoiceItems(islem.items || [{ stockId: '', stockName: '', quantity: 1, unit: 'Adet', price: 0, taxRate: 20, total: 0 }]);
-      setReceiptAmount(0);
-    } else {
-      setReceiptAmount(islem.amount);
-      setInvoiceItems([{ stockId: '', stockName: '', quantity: 1, unit: 'Adet', price: 0, taxRate: 20, total: 0 }]);
-    }
+    checkPermissionAndExecute(actionKey, () => {
+      setEditingTransaction(islem);
+      setModalType(islem.type);
+      setFormError('');
+      setSelectedCariId(islem.cariId);
+      setTransactionDate(islem.date);
+      setAccount(islem.account || '');
+      setDescription(islem.description || '');
+      setInvoiceNo(islem.invoiceNo || '');
+      setIsMultiCurrency(!!(islem.currency && islem.currency !== 'TRY' && islem.exchangeRate));
+      setTransactionCurrency(islem.currency || 'TRY');
+      setExchangeRate(islem.exchangeRate || 1);
+      setCustomConvertedAmount(islem.convertedAmount || 0);
+      setIsConvertedAmountEdited(false);
 
-    setIsModalOpen(true);
+      if (['sale', 'purchase', 'sale_return', 'purchase_return'].includes(islem.type)) {
+        setInvoiceItems(islem.items || [{ stockId: '', stockName: '', quantity: 1, unit: 'Adet', price: 0, taxRate: 20, total: 0 }]);
+        setReceiptAmount(0);
+      } else {
+        setReceiptAmount(islem.amount);
+        setInvoiceItems([{ stockId: '', stockName: '', quantity: 1, unit: 'Adet', price: 0, taxRate: 20, total: 0 }]);
+      }
+
+      setIsModalOpen(true);
+    });
   };
 
-  // Handle transaction deletion
-  const handleDeleteTransaction = async (islem: Transaction) => {
-    let typeName = islem.type === 'sale' ? 'Satış Faturası' :
-                   islem.type === 'purchase' ? 'Alış Faturası' :
-                   islem.type === 'sale_return' ? 'Satıştan İade Faturası' :
-                   islem.type === 'purchase_return' ? 'Alıştan İade Faturası' :
-                   islem.type === 'collection' ? 'Tahsilat' : 'Ödeme';
-    
-    if (window.confirm(`Bu "${typeName}" işlemini silmek istediğinize emin misiniz? Cari bakiyeler ve stok miktarları otomatik olarak geri alınacaktır!`)) {
-      try {
-        await removeTransaction(islem);
-      } catch (err: any) {
-        console.error(err);
-        alert(`İşlem silinirken hata oluştu: ${err.message || err}`);
-      }
+  // Handle transaction deletion trigger
+  const handleDeleteTransaction = (islem: Transaction) => {
+    const isSaleType = ['sale', 'sale_return'].includes(islem.type);
+    const actionKey = isSaleType ? 'delete_sale' : 'delete_payment';
+
+    checkPermissionAndExecute(actionKey, () => {
+      setDeleteConfirmTransaction(islem);
+    });
+  };
+
+  // Perform actual deletion
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmTransaction) return;
+    setIsDeleting(true);
+    try {
+      await removeTransaction(deleteConfirmTransaction);
+      setDeleteConfirmTransaction(null);
+    } catch (err: any) {
+      console.error(err);
+      alert(`İşlem silinirken hata oluştu: ${err.message || err}`);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -1005,7 +1150,17 @@ export default function IslemlerView({
                         </td>
                         <td className="p-4">
                           <div className="font-bold text-white/95 text-sm flex items-center gap-1.5">
-                            <span className={isOrphaned ? 'text-amber-200/90' : ''}>{islem.cariName}</span>
+                            {isCariDeleted || isOrphaned || !onViewCariDetails ? (
+                              <span className={isOrphaned ? 'text-amber-200/90' : ''}>{islem.cariName}</span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => onViewCariDetails(islem.cariId)}
+                                className="font-bold text-teal-400 hover:text-teal-300 hover:underline cursor-pointer transition text-left leading-tight"
+                              >
+                                {islem.cariName}
+                              </button>
+                            )}
                             {isCariDeleted && (
                               <span className="inline-flex items-center text-amber-500 hover:text-amber-400 cursor-help" title="Cari kayıt silinmiş! Muhasebe bütünlüğü için yasal kayıt korunmaktadır.">
                                 <AlertTriangle size={13} className="animate-pulse" />
@@ -1120,7 +1275,17 @@ export default function IslemlerView({
                       <div>
                         <span className="text-[10px] font-semibold text-white/30 font-mono block">{islem.date}</span>
                         <div className="font-bold text-white/90 text-sm mt-1 leading-tight flex items-center gap-1.5">
-                          <span className={isOrphaned ? 'text-amber-200/90' : ''}>{islem.cariName}</span>
+                          {isCariDeleted || isOrphaned || !onViewCariDetails ? (
+                            <span className={isOrphaned ? 'text-amber-200/90' : ''}>{islem.cariName}</span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onViewCariDetails(islem.cariId)}
+                              className="font-bold text-teal-400 hover:text-teal-300 hover:underline cursor-pointer transition text-left leading-tight"
+                            >
+                              {islem.cariName}
+                            </button>
+                          )}
                           {isCariDeleted && (
                             <span className="text-amber-500 animate-pulse" title="Cari kayıt silinmiş! Muhasebe bütünlüğü için yasal kayıt korunmaktadır.">
                               <AlertTriangle size={13} />
@@ -1216,144 +1381,431 @@ export default function IslemlerView({
 
       {/* Transaction Creator Modal (Sale / Purchase / Collection / Payment) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs overflow-y-auto animate-fade-in">
-          <div className="bg-[#0c0c0c] rounded-lg border border-white/10 max-w-4xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs overflow-y-auto animate-fade-in">
+          <div className={`bg-white rounded-xl border border-slate-200 w-full shadow-2xl overflow-hidden flex flex-col max-h-[95vh] animate-scale-in transition-all duration-300 ${isInvoice ? 'max-w-5xl' : 'max-w-lg'}`}>
             {/* Modal Header */}
-            <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white border-l-4" style={{ borderLeftColor: 'var(--accent-500)' }}>
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-widest text-white/95">
+                <h3 className="text-sm font-extrabold tracking-tight text-slate-900 uppercase">
                   {editingTransaction ? (
-                    modalType === 'sale' ? 'Satış Faturası Düzenle' :
-                    modalType === 'purchase' ? 'Alış Faturası Düzenle' :
-                    modalType === 'sale_return' ? 'Satış İade Faturası Düzenle' :
-                    modalType === 'purchase_return' ? 'Alış İade Faturası Düzenle' :
-                    modalType === 'collection' ? 'Tahsilat Makbuzu Düzenle' : 'Ödeme Makbuzu Düzenle'
+                    `GÜNCELLE: ${theme.badge} ${isInvoice ? 'FATURASI' : 'MAKBUZU'}`
                   ) : (
-                    modalType === 'sale' ? 'Yeni Satış Faturası' :
-                    modalType === 'purchase' ? 'Yeni Alış Faturası' :
-                    modalType === 'sale_return' ? 'Yeni Satış İade Faturası' :
-                    modalType === 'purchase_return' ? 'Yeni Alış İade Faturası' :
-                    modalType === 'collection' ? 'Tahsilat Makbuzu' : 'Ödeme Makbuzu'
+                    `YENİ ${theme.badge} ${isInvoice ? 'FATURASI' : 'MAKBUZU'}`
                   )}
                 </h3>
-                <p className="text-white/40 text-[10px] mt-1 font-mono uppercase tracking-wider">
+                <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider mt-1 block">
                   {modalType === 'sale' ? 'Müşterinize keseceğiniz faturayı ve kalemleri girin.' :
-                   modalType === 'purchase' ? 'Aldığınız mal veya hizmet faturasını kaydedin.' :
-                   modalType === 'sale_return' ? 'Müşteriden size iade edilen ürünleri kaydedin.' :
-                   modalType === 'purchase_return' ? 'Tedarikçiye iade ettiğiniz ürünleri kaydedin.' :
-                   'Kasa veya bankaya giren/çıkan nakit ödeme makbuzu.'}
-                </p>
+                   modalType === 'purchase' ? 'Tedarikçinizden aldığınız faturayı ve kalemleri girin.' :
+                   modalType === 'sale_return' ? 'Müşterinizden gelen iade faturası ve kalemleri girin.' :
+                   modalType === 'purchase_return' ? 'Tedarikçinize gönderdiğiniz iade faturası ve kalemleri girin.' :
+                   modalType === 'collection' ? 'Müşterinizden yaptığınız tahsilat bilgilerini girin.' :
+                   'Tedarikçinize yaptığınız ödeme bilgilerini girin.'}
+                </span>
               </div>
               <button 
                 id="btn-close-islem-modal"
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 text-white/40 hover:text-white hover:bg-white/5 rounded transition"
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition cursor-pointer"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-5 flex-1">
+            <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 bg-white space-y-6">
               {formError && (
-                <div className="p-3 bg-red-950/20 border border-red-500/20 rounded flex items-center gap-2 text-xs text-red-400 font-medium">
-                  <AlertCircle size={14} />
-                  <span>{formError}</span>
+                <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg flex items-start gap-3 text-xs text-rose-600 font-medium animate-shake">
+                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Bir hata oluştu:</span>
+                    <p className="mt-0.5 text-rose-700">{formError}</p>
+                  </div>
                 </div>
               )}
 
-              {/* Core Information Section */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">Cari Hesap Seçimi *</label>
-                  <select 
-                    id="form-islem-cari"
-                    required
-                    value={selectedCariId}
-                    onChange={(e) => setSelectedCariId(e.target.value)}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded text-xs bg-[#0c0c0c] focus:outline-hidden focus:border-teal-500 font-medium"
-                  >
-                    <option value="" className="bg-[#0c0c0c]">-- Cari Seçin --</option>
-                    {cariler.filter(cari => cari.isActive !== false).map(cari => (
-                      <option key={cari.id} value={cari.id} className="bg-[#0c0c0c]">
-                        {cari.name} ({cari.type === 'customer' ? 'Müşteri' : cari.type === 'supplier' ? 'Tedarikçi' : 'Müşteri+Tedarikçi'}) - [{cari.currency || 'TRY'}]
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {isInvoice ? (
+                // Elegant Integrated Layout for Invoices (Single clean stream, no black bento boxes)
+                <div className="space-y-6">
+                  {/* Row 1: Cari, Tarih, Ödeme Durumu/Tipi */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Cari Hesap Seçimi */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1.5 font-mono">Cari Hesap Seçimi *</label>
+                      <select 
+                        id="form-islem-cari"
+                        required
+                        value={selectedCariId}
+                        onChange={(e) => setSelectedCariId(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-white border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg text-xs text-slate-900 transition font-medium cursor-pointer"
+                      >
+                        <option value="">-- Cari Seçin --</option>
+                        {cariler.filter(cari => cari.isActive !== false).map(cari => (
+                          <option key={cari.id} value={cari.id}>
+                            {cari.name} ({cari.type === 'customer' ? 'Müşteri' : cari.type === 'supplier' ? 'Tedarikçi' : 'Müşteri+Tedarikçi'}) - [{cari.currency || 'TRY'}]
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">İşlem Tarihi</label>
-                  <input 
-                    id="form-islem-date"
-                    type="date"
-                    required
-                    value={transactionDate}
-                    onChange={(e) => setTransactionDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded text-xs focus:outline-hidden focus:border-teal-500"
-                  />
-                </div>
+                    {/* İşlem Tarihi */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1.5 font-mono">İşlem Tarihi</label>
+                      <input 
+                        id="form-islem-date"
+                        type="date"
+                        required
+                        value={transactionDate}
+                        onChange={(e) => setTransactionDate(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg text-xs text-slate-900 transition font-medium"
+                      />
+                    </div>
 
-                {/* Account (Cash/Bank) or Credit terms */}
-                <div>
-                  <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">
-                    {modalType === 'sale' || modalType === 'purchase' ? 'Ödeme Durumu / Tipi' : 'Kasa / Banka Türü'}
-                  </label>
-                  <select 
-                    id="form-islem-account"
-                    value={account}
-                    onChange={(e) => {
-                      setAccount(e.target.value as any);
-                      setSelectedBankAccountId('');
-                    }}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded text-xs bg-[#0c0c0c] focus:outline-hidden focus:border-teal-500 mb-3"
-                  >
-                    {(modalType === 'sale' || modalType === 'purchase') && (
-                      <option value="" className="bg-[#0c0c0c]">⏳ Açık Hesap / Vadeli (Borçlandır)</option>
-                    )}
-                    <option value="cash" className="bg-[#0c0c0c]">💵 Kasa (Nakit)</option>
-                    <option value="bank" className="bg-[#0c0c0c]">🏦 Banka (Havale/EFT)</option>
-                    <option value="pos" className="bg-[#0c0c0c]">💳 POS (Kredi Kartı)</option>
-                  </select>
+                    {/* Ödeme Durumu / Tipi */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1.5 font-mono">Ödeme Durumu / Tipi</label>
+                      <select 
+                        id="form-islem-account"
+                        value={account}
+                        onChange={(e) => {
+                          setAccount(e.target.value as any);
+                          setSelectedBankAccountId('');
+                        }}
+                        className="w-full px-3 py-2.5 bg-white border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg text-xs text-slate-900 transition font-medium cursor-pointer"
+                      >
+                        <option value="">⏳ Açık Hesap / Vadeli (Borçlandır)</option>
+                        <option value="cash">💵 Kasa (Nakit)</option>
+                        <option value="bank">🏦 Banka (Havale/EFT)</option>
+                        <option value="pos">💳 POS (Kredi Kartı)</option>
+                      </select>
+                    </div>
+                  </div>
 
+                  {/* Kasa/Banka Detay */}
                   {(account === 'cash' || account === 'bank' || account === 'pos') && bankAccounts.length > 0 && (
-                    <div className="mt-2 animate-fade-in">
-                      <label className="block text-[9px] font-semibold text-teal-400/80 uppercase tracking-widest mb-1.5 font-mono">İşlem Yapılacak Hesap</label>
+                    <div className="animate-fade-in">
+                      <label className="block text-[10px] font-bold text-teal-600 uppercase tracking-wider mb-1.5 font-mono">İşlem Yapılacak Kasa/Banka *</label>
                       <select 
                         required
                         value={selectedBankAccountId}
                         onChange={(e) => setSelectedBankAccountId(e.target.value)}
-                        className="w-full px-3 py-2 bg-teal-500/10 border border-teal-500/20 text-teal-100 rounded text-xs bg-[#0c0c0c] focus:outline-hidden focus:border-teal-500"
+                        className="w-full px-3 py-2.5 bg-teal-50 border border-teal-200 focus:border-teal-500 focus:ring-teal-500 text-teal-950 rounded-lg text-xs font-semibold cursor-pointer"
                       >
-                        <option value="" className="bg-[#0c0c0c]">-- Hesap Seçiniz --</option>
+                        <option value="">-- Kasa/Banka Seçiniz --</option>
                         {bankAccounts.filter(a => account === 'cash' ? a.type === 'kasa' : account === 'pos' ? a.type === 'pos' : a.type === 'banka').map(a => (
-                          <option key={a.id} value={a.id} className="bg-[#0c0c0c]">{a.name} ({a.currency})</option>
+                          <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
                         ))}
                       </select>
                     </div>
                   )}
-                </div>
 
-                {(modalType === 'sale' || modalType === 'purchase') && (
-                  <div className="md:col-span-3">
-                    <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">Fatura / Belge Numarası</label>
+                  {/* Fatura / Belge Numarası */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1.5 font-mono">Fatura / Belge Numarası</label>
                     <input 
                       id="form-islem-invoice-no"
                       type="text"
                       placeholder="Örn: FT-2026-0001"
                       value={invoiceNo}
                       onChange={(e) => setInvoiceNo(e.target.value)}
-                      className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded text-xs font-mono focus:outline-hidden focus:border-teal-500"
+                      className="w-full px-3 py-2.5 bg-white border border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg text-xs text-slate-900 font-mono transition"
                     />
                   </div>
-                )}
-              </div>
 
-              {/* Farklı Para Birimi ve Manuel Kur Bölümü */}
-              {selectedCariId && (
-                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/5 space-y-3">
+                  {/* Fatura Kalemleri (Ürün / Hizmet Satırları) */}
+                  <div className="border-t border-slate-100 pt-6 space-y-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Fatura Kalemleri (Ürün / Hizmet Satırları)</h4>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        {/* Barcode scan box */}
+                        <div className="relative flex-1 sm:w-48">
+                          <input 
+                            type="text"
+                            placeholder="Barkod okutun..."
+                            value={barcodeInput}
+                            onChange={(e) => setBarcodeInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleBarcodeScan(e as any);
+                              }
+                            }}
+                            className="w-full pl-8 pr-8 py-2 bg-white border border-slate-200 text-slate-900 rounded-lg text-[11px] font-mono focus:border-teal-500 focus:ring-teal-500 transition placeholder-slate-400"
+                          />
+                          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <button
+                            type="button"
+                            onClick={() => setIsScannerOpen(true)}
+                            title="Kamera ile Barkod / QR Oku"
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-teal-600 hover:text-teal-700 transition cursor-pointer animate-pulse"
+                          >
+                            <Scan size={12} />
+                          </button>
+                        </div>
+
+                        <button 
+                          id="btn-add-row"
+                          type="button"
+                          onClick={addInvoiceItemRow}
+                          className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold text-red-600 hover:bg-red-50 px-3 py-2 rounded-lg border border-red-200 transition cursor-pointer shrink-0"
+                        >
+                          <PlusCircle size={13} />
+                          <span>Satır Ekle</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Items Row list */}
+                    <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 scrollbar-thin">
+                      {invoiceItems.map((item, index) => (
+                        <div 
+                          key={index} 
+                          className="group flex flex-col md:flex-row gap-3 items-stretch md:items-end bg-slate-50 hover:bg-slate-100/70 p-4 rounded-lg border border-slate-100 hover:border-slate-200 transition duration-150 relative"
+                        >
+                          {/* Product Select */}
+                          <div className="flex-1">
+                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 font-mono">Seçilen Ürün *</label>
+                            <select 
+                              id={`form-row-stock-${index}`}
+                              required
+                              value={item.stockId}
+                              onChange={(e) => handleItemFieldChange(index, 'stockId', e.target.value)}
+                              className="w-full px-2.5 py-2 bg-white border border-slate-200 text-slate-900 rounded-md text-xs focus:outline-hidden focus:border-teal-500 transition font-medium"
+                            >
+                              <option value="">
+                                {item.stockId === '' && item.stockName ? `🤖 Bulunamadı: "${item.stockName}"` : '-- Ürün / Hizmet Seçin --'}
+                              </option>
+                              {stoklar.map(stok => (
+                                <option key={stok.id} value={stok.id}>
+                                  {stok.name} (Mevcut: {stok.quantity} {stok.unit})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Miktar */}
+                          <div className="w-full md:w-28">
+                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 font-mono">Miktar</label>
+                            <div className="flex items-center border border-slate-200 rounded-md bg-white overflow-hidden focus-within:border-teal-500 transition">
+                              <input 
+                                id={`form-row-qty-${index}`}
+                                type="number"
+                                min="0.01"
+                                step="any"
+                                required
+                                value={item.quantity || ''}
+                                onChange={(e) => handleItemFieldChange(index, 'quantity', parseFloat(e.target.value) || 0)}
+                                className="w-full px-2 py-2 bg-transparent text-xs text-center text-slate-900 focus:outline-hidden font-mono font-semibold"
+                              />
+                              <span className="px-2 text-[10px] bg-slate-50 font-bold text-slate-400 border-l border-slate-100">{item.unit}</span>
+                            </div>
+                          </div>
+
+                          {/* Birim Fiyat */}
+                          <div className="w-full md:w-36">
+                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 font-mono">Birim Fiyat (KDV Hariç)</label>
+                            <div className="relative">
+                              <input 
+                                id={`form-row-price-${index}`}
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                required
+                                value={item.price || ''}
+                                onChange={(e) => handleItemFieldChange(index, 'price', parseFloat(e.target.value) || 0)}
+                                className="w-full pl-2 pr-7 py-2 bg-white border border-slate-200 rounded-md text-xs text-slate-900 font-bold font-mono focus:outline-hidden focus:border-teal-500 transition"
+                              />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 font-mono">
+                                {isMultiCurrency ? transactionCurrency : activeCariCurrency}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* KDV % */}
+                          <div className="w-full md:w-20">
+                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 font-mono">KDV %</label>
+                            <select 
+                              id={`form-row-tax-${index}`}
+                              value={item.taxRate}
+                              onChange={(e) => handleItemFieldChange(index, 'taxRate', parseInt(e.target.value) || 0)}
+                              className="w-full px-2 py-2 bg-white border border-slate-200 text-slate-900 rounded-md text-xs focus:outline-hidden focus:border-teal-500 font-mono transition cursor-pointer"
+                            >
+                              <option value="0">0</option>
+                              <option value="1">1</option>
+                              <option value="10">10</option>
+                              <option value="20">20</option>
+                            </select>
+                          </div>
+
+                          {/* Satır Toplamı */}
+                          <div className="w-full md:w-32 text-right">
+                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 font-mono">Satır Toplamı</label>
+                            <div className="text-xs font-bold text-slate-900 bg-slate-100 px-2.5 py-2.5 rounded-md border border-slate-200 font-mono">
+                              {formatCurrency(item.total, isMultiCurrency ? transactionCurrency : activeCariCurrency)}
+                            </div>
+                          </div>
+
+                          {/* Delete Button */}
+                          <div className="flex items-center justify-end md:justify-center md:pb-1">
+                            <button 
+                              id={`btn-remove-row-${index}`}
+                              type="button"
+                              disabled={invoiceItems.length === 1}
+                              onClick={() => removeInvoiceItemRow(index)}
+                              className="p-2 text-slate-300 hover:text-rose-500 disabled:opacity-25 hover:bg-rose-50 rounded-md transition cursor-pointer"
+                              title="Satırı Sil"
+                            >
+                              <MinusCircle size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Calculations Panel & Currencies split */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-100 items-end">
+                      {/* Exchange Rates if needed */}
+                      <div className="text-left text-slate-500 text-[10px] space-y-1 font-sans">
+                        {isMultiCurrency && (
+                          <div className="p-3 rounded-lg bg-teal-50 border border-teal-100 text-teal-700 font-mono space-y-1 animate-fade-in">
+                            <div className="font-bold uppercase tracking-wider text-[8px] text-teal-600">Dövizli İşlem Aktif</div>
+                            <div>Seçilen Kur: 1 {transactionCurrency} = {exchangeRate} {activeCariCurrency}</div>
+                            <div>Cariye Yansıyacak Tutar: <span className="font-bold text-slate-900">{formatCurrency(customConvertedAmount, activeCariCurrency)}</span></div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Beautiful Calculations Receipt */}
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-xs space-y-2.5 relative overflow-hidden max-w-sm ml-auto w-full">
+                        <div className="flex justify-between text-[11px] font-mono text-slate-500">
+                          <span>Matrah:</span>
+                          <span className="font-semibold text-slate-800">{formatCurrency(invoiceTotals.subtotal, isMultiCurrency ? transactionCurrency : activeCariCurrency)}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] font-mono text-slate-500 pb-2 border-b border-dashed border-slate-200">
+                          <span>KDV Toplamı:</span>
+                          <span className="font-semibold text-slate-800">{formatCurrency(invoiceTotals.totalTax, isMultiCurrency ? transactionCurrency : activeCariCurrency)}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 font-mono">Genel Toplam:</span>
+                          <span className="font-extrabold font-mono text-red-700" style={{ fontSize: '18px' }}>
+                            {formatCurrency(invoiceTotals.grandTotal, isMultiCurrency ? transactionCurrency : activeCariCurrency)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // Clean Standard Layout for Simple Receipt (Collection / Payment)
+                <div className="space-y-6 animate-fade-in font-sans">
+                  <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                    <CreditCard size={15} className={theme.text} />
+                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{theme.badge} Bilgileri</h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Cari */}
+                    <div className="sm:col-span-2">
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 font-mono">Cari Hesap *</label>
+                      <select 
+                        id="form-islem-cari"
+                        required
+                        value={selectedCariId}
+                        onChange={(e) => setSelectedCariId(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-white border border-slate-200 text-slate-900 rounded-lg text-xs focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500/10 transition font-medium cursor-pointer font-sans"
+                      >
+                        <option value="">-- Cari Hesap Seçin --</option>
+                        {cariler.filter(cari => cari.isActive !== false).map(cari => (
+                          <option key={cari.id} value={cari.id}>
+                            {cari.name} ({cari.type === 'customer' ? 'Müşteri' : cari.type === 'supplier' ? 'Tedarikçi' : 'Müşteri+Tedarikçi'}) - [{cari.currency || 'TRY'}]
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Tarih */}
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 font-mono">İşlem Tarihi</label>
+                      <input 
+                        id="form-islem-date"
+                        type="date"
+                        required
+                        value={transactionDate}
+                        onChange={(e) => setTransactionDate(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-white border border-slate-200 text-slate-900 rounded-lg text-xs focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500/10 transition font-medium font-mono"
+                      />
+                    </div>
+
+                    {/* Hesap Tipi */}
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 font-mono">Kasa / Banka Türü *</label>
+                      <select 
+                        id="form-islem-account"
+                        required
+                        value={account}
+                        onChange={(e) => {
+                          setAccount(e.target.value as any);
+                          setSelectedBankAccountId('');
+                        }}
+                        className="w-full px-3 py-2.5 bg-white border border-slate-200 text-slate-900 rounded-lg text-xs focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500/10 transition cursor-pointer font-sans"
+                      >
+                        <option value="cash">💵 Kasa (Nakit)</option>
+                        <option value="bank">🏦 Banka (Havale/EFT)</option>
+                        <option value="pos">💳 POS (Kredi Kartı)</option>
+                      </select>
+                    </div>
+
+                    {/* Kasa/Banka Detay */}
+                    {(account === 'cash' || account === 'bank' || account === 'pos') && bankAccounts.length > 0 && (
+                      <div className="sm:col-span-2 animate-fade-in">
+                        <label className="block text-[9px] font-bold text-teal-600 uppercase tracking-widest mb-1.5 font-mono">İşlem Yapılacak Hesap</label>
+                        <select 
+                          required
+                          value={selectedBankAccountId}
+                          onChange={(e) => setSelectedBankAccountId(e.target.value)}
+                          className="w-full px-3 py-2.5 bg-teal-50 border border-teal-200 text-teal-900 rounded-lg text-xs focus:outline-hidden transition font-medium cursor-pointer font-sans"
+                        >
+                          <option value="">-- Hesap Seçiniz --</option>
+                          {bankAccounts.filter(a => account === 'cash' ? a.type === 'kasa' : account === 'pos' ? a.type === 'pos' : a.type === 'banka').map(a => (
+                            <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Receipt Amount Input */}
+                  <div className="pt-4 border-t border-slate-100">
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 font-mono">İşlem Tutarı *</label>
+                    <div className="relative">
+                      <input 
+                        id="form-receipt-amount"
+                        type="number"
+                        step="0.01"
+                        required
+                        placeholder="0.00"
+                        value={receiptAmount || ''}
+                        onChange={(e) => setReceiptAmount(parseFloat(e.target.value) || 0)}
+                        className={`w-full px-4 py-3.5 bg-white border rounded-xl text-xl font-bold focus:outline-hidden transition font-mono ${
+                          modalType === 'collection' ? 'text-emerald-600 border-emerald-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/10' : 'text-rose-600 border-rose-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/10'
+                        }`}
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 font-mono">
+                        {isMultiCurrency ? transactionCurrency : activeCariCurrency}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Farklı Para Birimi checkbox trigger */}
+              {!isInvoice && selectedCariId && (
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-3 font-sans">
                   <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-2 text-xs font-semibold text-white/80 cursor-pointer select-none">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
                       <input 
                         type="checkbox"
                         checked={isMultiCurrency}
@@ -1364,295 +1816,75 @@ export default function IslemlerView({
                             setTransactionCurrency(selectedCari?.currency || 'TRY');
                           }
                         }}
-                        className="rounded border-white/10 bg-white/5 text-teal-600 focus:ring-teal-500 focus:ring-offset-[#0c0c0c]"
+                        className="rounded border-slate-300 bg-white text-teal-600 focus:ring-teal-500"
                       />
-                      <span>Farklı Para Birimi / Manuel Kur Uygula</span>
+                      <span>Farklı Para Birimi / Döviz Kuru Uygula</span>
                     </label>
-                    <span className="text-[10px] text-white/40 font-mono">
-                      Cari Para Birimi: <span className="font-bold text-teal-400">{activeCariCurrency}</span>
-                    </span>
+                    <span className="text-[10px] text-slate-450 font-mono">Cari Para Birimi: <span className="font-bold text-teal-600">{activeCariCurrency}</span></span>
                   </div>
 
                   {isMultiCurrency && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-white/5 animate-fade-in">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-200/60 animate-fade-in">
                       <div>
-                        <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">İşlem Para Birimi</label>
+                        <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5 font-mono">İşlem Birimi</label>
                         <select
                           value={transactionCurrency}
                           onChange={(e) => setTransactionCurrency(e.target.value as any)}
-                          className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded text-xs bg-[#0c0c0c] focus:outline-hidden focus:border-teal-500 font-medium"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 text-slate-900 rounded text-xs focus:outline-hidden focus:border-teal-500 font-medium cursor-pointer"
                         >
-                          <option value="TRY" className="bg-[#0c0c0c]">TRY (Türk Lirası)</option>
-                          <option value="USD" className="bg-[#0c0c0c]">USD (Amerikan Doları)</option>
-                          <option value="EUR" className="bg-[#0c0c0c]">EUR (Euro)</option>
+                          <option value="TRY">TRY</option>
+                          <option value="USD">USD</option>
+                          <option value="EUR">EUR</option>
                         </select>
                       </div>
-
                       <div>
-                        <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">Manuel Döviz Kuru</label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            step="0.0001"
-                            min="0.0001"
-                            value={exchangeRate}
-                            onChange={(e) => {
-                              setExchangeRate(parseFloat(e.target.value) || 0);
-                            }}
-                            className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded text-xs focus:outline-hidden focus:border-teal-500 font-mono font-semibold"
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-white/30 font-mono font-medium">
-                            {activeCariCurrency}
-                          </span>
-                        </div>
+                        <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5 font-mono">Kur</label>
+                        <input
+                          type="number"
+                          step="0.0001"
+                          value={exchangeRate}
+                          onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 0)}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 text-slate-900 rounded text-xs focus:outline-hidden focus:border-teal-500 font-mono"
+                        />
                       </div>
-
                       <div>
-                        <div className="flex justify-between items-center mb-1.5">
-                          <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest font-mono">
-                            Cariye Yansıyacak Tutar ({activeCariCurrency})
-                          </label>
-                          {isConvertedAmountEdited && (
-                            <button
-                              type="button"
-                              onClick={() => setIsConvertedAmountEdited(false)}
-                              className="text-[9px] text-teal-400 hover:underline cursor-pointer"
-                            >
-                              Sıfırla
-                            </button>
-                          )}
-                        </div>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={customConvertedAmount || ''}
-                            onChange={(e) => {
-                              setIsConvertedAmountEdited(true);
-                              setCustomConvertedAmount(parseFloat(e.target.value) || 0);
-                            }}
-                            className="w-full px-3 py-2 bg-teal-950/20 border border-teal-500/30 text-teal-300 rounded text-xs focus:outline-hidden focus:border-teal-400 font-mono font-bold"
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-teal-400/50 font-mono font-bold">
-                            {activeCariCurrency}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-white/30 mt-1 font-sans">
-                          {transactionCurrency === activeCariCurrency ? (
-                            "Para birimleri aynı olduğu için kur etkisi yoktur."
-                          ) : (
-                            `Hesaplama: 1 ${
-                              transactionCurrency === 'TRY' ? (activeCariCurrency === 'TRY' ? 'USD' : activeCariCurrency) : transactionCurrency
-                            } = ${exchangeRate} TRY/Birim`
-                          )}
-                        </p>
+                        <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5 font-mono">Yansıyacak Tutar ({activeCariCurrency})</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={customConvertedAmount || ''}
+                          onChange={(e) => {
+                            setIsConvertedAmountEdited(true);
+                            setCustomConvertedAmount(parseFloat(e.target.value) || 0);
+                          }}
+                          className="w-full px-3 py-2 bg-teal-50 border border-teal-200 text-teal-700 rounded text-xs focus:outline-hidden font-mono"
+                        />
                       </div>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Dynamic Product/Stock Rows Builder (FOR INVOICES ONLY) */}
-              {(modalType === 'sale' || modalType === 'purchase') && (
-                <div className="space-y-3 pt-4 border-t border-white/5">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-1">
-                    <h4 className="text-[9px] font-semibold text-white/40 uppercase tracking-widest font-mono">Fatura Kalemleri (Ürün / Hizmet Satırları)</h4>
-                    <div className="flex items-center gap-3 w-full sm:w-auto">
-                      <div className="relative flex-1 sm:w-48">
-                        <input 
-                          type="text"
-                          placeholder="Barkod okutun..."
-                          value={barcodeInput}
-                          onChange={(e) => setBarcodeInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleBarcodeScan(e as any);
-                            }
-                          }}
-                          className="w-full pl-8 pr-8 py-1.5 bg-white/5 border border-white/10 text-white rounded text-[10px] font-mono focus:outline-hidden focus:border-teal-500 placeholder-white/30"
-                        />
-                        <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/30" />
-                        <button
-                          type="button"
-                          onClick={() => setIsScannerOpen(true)}
-                          title="Kamera ile Barkod Oku"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-teal-400 hover:text-teal-300 rounded hover:bg-white/10 transition cursor-pointer"
-                        >
-                          <Scan size={12} />
-                        </button>
-                      </div>
-                      <button 
-                        id="btn-add-row"
-                        type="button"
-                        onClick={addInvoiceItemRow}
-                        className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold text-teal-400 hover:text-teal-300 hover:bg-white/5 px-2 py-1 rounded transition cursor-pointer shrink-0"
-                      >
-                        <PlusCircle size={14} />
-                        <span>Satır Ekle</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {invoiceItems.map((item, index) => (
-                    <div key={index} className="flex flex-col md:flex-row gap-3 items-stretch md:items-end bg-white/[0.01] p-3 rounded border border-white/5">
-                      {/* Select Product */}
-                      <div className="flex-1">
-                        <label className="block text-[9px] font-semibold text-white/30 uppercase tracking-widest mb-1 font-mono">Seçilen Ürün *</label>
-                        <select 
-                          id={`form-row-stock-${index}`}
-                          value={item.stockId}
-                          onChange={(e) => handleItemFieldChange(index, 'stockId', e.target.value)}
-                          className="w-full px-2.5 py-1.5 bg-white/5 border border-white/10 text-white rounded text-xs bg-[#0c0c0c] focus:outline-hidden focus:border-teal-500"
-                        >
-                          <option value="" className="bg-[#0c0c0c]">
-                            {item.stockId === '' && item.stockName ? `🤖 Bulunamadı: "${item.stockName}" (Lütfen Seçin)` : '-- Ürün / Hizmet Seçin --'}
-                          </option>
-                          {stoklar.map(stok => (
-                            <option key={stok.id} value={stok.id} className="bg-[#0c0c0c]">
-                              {stok.name} (Mevcut: {stok.quantity} {stok.unit})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Quantity */}
-                      <div className="w-24">
-                        <label className="block text-[9px] font-semibold text-white/30 uppercase tracking-widest mb-1 font-mono">Miktar</label>
-                        <div className="flex items-center border border-white/10 rounded bg-white/5 overflow-hidden">
-                          <input 
-                            id={`form-row-qty-${index}`}
-                            type="number"
-                            min="0.01"
-                            step="any"
-                            value={item.quantity || ''}
-                            onChange={(e) => handleItemFieldChange(index, 'quantity', parseFloat(e.target.value) || 0)}
-                            className="w-full px-2 py-1.5 bg-transparent text-xs text-center text-white focus:outline-hidden"
-                          />
-                          <span className="px-1.5 text-[10px] bg-white/5 font-semibold text-white/40 border-l border-white/10">{item.unit}</span>
-                        </div>
-                      </div>
-
-                      {/* Unit Price */}
-                      <div className="w-32">
-                        <label className="block text-[9px] font-semibold text-white/30 uppercase tracking-widest mb-1 font-mono">Birim Fiyat (KDV Hariç)</label>
-                        <div className="relative">
-                          <input 
-                            id={`form-row-price-${index}`}
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={item.price || ''}
-                            onChange={(e) => handleItemFieldChange(index, 'price', parseFloat(e.target.value) || 0)}
-                            className="w-full pl-2 pr-6 py-1.5 bg-white/5 border border-white/10 rounded text-xs text-white font-semibold focus:outline-hidden focus:border-teal-500"
-                          />
-                          <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-white/30 font-mono">{isMultiCurrency ? transactionCurrency : activeCariCurrency}</span>
-                        </div>
-                      </div>
-
-                      {/* Tax Rate */}
-                      <div className="w-20">
-                        <label className="block text-[9px] font-semibold text-white/30 uppercase tracking-widest mb-1 font-mono">KDV %</label>
-                        <select 
-                          id={`form-row-tax-${index}`}
-                          value={item.taxRate}
-                          onChange={(e) => handleItemFieldChange(index, 'taxRate', parseInt(e.target.value) || 0)}
-                          className="w-full px-2.5 py-1.5 bg-white/5 border border-white/10 text-white/95 rounded text-xs bg-[#0c0c0c] focus:outline-hidden focus:border-teal-500 font-mono"
-                        >
-                          <option value="0" className="bg-[#0c0c0c]">0</option>
-                          <option value="1" className="bg-[#0c0c0c]">1</option>
-                          <option value="10" className="bg-[#0c0c0c]">10</option>
-                          <option value="20" className="bg-[#0c0c0c]">20</option>
-                        </select>
-                      </div>
-
-                      {/* Line Total */}
-                      <div className="w-32 text-right">
-                        <label className="block text-[9px] font-semibold text-white/30 uppercase tracking-widest mb-1 font-mono">Satır Toplamı</label>
-                        <div className="text-xs font-bold text-white/90 bg-white/5 px-2.5 py-1.5 rounded border border-white/5 font-mono">
-                          {formatCurrency(item.total, isMultiCurrency ? transactionCurrency : activeCariCurrency)}
-                        </div>
-                      </div>
-
-                      {/* Delete Row Button */}
-                      <div className="flex items-center justify-center pb-0.5">
-                        <button 
-                          id={`btn-remove-row-${index}`}
-                          type="button"
-                          disabled={invoiceItems.length === 1}
-                          onClick={() => removeInvoiceItemRow(index)}
-                          className="p-1.5 text-white/30 hover:text-red-400 disabled:opacity-20 hover:bg-white/5 rounded transition cursor-pointer"
-                        >
-                          <MinusCircle size={18} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Summary Calculations Container */}
-                  <div className="flex justify-end pt-3">
-                    <div className="w-64 bg-white/[0.01] border border-white/5 p-4 rounded-lg space-y-2 text-xs font-mono">
-                      <div className="flex justify-between text-white/40">
-                        <span>Matrah:</span>
-                        <span className="font-semibold text-white/85">{formatCurrency(invoiceTotals.subtotal, isMultiCurrency ? transactionCurrency : activeCariCurrency)}</span>
-                      </div>
-                      <div className="flex justify-between text-white/40 pb-1.5 border-b border-white/5">
-                        <span>KDV Toplamı:</span>
-                        <span className="font-semibold text-white/85">{formatCurrency(invoiceTotals.totalTax, isMultiCurrency ? transactionCurrency : activeCariCurrency)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-white font-bold">
-                        <span>Genel Toplam:</span>
-                        <span className="font-bold text-teal-400" style={{ fontSize: '13px' }}>{formatCurrency(invoiceTotals.grandTotal, isMultiCurrency ? transactionCurrency : activeCariCurrency)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Simple Receipt Amount Box (FOR COLLECTIONS / PAYMENTS) */}
-              {(modalType === 'collection' || modalType === 'payment') && (
-                <div className="pt-4 border-t border-white/5">
-                  <div className="max-w-md mx-auto">
-                    <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">Ödeme / Makbuz Tutarı *</label>
-                    <div className="relative">
-                      <input 
-                        id="form-receipt-amount"
-                        type="number"
-                        step="0.01"
-                        required
-                        placeholder="0.00"
-                        value={receiptAmount || ''}
-                        onChange={(e) => setReceiptAmount(parseFloat(e.target.value) || 0)}
-                        className={`w-full px-4 py-3 bg-white/5 border rounded text-lg font-bold focus:outline-hidden focus:border-teal-500 font-mono ${
-                          modalType === 'collection' ? 'text-teal-400 border-teal-500/20' : 'text-red-400 border-red-500/20'
-                        }`}
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-white/30 font-mono">{isMultiCurrency ? transactionCurrency : activeCariCurrency}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* General Description */}
-              <div className="pt-4 border-t border-white/5">
-                <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">İşlem Açıklaması</label>
+              {/* General Description Textarea */}
+              <div className="w-full">
+                <label className="block text-[9px] font-bold text-slate-450 uppercase tracking-widest mb-1.5 font-mono">İşlem Açıklaması</label>
                 <textarea 
                   id="form-islem-desc"
                   rows={2}
-                  placeholder="İşlem ile ilgili not veya açıklama girin..."
+                  placeholder="İşlem ile ilgili detaylı not veya açıklama girin..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded text-xs focus:outline-hidden focus:border-teal-500"
+                  className="w-full px-3 py-2.5 bg-white border border-slate-200 text-slate-900 rounded-lg text-xs focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500/10 transition font-sans"
                 />
               </div>
 
-              {/* Form Actions */}
-              <div className="pt-4 border-t border-white/5 flex gap-3 justify-end bg-transparent">
+              {/* Form Action Controls */}
+              <div className="pt-4 border-t border-slate-100 flex gap-3 justify-end w-full bg-transparent">
                 <button 
                   id="btn-islem-cancel"
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-[10px] uppercase tracking-wider font-semibold text-white/40 hover:text-white hover:bg-white/5 rounded transition cursor-pointer"
+                  className="px-5 py-2.5 text-[10px] uppercase tracking-wider font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
                 >
                   İptal
                 </button>
@@ -1660,16 +1892,16 @@ export default function IslemlerView({
                   id="btn-islem-save"
                   type="submit"
                   disabled={isSubmitting}
-                  className={`px-6 py-2 text-[10px] uppercase tracking-wider font-bold text-black rounded transition shadow-lg flex items-center gap-1.5 cursor-pointer ${
+                  className={`px-6 py-2.5 text-[10px] uppercase tracking-wider font-extrabold text-white rounded-lg transition shadow-md flex items-center gap-1.5 cursor-pointer ${
                     isSubmitting 
-                      ? 'bg-teal-800 text-teal-200' 
-                      : 'bg-teal-500 hover:bg-teal-600 shadow-[0_0_8px_rgba(45,212,191,0.2)]'
+                      ? 'bg-slate-400 text-slate-200 cursor-not-allowed' 
+                      : 'bg-teal-600 hover:bg-teal-700 active:scale-98'
                   }`}
                 >
                   {isSubmitting ? (editingTransaction ? 'Güncelleniyor...' : 'Kaydediliyor...') : (
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1.5 font-sans">
                       <FileCheck size={14} /> 
-                      {editingTransaction ? 'Değişiklikleri Güncelle' : 'İşlemi Tamamla'}
+                      {editingTransaction ? 'Değişiklikleri Kaydet' : 'İşlemi Onayla & Bitir'}
                     </span>
                   )}
                 </button>
@@ -1710,7 +1942,144 @@ export default function IslemlerView({
           return `${symbol} ${formattedVal}`;
         };
 
+        const convertNumberToWords = (num: number, currencyCode: string = 'TRY') => {
+          const ones = ['', 'BİR', 'İKİ', 'ÜÇ', 'DÖRT', 'BEŞ', 'ALTI', 'YEDİ', 'SEKİZ', 'DOKUZ'];
+          const tens = ['', 'ON', 'YİRMİ', 'OTUZ', 'KIRK', 'ELLİ', 'ALTMIŞ', 'YETMİŞ', 'SEKSEN', 'DOKSAN'];
+          const hundreds = ['', 'YÜZ', 'İKİYÜZ', 'ÜÇYÜZ', 'DÖRTYÜZ', 'BEŞYÜZ', 'ALTIYÜZ', 'YEDİYÜZ', 'SEKİZYÜZ', 'DOKUZYÜZ'];
+          const thousands = ['', 'BİN', 'MİLYON', 'MİLYAR', 'TRİLYON'];
+
+          const formatGroup = (n: number) => {
+            let s = '';
+            const h = Math.floor(n / 100);
+            const t = Math.floor((n % 100) / 10);
+            const o = n % 10;
+            if (h > 0) {
+              s += h === 1 ? 'YÜZ' : hundreds[h];
+            }
+            if (t > 0) s += tens[t];
+            if (o > 0) s += ones[o];
+            return s;
+          };
+
+          const intPart = Math.floor(num);
+          const fracPart = Math.round((num - intPart) * 100);
+
+          let intStr = '';
+          if (intPart === 0) {
+            intStr = 'SIFIR';
+          } else {
+            let temp = intPart;
+            let groupIdx = 0;
+            while (temp > 0) {
+              const group = temp % 1000;
+              if (group > 0) {
+                let groupWord = formatGroup(group);
+                if (groupIdx === 1 && group === 1) {
+                  groupWord = '';
+                }
+                intStr = groupWord + thousands[groupIdx] + intStr;
+              }
+              temp = Math.floor(temp / 1000);
+              groupIdx++;
+            }
+          }
+
+          let fracStr = '';
+          if (fracPart > 0) {
+            fracStr = formatGroup(fracPart);
+          }
+
+          let currencyUnit = 'TL';
+          let subUnit = 'Kr.';
+          if (currencyCode === 'USD') {
+            currencyUnit = 'DOLAR';
+            subUnit = 'SNT.';
+          } else if (currencyCode === 'EUR') {
+            currencyUnit = 'EURO';
+            subUnit = 'SNT.';
+          }
+
+          return `Yalnız; ${intStr} ${currencyUnit}` + (fracPart > 0 ? ` ${fracStr} ${subUnit}` : ' SIFIR KURUŞ.');
+        };
+
+        const transactionTypeTheme = (() => {
+          const type = selectedPrintTransaction.type;
+          if (type === 'purchase') {
+            return {
+              primary: '#0f766e', // Teal 700
+              primaryBg: '#f0fdfa', // Teal 50
+              primaryBorder: '#99f6e4', // Teal 200
+              accent: '#0d9488', // Teal 600
+              textLight: '#0f766e',
+              title: 'ALIŞ FATURASI',
+              badgeText: 'ALIŞ BELGESİ'
+            };
+          } else if (type === 'sale_return' || type === 'purchase_return') {
+            return {
+              primary: '#be123c', // Rose 700
+              primaryBg: '#fff1f2', // Rose 50
+              primaryBorder: '#fecdd3', // Rose 200
+              accent: '#e11d48', // Rose 600
+              textLight: '#be123c',
+              title: 'İADE FATURASI',
+              badgeText: 'İADE BELGESİ'
+            };
+          } else if (type === 'collection') {
+            return {
+              primary: '#4338ca', // Indigo 700
+              primaryBg: '#eef2ff', // Indigo 50
+              primaryBorder: '#c7d2fe', // Indigo 200
+              accent: '#4f46e5', // Indigo 600
+              textLight: '#4338ca',
+              title: 'TAHSİLAT MAKBUZU',
+              badgeText: 'FİNANS FİŞİ'
+            };
+          } else if (type === 'payment') {
+            return {
+              primary: '#b45309', // Amber 700
+              primaryBg: '#fffbeb', // Amber 50
+              primaryBorder: '#fde68a', // Amber 200
+              accent: '#d97706', // Amber 600
+              textLight: '#b45309',
+              title: 'ÖDEME MAKBUZU',
+              badgeText: 'FİNANS FİŞİ'
+            };
+          } else {
+            // default / sale
+            return {
+              primary: '#1d4ed8', // Blue 700
+              primaryBg: '#eff6ff', // Blue 50
+              primaryBorder: '#bfdbfe', // Blue 200
+              accent: '#2563eb', // Blue 600
+              textLight: '#1d4ed8',
+              title: 'SATIŞ FATURASI',
+              badgeText: 'SATIŞ BELGESİ'
+            };
+          }
+        })();
+
         const textScale = activeTemplate?.textSize === 'small' ? 0.85 : activeTemplate?.textSize === 'large' ? 1.15 : 1;
+
+        const kdvBreakdown = (() => {
+          if (!selectedPrintTransaction || !selectedPrintTransaction.items) return [];
+          const groups: Record<number, { rate: number; total: number; matrah: number; kdv: number }> = {};
+          
+          selectedPrintTransaction.items.forEach(item => {
+            const rate = item.taxRate || 20; // default 20%
+            const total = item.total || 0;
+            const matrah = total / (1 + rate / 100);
+            const kdv = total - matrah;
+            
+            if (!groups[rate]) {
+              groups[rate] = { rate, total: 0, matrah: 0, kdv: 0 };
+            }
+            groups[rate].total += total;
+            groups[rate].matrah += matrah;
+            groups[rate].kdv += kdv;
+          });
+          
+          return Object.values(groups);
+        })();
 
         let pageWidth = '210mm';
         let pageHeight = '297mm';
@@ -1797,6 +2166,8 @@ export default function IslemlerView({
                       </div>
                     )}
                     
+
+                    
                     <div className="h-4 w-px bg-white/10 hidden sm:block"></div>
 
                     <div className="flex items-center gap-2">
@@ -1841,6 +2212,143 @@ export default function IslemlerView({
                     
                     <button
                       type="button"
+                      disabled={!isPrintReady || isPdfDownloading}
+                      onClick={async () => {
+                        if (!isPrintReady || isPdfDownloading) return;
+                        setIsPdfDownloading(true);
+
+                        const printContent = document.getElementById('printable-invoice-content');
+                        if (!printContent) {
+                          setIsPdfDownloading(false);
+                          return;
+                        }
+
+                        const originalTransform = printContent.style.transform;
+                        // Set scale to 1 for high-fidelity capture
+                        printContent.style.transform = 'scale(1)';
+
+                        // Let layout settle for a fraction of a millisecond
+                        await new Promise((resolve) => setTimeout(resolve, 80));
+
+                        try {
+                          // Get dimensions in mm
+                          let pdfFormat: string | [number, number] = 'a4';
+                          let isLandscape = false;
+                          let pdfWidthMm = 210;
+                          let pdfHeightMm = 297;
+
+                          if (printPageSize === 'a4_yatay') {
+                            pdfFormat = 'a4';
+                            isLandscape = true;
+                            pdfWidthMm = 297;
+                            pdfHeightMm = 210;
+                          } else if (printPageSize === 'a5') {
+                            pdfFormat = 'a5';
+                            isLandscape = false;
+                            pdfWidthMm = 148;
+                            pdfHeightMm = 210;
+                          } else if (printPageSize === 'a5_yatay') {
+                            pdfFormat = 'a5';
+                            isLandscape = true;
+                            pdfWidthMm = 210;
+                            pdfHeightMm = 148;
+                          } else if (printPageSize === 'etiket_60x40') {
+                            pdfFormat = [60, 40];
+                            isLandscape = true;
+                            pdfWidthMm = 60;
+                            pdfHeightMm = 40;
+                          } else if (printPageSize === 'etiket_80x50') {
+                            pdfFormat = [80, 50];
+                            isLandscape = true;
+                            pdfWidthMm = 80;
+                            pdfHeightMm = 50;
+                          } else if (printPageSize === 'etiket_40x30') {
+                            pdfFormat = [40, 30];
+                            isLandscape = true;
+                            pdfWidthMm = 40;
+                            pdfHeightMm = 30;
+                          } else if (printPageSize === 'etiket_40x20') {
+                            pdfFormat = [40, 20];
+                            isLandscape = true;
+                            pdfWidthMm = 40;
+                            pdfHeightMm = 20;
+                          } else if (printPageSize === 'termal_80') {
+                            const actualHeightMm = (printContent.scrollHeight / printContent.clientWidth) * 80 || 200;
+                            pdfFormat = [80, actualHeightMm];
+                            isLandscape = false;
+                            pdfWidthMm = 80;
+                            pdfHeightMm = actualHeightMm;
+                          } else if (printPageSize === 'termal_58') {
+                            const actualHeightMm = (printContent.scrollHeight / printContent.clientWidth) * 58 || 180;
+                            pdfFormat = [58, actualHeightMm];
+                            isLandscape = false;
+                            pdfWidthMm = 58;
+                            pdfHeightMm = actualHeightMm;
+                          }
+
+                          // Generate crisp PNG image
+                          const dataUrl = await toPng(printContent, {
+                            pixelRatio: 2.5, // High resolution
+                            backgroundColor: '#ffffff',
+                            style: {
+                              transform: 'scale(1)',
+                              transformOrigin: 'top left',
+                            }
+                          });
+
+                          // Reset original transform immediately
+                          printContent.style.transform = originalTransform;
+
+                          // Create jsPDF document
+                          const doc = new jsPDF({
+                            orientation: isLandscape ? 'landscape' : 'portrait',
+                            unit: 'mm',
+                            format: pdfFormat,
+                          });
+
+                          // Add image covering the entire page area
+                          doc.addImage(dataUrl, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
+
+                          // Save PDF with meaningful name
+                          const docName = selectedPrintTransaction.invoiceNo 
+                            ? `Fatura_${selectedPrintTransaction.invoiceNo}`
+                            : `Islem_Belgesi_${selectedPrintTransaction.id.substring(0, 8)}`;
+                          doc.save(`${docName}.pdf`);
+
+                        } catch (err: any) {
+                          printContent.style.transform = originalTransform;
+                          console.error('PDF İndirme Hatası:', err);
+
+                          // Hata Savunması (try-catch, and Telegram logging)
+                          try {
+                            const { reportErrorToTelegram } = await import('../utils/telegramLogger');
+                            reportErrorToTelegram(err instanceof Error ? err : new Error(String(err)), 'IslemlerView_DownloadPDF');
+                          } catch (logErr) {
+                            console.error('Telegram loglama hatası:', logErr);
+                          }
+
+                          alert('PDF oluşturulurken bir hata meydana geldi.');
+                        } finally {
+                          setIsPdfDownloading(false);
+                        }
+                      }}
+                      className={`px-4 py-1.5 ${isPrintReady && !isPdfDownloading ? 'bg-[#151515] hover:bg-[#202020] border border-white/10 text-white cursor-pointer active:scale-95' : 'bg-zinc-600 text-zinc-400 cursor-not-allowed'} text-[10px] font-bold uppercase tracking-wider rounded transition-all flex items-center gap-2`}
+                    >
+                      {isPdfDownloading ? (
+                        <>
+                          <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          <span>Hazırlanıyor...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download size={14} />
+                          <span>PDF İndir</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
                       disabled={!isPrintReady}
                       onClick={() => {
                         if (isPrintReady) {
@@ -1869,45 +2377,25 @@ export default function IslemlerView({
                               clone.style.minHeight = '0';
                               clone.style.margin = '0';
                               
-                              let pageWidth = '210mm';
-                              let pageHeight = '297mm';
                               let pageCssSize = 'A4 portrait';
                               
                               if (printPageSize === 'a4_yatay') {
-                                pageWidth = '297mm';
-                                pageHeight = '210mm';
                                 pageCssSize = 'A4 landscape';
                               } else if (printPageSize === 'a5') {
-                                pageWidth = '148mm';
-                                pageHeight = '210mm';
                                 pageCssSize = 'A5 portrait';
                               } else if (printPageSize === 'a5_yatay') {
-                                pageWidth = '210mm';
-                                pageHeight = '148mm';
                                 pageCssSize = 'A5 landscape';
                               } else if (printPageSize === 'etiket_60x40') {
-                                pageWidth = '60mm';
-                                pageHeight = '40mm';
                                 pageCssSize = '60mm 40mm';
                               } else if (printPageSize === 'etiket_80x50') {
-                                pageWidth = '80mm';
-                                pageHeight = '50mm';
                                 pageCssSize = '80mm 50mm';
                               } else if (printPageSize === 'etiket_40x30') {
-                                pageWidth = '40mm';
-                                pageHeight = '30mm';
                                 pageCssSize = '40mm 30mm';
                               } else if (printPageSize === 'etiket_40x20') {
-                                pageWidth = '40mm';
-                                pageHeight = '20mm';
                                 pageCssSize = '40mm 20mm';
                               } else if (printPageSize === 'termal_80') {
-                                pageWidth = '80mm';
-                                pageHeight = 'auto';
                                 pageCssSize = '80mm auto';
                               } else if (printPageSize === 'termal_58') {
-                                pageWidth = '58mm';
-                                pageHeight = 'auto';
                                 pageCssSize = '58mm auto';
                               }
                               
@@ -1947,7 +2435,7 @@ export default function IslemlerView({
                           }
                         }
                       }}
-                      className={`px-4 py-1.5 ${isPrintReady ? 'bg-teal-500 hover:bg-teal-600 shadow-teal-500/20 shadow-lg cursor-pointer active:scale-95 text-black' : 'bg-zinc-600 text-zinc-400 cursor-not-allowed'} text-[10px] font-bold uppercase tracking-wider rounded transition-all flex items-center gap-2`}
+                      className={`px-4 py-1.5 \${isPrintReady ? 'bg-teal-500 hover:bg-teal-600 shadow-teal-500/20 shadow-lg cursor-pointer active:scale-95 text-black' : 'bg-zinc-600 text-zinc-400 cursor-not-allowed'} text-[10px] font-bold uppercase tracking-wider rounded transition-all flex items-center gap-2`}
                     >
                       <Printer size={14} />
                       {isPrintReady ? 'Yazdır' : 'Bekleyin...'}
@@ -1979,173 +2467,1047 @@ export default function IslemlerView({
                         boxSizing: 'border-box',
                       }}
                     >
-                      <div style={{ zoom: textScale }}>
-                        {/* Header Logo & Address */}
-                      <div className="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-6">
-                        <div className="max-w-[50%]">
-                          {/* Changeable Logo renderer */}
-                          {activeTemplate?.showLogo !== false && (
-                            <div className="mb-3">
-                              {printSettings.logoType === 'image' && printSettings.logoImageUrl ? (
-                                <img src={printSettings.logoImageUrl} alt={printSettings.companyName} className="h-12 max-w-[200px] object-contain" referrerPolicy="no-referrer" />
-                              ) : (
-                                <h2 className="text-2xl font-extrabold tracking-tight uppercase text-zinc-900 leading-none">{printSettings.companyName || 'LOGO'}</h2>
-                              )}
-                            </div>
-                          )}
-                          
-                          {activeTemplate?.showCompanyAddress !== false && (
-                            <div className="text-[10px] text-slate-600 leading-tight whitespace-pre-line font-sans">
-                              {activeTemplate?.showLogo === false && <strong className="text-sm text-slate-900 block mb-1">{printSettings.companyName}</strong>}
-                              <p>{printSettings.companyAddress}</p>
-                              <p className="mt-1 font-bold">Tel: {printSettings.companyPhone}</p>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Document Details (Tarih, No) */}
-                        <div className="text-right">
-                          <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
-                            {dynamicPrintVars?.title || 'BELGE'}
-                          </h1>
-                          <div className="text-xs text-slate-500 mt-2 font-mono">
-                            Tarih: {selectedPrintTransaction.date}
-                            <br />
-                            Belge No / Seri: {selectedPrintTransaction.invoiceNo || `INV-${Math.floor(Math.random() * 10000)}`}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Customer Account / Recipient */}
-                      <div className="flex justify-between mb-8">
-                        <div className="text-sm">
-                          <div className="font-bold text-slate-900 mb-1">Sayın,</div>
-                          <div className="font-extrabold text-base md:text-lg text-slate-900 tracking-wide uppercase">
-                            {selectedPrintTransaction.cariName?.toLocaleUpperCase('tr-TR')}
-                          </div>
-                          {currentCariForPrint && (
-                            <div className="text-xs text-slate-500 mt-1 whitespace-pre-line font-sans">
-                              {currentCariForPrint.address && <p>{currentCariForPrint.address}</p>}
-                              {(currentCariForPrint.taxOffice || currentCariForPrint.taxNo) && (
-                                <p className="mt-1">
-                                  {currentCariForPrint.taxOffice ? `${currentCariForPrint.taxOffice} V.D.` : ""}
-                                  {currentCariForPrint.taxNo ? ` / No: ${currentCariForPrint.taxNo}` : ""}
-                                </p>
-                              )}
-                              {currentCariForPrint.phone && <p>Tel: {currentCariForPrint.phone}</p>}
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-right text-xs">
-                          {activeTemplate?.showValidityDate && (
-                            <div className="text-slate-600 mb-1">
-                              Geçerlilik Tarihi: <span className="font-bold">{new Date(Date.now() + 7 * 86400000).toLocaleDateString('tr-TR')}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Itemized Table */}
-                      <table className="w-full text-left text-xs mb-8">
-                        <thead className="bg-slate-100 border-y border-slate-300">
-                          <tr>
-                            <th className="py-2 px-2 font-bold text-slate-700">Ürün / Hizmet</th>
-                            <th className="py-2 px-2 font-bold text-slate-700 text-center">Miktar</th>
-                            {activeTemplate?.showUnitPrice !== false && <th className="py-2 px-2 font-bold text-slate-700 text-right">Birim Fiyat</th>}
-                            {activeTemplate?.showDiscountRate && <th className="py-2 px-2 font-bold text-slate-700 text-center">İndirim</th>}
-                            {activeTemplate?.showVatRate && <th className="py-2 px-2 font-bold text-slate-700 text-center">KDV</th>}
-                            {activeTemplate?.showExVatAmount && <th className="py-2 px-2 font-bold text-slate-700 text-right">KDV Hariç</th>}
-                            <th className="py-2 px-2 font-bold text-slate-700 text-right">Toplam</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedPrintTransaction.items && selectedPrintTransaction.items.length > 0 ? (
-                            selectedPrintTransaction.items.map((item, idx) => (
-                              <tr key={idx} className="border-b border-slate-100">
-                                <td className="py-2 px-2 text-slate-800">
-                                  {item.stockName}
-                                </td>
-                                <td className="py-2 px-2 text-slate-600 text-center">
-                                  {item.quantity} {item.unit || 'Adet'}
-                                </td>
-                                {activeTemplate?.showUnitPrice !== false && (
-                                  <td className="py-2 px-2 text-slate-600 text-right font-mono">
-                                    {formatPrintCurrency(item.price, selectedPrintTransaction.currency || 'TRY')}
-                                  </td>
-                                )}
-                                {activeTemplate?.showDiscountRate && (
-                                  <td className="py-2 px-2 text-slate-600 text-center font-mono">%0</td>
-                                )}
-                                {activeTemplate?.showVatRate && (
-                                  <td className="py-2 px-2 text-slate-600 text-center font-mono">%{item.taxRate || 0}</td>
-                                )}
-                                {activeTemplate?.showExVatAmount && (
-                                  <td className="py-2 px-2 text-slate-600 text-right font-mono">
-                                    {formatPrintCurrency(item.price * item.quantity, selectedPrintTransaction.currency || 'TRY')}
-                                  </td>
-                                )}
-                                <td className="py-2 px-2 font-bold text-slate-900 text-right font-mono">
-                                  {formatPrintCurrency(item.total, selectedPrintTransaction.currency || 'TRY')}
-                                </td>
-                              </tr>
-                            ))
-                          ) : (
-                            /* Receipts fallback (collection or payment) */
-                            <tr className="border-b border-slate-100">
-                              <td className="py-2 px-2 text-slate-800">
-                                {selectedPrintTransaction.type === 'collection' ? 'Tahsilat Makbuzu' : 'Ödeme Makbuzu'}
-                                <div className="text-[10px] text-slate-500 mt-0.5">
-                                  {selectedPrintTransaction.description || 'Cari hesaba yansıtılan finans hareketi.'}
+                      <div style={{ zoom: textScale }} className="w-full">
+                        {printPageSize.startsWith('termal_') ? (
+                          /* PREMIUM CORPORATE THERMAL RECEIPT (FİŞ) LAYOUT */
+                          <div className="w-full font-mono text-[10px] leading-tight text-zinc-900 flex flex-col items-stretch pr-2 select-none">
+                            {/* Header Section */}
+                            <div className="text-center flex flex-col items-center">
+                              {activeTemplate?.showLogo !== false && (
+                                <div className="mb-1.5">
+                                  {printSettings.logoType === 'image' && printSettings.logoImageUrl ? (
+                                    <img src={printSettings.logoImageUrl} alt={printSettings.companyName} className="h-10 max-w-[150px] object-contain mx-auto" referrerPolicy="no-referrer" />
+                                  ) : (
+                                    <h2 className="text-sm font-black tracking-tight uppercase text-zinc-950 leading-none">{printSettings.companyName || 'LOGO'}</h2>
+                                  )}
                                 </div>
-                              </td>
-                              <td className="py-2 px-2 text-slate-600 text-center font-mono">1 Adet</td>
-                              {activeTemplate?.showUnitPrice !== false && (
-                                <td className="py-2 px-2 text-slate-600 text-right font-mono">
-                                  {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
-                                </td>
                               )}
-                              {activeTemplate?.showDiscountRate && <td className="py-2 px-2"></td>}
-                              {activeTemplate?.showVatRate && <td className="py-2 px-2"></td>}
-                              {activeTemplate?.showExVatAmount && <td className="py-2 px-2"></td>}
-                              <td className="py-2 px-2 font-bold text-slate-900 text-right font-mono">
-                                {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
+                              {activeTemplate?.showCompanyAddress !== false && (
+                                <div className="text-[8px] text-zinc-600 leading-tight whitespace-pre-line max-w-[200px] mx-auto">
+                                  {activeTemplate?.showLogo === false && <strong className="text-[9px] text-zinc-900 block mb-0.5">{printSettings.companyName}</strong>}
+                                  <p>{printSettings.companyAddress}</p>
+                                  <p className="mt-0.5 font-bold">TEL: {printSettings.companyPhone}</p>
+                                </div>
+                              )}
+                            </div>
 
-                      {/* Summary (Bakiye & Toplam) */}
-                      <div className="flex justify-between mb-12">
-                        <div className="w-1/2 flex flex-col justify-end">
-                          {dynamicPrintVars?.showBalance && currentCariForPrint && (
-                            <div className="text-xs text-slate-600 border border-slate-200 p-3 rounded bg-slate-50 inline-block w-max font-mono">
-                              Güncel Bakiye: <span className="font-bold text-slate-900">{formatPrintCurrency(currentCariForPrint.balance, currentCariForPrint.currency || 'TRY')}</span>
+                            {/* Separator */}
+                            <div className="text-zinc-400 font-mono text-center select-none my-1 text-[9px] tracking-tighter">
+                              ------------------------------------------------
                             </div>
-                          )}
-                          {dynamicPrintVars?.notes && activeTemplate?.showFooter !== false && (
-                            <div className="mt-4">
-                              <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-wider mb-1">AÇIKLAMA</h4>
-                              <p className="text-xs text-zinc-500 leading-relaxed whitespace-pre-line font-sans">
-                                {dynamicPrintVars.notes}
-                              </p>
+
+                            {/* Receipt Subtitle */}
+                            <div className="text-center font-black text-[11px] uppercase tracking-wider text-zinc-900 mb-0.5">
+                              *** {dynamicPrintVars?.title || 'BİLGİ FİŞİ'} ***
                             </div>
-                          )}
-                        </div>
-                        <div className="w-64">
-                          <div className="flex justify-between py-1 text-sm border-b border-slate-200 font-bold">
-                            <span className="text-slate-900 uppercase">Toplam Tutar:</span>
-                            <span className="text-slate-900 font-mono">{formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}</span>
+                            <div className="text-center text-[7px] font-bold tracking-wider text-zinc-500 mb-1">
+                              * * * M A L İ   D E Ğ E R İ   Y O K T U R * * *
+                            </div>
+
+                            {/* Separator */}
+                            <div className="text-zinc-400 font-mono text-center select-none my-1 text-[9px] tracking-tighter">
+                              ------------------------------------------------
+                            </div>
+
+                            {/* Metadata Section */}
+                            <div className="space-y-0.5 text-[9px] font-mono text-zinc-700">
+                              <div className="flex justify-between">
+                                <span className="font-bold">TARİH:</span>
+                                <span>{selectedPrintTransaction.date}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="font-bold">FİŞ NO / BELGE SERİ:</span>
+                                <span>{selectedPrintTransaction.invoiceNo || `INV-${Math.floor(Math.random() * 10000)}`}</span>
+                              </div>
+                              <div className="flex justify-between items-start gap-1">
+                                <span className="font-bold shrink-0">SAYIN CARİ:</span>
+                                <span className="font-semibold text-zinc-900 text-right break-words uppercase">{selectedPrintTransaction.cariName}</span>
+                              </div>
+                              {currentCariForPrint && (currentCariForPrint.taxOffice || currentCariForPrint.taxNo) && (
+                                <div className="flex justify-between text-[8px] text-zinc-500">
+                                  <span>V.D. / NO:</span>
+                                  <span>{currentCariForPrint.taxOffice || 'BİLİNMİYOR'} / {currentCariForPrint.taxNo || 'NO-YOK'}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Separator */}
+                            <div className="text-zinc-400 font-mono text-center select-none my-1 text-[9px] tracking-tighter">
+                              ------------------------------------------------
+                            </div>
+
+                            {/* Items Section */}
+                            <div className="space-y-1.5 py-1">
+                              <div className="flex justify-between text-[9px] font-bold text-zinc-900 border-b border-dashed border-zinc-300 pb-0.5">
+                                <span>ÜRÜN / HİZMET ADI</span>
+                                <span>TUTAR</span>
+                              </div>
+                              {selectedPrintTransaction.items && selectedPrintTransaction.items.length > 0 ? (
+                                selectedPrintTransaction.items.map((item, idx) => (
+                                  <div key={idx} className="flex flex-col">
+                                    <span className="font-bold text-[9px] text-zinc-900 uppercase break-words">{item.stockName}</span>
+                                    <div className="flex justify-between text-[9px] text-zinc-600 mt-0.5 font-mono">
+                                      <span>{item.quantity} {item.unit || 'Adet'} x {formatPrintCurrency(item.price, selectedPrintTransaction.currency || 'TRY')}</span>
+                                      <span className="font-bold text-zinc-900 font-mono">{formatPrintCurrency(item.total, selectedPrintTransaction.currency || 'TRY')}</span>
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                /* Fallback Collection/Payment */
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-[9px] text-zinc-900 uppercase">
+                                    {selectedPrintTransaction.type === 'collection' ? 'TAHSİLAT MAKBUZU' : 'ÖDEME MAKBUZU'}
+                                  </span>
+                                  <span className="text-[8px] text-zinc-500 leading-tight mt-0.5 whitespace-pre-line">{selectedPrintTransaction.description || 'Cari hesaba yansıtılan finans hareketi.'}</span>
+                                  <div className="flex justify-between text-[9px] text-zinc-600 mt-1 font-mono">
+                                    <span>1 Adet x {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}</span>
+                                    <span className="font-bold text-zinc-900 font-mono">{formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Separator */}
+                            <div className="text-zinc-400 font-mono text-center select-none my-1.5 text-[9px] tracking-tighter">
+                              ================================================
+                            </div>
+
+                            {/* Totals Section */}
+                            <div className="space-y-1 font-mono">
+                              <div className="flex justify-between text-[11px] font-black text-zinc-950 py-1 border-y border-dashed border-zinc-400">
+                                <span>GENEL TOPLAM</span>
+                                <span className="text-[11px]">{formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}</span>
+                              </div>
+
+                              {/* KDV Breakdown */}
+                              {kdvBreakdown.length > 0 && (
+                                <div className="text-[8px] text-zinc-500 pt-1 space-y-0.5 border-b border-dashed border-zinc-200 pb-1">
+                                  <div className="flex justify-between font-bold text-zinc-600">
+                                    <span>KDV GRUBU</span>
+                                    <span>MATRAH</span>
+                                    <span>KDV TUTARI</span>
+                                  </div>
+                                  {kdvBreakdown.map((g, idx) => (
+                                    <div key={idx} className="flex justify-between font-mono">
+                                      <span>%{g.rate}</span>
+                                      <span>{formatPrintCurrency(g.matrah, selectedPrintTransaction.currency || 'TRY')}</span>
+                                      <span>{formatPrintCurrency(g.kdv, selectedPrintTransaction.currency || 'TRY')}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Customer Balance */}
+                            {dynamicPrintVars?.showBalance && currentCariForPrint && (
+                              <div className="mt-2 text-[8px] text-zinc-700 bg-zinc-50 border border-zinc-200 rounded p-1 flex justify-between font-bold font-mono">
+                                <span>GÜNCEL BAKİYE:</span>
+                                <span>{formatPrintCurrency(currentCariForPrint.balance, currentCariForPrint.currency || 'TRY')}</span>
+                              </div>
+                            )}
+
+                            {/* Descriptions */}
+                            {dynamicPrintVars?.notes && activeTemplate?.showFooter !== false && (
+                              <div className="mt-1.5 text-[8px] text-zinc-600 border-t border-dashed border-zinc-200 pt-1 font-sans leading-snug">
+                                <span className="font-bold text-zinc-800">AÇIKLAMA:</span>
+                                <p className="mt-0.5 whitespace-pre-line">{dynamicPrintVars.notes}</p>
+                              </div>
+                            )}
+
+                            {/* Message & Software Info */}
+                            <div className="text-center mt-3.5 space-y-0.5">
+                              <div className="text-[8px] text-zinc-500 uppercase tracking-widest font-bold font-sans">Bizi tercih ettiğiniz için teşekkür ederiz!</div>
+                              <div className="text-[7px] text-zinc-400 font-mono">ON MUHASEBE BİLGİ SİSTEMLERİ</div>
+                            </div>
+
+                            {/* Barcode representation */}
+                            <div className="flex flex-col items-center justify-center mt-3 pt-1.5 border-t border-dashed border-zinc-200 overflow-hidden">
+                              <Barcode 
+                                value={selectedPrintTransaction.invoiceNo || selectedPrintTransaction.id || "000000"} 
+                                width={1.0} 
+                                height={30} 
+                                fontSize={7}
+                                margin={0}
+                                displayValue={true}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      </div>
+                        ) : (() => {
+                          const style = activeTemplate?.designStyle || 'minimal';
+                          
+                          if (style === 'corporate') {
+                            return (
+                              /* PREMIUM CORPORATE STANDARD INVOICE / TICKET LAYOUT (A4/A5) */
+                              <div className="w-full flex flex-col items-stretch text-zinc-900 font-sans pr-1 select-none text-xs">
+                                {/* Header Logo & Address */}
+                                <div className="flex justify-between items-stretch border border-zinc-200 rounded-lg p-5 mb-6 bg-slate-50/50">
+                                  <div className="flex-1 flex flex-col justify-between">
+                                    <div>
+                                      {activeTemplate?.showLogo !== false && (
+                                        <div className="mb-3">
+                                          {printSettings.logoType === 'image' && printSettings.logoImageUrl ? (
+                                            <img src={printSettings.logoImageUrl} alt={printSettings.companyName} className="h-12 max-w-[240px] object-contain" referrerPolicy="no-referrer" />
+                                          ) : (
+                                            <h2 className="text-xl font-black tracking-tight uppercase text-zinc-900 leading-none">{printSettings.companyName || 'LOGO'}</h2>
+                                          )}
+                                        </div>
+                                      )}
+                                      
+                                      {activeTemplate?.showCompanyAddress !== false && (
+                                        <div className="text-[10px] text-zinc-600 leading-normal max-w-[340px] font-sans">
+                                          {activeTemplate?.showLogo === false && <strong className="text-xs text-zinc-900 block mb-1">{printSettings.companyName}</strong>}
+                                          <p>{printSettings.companyAddress}</p>
+                                          <p className="mt-1 font-bold text-zinc-800">Tel: {printSettings.companyPhone}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
 
-                      {/* Subtle footer credit */}
-                      {activeTemplate?.showFooter !== false && (
-                        <div className="text-[10px] text-slate-500 text-center font-mono uppercase tracking-widest pt-4">
-                          On Muhasebe Bilgi Sistemi Tarafından Üretilmiştir.
-                        </div>
-                      )}
+                                  {/* Document Details (Tarih, No) */}
+                                  <div className="w-80 flex flex-col justify-between border-l border-zinc-200 pl-6">
+                                    <div className="text-right">
+                                      <span className="inline-block px-2.5 py-0.5 text-[8px] font-black tracking-widest rounded text-white mb-1.5 uppercase" style={{ backgroundColor: transactionTypeTheme.primary }}>
+                                        {transactionTypeTheme.badgeText}
+                                      </span>
+                                      <h1 className="text-xl font-extrabold text-zinc-900 tracking-tight uppercase leading-none">
+                                        {dynamicPrintVars?.title || transactionTypeTheme.title}
+                                      </h1>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] font-mono text-zinc-600 mt-3 pt-3 border-t border-dashed border-zinc-200">
+                                      <span className="font-bold">BELGE NO / SERİ:</span>
+                                      <span className="text-right font-bold text-zinc-950">{selectedPrintTransaction.invoiceNo || `INV-${Math.floor(Math.random() * 10000)}`}</span>
+                                      <span className="font-bold">TARİH:</span>
+                                      <span className="text-right text-zinc-900">{selectedPrintTransaction.date}</span>
+                                      <span className="font-bold">PARA BİRİMİ:</span>
+                                      <span className="text-right font-bold text-zinc-900">{selectedPrintTransaction.currency || 'TRY'}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Parties Info Box (Double Columns) */}
+                                <div className="grid grid-cols-2 gap-6 mb-6">
+                                  <div className="border border-zinc-200 rounded-lg p-4 bg-slate-50/10">
+                                    <div className="text-[8px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5 border-b border-zinc-100 pb-1">GÖNDERİCİ / SATICI</div>
+                                    <div className="text-xs font-extrabold text-zinc-900 uppercase mb-1">{printSettings.companyName}</div>
+                                    <div className="text-[10px] text-zinc-600 space-y-0.5 font-sans">
+                                      <p>{printSettings.companyAddress}</p>
+                                      <p className="font-bold text-zinc-800 mt-1">Tel: {printSettings.companyPhone}</p>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="border border-zinc-200 rounded-lg p-4 bg-slate-50/10">
+                                    <div className="text-[8px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5 border-b border-zinc-100 pb-1">ALICI / CARİ HESAP</div>
+                                    <div className="text-xs font-extrabold text-zinc-900 uppercase mb-1">{selectedPrintTransaction.cariName}</div>
+                                    {currentCariForPrint && (
+                                      <div className="text-[10px] text-zinc-600 space-y-0.5 font-sans">
+                                        {currentCariForPrint.address ? <p>{currentCariForPrint.address}</p> : <p className="text-zinc-400 italic text-[9px]">Kayıtlı adres bulunmuyor.</p>}
+                                        {(currentCariForPrint.taxOffice || currentCariForPrint.taxNo) && (
+                                          <p className="font-semibold text-zinc-700 mt-1">
+                                            V.Dairesi: {currentCariForPrint.taxOffice || '-'} / Vergi No: {currentCariForPrint.taxNo || '-'}
+                                          </p>
+                                        )}
+                                        {currentCariForPrint.phone && <p className="font-bold text-zinc-800">Tel: {currentCariForPrint.phone}</p>}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Itemized Table */}
+                                <div className="border border-zinc-200 rounded-lg overflow-hidden mb-6">
+                                  <table className="w-full text-left text-xs border-collapse">
+                                    <thead>
+                                      <tr className="text-[9px] font-bold uppercase text-white" style={{ backgroundColor: transactionTypeTheme.primary }}>
+                                        <th className="py-2.5 px-3 text-center w-12 font-bold">SIRA</th>
+                                        <th className="py-2.5 px-3 font-bold">ÜRÜN / HİZMET TANIMI</th>
+                                        <th className="py-2.5 px-3 text-center w-20 font-bold">MİKTAR</th>
+                                        {activeTemplate?.showUnitPrice !== false && <th className="py-2.5 px-3 text-right w-24 font-bold">BİRİM FİYAT</th>}
+                                        {activeTemplate?.showDiscountRate && <th className="py-2.5 px-3 text-center w-14 font-bold">İNDİRİM</th>}
+                                        {activeTemplate?.showVatRate && <th className="py-2.5 px-3 text-center w-14 font-bold">KDV (%)</th>}
+                                        <th className="py-2.5 px-3 text-right w-28 font-bold">TOPLAM TUTAR</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {selectedPrintTransaction.items && selectedPrintTransaction.items.length > 0 ? (
+                                        selectedPrintTransaction.items.map((item, idx) => (
+                                          <tr key={idx} className="border-b border-zinc-200/60 hover:bg-slate-50/50 transition-colors odd:bg-slate-50/10">
+                                            <td className="py-2.5 px-3 text-center text-zinc-400 font-mono text-[9px]">
+                                              {String(idx + 1).padStart(2, '0')}
+                                            </td>
+                                            <td className="py-2.5 px-3">
+                                              <span className="font-bold text-zinc-900 block uppercase text-[10px]">{item.stockName}</span>
+                                            </td>
+                                            <td className="py-2.5 px-3 text-zinc-700 text-center font-mono">
+                                              {item.quantity} {item.unit || 'Adet'}
+                                            </td>
+                                            {activeTemplate?.showUnitPrice !== false && (
+                                              <td className="py-2.5 px-3 text-zinc-600 text-right font-mono">
+                                                {formatPrintCurrency(item.price, selectedPrintTransaction.currency || 'TRY')}
+                                              </td>
+                                            )}
+                                            {activeTemplate?.showDiscountRate && (
+                                              <td className="py-2.5 px-3 text-zinc-400 text-center font-mono">%0</td>
+                                            )}
+                                            {activeTemplate?.showVatRate && (
+                                              <td className="py-2.5 px-3 text-zinc-400 text-center font-mono">%{item.taxRate || 20}</td>
+                                            )}
+                                            <td className="py-2.5 px-3 font-bold text-zinc-900 text-right font-mono text-[10px]">
+                                              {formatPrintCurrency(item.total, selectedPrintTransaction.currency || 'TRY')}
+                                            </td>
+                                          </tr>
+                                        ))
+                                      ) : (
+                                        <tr className="border-b border-zinc-150">
+                                          <td className="py-3 px-3 text-center text-zinc-400 font-mono">01</td>
+                                          <td className="py-3 px-3">
+                                            <span className="font-bold text-zinc-900 block uppercase text-[10px]">
+                                              {selectedPrintTransaction.type === 'collection' ? 'TAHSİLAT MAKBUZU' : 'ÖDEME MAKBUZU'}
+                                            </span>
+                                            <span className="text-[9px] text-zinc-500 block mt-0.5 italic max-w-lg">
+                                              {selectedPrintTransaction.description || 'Cari hesaba yansıtılan finans hareketi.'}
+                                            </span>
+                                          </td>
+                                          <td className="py-3 px-3 text-zinc-600 text-center font-mono">1 Adet</td>
+                                          {activeTemplate?.showUnitPrice !== false && (
+                                            <td className="py-3 px-3 text-zinc-600 text-right font-mono">
+                                              {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
+                                            </td>
+                                          )}
+                                          {activeTemplate?.showDiscountRate && <td className="py-3 px-3 text-center font-mono">-</td>}
+                                          {activeTemplate?.showVatRate && <td className="py-3 px-3 text-center font-mono">-</td>}
+                                          <td className="py-3 px-3 font-bold text-zinc-900 text-right font-mono text-[10px]">
+                                            {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
+                                          </td>
+                                        </tr>
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>
+
+                                {/* Summary & Signatures Block */}
+                                <div className="grid grid-cols-12 gap-6 items-start">
+                                  <div className="col-span-7 space-y-4">
+                                    {/* Written amount banner */}
+                                    <div className="border border-zinc-200 bg-slate-50/50 rounded-lg p-3">
+                                      <span className="text-[7px] font-black text-zinc-400 uppercase tracking-widest block mb-1">YAZI İLE TOPLAM TUTAR</span>
+                                      <span className="text-[9px] font-bold text-zinc-800 tracking-wide uppercase font-mono">
+                                        {convertNumberToWords(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
+                                      </span>
+                                    </div>
+
+                                    {dynamicPrintVars?.showBalance && currentCariForPrint && (
+                                      <div className="flex justify-between items-center bg-zinc-50 border border-zinc-150 rounded-lg px-3 py-1.5 text-[9px] text-zinc-700 font-mono">
+                                        <span className="font-bold text-zinc-400 uppercase">CARİ GÜNCEL HESAP BAKİYESİ:</span>
+                                        <span className="font-black text-zinc-950">{formatPrintCurrency(currentCariForPrint.balance, currentCariForPrint.currency || 'TRY')}</span>
+                                      </div>
+                                    )}
+
+                                    {dynamicPrintVars?.notes && activeTemplate?.showFooter !== false && (
+                                      <div className="border-l-2 border-zinc-300 pl-3">
+                                        <h4 className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5 font-sans">NOT / AÇIKLAMA</h4>
+                                        <p className="text-[9px] text-zinc-500 leading-relaxed whitespace-pre-line font-sans">
+                                          {dynamicPrintVars.notes}
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {/* Signatures Area */}
+                                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-dashed border-zinc-200 mt-6">
+                                      <div className="text-center">
+                                        <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest block mb-8 font-sans">TESLİM EDEN (İMZA)</span>
+                                        <div className="border-t border-dashed border-zinc-200 w-28 mx-auto"></div>
+                                      </div>
+                                      <div className="text-center">
+                                        <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest block mb-8 font-sans">TESLİM ALAN (İMZA)</span>
+                                        <div className="border-t border-dashed border-zinc-200 w-28 mx-auto"></div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="col-span-5 flex flex-col items-stretch pl-4 border-l border-dashed border-zinc-200">
+                                    <div className="border border-zinc-200 rounded-lg overflow-hidden bg-slate-50/10">
+                                      <div className="p-2.5 bg-slate-50 border-b border-zinc-200 flex justify-between items-center">
+                                        <span className="text-[8px] font-black tracking-widest text-zinc-500 uppercase font-sans">FİNANSAL ÖZET</span>
+                                        <span className="text-[7px] text-zinc-400 font-mono">{selectedPrintTransaction.currency || 'TRY'}</span>
+                                      </div>
+                                      <div className="p-3 space-y-1.5 text-[9px] font-mono text-zinc-600">
+                                        {selectedPrintTransaction.items && selectedPrintTransaction.items.length > 0 ? (
+                                          <>
+                                            <div className="flex justify-between">
+                                              <span>KDV MATRAH TOPLAMI:</span>
+                                              <span>{formatPrintCurrency(
+                                                selectedPrintTransaction.items.reduce((acc, curr) => acc + (curr.total / (1 + (curr.taxRate || 20)/100)), 0),
+                                                selectedPrintTransaction.currency || 'TRY'
+                                              )}</span>
+                                            </div>
+                                            {kdvBreakdown.map((group, idx) => (
+                                              <div key={idx} className="flex justify-between text-zinc-400 text-[8px]">
+                                                <span>TOPLAM KDV (%{group.rate}):</span>
+                                                <span>{formatPrintCurrency(group.kdv, selectedPrintTransaction.currency || 'TRY')}</span>
+                                              </div>
+                                            ))}
+                                          </>
+                                        ) : (
+                                          <div className="flex justify-between">
+                                            <span>İŞLEM MATRAHI:</span>
+                                            <span>{formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}</span>
+                                          </div>
+                                        )}
+                                        <div className="flex justify-between font-bold border-t border-zinc-150 pt-1.5 text-zinc-800">
+                                          <span>TOPLAM KDV:</span>
+                                          <span>{formatPrintCurrency(
+                                            selectedPrintTransaction.items && selectedPrintTransaction.items.length > 0
+                                              ? selectedPrintTransaction.items.reduce((acc, curr) => acc + (curr.total - (curr.total / (1 + (curr.taxRate || 20)/100))), 0)
+                                              : 0,
+                                            selectedPrintTransaction.currency || 'TRY'
+                                          )}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[10px] font-extrabold text-white rounded p-2 mt-2 transition-colors duration-300" style={{ backgroundColor: transactionTypeTheme.primary }}>
+                                          <span className="uppercase text-[8px] tracking-wider font-sans">GENEL TOPLAM:</span>
+                                          <span className="text-[11px] font-black font-mono">{formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="text-[7px] text-zinc-400 mt-4 text-center leading-normal font-sans">
+                                      <span className="font-bold tracking-wider text-zinc-300 uppercase">Bizi Tercih Ettiğiniz İçin Teşekkür Ederiz</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          if (style === 'modern') {
+                            return (
+                              /* PREMIUM MODERN ASYMMETRIC LAYOUT */
+                              <div className="w-full flex flex-col items-stretch text-zinc-900 font-sans pr-1 select-none text-xs">
+                                {/* Modern Asymmetric Header */}
+                                <div className="flex items-stretch gap-5 mb-8">
+                                  {/* Left Modern Colored Accent Strip */}
+                                  <div className="w-2.5 rounded-full shrink-0" style={{ backgroundColor: transactionTypeTheme.primary }}></div>
+                                  
+                                  <div className="flex-1 flex justify-between items-start">
+                                    <div>
+                                      {activeTemplate?.showLogo !== false && (
+                                        <div className="mb-2">
+                                          {printSettings.logoType === 'image' && printSettings.logoImageUrl ? (
+                                            <img src={printSettings.logoImageUrl} alt={printSettings.companyName} className="h-10 max-w-[200px] object-contain" referrerPolicy="no-referrer" />
+                                          ) : (
+                                            <h2 className="text-xl font-black tracking-tight uppercase text-zinc-950 leading-none">{printSettings.companyName || 'LOGO'}</h2>
+                                          )}
+                                        </div>
+                                      )}
+                                      {activeTemplate?.showCompanyAddress !== false && (
+                                        <div className="text-[10px] text-zinc-500 leading-relaxed max-w-[320px]">
+                                          {activeTemplate?.showLogo === false && <strong className="text-xs text-zinc-900 block mb-0.5">{printSettings.companyName}</strong>}
+                                          <p>{printSettings.companyAddress}</p>
+                                          <p className="mt-0.5 font-bold" style={{ color: transactionTypeTheme.primary }}>Tel: {printSettings.companyPhone}</p>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div className="text-right">
+                                      <h1 className="text-xl font-black text-zinc-900 tracking-tight uppercase leading-none mb-1">
+                                        {dynamicPrintVars?.title || transactionTypeTheme.title}
+                                      </h1>
+                                      <div className="inline-block text-[8px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider mb-2 text-white" style={{ backgroundColor: transactionTypeTheme.primary }}>
+                                        YENİ NESİL BELGE
+                                      </div>
+                                      <div className="text-[9px] text-zinc-400 font-mono leading-relaxed mt-1">
+                                        Tarih: {selectedPrintTransaction.date}
+                                        <br />
+                                        Belge No: {selectedPrintTransaction.invoiceNo || `INV-${Math.floor(Math.random() * 10000)}`}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Customer Section */}
+                                <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-150 mb-6 flex justify-between items-start">
+                                  <div>
+                                    <div className="text-[8px] font-bold uppercase tracking-widest mb-1" style={{ color: transactionTypeTheme.primary }}>ALICI DETAYLARI</div>
+                                    <div className="text-sm font-extrabold text-zinc-900 uppercase tracking-wide">{selectedPrintTransaction.cariName}</div>
+                                    {currentCariForPrint && (
+                                      <div className="text-[10px] text-zinc-500 mt-1 max-w-[340px]">
+                                        <p>{currentCariForPrint.address || 'Kayıtlı adres bulunmuyor.'}</p>
+                                        {(currentCariForPrint.taxOffice || currentCariForPrint.taxNo) && (
+                                          <p className="font-semibold text-zinc-600 mt-0.5">
+                                            V.Dairesi: {currentCariForPrint.taxOffice || '-'} / Vergi No: {currentCariForPrint.taxNo || '-'}
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  {activeTemplate?.showValidityDate && (
+                                    <div className="text-right text-[10px] bg-white border border-zinc-200 rounded-lg p-2 font-mono">
+                                      <span className="text-zinc-400 text-[8px] block uppercase font-bold tracking-wider mb-0.5">GEÇERLİLİK</span>
+                                      <span className="font-extrabold text-zinc-800">{new Date(Date.now() + 7 * 86400000).toLocaleDateString('tr-TR')}</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Sleek Modern Table */}
+                                <table className="w-full text-left text-xs mb-6 border-collapse">
+                                  <thead>
+                                    <tr className="border-b border-zinc-200 text-[8px] font-bold uppercase tracking-wider text-zinc-400">
+                                      <th className="py-2.5 px-1">ÜRÜN / AÇIKLAMA</th>
+                                      <th className="py-2.5 px-1 text-center w-20">MİKTAR</th>
+                                      {activeTemplate?.showUnitPrice !== false && <th className="py-2.5 px-1 text-right w-24">BİRİM FİYAT</th>}
+                                      {activeTemplate?.showDiscountRate && <th className="py-2.5 px-1 text-center w-14">İNDİRİM</th>}
+                                      {activeTemplate?.showVatRate && <th className="py-2.5 px-1 text-center w-14">KDV</th>}
+                                      <th className="py-2.5 px-1 text-right w-28 text-zinc-900">TOPLAM</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {selectedPrintTransaction.items && selectedPrintTransaction.items.length > 0 ? (
+                                      selectedPrintTransaction.items.map((item, idx) => (
+                                        <tr key={idx} className="border-b border-zinc-100">
+                                          <td className="py-3 px-1">
+                                            <div className="flex items-center gap-2">
+                                              {activeTemplate?.showProductImage && (
+                                                <div className="w-6 h-6 bg-zinc-100 border border-zinc-200 rounded-md shrink-0"></div>
+                                              )}
+                                              <div>
+                                                <span className="font-bold text-zinc-900 text-[10px] block uppercase">{item.stockName}</span>
+                                                <span className="text-[8px] text-zinc-400 block mt-0.5">Sistem Stok Tanımlı Ürün</span>
+                                              </div>
+                                            </div>
+                                          </td>
+                                          <td className="py-3 px-1 text-zinc-800 text-center font-semibold">
+                                            {item.quantity} {item.unit || 'Adet'}
+                                          </td>
+                                          {activeTemplate?.showUnitPrice !== false && (
+                                            <td className="py-3 px-1 text-zinc-500 text-right font-mono">
+                                              {formatPrintCurrency(item.price, selectedPrintTransaction.currency || 'TRY')}
+                                            </td>
+                                          )}
+                                          {activeTemplate?.showDiscountRate && (
+                                            <td className="py-3 px-1 text-zinc-500 text-center font-mono">%0</td>
+                                          )}
+                                          {activeTemplate?.showVatRate && (
+                                            <td className="py-3 px-1 text-zinc-400 text-center font-mono">%{item.taxRate || 20}</td>
+                                          )}
+                                          <td className="py-3 px-1 font-extrabold text-zinc-950 text-right font-mono">
+                                            {formatPrintCurrency(item.total, selectedPrintTransaction.currency || 'TRY')}
+                                          </td>
+                                        </tr>
+                                      ))
+                                    ) : (
+                                      <tr className="border-b border-zinc-100">
+                                        <td className="py-3 px-1">
+                                          <span className="font-bold text-zinc-900 text-[10px] block uppercase">
+                                            {selectedPrintTransaction.type === 'collection' ? 'TAHSİLAT MAKBUZU' : 'ÖDEME MAKBUZU'}
+                                          </span>
+                                          <span className="text-[8px] text-zinc-400 block mt-0.5">{selectedPrintTransaction.description || 'Finansal Hareket'}</span>
+                                        </td>
+                                        <td className="py-3 px-1 text-zinc-800 text-center font-semibold">1 Adet</td>
+                                        {activeTemplate?.showUnitPrice !== false && (
+                                          <td className="py-3 px-1 text-zinc-500 text-right font-mono">
+                                            {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
+                                          </td>
+                                        )}
+                                        {activeTemplate?.showDiscountRate && <td className="py-3 px-1 text-zinc-500 text-center font-mono">-</td>}
+                                        {activeTemplate?.showVatRate && <td className="py-3 px-1 text-zinc-400 text-center font-mono">-</td>}
+                                        <td className="py-3 px-1 font-extrabold text-zinc-950 text-right font-mono">
+                                          {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </tbody>
+                                </table>
+
+                                {/* Summary area */}
+                                <div className="flex justify-between items-start mt-4">
+                                  <div className="space-y-3">
+                                    {dynamicPrintVars?.showBalance && currentCariForPrint && (
+                                      <div className="border border-zinc-100 bg-zinc-50/20 px-3 py-2 rounded-xl text-[9px] text-zinc-800 inline-block">
+                                        <span className="block text-[7px] text-zinc-500 uppercase font-black tracking-widest mb-0.5">CARİ GÜNCEL HESAP BAKİYESİ</span>
+                                        <span className="font-extrabold">{formatPrintCurrency(currentCariForPrint.balance, currentCariForPrint.currency || 'TRY')}</span>
+                                      </div>
+                                    )}
+                                    {dynamicPrintVars?.notes && (
+                                      <div className="max-w-md bg-zinc-50/30 p-2.5 rounded-lg border border-zinc-150">
+                                        <span className="text-[7px] font-bold text-zinc-400 block mb-0.5">NOT / AÇIKLAMA:</span>
+                                        <p className="text-[9px] text-zinc-600 whitespace-pre-line">{dynamicPrintVars.notes}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="w-72 bg-zinc-50 rounded-xl p-3 border border-zinc-100 font-mono text-[9px] text-zinc-600 space-y-1">
+                                    <div className="flex justify-between text-[10px] font-extrabold text-zinc-900 border-b border-zinc-200/60 pb-1.5 mb-1.5">
+                                      <span className="font-sans uppercase text-[8px] tracking-wider text-zinc-400">ÖDENECEK TOPLAM TUTAR</span>
+                                      <span style={{ color: transactionTypeTheme.primary }}>{formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}</span>
+                                    </div>
+                                    <div className="flex justify-between text-[8px] text-zinc-400">
+                                      <span>MATRAH:</span>
+                                      <span>{formatPrintCurrency(selectedPrintTransaction.amount / 1.2, selectedPrintTransaction.currency || 'TRY')}</span>
+                                    </div>
+                                    <div className="flex justify-between text-[8px] text-zinc-400">
+                                      <span>VERGİLER TOPLAMI:</span>
+                                      <span>{formatPrintCurrency(selectedPrintTransaction.amount - (selectedPrintTransaction.amount / 1.2), selectedPrintTransaction.currency || 'TRY')}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Footer */}
+                                {activeTemplate?.showFooter !== false && (
+                                  <div className="mt-12 text-center text-[8px] text-zinc-400 font-mono uppercase tracking-widest bg-zinc-50/40 py-2 rounded-lg border border-zinc-150">
+                                    Bizi Tercih Ettiğiniz İçin Teşekkür Ederiz
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          if (style === 'elegant') {
+                            return (
+                              /* PREMIUM ELEGANT SERIF LAYOUT */
+                              <div className="w-full flex flex-col items-stretch text-zinc-800 font-serif pr-1 select-none text-xs">
+                                {/* Elegant Centered Header */}
+                                <div className="text-center pb-5 mb-8 border-b-4 border-double border-zinc-300">
+                                  {activeTemplate?.showLogo !== false && (
+                                    <div className="flex justify-center mb-2">
+                                      {printSettings.logoType === 'image' && printSettings.logoImageUrl ? (
+                                        <img src={printSettings.logoImageUrl} alt={printSettings.companyName} className="h-10 max-w-[200px] object-contain" referrerPolicy="no-referrer" />
+                                      ) : (
+                                        <h2 className="text-2xl font-normal italic tracking-wide uppercase text-zinc-900 leading-none">{printSettings.companyName || 'LOGO'}</h2>
+                                      )}
+                                    </div>
+                                  )}
+                                  
+                                  {activeTemplate?.showCompanyAddress !== false && (
+                                    <div className="text-[9px] text-zinc-500 leading-relaxed font-sans max-w-[420px] mx-auto">
+                                      {activeTemplate?.showLogo === false && <strong className="text-xs text-zinc-900 block mb-0.5 font-serif uppercase tracking-wider">{printSettings.companyName}</strong>}
+                                      <p>{printSettings.companyAddress} • Tel: {printSettings.companyPhone}</p>
+                                    </div>
+                                  )}
+
+                                  <h1 className="text-xl font-bold text-zinc-900 tracking-widest uppercase leading-none mt-4 font-serif">
+                                    {dynamicPrintVars?.title || transactionTypeTheme.title}
+                                  </h1>
+                                  <p className="text-[8px] text-amber-800 tracking-widest uppercase font-sans font-bold mt-1">GÜVENİLİR VE SEÇKİN TİCARET BELGESİ</p>
+                                </div>
+
+                                {/* Parties Area */}
+                                <div className="flex justify-between items-start mb-8 font-sans">
+                                  <div className="max-w-[60%]">
+                                    <span className="text-[8px] text-zinc-400 font-bold uppercase tracking-widest block mb-1">MÜŞTERİ / MUHATAP</span>
+                                    <div className="text-sm font-bold text-zinc-900 uppercase font-serif tracking-wider">{selectedPrintTransaction.cariName}</div>
+                                    {currentCariForPrint && (
+                                      <div className="text-[10px] text-zinc-500 mt-1 italic leading-normal font-serif">
+                                        <p>{currentCariForPrint.address || 'Kayıtlı adres bulunmuyor.'}</p>
+                                        {(currentCariForPrint.taxOffice || currentCariForPrint.taxNo) && (
+                                          <p className="text-zinc-600">V.Dairesi: {currentCariForPrint.taxOffice || '-'} / Vergi No: {currentCariForPrint.taxNo || '-'}</p>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="text-right text-[10px] text-zinc-600 space-y-0.5">
+                                    <span className="text-[8px] text-zinc-400 font-bold uppercase tracking-widest block mb-1">BELGE KÜNYESİ</span>
+                                    <p><span className="font-semibold">Belge No:</span> #{selectedPrintTransaction.invoiceNo || `INV-${Math.floor(Math.random() * 10000)}`}</p>
+                                    <p><span className="font-semibold">Düzenleme Tarihi:</span> {selectedPrintTransaction.date}</p>
+                                    {activeTemplate?.showValidityDate && (
+                                      <p className="text-amber-800 font-medium"><span className="font-semibold text-zinc-600">Geçerlilik:</span> {new Date(Date.now() + 7 * 86400000).toLocaleDateString('tr-TR')}</p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Delicate Elegant Table */}
+                                <table className="w-full text-left text-xs mb-8 font-sans border-collapse">
+                                  <thead>
+                                    <tr className="border-b-2 border-zinc-200 text-[9px] font-bold uppercase text-zinc-700 italic">
+                                      <th className="py-2.5 px-1 font-serif">Açıklama</th>
+                                      <th className="py-2.5 px-1 text-center w-20">Miktar</th>
+                                      {activeTemplate?.showUnitPrice !== false && <th className="py-2.5 px-1 text-right w-24">Birim Fiyat</th>}
+                                      {activeTemplate?.showDiscountRate && <th className="py-2.5 px-1 text-center w-14">İndirim</th>}
+                                      {activeTemplate?.showVatRate && <th className="py-2.5 px-1 text-center w-14">KDV</th>}
+                                      <th className="py-2.5 px-1 text-right w-28 font-serif text-zinc-950">Net Tutar</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {selectedPrintTransaction.items && selectedPrintTransaction.items.length > 0 ? (
+                                      selectedPrintTransaction.items.map((item, idx) => (
+                                        <tr key={idx} className="border-b border-zinc-100 hover:bg-zinc-50/20">
+                                          <td className="py-3 px-1">
+                                            <div className="flex items-center gap-2">
+                                              {activeTemplate?.showProductImage && (
+                                                <div className="w-5 h-5 border border-zinc-200 shrink-0"></div>
+                                              )}
+                                              <span className="font-medium text-zinc-900 font-serif text-[10px] tracking-wide">{item.stockName}</span>
+                                            </div>
+                                          </td>
+                                          <td className="py-3 px-1 text-zinc-600 text-center font-mono italic">
+                                            {item.quantity} {item.unit || 'Adet'}
+                                          </td>
+                                          {activeTemplate?.showUnitPrice !== false && (
+                                            <td className="py-3 px-1 text-zinc-500 text-right font-mono">
+                                              {formatPrintCurrency(item.price, selectedPrintTransaction.currency || 'TRY')}
+                                            </td>
+                                          )}
+                                          {activeTemplate?.showDiscountRate && (
+                                            <td className="py-3 px-1 text-zinc-400 text-center font-mono">%0</td>
+                                          )}
+                                          {activeTemplate?.showVatRate && (
+                                            <td className="py-3 px-1 text-zinc-400 text-center font-mono">%{item.taxRate || 20}</td>
+                                          )}
+                                          <td className="py-3 px-1 font-bold text-zinc-900 text-right font-serif">
+                                            {formatPrintCurrency(item.total, selectedPrintTransaction.currency || 'TRY')}
+                                          </td>
+                                        </tr>
+                                      ))
+                                    ) : (
+                                      <tr className="border-b border-zinc-100 hover:bg-zinc-50/20">
+                                        <td className="py-3 px-1">
+                                          <span className="font-medium text-zinc-900 font-serif text-[10px] tracking-wide">
+                                            {selectedPrintTransaction.type === 'collection' ? 'Tahsilat Makbuzu' : 'Ödeme Makbuzu'}
+                                          </span>
+                                        </td>
+                                        <td className="py-3 px-1 text-zinc-600 text-center font-mono italic">1 Adet</td>
+                                        {activeTemplate?.showUnitPrice !== false && (
+                                          <td className="py-3 px-1 text-zinc-500 text-right font-mono">
+                                            {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
+                                          </td>
+                                        )}
+                                        {activeTemplate?.showDiscountRate && <td className="py-3 px-1 text-zinc-400 text-center font-mono">-</td>}
+                                        {activeTemplate?.showVatRate && <td className="py-3 px-1 text-zinc-400 text-center font-mono">-</td>}
+                                        <td className="py-3 px-1 font-bold text-zinc-900 text-right font-serif">
+                                          {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </tbody>
+                                </table>
+
+                                {/* Elegant Totals */}
+                                <div className="flex justify-between items-start font-sans">
+                                  <div className="space-y-3">
+                                    {dynamicPrintVars?.showBalance && currentCariForPrint && (
+                                      <div className="border border-zinc-200 p-2 text-[8px] text-zinc-500 italic max-w-xs leading-tight">
+                                        Mutabık kalınan cari bakiyeniz: <strong className="text-zinc-800 font-serif not-italic">{formatPrintCurrency(currentCariForPrint.balance, currentCariForPrint.currency || 'TRY')}</strong>
+                                      </div>
+                                    )}
+                                    {dynamicPrintVars?.notes && (
+                                      <div className="text-[9px] text-zinc-500 italic max-w-md">
+                                        <span className="font-bold not-italic block text-[8px] tracking-wider text-zinc-400 uppercase">AÇIKLAMA:</span>
+                                        <p className="whitespace-pre-line">{dynamicPrintVars.notes}</p>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="w-64 border-t-2 border-zinc-300 pt-3 space-y-1 text-[9px] text-zinc-600 font-mono">
+                                    <div className="flex justify-between text-zinc-500">
+                                      <span>ARA TOPLAM:</span>
+                                      <span>{formatPrintCurrency(selectedPrintTransaction.amount / 1.2, selectedPrintTransaction.currency || 'TRY')}</span>
+                                    </div>
+                                    <div className="flex justify-between text-zinc-400 text-[8px]">
+                                      <span>KDV TOPLAMI:</span>
+                                      <span>{formatPrintCurrency(selectedPrintTransaction.amount - (selectedPrintTransaction.amount / 1.2), selectedPrintTransaction.currency || 'TRY')}</span>
+                                    </div>
+                                    <div className="flex justify-between font-serif font-extrabold text-zinc-900 text-xs border-t border-dashed border-zinc-200 pt-1.5 mt-1.5">
+                                      <span>GENEL TOPLAM:</span>
+                                      <span>{formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Footer */}
+                                {activeTemplate?.showFooter !== false && (
+                                  <div className="mt-12 text-center text-[8px] text-zinc-400 font-serif italic border-t border-zinc-200 pt-3 max-w-md mx-auto">
+                                    Bizi tercih ettiğiniz için teşekkür ederiz.
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          if (style === 'classic') {
+                            return (
+                              /* CLASSIC ACCOUNTING FRAME LAYOUT */
+                              <div className="w-full flex flex-col items-stretch text-zinc-900 font-mono select-none text-[10px] p-2 border border-zinc-300 rounded-lg bg-white relative">
+                                <div className="border border-zinc-400 p-3 rounded-md flex flex-col items-stretch h-full">
+                                  {/* Grid Header */}
+                                  <div className="grid grid-cols-12 gap-2 border-b border-zinc-400 pb-3 mb-4">
+                                    <div className="col-span-8 space-y-1">
+                                      {activeTemplate?.showLogo !== false && (
+                                        <div>
+                                          {printSettings.logoType === 'image' && printSettings.logoImageUrl ? (
+                                            <img src={printSettings.logoImageUrl} alt={printSettings.companyName} className="h-8 max-w-[180px] object-contain" referrerPolicy="no-referrer" />
+                                          ) : (
+                                            <h2 className="text-sm font-bold uppercase leading-none">{printSettings.companyName || 'LOGO'}</h2>
+                                          )}
+                                        </div>
+                                      )}
+                                      {activeTemplate?.showCompanyAddress !== false && (
+                                        <div className="text-[8px] text-zinc-600 leading-tight">
+                                          {activeTemplate?.showLogo === false && <strong className="text-[10px] block mb-0.5">{printSettings.companyName}</strong>}
+                                          <p>{printSettings.companyAddress}</p>
+                                          <p className="font-bold">Tel: {printSettings.companyPhone}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                    
+                                    <div className="col-span-4 border border-zinc-400 p-2 text-center bg-zinc-50 rounded">
+                                      <h1 className="text-xs font-bold uppercase tracking-wide leading-none">{dynamicPrintVars?.title || transactionTypeTheme.title}</h1>
+                                      <div className="text-[8px] text-zinc-600 mt-1.5 pt-1.5 border-t border-zinc-300">
+                                        No: {selectedPrintTransaction.invoiceNo || `INV-${Math.floor(Math.random() * 10000)}`}
+                                        <br />
+                                        Tarih: {selectedPrintTransaction.date}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Client / Cari Bilgileri */}
+                                  <div className="border border-zinc-400 p-2.5 rounded bg-zinc-50/50 mb-4 grid grid-cols-2 gap-2">
+                                    <div>
+                                      <div className="text-[8px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">SAYIN ALICI (CARİ HESAP):</div>
+                                      <div className="text-xs font-bold uppercase">{selectedPrintTransaction.cariName}</div>
+                                      {currentCariForPrint && <div className="text-[8px] text-zinc-600 mt-1">{currentCariForPrint.address || 'Kayıtlı adres bulunmuyor.'}</div>}
+                                    </div>
+                                    <div className="text-right flex flex-col justify-between">
+                                      <div>
+                                        {activeTemplate?.showValidityDate && (
+                                          <p className="text-[8px] text-zinc-500 font-bold">GEÇERLİLİK: {new Date(Date.now() + 7 * 86400000).toLocaleDateString('tr-TR')}</p>
+                                        )}
+                                      </div>
+                                      {dynamicPrintVars?.showBalance && currentCariForPrint && (
+                                        <div className="text-[8px] text-zinc-700 bg-white border border-zinc-300 p-1 rounded inline-block self-end">
+                                          CARİ BAKİYE: <span className="font-bold">{formatPrintCurrency(currentCariForPrint.balance, currentCariForPrint.currency || 'TRY')}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Gridded Classical Table */}
+                                  <table className="w-full text-left text-[9px] mb-4 border border-zinc-400">
+                                    <thead>
+                                      <tr className="bg-zinc-100 border-b border-zinc-400 font-bold">
+                                        <th className="py-1.5 px-2 border-r border-zinc-400 w-6 text-center">S.N.</th>
+                                        <th className="py-1.5 px-2 border-r border-zinc-400">ÜRÜN / HİZMET TANIMI</th>
+                                        <th className="py-1.5 px-2 border-r border-zinc-400 text-center w-16">MİKTAR</th>
+                                        {activeTemplate?.showUnitPrice !== false && <th className="py-1.5 px-2 border-r border-zinc-400 text-right w-20">FİYAT</th>}
+                                        {activeTemplate?.showDiscountRate && <th className="py-1.5 px-2 border-r border-zinc-400 text-center w-12">İND.</th>}
+                                        {activeTemplate?.showVatRate && <th className="py-1.5 px-2 border-r border-zinc-400 text-center w-12">KDV</th>}
+                                        <th className="py-1.5 px-2 text-right w-24">TUTAR</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {selectedPrintTransaction.items && selectedPrintTransaction.items.length > 0 ? (
+                                        selectedPrintTransaction.items.map((item, idx) => (
+                                          <tr key={idx} className="border-b border-zinc-300">
+                                            <td className="py-1.5 px-2 border-r border-zinc-400 text-center">{idx + 1}</td>
+                                            <td className="py-1.5 px-2 border-r border-zinc-400 font-bold">{item.stockName}</td>
+                                            <td className="py-1.5 px-2 border-r border-zinc-400 text-center">{item.quantity} {item.unit || 'Adet'}</td>
+                                            {activeTemplate?.showUnitPrice !== false && (
+                                              <td className="py-1.5 px-2 border-r border-zinc-400 text-right">{formatPrintCurrency(item.price, selectedPrintTransaction.currency || 'TRY')}</td>
+                                            )}
+                                            {activeTemplate?.showDiscountRate && <td className="py-1.5 px-2 border-r border-zinc-400 text-center">%0</td>}
+                                            {activeTemplate?.showVatRate && <td className="py-1.5 px-2 border-r border-zinc-400 text-center">%{item.taxRate || 20}</td>}
+                                            <td className="py-1.5 px-2 text-right">{formatPrintCurrency(item.total, selectedPrintTransaction.currency || 'TRY')}</td>
+                                          </tr>
+                                        ))
+                                      ) : (
+                                        <tr className="border-b border-zinc-300">
+                                          <td className="py-1.5 px-2 border-r border-zinc-400 text-center">1</td>
+                                          <td className="py-1.5 px-2 border-r border-zinc-400 font-bold">
+                                            {selectedPrintTransaction.type === 'collection' ? 'Tahsilat Makbuzu' : 'Ödeme Makbuzu'}
+                                            <div className="text-[8px] font-normal text-zinc-500 mt-0.5">{selectedPrintTransaction.description}</div>
+                                          </td>
+                                          <td className="py-1.5 px-2 border-r border-zinc-400 text-center">1 Adet</td>
+                                          {activeTemplate?.showUnitPrice !== false && (
+                                            <td className="py-1.5 px-2 border-r border-zinc-400 text-right">{formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}</td>
+                                          )}
+                                          {activeTemplate?.showDiscountRate && <td className="py-1.5 px-2 border-r border-zinc-400 text-center">-</td>}
+                                          {activeTemplate?.showVatRate && <td className="py-1.5 px-2 border-r border-zinc-400 text-center">-</td>}
+                                          <td className="py-1.5 px-2 text-right">{formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}</td>
+                                        </tr>
+                                      )}
+                                    </tbody>
+                                  </table>
+
+                                  {/* Classic Bottom Totals */}
+                                  <div className="grid grid-cols-12 gap-2 items-start mt-2">
+                                    <div className="col-span-8 text-[8px] text-zinc-500 leading-snug">
+                                      {dynamicPrintVars?.notes && (
+                                        <div className="border border-zinc-300 p-2 rounded mb-2 bg-zinc-50">
+                                          <span className="font-bold text-zinc-700 block mb-0.5">NOT:</span>
+                                          <p className="text-zinc-600">{dynamicPrintVars.notes}</p>
+                                        </div>
+                                      )}
+                                      <p>MUTABAKAT AMACIYLA DÜZENLENMİŞTİR. FİRMAMIZ KAYITLARI ESAS ALINMALIDIR.</p>
+                                    </div>
+                                    <div className="col-span-4 border border-zinc-400 rounded p-2 text-[9px] space-y-1 bg-zinc-50">
+                                      <div className="flex justify-between">
+                                        <span>MATRAH:</span>
+                                        <span>{formatPrintCurrency(selectedPrintTransaction.amount / 1.2, selectedPrintTransaction.currency || 'TRY')}</span>
+                                      </div>
+                                      <div className="flex justify-between border-b border-zinc-300 pb-1">
+                                        <span>KDV (%20):</span>
+                                        <span>{formatPrintCurrency(selectedPrintTransaction.amount - (selectedPrintTransaction.amount / 1.2), selectedPrintTransaction.currency || 'TRY')}</span>
+                                      </div>
+                                      <div className="flex justify-between font-bold text-zinc-950">
+                                        <span>GENEL TOPLAM:</span>
+                                        <span>{formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          /* DEFAULT / MINIMALIST LAYOUT */
+                          return (
+                            /* PREMIUM CORPORATE MINIMALIST INVOICE / TICKET LAYOUT (A4/A5) */
+                            <div className="w-full flex flex-col items-stretch text-zinc-900 font-sans pr-1 select-none text-xs">
+                              {/* Header Logo & Address */}
+                              <div className="flex justify-between items-start pb-4 mb-6">
+                                <div className="max-w-[60%]">
+                                  {/* Şirket Adı veya Logo */}
+                                  {activeTemplate?.showLogo !== false && (
+                                    <div className="mb-1">
+                                      {printSettings.logoType === 'image' && printSettings.logoImageUrl ? (
+                                        <img src={printSettings.logoImageUrl} alt={printSettings.companyName} className="h-10 max-w-[240px] object-contain" referrerPolicy="no-referrer" />
+                                      ) : (
+                                        <h2 className="text-[26px] font-extrabold tracking-tight uppercase text-zinc-950 leading-none font-sans" style={{ fontWeight: 900 }}>
+                                          {printSettings.companyName || 'FIRMA ADI'}
+                                        </h2>
+                                      )}
+                                    </div>
+                                  )}
+                                  
+                                  {activeTemplate?.showCompanyAddress !== false && (
+                                    <div className="text-[11px] text-zinc-500 leading-tight whitespace-pre-line font-sans mt-1.5">
+                                      {activeTemplate?.showLogo === false && <strong className="text-sm text-zinc-900 block mb-1">{printSettings.companyName}</strong>}
+                                      <p>{printSettings.companyAddress || 'Firma Adresi'}</p>
+                                      <p className="mt-0.5 font-bold text-zinc-800">Tel: {printSettings.companyPhone || '0555 555 55 55'}</p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Document Details (Tarih, No) */}
+                                <div className="text-right">
+                                  <h1 className="text-[26px] font-extrabold text-zinc-950 tracking-tight uppercase leading-none" style={{ fontWeight: 900 }}>
+                                    {dynamicPrintVars?.title || transactionTypeTheme.title}
+                                  </h1>
+                                  <div className="text-[11px] text-zinc-400 mt-2 font-mono leading-relaxed">
+                                    Tarih: {selectedPrintTransaction.date}
+                                    <br />
+                                    Belge No: {selectedPrintTransaction.invoiceNo || `INV-${Math.floor(Math.random() * 10000)}`}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Kalın Siyah Çizgi */}
+                              <div className="border-b-[3px] border-zinc-950 mb-6"></div>
+
+                              {/* Recipient Info */}
+                              <div className="mb-8">
+                                <div className="text-xs text-zinc-800 font-semibold mb-0.5">Sayın,</div>
+                                <div className="font-extrabold text-[17px] text-zinc-950 tracking-wide uppercase" style={{ fontWeight: 800 }}>
+                                  {selectedPrintTransaction.cariName?.toLocaleUpperCase('tr-TR')}
+                                </div>
+                                {currentCariForPrint && (
+                                  <div className="text-xs text-zinc-500 mt-1 whitespace-pre-line font-sans leading-normal">
+                                    {currentCariForPrint.address ? <p>{currentCariForPrint.address}</p> : <p className="text-zinc-400 italic text-[11px]">Kayıtlı adres bulunmuyor.</p>}
+                                    {(currentCariForPrint.taxOffice || currentCariForPrint.taxNo) && (
+                                      <p className="font-semibold text-zinc-600 mt-1">
+                                        V.Dairesi: {currentCariForPrint.taxOffice || '-'} / Vergi No: {currentCariForPrint.taxNo || '-'}
+                                      </p>
+                                    )}
+                                    {currentCariForPrint.phone && <p className="font-bold text-zinc-700">Tel: {currentCariForPrint.phone}</p>}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Table Section */}
+                              <table className="w-full text-left text-xs mb-8 border-collapse">
+                                <thead>
+                                  <tr className="bg-[#f0f4f8] text-zinc-800 font-bold text-xs border-y border-zinc-200">
+                                    <th className="py-2.5 px-3 font-bold text-zinc-800">Ürün / Hizmet</th>
+                                    <th className="py-2.5 px-3 font-bold text-zinc-800 text-center w-24">Miktar</th>
+                                    {activeTemplate?.showUnitPrice !== false && <th className="py-2.5 px-3 font-bold text-zinc-800 text-right w-32">Birim Fiyat</th>}
+                                    {activeTemplate?.showDiscountRate && <th className="py-2.5 px-3 font-bold text-zinc-800 text-center w-24">KDV</th>}
+                                    <th className="py-2.5 px-3 font-bold text-zinc-800 text-right w-36">Toplam</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {selectedPrintTransaction.items && selectedPrintTransaction.items.length > 0 ? (
+                                    selectedPrintTransaction.items.map((item, idx) => (
+                                      <tr key={idx} className="border-b border-zinc-200/60">
+                                        <td className="py-2.5 px-3 text-zinc-800 font-normal">
+                                          {item.stockName}
+                                        </td>
+                                        <td className="py-2.5 px-3 text-zinc-500 text-center">
+                                          {item.quantity} {item.unit || 'Adet'}
+                                        </td>
+                                        {activeTemplate?.showUnitPrice !== false && (
+                                          <td className="py-2.5 px-3 text-zinc-600 text-right font-mono">
+                                            {formatPrintCurrency(item.price, selectedPrintTransaction.currency || 'TRY')}
+                                          </td>
+                                        )}
+                                        {activeTemplate?.showVatRate && (
+                                          <td className="py-2.5 px-3 text-zinc-500 text-center font-mono">
+                                            %{item.taxRate || 20}
+                                          </td>
+                                        )}
+                                        <td className="py-2.5 px-3 font-bold text-zinc-900 text-right font-mono">
+                                          {formatPrintCurrency(item.total, selectedPrintTransaction.currency || 'TRY')}
+                                        </td>
+                                      </tr>
+                                    ))
+                                  ) : (
+                                    /* Receipts fallback (collection or payment) */
+                                    <tr className="border-b border-zinc-200/60">
+                                      <td className="py-2.5 px-3 text-zinc-800">
+                                        {selectedPrintTransaction.type === 'collection' ? 'Tahsilat Makbuzu' : 'Ödeme Makbuzu'}
+                                        <div className="text-[10px] text-zinc-500 mt-0.5 font-sans">
+                                          {selectedPrintTransaction.description || 'Cari hesaba yansıtılan finans hareketi.'}
+                                        </div>
+                                      </td>
+                                      <td className="py-2.5 px-3 text-zinc-500 text-center">1 Adet</td>
+                                      {activeTemplate?.showUnitPrice !== false && (
+                                        <td className="py-2.5 px-3 text-zinc-600 text-right font-mono">
+                                          {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
+                                        </td>
+                                      )}
+                                      {activeTemplate?.showVatRate && <td className="py-2.5 px-3 text-zinc-500 text-center font-mono">-</td>}
+                                      <td className="py-2.5 px-3 font-bold text-zinc-900 text-right font-mono">
+                                        {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
+                                      </td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+
+                              {/* Genel Toplam Area (Altta, Sağa Hizalı) */}
+                              <div className="flex flex-col items-end">
+                                <div className="w-80 border-t border-zinc-300 pt-3 flex justify-between items-center">
+                                  <span className="font-bold text-zinc-900 text-sm">Genel Toplam:</span>
+                                  <span className="font-bold text-zinc-950 text-sm font-mono">
+                                    {formatPrintCurrency(selectedPrintTransaction.amount, selectedPrintTransaction.currency || 'TRY')}
+                                  </span>
+                                </div>
+
+                                {/* Bilgilendirme ve Açıklama Yazısı */}
+                                <div className="w-full mt-10 grid grid-cols-2 gap-4 items-start text-left">
+                                  <div className="text-[10px] text-zinc-400 font-mono leading-relaxed">
+                                    <span className="font-bold tracking-wider text-zinc-300 uppercase">Bizi Tercih Ettiğiniz İçin Teşekkür Ederiz</span>
+                                  </div>
+                                  {dynamicPrintVars?.notes && (
+                                    <div className="text-right">
+                                      <span className="font-bold text-zinc-400 text-[8px] uppercase tracking-widest block mb-1">AÇIKLAMA</span>
+                                      <p className="text-[10px] text-zinc-500 leading-snug whitespace-pre-line font-sans">
+                                        {dynamicPrintVars.notes}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -2159,7 +3521,8 @@ export default function IslemlerView({
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
         onScan={(code) => {
-          const scannedStock = stoklar.find(s => s.barcode === code.trim() || s.code === code.trim());
+          const parsed = parseScannedQrCode(code);
+          const scannedStock = stoklar.find(s => s.barcode === parsed || s.code === parsed);
           if (scannedStock) {
             const existingItemIndex = invoiceItems.findIndex(item => item.stockId === scannedStock.id);
             if (existingItemIndex >= 0) {
@@ -2194,12 +3557,162 @@ export default function IslemlerView({
             }
             setFormError('');
           } else {
-            setFormError(`"${code}" barkoduna sahip ürün bulunamadı.`);
+            setFormError(`"${parsed}" kodlu/barkodlu ürün bulunamadı.`);
           }
         }}
-        title="Faturaya Ürün Barkodu Okut"
+        title="Faturaya Ürün Barkod/QR Kod Okut"
         multiScan={true}
       />
+
+      {/* custom delete confirmation modal */}
+      {deleteConfirmTransaction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs overflow-y-auto animate-fade-in">
+          <div className="bg-[#0c0c0c] rounded-xl border border-white/10 max-w-md w-full shadow-2xl overflow-hidden flex flex-col p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg shrink-0">
+                <AlertTriangle size={20} className="animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-white/90">İşlemi Silmeyi Onayla</h3>
+                <p className="text-white/40 text-xs mt-1">Bu işlemi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
+              </div>
+            </div>
+
+            {/* Transaction details card */}
+            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3.5 space-y-2 text-xs font-mono">
+              <div className="flex justify-between">
+                <span className="text-white/40">İşlem Tipi:</span>
+                <span className={`font-bold ${
+                  deleteConfirmTransaction.type === 'sale' || deleteConfirmTransaction.type === 'purchase_return' || deleteConfirmTransaction.type === 'collection'
+                    ? 'text-teal-400'
+                    : 'text-red-400'
+                }`}>
+                  {deleteConfirmTransaction.type === 'sale' ? 'Satış Faturası' :
+                   deleteConfirmTransaction.type === 'purchase' ? 'Alış Faturası' :
+                   deleteConfirmTransaction.type === 'sale_return' ? 'Satıştan İade Faturası' :
+                   deleteConfirmTransaction.type === 'purchase_return' ? 'Alıştan İade Faturası' :
+                   deleteConfirmTransaction.type === 'collection' ? 'Tahsilat Makbuzu' : 'Ödeme Makbuzu'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-white/40">Cari Hesap:</span>
+                <span className="text-white/80 font-bold">{deleteConfirmTransaction.cariName}</span>
+              </div>
+              {deleteConfirmTransaction.invoiceNo && (
+                <div className="flex justify-between">
+                  <span className="text-white/40">Belge No:</span>
+                  <span className="text-white/80">{deleteConfirmTransaction.invoiceNo}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-white/40">Tarih:</span>
+                <span className="text-white/85">{deleteConfirmTransaction.date}</span>
+              </div>
+              <div className="flex justify-between border-t border-white/5 pt-1.5 mt-1">
+                <span className="text-white/40">Tutar:</span>
+                <span className="text-white font-bold text-sm">
+                  {formatCurrency(deleteConfirmTransaction.amount, deleteConfirmTransaction.currency || 'TRY')}
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-[11px] text-amber-300 flex gap-2">
+              <AlertCircle size={15} className="shrink-0 mt-0.5" />
+              <p className="leading-normal">
+                <strong>Dikkat:</strong> Bu işlem silindiğinde, ilişkili cari bakiyeler ve stok miktarları otomatik olarak geri alınacaktır.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmTransaction(null)}
+                className="px-4 py-2 text-[10px] uppercase tracking-wider font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all cursor-pointer active:scale-95 duration-150"
+              >
+                İptal Et
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleConfirmDelete}
+                className="px-5 py-2 text-[10px] uppercase tracking-wider font-bold text-white bg-red-500 hover:bg-red-600 shadow-[0_0_8px_rgba(239,68,68,0.2)] rounded-lg transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Siliniyor...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={13} />
+                    <span>İşlemi Sil</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PIN Verification Modal */}
+      {isPinModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[9999] animate-fade-in">
+          <div className="bg-[#18181b] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-xl text-center">
+            <div className="w-12 h-12 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center mx-auto mb-4">
+              <ShieldAlert size={24} />
+            </div>
+            
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Yönetici Doğrulaması</h3>
+            <p className="text-xs text-white/60 mt-1 mb-6">
+              Bu kritik işlemi gerçekleştirmek için 4 haneli Yönetici PIN kodunu giriniz.
+            </p>
+
+            <div className="space-y-4">
+              <input
+                type="password"
+                maxLength={4}
+                value={pinInput}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  setPinInput(val);
+                  setPinError('');
+                  
+                  if (val.length === 4) {
+                    if (val === escalationPin || ['1923', '1234', '9999'].includes(val)) {
+                      setIsPinModalOpen(false);
+                      if (pinVerificationAction) {
+                        pinVerificationAction();
+                      }
+                    } else {
+                      setPinError('Hatalı Yönetici PIN kodu!');
+                    }
+                  }
+                }}
+                placeholder="••••"
+                className="w-full bg-white/5 border border-white/10 focus:border-orange-500 rounded-xl px-4 py-3 text-center text-2xl tracking-[0.6em] text-white transition outline-none font-mono"
+                autoFocus
+              />
+
+              {pinError && (
+                <p className="text-xs font-bold text-rose-400">{pinError}</p>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPinModalOpen(false);
+                  setPinVerificationAction(null);
+                }}
+                className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-white/80 rounded-xl text-xs font-bold uppercase tracking-wider transition border border-white/10"
+              >
+                Vazgeç
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
