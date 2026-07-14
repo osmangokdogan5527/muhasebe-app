@@ -605,7 +605,7 @@ export default function AyarlarView({
               <div className="mt-6 pt-4 border-t border-slate-100 text-[10px] text-slate-400 font-mono uppercase tracking-wider flex items-center justify-between">
                 <span>Mevcut Logo Rengi:</span>
                 <span className="font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                  {activeLogoTheme === 'theme' ? 'Dinamik' : (COLOR_PRESETS.find(p => p.id === activeLogoTheme)?.name || 'Storm Kırmızı')}
+                  {activeLogoTheme === 'theme' ? 'Dinamik' : (COLOR_PRESETS.find(p => p.id === activeLogoTheme)?.name || 'Kırmızı')}
                 </span>
               </div>
             </div>

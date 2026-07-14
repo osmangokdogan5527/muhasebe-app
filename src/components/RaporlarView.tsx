@@ -1027,6 +1027,8 @@ export default function RaporlarView({
     const stoklarData = stoklar.map(s => ({
       'Stok Kodu': s.code || '',
       'Ürün / Hizmet Adı': s.name || '',
+      'Kategori': s.category || '',
+      'Marka / Üretici': s.brand || '',
       'Miktar': s.quantity || 0,
       'Birim': s.unit || 'Adet',
       'Alış Fiyatı (KDV Hariç)': s.purchasePrice || 0,

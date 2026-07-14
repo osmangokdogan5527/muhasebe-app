@@ -57,6 +57,14 @@ export interface PrintTemplateConfig {
   showCustomText?: boolean;
   customTextContent?: string;
 
+  // Signature and Bank Details Settings (1-2)
+  showSignatureArea?: boolean;
+  deliveryDelivererLabel?: string;
+  deliveryReceiverLabel?: string;
+  showBankDetails?: boolean;
+  bankDetailsTitle?: string;
+  bankDetailsContent?: string;
+
   // Template design layout style (5 different designs)
   designStyle?: 'minimal' | 'corporate' | 'modern' | 'elegant' | 'classic';
 }
@@ -79,6 +87,12 @@ const DEFAULT_TEMPLATES: PrintTemplateConfig[] = [
     showExVatAmount: true,
     showVatRate: true,
     showUnitPrice: true,
+    showSignatureArea: true,
+    deliveryDelivererLabel: 'TESLİM EDEN (İMZA)',
+    deliveryReceiverLabel: 'TESLİM ALAN (İMZA)',
+    showBankDetails: false,
+    bankDetailsTitle: 'BANKA HESAP BİLGİLERİ',
+    bankDetailsContent: 'Ziraat Bankası: TR00 1111 2222 3333 4444 5555 66\nVakıfbank: TR00 2222 3333 4444 5555 6666 77',
   }
 ];
 
@@ -341,6 +355,12 @@ export default function TemplateDesignerView() {
       showBarcodeCode: true,
       showCustomText: false,
       customTextContent: '',
+      showSignatureArea: true,
+      deliveryDelivererLabel: 'TESLİM EDEN (İMZA)',
+      deliveryReceiverLabel: 'TESLİM ALAN (İMZA)',
+      showBankDetails: false,
+      bankDetailsTitle: 'BANKA HESAP BİLGİLERİ',
+      bankDetailsContent: 'Ziraat Bankası: TR00 1111 2222 3333 4444 5555 66\nVakıfbank: TR00 2222 3333 4444 5555 6666 77',
     };
     saveTemplates([...templates, newTemplate]);
     setActiveTemplateId(newTemplate.id);
@@ -390,6 +410,40 @@ export default function TemplateDesignerView() {
       const withVat = discountedPrice * (1 + item.vat / 100);
       return acc + (withVat * item.qty);
     }, 0);
+  };
+
+  const renderPreviewBankDetails = () => {
+    if (!activeTemplate.showBankDetails) return null;
+    return (
+      <div className="mt-4 border border-slate-200 bg-slate-50/50 rounded-lg p-2.5 text-left font-mono text-[8px] text-slate-600">
+        <span className="font-extrabold text-[9px] text-slate-800 tracking-wider block mb-1 uppercase font-sans">
+          {activeTemplate.bankDetailsTitle || 'BANKA HESAP BİLGİLERİ'}
+        </span>
+        <div className="whitespace-pre-line leading-relaxed">
+          {activeTemplate.bankDetailsContent || 'Banka bilgisi girilmemiş.'}
+        </div>
+      </div>
+    );
+  };
+
+  const renderPreviewSignatureArea = () => {
+    if (activeTemplate.showSignatureArea === false) return null;
+    return (
+      <div className="grid grid-cols-2 gap-4 text-center mt-4 pt-3 border-t border-dashed border-slate-200">
+        <div>
+          <span className="text-[7px] font-bold text-slate-400 tracking-wider uppercase block mb-6 font-sans">
+            {activeTemplate.deliveryDelivererLabel || 'TESLİM EDEN (İMZA)'}
+          </span>
+          <div className="border-t border-dashed border-slate-200 w-16 mx-auto"></div>
+        </div>
+        <div>
+          <span className="text-[7px] font-bold text-slate-400 tracking-wider uppercase block mb-6 font-sans">
+            {activeTemplate.deliveryReceiverLabel || 'TESLİM ALAN (İMZA)'}
+          </span>
+          <div className="border-t border-dashed border-slate-200 w-16 mx-auto"></div>
+        </div>
+      </div>
+    );
   };
 
   const getPaperDimensions = (size: string) => {
@@ -763,7 +817,9 @@ export default function TemplateDesignerView() {
                                 </td>
                                 <td className="py-2 px-3 font-semibold text-slate-950 uppercase text-[9px] flex items-center gap-2">
                                   {activeTemplate.showProductImage && (
-                                    <div className="w-5 h-5 bg-slate-200 rounded shrink-0"></div>
+                                    <div className="w-5 h-5 bg-slate-200 rounded shrink-0 flex items-center justify-center">
+                                      <ImageIcon size={10} className="text-slate-400" />
+                                    </div>
                                   )}
                                   {item.name}
                                 </td>
@@ -806,6 +862,7 @@ export default function TemplateDesignerView() {
                             Bu belge sistem üzerinde oluşturulmuş finansal bilgi amaçlı dökümdür. Resmi fatura yerine geçmez.
                           </p>
                         </div>
+                        {renderPreviewBankDetails()}
                       </div>
 
                       <div className="col-span-5 flex flex-col items-stretch pl-3 border-l border-dashed border-slate-200 font-mono text-[9px] text-slate-600 space-y-1.5">
@@ -823,6 +880,8 @@ export default function TemplateDesignerView() {
                         </div>
                       </div>
                     </div>
+
+                    {renderPreviewSignatureArea()}
 
                     {/* Footer */}
                     {activeTemplate.showFooter && (
@@ -917,7 +976,9 @@ export default function TemplateDesignerView() {
                               <td className="py-3 px-1">
                                 <div className="flex items-center gap-2">
                                   {activeTemplate.showProductImage && (
-                                    <div className="w-6 h-6 bg-slate-100 border border-slate-200 rounded-md shrink-0"></div>
+                                    <div className="w-6 h-6 bg-slate-100 border border-slate-200 rounded-md shrink-0 flex items-center justify-center">
+                                      <ImageIcon size={12} className="text-slate-400" />
+                                    </div>
                                   )}
                                   <div>
                                     <span className="font-bold text-slate-900 text-[10px] block uppercase">{item.name}</span>
@@ -950,13 +1011,14 @@ export default function TemplateDesignerView() {
 
                     {/* Summary area */}
                     <div className="flex justify-between items-start mt-4">
-                      <div>
+                      <div className="space-y-3">
                         {activeTemplate.showCustomerBalance && (
                           <div className="border border-teal-100 bg-teal-50/20 px-3 py-2 rounded-xl text-[9px] text-teal-800 inline-block">
                             <span className="block text-[7px] text-teal-500 uppercase font-black tracking-widest mb-0.5">CARİ GÜNCEL HESAP BAKİYESİ</span>
                             <span className="font-extrabold">{mockCustomer.balance}</span>
                           </div>
                         )}
+                        {renderPreviewBankDetails()}
                       </div>
                       
                       <div className="w-72 bg-slate-50 rounded-xl p-3 border border-slate-100 font-mono text-[9px] text-slate-600 space-y-1">
@@ -974,6 +1036,8 @@ export default function TemplateDesignerView() {
                         </div>
                       </div>
                     </div>
+
+                    {renderPreviewSignatureArea()}
 
                     {/* Footer */}
                     {activeTemplate.showFooter && (
@@ -1054,7 +1118,9 @@ export default function TemplateDesignerView() {
                               <td className="py-3 px-1">
                                 <div className="flex items-center gap-2">
                                   {activeTemplate.showProductImage && (
-                                    <div className="w-5 h-5 border border-slate-200 shrink-0"></div>
+                                    <div className="w-5 h-5 border border-slate-200 shrink-0 flex items-center justify-center">
+                                      <ImageIcon size={10} className="text-slate-400" />
+                                    </div>
                                   )}
                                   <span className="font-medium text-slate-900 font-serif text-[10px] tracking-wide">{item.name}</span>
                                 </div>
@@ -1084,12 +1150,13 @@ export default function TemplateDesignerView() {
 
                     {/* Elegant Totals */}
                     <div className="flex justify-between items-start font-sans">
-                      <div>
+                      <div className="space-y-3">
                         {activeTemplate.showCustomerBalance && (
                           <div className="border border-slate-200 p-2 text-[8px] text-slate-500 italic max-w-xs leading-tight">
                             Mutabık kalınan cari bakiyeniz: <strong className="text-slate-800 font-serif not-italic">{mockCustomer.balance}</strong>
                           </div>
                         )}
+                        {renderPreviewBankDetails()}
                       </div>
 
                       <div className="w-64 border-t-2 border-slate-300 pt-3 space-y-1 text-[9px] text-slate-600 font-mono">
@@ -1107,6 +1174,8 @@ export default function TemplateDesignerView() {
                         </div>
                       </div>
                     </div>
+
+                    {renderPreviewSignatureArea()}
 
                     {/* Footer */}
                     {activeTemplate.showFooter && (
@@ -1200,7 +1269,9 @@ export default function TemplateDesignerView() {
                                 <td className="py-1.5 px-2 border-r border-slate-300 text-center">{idx + 1}</td>
                                 <td className="py-1.5 px-2 border-r border-slate-300 uppercase font-bold flex items-center gap-1.5">
                                   {activeTemplate.showProductImage && (
-                                    <div className="w-4 h-4 bg-slate-200 shrink-0 border border-slate-400"></div>
+                                    <div className="w-4 h-4 bg-slate-200 shrink-0 border border-slate-400 flex items-center justify-center">
+                                      <ImageIcon size={8} className="text-slate-400" />
+                                    </div>
                                   )}
                                   {item.name}
                                 </td>
@@ -1230,17 +1301,25 @@ export default function TemplateDesignerView() {
                         <div className="col-span-7 border border-slate-400 rounded p-2 text-[7px] leading-relaxed text-slate-500 self-stretch flex flex-col justify-between">
                           <div>
                             <p>Bu döküm sistem üzerinden üretilmiştir.</p>
+                            {activeTemplate.showBankDetails && (
+                              <div className="mt-2 border-t border-slate-200 pt-2 font-mono text-[7px] text-slate-600">
+                                <span className="font-bold block mb-0.5">{activeTemplate.bankDetailsTitle || 'BANKA HESAP BİLGİLERİ'}</span>
+                                <div className="whitespace-pre-line leading-normal">{activeTemplate.bankDetailsContent}</div>
+                              </div>
+                            )}
                           </div>
-                          <div className="grid grid-cols-2 gap-4 text-center mt-2 pt-2 border-t border-dashed border-slate-300">
-                            <div>
-                              <span>TESLİM EDEN (İMZA)</span>
-                              <div className="border-t border-slate-300 w-16 mx-auto mt-4"></div>
+                          {activeTemplate.showSignatureArea !== false && (
+                            <div className="grid grid-cols-2 gap-4 text-center mt-2 pt-2 border-t border-dashed border-slate-300">
+                              <div>
+                                <span>{activeTemplate.deliveryDelivererLabel || 'TESLİM EDEN (İMZA)'}</span>
+                                <div className="border-t border-slate-300 w-16 mx-auto mt-4"></div>
+                              </div>
+                              <div>
+                                <span>{activeTemplate.deliveryReceiverLabel || 'TESLİM ALAN (İMZA)'}</span>
+                                <div className="border-t border-slate-300 w-16 mx-auto mt-4"></div>
+                              </div>
                             </div>
-                            <div>
-                              <span>TESLİM ALAN (İMZA)</span>
-                              <div className="border-t border-slate-300 w-16 mx-auto mt-4"></div>
-                            </div>
-                          </div>
+                          )}
                         </div>
 
                         <div className="col-span-5 border border-slate-400 rounded p-2 bg-slate-50 space-y-1 text-right">
@@ -1339,7 +1418,9 @@ export default function TemplateDesignerView() {
                           <tr key={idx} className="border-b border-slate-100">
                             <td className="py-2 px-2 text-slate-800 flex items-center gap-2">
                               {activeTemplate.showProductImage && (
-                                <div className="w-6 h-6 bg-slate-200 rounded shrink-0"></div>
+                                <div className="w-6 h-6 bg-slate-200 rounded shrink-0 flex items-center justify-center">
+                                  <ImageIcon size={12} className="text-slate-400" />
+                                </div>
                               )}
                               {item.name}
                             </td>
@@ -1357,12 +1438,13 @@ export default function TemplateDesignerView() {
 
                   {/* Totals */}
                   <div className="flex justify-between mb-12 text-xs font-sans">
-                    <div className="w-1/2 flex flex-col justify-end">
+                    <div className="w-1/2 flex flex-col justify-end space-y-3">
                       {activeTemplate.showCustomerBalance && (
                         <div className="text-xs text-slate-600 border border-slate-200 p-3 rounded bg-slate-50 inline-block w-max">
                           Güncel Bakiye: <span className="font-bold text-slate-900">{mockCustomer.balance}</span>
                         </div>
                       )}
+                      {renderPreviewBankDetails()}
                     </div>
                     <div className="w-64">
                       <div className="flex justify-between py-1 text-sm border-b border-slate-200 font-bold">
@@ -1371,6 +1453,8 @@ export default function TemplateDesignerView() {
                       </div>
                     </div>
                   </div>
+
+                  {renderPreviewSignatureArea()}
 
                   {/* Footer */}
                   {activeTemplate.showFooter && (
@@ -1961,6 +2045,83 @@ export default function TemplateDesignerView() {
                     checked={activeTemplate.showExVatAmount} 
                     onChange={(v) => handleUpdateActiveTemplate({ showExVatAmount: v })} 
                   />
+                </div>
+              </div>
+
+              {/* İmza & Kaşe Ayarları (1-2) */}
+              <div className="space-y-4 pt-4 border-t border-slate-150">
+                <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
+                  <span className="p-1 rounded-lg bg-teal-50 text-teal-600">✍️</span> İmza & Kaşe Ayarları
+                </h3>
+                
+                <div className="space-y-3">
+                  <SwitchRow 
+                    label="İmza/Kaşe Alanı Gösterilsin" 
+                    checked={activeTemplate.showSignatureArea !== false} 
+                    onChange={(v) => handleUpdateActiveTemplate({ showSignatureArea: v })} 
+                  />
+                  
+                  {(activeTemplate.showSignatureArea !== false) && (
+                    <div className="space-y-2 pl-2 border-l-2 border-slate-200 mt-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Teslim Eden Başlığı</label>
+                        <input 
+                          type="text"
+                          value={activeTemplate.deliveryDelivererLabel || 'TESLİM EDEN (İMZA)'}
+                          onChange={(e) => handleUpdateActiveTemplate({ deliveryDelivererLabel: e.target.value })}
+                          className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium focus:ring-1 focus:ring-teal-500 outline-none bg-white text-slate-800"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Teslim Alan Başlığı</label>
+                        <input 
+                          type="text"
+                          value={activeTemplate.deliveryReceiverLabel || 'TESLİM ALAN (İMZA)'}
+                          onChange={(e) => handleUpdateActiveTemplate({ deliveryReceiverLabel: e.target.value })}
+                          className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium focus:ring-1 focus:ring-teal-500 outline-none bg-white text-slate-800"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Banka Hesap Bilgileri Ayarları (1-2) */}
+              <div className="space-y-4 pt-4 border-t border-slate-150">
+                <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
+                  <span className="p-1 rounded-lg bg-teal-50 text-teal-600">🏦</span> Banka Hesap / IBAN Bilgileri
+                </h3>
+                
+                <div className="space-y-3">
+                  <SwitchRow 
+                    label="Banka Hesap Bilgilerini Göster" 
+                    checked={activeTemplate.showBankDetails || false} 
+                    onChange={(v) => handleUpdateActiveTemplate({ showBankDetails: v })} 
+                  />
+                  
+                  {activeTemplate.showBankDetails && (
+                    <div className="space-y-2 pl-2 border-l-2 border-slate-200 mt-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Banka Bölüm Başlığı</label>
+                        <input 
+                          type="text"
+                          value={activeTemplate.bankDetailsTitle || 'BANKA HESAP BİLGİLERİ'}
+                          onChange={(e) => handleUpdateActiveTemplate({ bankDetailsTitle: e.target.value })}
+                          className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium focus:ring-1 focus:ring-teal-500 outline-none bg-white text-slate-800"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Hesap / IBAN Bilgileri</label>
+                        <textarea 
+                          rows={3}
+                          value={activeTemplate.bankDetailsContent || 'Ziraat Bankası: TR00 1111 2222 3333 4444 5555 66\nVakıfbank: TR00 2222 3333 4444 5555 6666 77'}
+                          onChange={(e) => handleUpdateActiveTemplate({ bankDetailsContent: e.target.value })}
+                          className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium focus:ring-1 focus:ring-teal-500 outline-none bg-white text-slate-800 font-mono"
+                          placeholder="Her satıra bir hesap gelecek şekilde yazınız..."
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </>

@@ -45,6 +45,8 @@ export interface Stock {
   minQuantity: number;
   barcode?: string; // Optional barcode support
   imageUrl?: string; // Product image
+  category?: string; // Product category
+  brand?: string; // Product brand
   createdAt: string;
 }
 

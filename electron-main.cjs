@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, shell, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -209,6 +209,23 @@ ipcMain.on('restart_app', () => {
 });
 
 app.whenReady().then(() => {
+  // Mikrofon ve medya izinlerini otomatik olarak onayla (Masaüstü uygulaması sesli komut sistemi için)
+  if (session && session.defaultSession) {
+    session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+      if (permission === 'media') {
+        return callback(true);
+      }
+      callback(false);
+    });
+
+    session.defaultSession.setPermissionCheckHandler((webContents, permission, origin) => {
+      if (permission === 'media') {
+        return true;
+      }
+      return false;
+    });
+  }
+
   performSchemaMigration(); // Uygulama başlarken şema göç kontrollerini yap
   createWindow();
 

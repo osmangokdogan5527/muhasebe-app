@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { motion } from 'motion/react';
 import Barcode from 'react-barcode';
 import QRCode from 'qrcode';
 import { toPng } from 'html-to-image';
@@ -61,6 +62,8 @@ export default function StoklarView({
 }: StoklarViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'critical' | 'instock' | 'outstock'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedBrand, setSelectedBrand] = useState<string>('');
   
   const [selectedStockForDetails, setSelectedStockForDetails] = useState<Stock | null>(null);
   const [expandedCariId, setExpandedCariId] = useState<string | null>(null);
@@ -254,12 +257,26 @@ export default function StoklarView({
     unit: 'Adet' as 'Adet' | 'KG' | 'Litre' | 'Metre' | 'Kutu' | 'Hizmet',
     purchasePrice: 0,
     salesPrice: 0,
-    taxRate: 20,
+    taxRate: 0,
     quantity: 0,
-    minQuantity: 5
+    minQuantity: 5,
+    category: '',
+    brand: ''
   });
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Categories list extracted from stoklar
+  const categories = useMemo(() => {
+    const list = stoklar.map(s => s.category?.trim()).filter(Boolean) as string[];
+    return Array.from(new Set(list)).sort();
+  }, [stoklar]);
+
+  // Brands list extracted from stoklar
+  const brands = useMemo(() => {
+    const list = stoklar.map(s => s.brand?.trim()).filter(Boolean) as string[];
+    return Array.from(new Set(list)).sort();
+  }, [stoklar]);
 
   // Filter and search Stock items
   const filteredStoklar = useMemo(() => {
@@ -267,9 +284,19 @@ export default function StoklarView({
       const matchSearch = 
         stok.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         stok.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (stok.category || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (stok.brand || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (stok.barcode || '').toLowerCase().includes(searchTerm.toLowerCase());
 
       if (!matchSearch) return false;
+
+      if (selectedCategory && stok.category !== selectedCategory) {
+        return false;
+      }
+
+      if (selectedBrand && stok.brand !== selectedBrand) {
+        return false;
+      }
 
       switch (filterType) {
         case 'critical':
@@ -282,7 +309,7 @@ export default function StoklarView({
           return true;
       }
     });
-  }, [stoklar, searchTerm, filterType]);
+  }, [stoklar, searchTerm, filterType, selectedCategory, selectedBrand]);
 
   // General Inventory Stats
   const invStats = useMemo(() => {
@@ -315,9 +342,11 @@ export default function StoklarView({
             : 'Adet',
           purchasePrice: aiPrefilledData.purchasePrice || 0,
           salesPrice: aiPrefilledData.salesPrice || 0,
-          taxRate: aiPrefilledData.kdv !== undefined ? aiPrefilledData.kdv : 20,
+          taxRate: aiPrefilledData.kdv !== undefined ? aiPrefilledData.kdv : 0,
           quantity: aiPrefilledData.miktar || 0,
-          minQuantity: aiPrefilledData.minQuantity || 5
+          minQuantity: aiPrefilledData.minQuantity || 5,
+          category: aiPrefilledData.category || '',
+          brand: aiPrefilledData.brand || ''
         });
         setFormError('');
         setIsModalOpen(true);
@@ -361,9 +390,11 @@ export default function StoklarView({
       unit: 'Adet',
       purchasePrice: 0,
       salesPrice: 0,
-      taxRate: 20,
+      taxRate: 0,
       quantity: 0,
-      minQuantity: 5
+      minQuantity: 5,
+      category: '',
+      brand: ''
     });
     setFormError('');
     setIsModalOpen(true);
@@ -383,7 +414,9 @@ export default function StoklarView({
         salesPrice: stock.salesPrice,
         taxRate: stock.taxRate,
         quantity: stock.quantity,
-        minQuantity: stock.minQuantity
+        minQuantity: stock.minQuantity,
+        category: stock.category || '',
+        brand: stock.brand || ''
       });
       setFormError('');
       setIsModalOpen(true);
@@ -432,6 +465,8 @@ export default function StoklarView({
           taxRate: formData.taxRate,
           quantity: formData.quantity,
           minQuantity: formData.minQuantity,
+          category: formData.category,
+          brand: formData.brand,
           createdAt: editingStock.createdAt || new Date().toISOString()
         };
         await saveStock(updatedStock, editingStock.id);
@@ -447,6 +482,8 @@ export default function StoklarView({
           taxRate: formData.taxRate,
           quantity: formData.quantity,
           minQuantity: formData.minQuantity,
+          category: formData.category,
+          brand: formData.brand,
           createdAt: new Date().toISOString()
         };
         await saveStock(newStock);
@@ -516,39 +553,243 @@ export default function StoklarView({
         </button>
       </div>
 
-      {/* Inventory Mini Stats Dashboard */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-[#111111] p-4 rounded-lg border border-white/5 shadow-md flex flex-col justify-between">
-          <span className="text-[9px] font-mono tracking-widest font-bold text-white/40 uppercase block">Stok Çeşidi</span>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-light italic text-teal-400" style={{ fontFamily: 'Georgia, serif' }}>{invStats.totalItems}</span>
-            <span className="text-[10px] text-white/40 uppercase font-mono tracking-wider">Ürün</span>
+      {/* Bento-Grid Stats and Dynamic Filters */}
+      <div className="space-y-4">
+        {/* Row 1: Statistics & Quick Status Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Bento Card 1: Inventory Stats Summary */}
+          <div className="bg-[#111111] p-5 rounded-2xl border border-white/5 shadow-md flex flex-col justify-between col-span-1 md:col-span-2 min-h-[140px] relative overflow-hidden group">
+            <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-teal-500/5 rounded-full blur-2xl group-hover:bg-teal-500/10 transition-colors duration-300"></div>
+            
+            <div>
+              <span className="text-[9px] font-mono tracking-widest font-bold text-white/40 uppercase block">Stok Özeti</span>
+              <h4 className="text-white/80 font-semibold text-xs mt-1 uppercase tracking-wider">Genel Envanter Değeri</h4>
+            </div>
+            <div className="flex justify-between items-end mt-4 z-10">
+              <div>
+                <span className="text-2xl font-light italic text-teal-400" style={{ fontFamily: 'Georgia, serif' }}>
+                  {formatCurrency(invStats.totalStockValue)}
+                </span>
+                <span className="block text-[9px] text-white/40 font-mono uppercase tracking-wider mt-1">Toplam Envanter Maliyeti</span>
+              </div>
+              <div className="text-right">
+                <div className="text-sm font-semibold text-white/90 font-mono">
+                  {invStats.totalQuantity} <span className="text-[10px] text-white/40">Birim</span>
+                </div>
+                <span className="block text-[8px] text-white/40 font-mono uppercase tracking-wider mt-1">Fiziksel Stok ({invStats.totalItems} Çeşit)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bento Card 2: Kritik Stok Risk Durumu */}
+          <motion.div 
+            onClick={() => setFilterType(filterType === 'critical' ? 'all' : 'critical')}
+            whileHover={{ scale: 1.02, y: -1 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+            className={`p-5 rounded-2xl border transition duration-300 cursor-pointer flex flex-col justify-between col-span-1 min-h-[140px] relative overflow-hidden group ${
+              filterType === 'critical' 
+                ? 'bg-red-950/30 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.25)]' 
+                : 'bg-[#111111] border-white/5 hover:border-white/10 hover:bg-white/[0.02]'
+            }`}
+          >
+            <div className="flex justify-between items-start">
+              <span className="text-[9px] font-mono tracking-widest font-bold text-red-400 uppercase">Kritik Sınır</span>
+              <AlertTriangle size={14} className={`text-red-400 ${invStats.criticalItemsCount > 0 ? 'animate-pulse' : ''}`} />
+            </div>
+            <div className="mt-4">
+              <span className="text-2xl font-light italic text-red-400" style={{ fontFamily: 'Georgia, serif' }}>
+                {invStats.criticalItemsCount}
+              </span>
+              <span className="block text-[10px] text-white/40 uppercase font-mono tracking-wider mt-1">Kritik Seviyede Ürün</span>
+            </div>
+          </motion.div>
+
+          {/* Bento Card 3: Hızlı Stok Durum İzleme */}
+          <div className="bg-[#111111] p-5 rounded-2xl border border-white/5 shadow-md flex flex-col justify-between col-span-1 min-h-[140px] relative overflow-hidden">
+            <span className="text-[9px] font-mono tracking-widest font-bold text-white/40 uppercase block mb-2">Stok Durum İzleme</span>
+            
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <motion.button 
+                onClick={() => setFilterType(filterType === 'instock' ? 'all' : 'instock')}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`p-2 rounded-xl border text-left transition duration-300 cursor-pointer flex flex-col justify-between h-[65px] ${
+                  filterType === 'instock' 
+                    ? 'bg-teal-500/10 border-teal-500/30 shadow-[0_0_12px_rgba(45,212,191,0.15)]' 
+                    : 'bg-white/[0.02] border-white/5 hover:bg-white/5'
+                }`}
+              >
+                <span className="text-[8px] font-mono text-white/40 uppercase tracking-wider">Mevcut</span>
+                <span className="text-xs font-bold text-teal-400 mt-1 block">
+                  {stoklar.filter(s => s.quantity > 0).length} <span className="text-[8px] font-normal text-white/40 font-sans">Ürün</span>
+                </span>
+              </motion.button>
+
+              <motion.button 
+                onClick={() => setFilterType(filterType === 'outstock' ? 'all' : 'outstock')}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`p-2 rounded-xl border text-left transition duration-300 cursor-pointer flex flex-col justify-between h-[65px] ${
+                  filterType === 'outstock' 
+                    ? 'bg-white/10 border-white/20 shadow-[0_0_12px_rgba(255,255,255,0.08)]' 
+                    : 'bg-white/[0.02] border-white/5 hover:bg-white/5'
+                }`}
+              >
+                <span className="text-[8px] font-mono text-white/40 uppercase tracking-wider">Tükendi</span>
+                <span className="text-xs font-bold text-white mt-1 block">
+                  {stoklar.filter(s => s.quantity <= 0).length} <span className="text-[8px] font-normal text-white/40 font-sans">Ürün</span>
+                </span>
+              </motion.button>
+            </div>
           </div>
         </div>
 
-        <div className="bg-[#111111] p-4 rounded-lg border border-white/5 shadow-md flex flex-col justify-between">
-          <span className="text-[9px] font-mono tracking-widest font-bold text-white/40 uppercase block">Toplam Miktar</span>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-light italic text-white/95" style={{ fontFamily: 'Georgia, serif' }}>{invStats.totalQuantity}</span>
-            <span className="text-[10px] text-white/40 uppercase font-mono tracking-wider">Birim</span>
+        {/* Row 2: Interactive Tag Filters (Categories & Brands) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Bento Card 4: Hızlı Kategori Filtresi */}
+          <div className="bg-[#111111] p-5 rounded-2xl border border-white/5 shadow-md flex flex-col justify-between relative overflow-hidden">
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-[9px] font-mono tracking-widest font-bold text-teal-400 uppercase">KATEGORİLER</span>
+                {selectedCategory && (
+                  <button 
+                    onClick={() => setSelectedCategory('')}
+                    className="text-[9px] text-red-400 hover:text-red-300 font-bold uppercase tracking-wider underline cursor-pointer"
+                  >
+                    Temizle
+                  </button>
+                )}
+              </div>
+              
+              <div className="flex flex-wrap gap-2 pr-1">
+                {categories.length === 0 ? (
+                  <div className="text-[10px] text-white/30 uppercase tracking-wider font-mono py-2">
+                    Henüz kategori eklenmedi.
+                  </div>
+                ) : (
+                  categories.map(cat => {
+                    const count = stoklar.filter(s => s.category === cat).length;
+                    const isSelected = selectedCategory === cat;
+                    return (
+                      <motion.button
+                        key={cat}
+                        onClick={() => setSelectedCategory(isSelected ? '' : cat)}
+                        whileHover={{ scale: 1.03, y: -1 }}
+                        whileTap={{ scale: 0.97 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-medium flex items-center gap-2 transition duration-300 cursor-pointer border ${
+                          isSelected 
+                            ? 'bg-teal-500 text-black font-semibold shadow-[0_0_15px_rgba(45,212,191,0.6)] border-teal-400 ring-1 ring-teal-400/30' 
+                            : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-white/5 hover:border-white/10'
+                        }`}
+                      >
+                        <span className="uppercase">{cat}</span>
+                        <span className={`text-[8px] font-mono px-1 py-0.5 rounded-full transition-colors duration-300 ${isSelected ? 'bg-black/20 text-black font-bold' : 'bg-white/10 text-white/60'}`}>{count}</span>
+                      </motion.button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+            
+            <div className="text-[9px] text-white/30 font-mono uppercase tracking-wider pt-2 border-t border-white/5 mt-4">
+              {selectedCategory ? `Filtre: ${selectedCategory.toUpperCase()}` : 'Kategori Seçin'}
+            </div>
           </div>
-        </div>
 
-        <div className="bg-[#111111] p-4 rounded-lg border border-white/5 shadow-md flex flex-col justify-between">
-          <span className="text-[9px] font-mono tracking-widest font-bold text-white/40 uppercase block">Kritik Limit</span>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className={`text-2xl font-light italic ${invStats.criticalItemsCount > 0 ? 'text-red-400' : 'text-teal-400'}`} style={{ fontFamily: 'Georgia, serif' }}>{invStats.criticalItemsCount}</span>
-            <span className="text-[10px] text-white/40 uppercase font-mono tracking-wider">Ürün</span>
-          </div>
-        </div>
-
-        <div className="bg-[#111111] p-4 rounded-lg border border-white/5 shadow-md flex flex-col justify-between">
-          <span className="text-[9px] font-mono tracking-widest font-bold text-white/40 uppercase block">Stok Değeri</span>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-xl font-light italic text-teal-400" style={{ fontFamily: 'Georgia, serif' }}>{formatCurrency(invStats.totalStockValue)}</span>
+          {/* Bento Card 5: Hızlı Marka Filtresi */}
+          <div className="bg-[#111111] p-5 rounded-2xl border border-white/5 shadow-md flex flex-col justify-between relative overflow-hidden">
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-[9px] font-mono tracking-widest font-bold text-purple-400 uppercase">MARKALAR</span>
+                {selectedBrand && (
+                  <button 
+                    onClick={() => setSelectedBrand('')}
+                    className="text-[9px] text-red-400 hover:text-red-300 font-bold uppercase tracking-wider underline cursor-pointer"
+                  >
+                    Temizle
+                  </button>
+                )}
+              </div>
+              
+              <div className="flex flex-wrap gap-2 pr-1">
+                {brands.length === 0 ? (
+                  <div className="text-[10px] text-white/30 uppercase tracking-wider font-mono py-2">
+                    Henüz marka eklenmedi.
+                  </div>
+                ) : (
+                  brands.map(brnd => {
+                    const count = stoklar.filter(s => s.brand === brnd).length;
+                    const isSelected = selectedBrand === brnd;
+                    return (
+                      <motion.button
+                        key={brnd}
+                        onClick={() => setSelectedBrand(isSelected ? '' : brnd)}
+                        whileHover={{ scale: 1.03, y: -1 }}
+                        whileTap={{ scale: 0.97 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-medium flex items-center gap-2 transition duration-300 cursor-pointer border ${
+                          isSelected 
+                            ? 'bg-purple-500 text-white font-semibold shadow-[0_0_15px_rgba(168,85,247,0.6)] border-purple-400 ring-1 ring-purple-400/30' 
+                            : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-white/5 hover:border-white/10'
+                        }`}
+                      >
+                        <span className="uppercase">{brnd}</span>
+                        <span className={`text-[8px] font-mono px-1 py-0.5 rounded-full transition-colors duration-300 ${isSelected ? 'bg-black/20 text-white font-bold' : 'bg-white/10 text-white/60'}`}>{count}</span>
+                      </motion.button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+            
+            <div className="text-[9px] text-white/30 font-mono uppercase tracking-wider pt-2 border-t border-white/5 mt-4">
+              {selectedBrand ? `Filtre: ${selectedBrand.toUpperCase()}` : 'Marka Seçin'}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Active Category & Brand Filters Indicators */}
+      {(selectedCategory || selectedBrand) && (
+        <div className="flex flex-wrap items-center gap-2 bg-[#111111] p-3 rounded-xl border border-white/5 animate-fade-in">
+          <span className="text-[10px] font-mono font-bold tracking-wider text-white/30 uppercase">Aktif Filtreler:</span>
+          {selectedCategory && (
+            <span className="bg-teal-500/10 text-teal-400 border border-teal-500/20 px-2.5 py-1 rounded-lg text-xs font-medium uppercase flex items-center gap-1.5">
+              <span>Kategori: {selectedCategory}</span>
+              <button 
+                onClick={() => setSelectedCategory('')}
+                className="hover:bg-white/10 p-0.5 rounded transition cursor-pointer"
+                title="Kategori Filtresini Kaldır"
+              >
+                <X size={12} />
+              </button>
+            </span>
+          )}
+          {selectedBrand && (
+            <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2.5 py-1 rounded-lg text-xs font-medium uppercase flex items-center gap-1.5">
+              <span>Marka: {selectedBrand}</span>
+              <button 
+                onClick={() => setSelectedBrand('')}
+                className="hover:bg-white/10 p-0.5 rounded transition cursor-pointer"
+                title="Marka Filtresini Kaldır"
+              >
+                <X size={12} />
+              </button>
+            </span>
+          )}
+          <button
+            onClick={() => {
+              setSelectedCategory('');
+              setSelectedBrand('');
+            }}
+            className="text-[10px] uppercase font-bold text-red-400 hover:text-red-300 ml-auto tracking-wider font-mono hover:underline cursor-pointer"
+          >
+            Tümünü Temizle
+          </button>
+        </div>
+      )}
 
       {/* Filters and Search Bar */}
       <div className="bg-[#111111] p-4 rounded-lg border border-white/5 shadow-md flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
@@ -682,10 +923,20 @@ export default function StoklarView({
                               >
                                 {stok.name}
                               </div>
-                              <div className="text-[10px] text-white/40 mt-1 font-mono tracking-wider flex items-center gap-2">
+                              <div className="text-[10px] text-white/40 mt-1 font-mono tracking-wider flex flex-wrap items-center gap-2">
                                 <span>{stok.code}</span>
                                 {stok.barcode && (
                                   <span className="text-teal-400/70">| Barkod: {stok.barcode}</span>
+                                )}
+                                {stok.category && (
+                                  <span className="bg-teal-500/10 text-teal-400 border border-teal-500/20 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider font-semibold font-sans">
+                                    {stok.category}
+                                  </span>
+                                )}
+                                {stok.brand && (
+                                  <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider font-semibold font-sans">
+                                    {stok.brand}
+                                  </span>
                                 )}
                               </div>
                             </div>
@@ -793,6 +1044,16 @@ export default function StoklarView({
                               <span>{stok.code}</span>
                               {stok.barcode && (
                                 <span className="text-teal-400/70">| Barkod: {stok.barcode}</span>
+                              )}
+                              {stok.category && (
+                                <span className="bg-teal-500/10 text-teal-400 border border-teal-500/20 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider font-semibold font-sans">
+                                  {stok.category}
+                                </span>
+                              )}
+                              {stok.brand && (
+                                <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider font-semibold font-sans">
+                                  {stok.brand}
+                                </span>
                               )}
                             </div>
                           </div>
@@ -979,6 +1240,38 @@ export default function StoklarView({
                 </div>
 
                 <div>
+                  <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">Kategori</label>
+                  <input 
+                    id="form-stock-category"
+                    type="text"
+                    placeholder="Örn: Mobilya, Kırtasiye..."
+                    value={formData.category}
+                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded text-xs focus:outline-hidden focus:border-teal-500"
+                    list="category-suggestions"
+                  />
+                  <datalist id="category-suggestions">
+                    {categories.map(cat => <option key={cat} value={cat} />)}
+                  </datalist>
+                </div>
+
+                <div>
+                  <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">Marka / Üretici</label>
+                  <input 
+                    id="form-stock-brand"
+                    type="text"
+                    placeholder="Örn: Storm, Samsung..."
+                    value={formData.brand}
+                    onChange={(e) => setFormData({...formData, brand: e.target.value})}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded text-xs focus:outline-hidden focus:border-teal-500"
+                    list="brand-suggestions"
+                  />
+                  <datalist id="brand-suggestions">
+                    {brands.map(brnd => <option key={brnd} value={brnd} />)}
+                  </datalist>
+                </div>
+
+                <div>
                   <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">Birim</label>
                   <select 
                     id="form-stock-unit"
@@ -996,13 +1289,12 @@ export default function StoklarView({
                 </div>
 
                 <div>
-                  <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">Alış Fiyatı (KDV Hariç) *</label>
+                  <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">Alış Fiyatı (KDV Hariç)</label>
                   <div className="relative">
                     <input 
                       id="form-stock-purchase-price"
                       type="number"
                       step="0.01"
-                      required
                       placeholder="0.00"
                       value={formData.purchasePrice || ''}
                       onChange={(e) => setFormData({...formData, purchasePrice: parseFloat(e.target.value) || 0})}
@@ -1013,13 +1305,12 @@ export default function StoklarView({
                 </div>
 
                 <div>
-                  <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">Satış Fiyatı (KDV Hariç) *</label>
+                  <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">Satış Fiyatı (KDV Hariç)</label>
                   <div className="relative">
                     <input 
                       id="form-stock-sales-price"
                       type="number"
                       step="0.01"
-                      required
                       placeholder="0.00"
                       value={formData.salesPrice || ''}
                       onChange={(e) => setFormData({...formData, salesPrice: parseFloat(e.target.value) || 0})}
@@ -2012,6 +2303,20 @@ export default function StoklarView({
                 <h3 className="text-base font-extrabold tracking-tight text-white leading-tight">
                   {selectedStockForDetails.name}
                 </h3>
+                {(selectedStockForDetails.category || selectedStockForDetails.brand) && (
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    {selectedStockForDetails.category && (
+                      <span className="bg-teal-500/10 text-teal-400 border border-teal-500/20 px-2 py-0.5 rounded text-[8px] uppercase tracking-wider font-semibold font-sans">
+                        Kategori: {selectedStockForDetails.category}
+                      </span>
+                    )}
+                    {selectedStockForDetails.brand && (
+                      <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] uppercase tracking-wider font-semibold font-sans">
+                        Marka: {selectedStockForDetails.brand}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <button
                 type="button"

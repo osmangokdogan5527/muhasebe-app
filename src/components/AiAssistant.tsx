@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Loader2, Sparkles, AlertCircle, Settings, Bot, Mic } from 'lucide-react';
 
-const SpeechRecognition = typeof window !== 'undefined' ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) : null;
-
 interface AiAssistantProps {
   apiKey: string;
   onNavigateToSettings: () => void;
@@ -38,7 +36,9 @@ export default function AiAssistant({ apiKey, onNavigateToSettings, onCommandPar
   const [isListening, setIsListening] = useState(false);
   const [listeningError, setListeningError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<any>(null);
 
   // Clear listening error automatically after 12 seconds
   useEffect(() => {
@@ -50,87 +50,248 @@ export default function AiAssistant({ apiKey, onNavigateToSettings, onCommandPar
     }
   }, [listeningError]);
 
-  const startListening = () => {
+  // Clean up recording on unmount or close
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
+
+  const startListening = async () => {
     setListeningError(null);
-    if (!SpeechRecognition) {
-      setListeningError("Ses tanıma desteklenmiyor.");
+    audioChunksRef.current = [];
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setListeningError("Cihazınızda mikrofon erişimi desteklenmiyor.");
       return;
     }
 
     try {
-      const rec = new SpeechRecognition();
-      rec.continuous = true;
-      rec.interimResults = false;
-      rec.lang = 'tr-TR';
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      let options = { mimeType: 'audio/webm' };
+      if (!MediaRecorder.isTypeSupported('audio/webm')) {
+        options = { mimeType: 'audio/mp4' };
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, options);
+      mediaRecorderRef.current = mediaRecorder;
 
-      rec.onstart = () => {
-        setIsListening(true);
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
       };
 
-      rec.onresult = (event: any) => {
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const text = event.results[i][0].transcript;
-          if (text) {
-            finalTranscript += (finalTranscript ? ' ' : '') + text.trim();
+      mediaRecorder.onstop = async () => {
+        // Stop all tracks to release the microphone immediately
+        stream.getTracks().forEach(track => track.stop());
+
+        if (audioChunksRef.current.length === 0) {
+          setListeningError("Ses kaydedilemedi.");
+          return;
+        }
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: options.mimeType });
+        
+        // Convert to Base64
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+          try {
+            const base64Data = (reader.result as string).split(',')[1];
+            await handleAudioInput(base64Data, options.mimeType);
+          } catch (err) {
+            console.error("Audio processing error:", err);
+            setListeningError("Ses işlenirken bir hata oluştu.");
           }
-        }
-        if (finalTranscript) {
-          setInput(prev => prev + (prev ? ' ' : '') + finalTranscript);
-        }
+        };
       };
 
-      rec.onerror = (event: any) => {
-        if (event.error !== 'no-speech' && event.error !== 'not-allowed') {
-          console.error("Speech recognition error:", event.error);
-        } else {
-          console.warn("Speech recognition info:", event.error);
+      mediaRecorder.start();
+      setIsListening(true);
+
+      // Max 30 seconds limit to avoid infinite recording
+      if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
+      recordingTimerRef.current = setTimeout(() => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          stopListening();
         }
-        setIsListening(false);
+      }, 30000);
 
-        const isIframe = typeof window !== 'undefined' && window.self !== window.top;
-
-        if (event.error === 'not-allowed') {
-          if (isIframe) {
-            setListeningError("Mikrofon izni alınamadı. Önizleme ekranında (Iframe) olduğunuz için tarayıcı güvenlik politikaları ses tanımayı engelliyor olabilir. Tam performans için lütfen sağ üstteki butonla uygulamayı 'Yeni Sekmede Aç'arak deneyin.");
-          } else {
-            setListeningError("Mikrofon izni verilmedi. Lütfen tarayıcınızın adres çubuğundaki kilit simgesine tıklayarak mikrofon erişimine izin verin.");
-          }
-        } else if (event.error === 'no-speech') {
-          // No-speech is a normal timeout event when user doesn't say anything.
-          // Handle it silently to prevent disruptive warnings or validation alerts.
-        } else if (event.error === 'network') {
-          if (isIframe) {
-            setListeningError("Ses tanıma sunucu bağlantısı kurulamadı. Önizleme ekranı yerine lütfen uygulamayı sağ üstteki 'Yeni Sekmede Aç' butonuyla açıp orada deneyin.");
-          } else {
-            setListeningError("Ses tanıma için Google API bağlantısı kurulamadı. Lütfen internet bağlantınızı kontrol edin veya yazarak iletişim kurun.");
-          }
-        } else if (event.error === 'audio-capture') {
-          setListeningError("Ses kaydedilemedi. Mikrofon donanımınızı veya bağlantı kablolarınızı kontrol edin.");
-        } else if (event.error === 'aborted') {
-          setListeningError("Sesli asistan işlemi iptal edildi.");
-        } else {
-          setListeningError(`Ses tanıma hatası (${event.error}). Lütfen uygulamayı yeni sekmede açarak mikrofon izniyle deneyin.`);
-        }
-      };
-
-      rec.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = rec;
-      rec.start();
-    } catch (error) {
-      console.error("Failed to start speech recognition:", error);
+    } catch (err: any) {
+      console.error("Microphone access error:", err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setListeningError("Mikrofon izni verilmedi. Lütfen sistem ayarlarından veya tarayıcınızdan mikrofon erişimine izin verin.");
+      } else {
+        setListeningError("Mikrofon bağlantısı kurulamadı. Lütfen mikrofonunuzu kontrol edin.");
+      }
       setIsListening(false);
     }
   };
 
   const stopListening = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
+    if (recordingTimerRef.current) {
+      clearTimeout(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
     }
     setIsListening(false);
+  };
+
+  const handleAudioInput = async (base64Audio: string, mimeType: string) => {
+    if (!apiKey) return;
+
+    const tempUserMessageId = Date.now().toString();
+    setMessages(prev => [...prev, { 
+      id: tempUserMessageId, 
+      role: 'user', 
+      text: '🎤 [Sesli komut çözümleniyor...]' 
+    }]);
+    setIsTyping(true);
+
+    try {
+      const today = new Date().toLocaleDateString('tr-TR');
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          system_instruction: {
+            parts: [{ text: `Sen Storm Muhasebe asistanısın. Kullanıcının ses kaydını analiz et. Bugünün tarihi: ${today}.
+Öncelikle ses kaydındaki konuşmayı birebir veya en yakın anlamıyla Türkçe olarak yazıya dök (transcribe et) ve JSON sonucundaki "transcription" alanına yaz.
+
+Eğer girdi bir finansal işlem (satış, alış, tahsilat, ödeme, masraf, personel maaş/avans ödemesi) içeriyorsa, SADECE şu JSON formatını döndür: 
+{ "tip": "islem", "islem": "satis|alis|tahsilat|odeme|masraf|personel", "cariAdi": "string", "urunAdi": "string", "miktar": number, "fiyat": number, "kdv": number, "tarih": "YYYY-MM-DD", "transcription": "ses kaydının metin hali" }
+KDV belirtilmemişse her zaman 0 yap. Personel ödemelerinde "cariAdi" veya "urunAdi" alanına personelin adını yaz. Masraflarda (ör: su faturası, elektrik) faturanın cinsini "urunAdi" kısmına yaz. Eğer tarih belirtilmemişse veya 'bugün' denilmişse bugünün tarihini ver. Eğer belirsiz bir şey varsa mantıksal tahmin yürüt.
+
+Eğer girdi bir MÜŞTERİ EKLEME/TANIMLAMA isteği ise (ör: "Mehmet Demir adında müşteri ekle, tel: 0555...", "Yeni müşteri tanımla: Can A.Ş.", vb.), SADECE şu JSON formatını döndür:
+{ "tip": "islem", "islem": "add_customer", "cariAdi": "Müşteri Adı/Ünvanı", "phone": "Telefon", "email": "E-posta", "address": "Adres", "bakiye": bakiye_varsa_sayi_değilse_0, "currency": "TRY|USD|EUR", "transcription": "ses kaydının metin hali" }
+
+Eğer girdi bir TEDARİKÇİ EKLEME/TANIMLAMA isteği ise (ör: "XYZ Toptan adında tedarikçi ekle", "Yeni tedarikçi tanımla: ABC Gıda, borç bakiye: -3000 TL", vb.), SADECE şu JSON formatını döndür:
+{ "tip": "islem", "islem": "add_supplier", "cariAdi": "Tedarikçi Adı/Ünvanı", "phone": "Telefon", "email": "E-posta", "address": "Adres", "bakiye": bakiye_varsa_sayi_değilse_0, "currency": "TRY|USD|EUR", "transcription": "ses kaydının metin hali" }
+
+Eğer girdi bir ÜRÜN / STOK KARTI EKLEME/TANIMLAMA isteği ise (ör: "Kablosuz Mouse ekle, alış 150 TL, satış 250 TL, stok 100 adet, KDV 20%", "Yeni ürün tanımla: Klavye", vb.), SADECE şu JSON formatını döndür:
+{ "tip": "islem", "islem": "add_product", "urunAdi": "Ürün Adı", "code": "Stok Kodu (ör: STK-001 gibi, belirtilmemişse boş bırak)", "barcode": "Barkod (varsa)", "unit": "Adet|KG|Litre|Metre|Kutu|Hizmet (belirtilmemişse Adet)", "purchasePrice": number, "salesPrice": number, "kdv": number (ör: 20 veya 10, belirtilmemişse 20), "miktar": miktar_sayi_değilse_0, "minQuantity": number (kritik limit, belirtilmemişse 5), "transcription": "ses kaydının metin hali" }
+
+Eğer kullanıcı sadece bir soru soruyorsa, bilgi istiyorsa veya uygulamanın nasıl kullanılacağı hakkında (örneğin: sistem verileri nasıl sıfırlanır, fatura nasıl kesilir, vb.) bir şey diyorsa, SADECE şu JSON formatını döndür:
+{ "tip": "bilgi", "mesaj": "Kullanıcıya verilecek açıklayıcı, profesyonel, yönlendirici veya bilgilendirici cevap metni.", "transcription": "ses kaydının metin hali" }
+
+Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kullanma.` }]
+          },
+          contents: [{
+            parts: [
+              {
+                inlineData: {
+                  mimeType: mimeType,
+                  data: base64Audio
+                }
+              },
+              {
+                text: "Bu ses kaydını dinle, deşifre et ve analiz et."
+              }
+            ]
+          }],
+          generationConfig: {
+            temperature: 0.1,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('API isteği başarısız oldu.');
+      }
+
+      const data = await response.json();
+      const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+      try {
+        let jsonStr = responseText.trim();
+        if (jsonStr.startsWith('```json')) jsonStr = jsonStr.replace(/^```json/, '');
+        if (jsonStr.startsWith('```')) jsonStr = jsonStr.replace(/^```/, '');
+        if (jsonStr.endsWith('```')) jsonStr = jsonStr.replace(/```$/, '');
+        jsonStr = jsonStr.trim();
+        
+        const parsedCommand = JSON.parse(jsonStr);
+
+        // Update the user message to show the real transcription
+        if (parsedCommand.transcription) {
+          setMessages(prev => prev.map(m => m.id === tempUserMessageId ? { 
+            ...m, 
+            text: `🎤 Söylediğiniz: "${parsedCommand.transcription}"` 
+          } : m));
+        } else {
+          setMessages(prev => prev.map(m => m.id === tempUserMessageId ? { 
+            ...m, 
+            text: `🎤 [Ses çözümlendi]` 
+          } : m));
+        }
+        
+        if (parsedCommand.tip === 'bilgi') {
+          setMessages(prev => [...prev, { 
+            id: Date.now().toString(), 
+            role: 'assistant', 
+            text: parsedCommand.mesaj 
+          }]);
+          setIsTyping(false);
+          return;
+        }
+
+        // Map Turkish operation names to our internal ones if necessary
+        if (parsedCommand.islem === 'satis') parsedCommand.islem = 'sale';
+        else if (parsedCommand.islem === 'alis') parsedCommand.islem = 'purchase';
+        else if (parsedCommand.islem === 'tahsilat') parsedCommand.islem = 'collection';
+        else if (parsedCommand.islem === 'odeme') parsedCommand.islem = 'payment';
+        else if (parsedCommand.islem === 'masraf') parsedCommand.islem = 'expense';
+        else if (parsedCommand.islem === 'personel') parsedCommand.islem = 'employee_payment';
+        else if (parsedCommand.islem === 'musteri_ekle') parsedCommand.islem = 'add_customer';
+        else if (parsedCommand.islem === 'tedarikci_ekle') parsedCommand.islem = 'add_supplier';
+        else if (parsedCommand.islem === 'urun_ekle') parsedCommand.islem = 'add_product';
+
+        setMessages(prev => [...prev, { 
+          id: Date.now().toString(), 
+          role: 'assistant', 
+          text: `İşlemi anladım. Yönlendiriyorum ve formu sizin için dolduruyorum...` 
+        }]);
+
+        setTimeout(() => {
+          onCommandParsed(parsedCommand);
+          setIsOpen(false);
+        }, 1500);
+
+      } catch (parseError) {
+        setMessages(prev => prev.map(m => m.id === tempUserMessageId ? { 
+          ...m, 
+          text: `🎤 Ses kaydı alındı ancak anlaşılamadı. Lütfen tekrar daha net konuşun.` 
+        } : m));
+      }
+
+    } catch (error: any) {
+      console.error("Audio AI Error:", error);
+      let errorMsg = "Sistemle iletişim kurulurken bir hata oluştu. Lütfen internet bağlantınızı ve API anahtarınızı kontrol edin.";
+      if (error.status === 429) errorMsg = "API limitlerine ulaşıldı. Lütfen daha sonra tekrar deneyin.";
+      
+      setMessages(prev => prev.map(m => m.id === tempUserMessageId ? { 
+        ...m, 
+        text: `🎤 [Ses analiz hatası]` 
+      } : m));
+
+      setMessages(prev => [...prev, { 
+        id: Date.now().toString(), 
+        role: 'assistant', 
+        text: errorMsg,
+        isError: true
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   useEffect(() => {
@@ -406,20 +567,18 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
                     }`}
                     disabled={isTyping}
                   />
-                  {SpeechRecognition && (
-                    <button
-                      type="button"
-                      onClick={isListening ? stopListening : startListening}
-                      className={`absolute right-2.5 p-1.5 rounded-lg transition-all ${
-                        isListening 
-                          ? 'text-red-500 hover:bg-red-100 bg-red-50 animate-pulse' 
-                          : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
-                      }`}
-                      title={isListening ? "Dinlemeyi Durdur" : "Sesle Yazdır"}
-                    >
-                      <Mic size={16} className={isListening ? "animate-bounce text-red-600" : ""} />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={isListening ? stopListening : startListening}
+                    className={`absolute right-2.5 p-1.5 rounded-lg transition-all ${
+                      isListening 
+                        ? 'text-red-500 hover:bg-red-100 bg-red-50 animate-pulse' 
+                        : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                    }`}
+                    title={isListening ? "Dinlemeyi Durdur" : "Sesle Konuş"}
+                  >
+                    <Mic size={16} className={isListening ? "animate-bounce text-red-600" : ""} />
+                  </button>
                 </div>
                 <button
                   type="submit"

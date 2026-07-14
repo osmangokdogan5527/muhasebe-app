@@ -239,17 +239,16 @@ const StormLogo = ({
   );
 };
 
-const APP_VERSION = '1.6.5';
+const APP_VERSION = '1.6.6-draft';
 
 const CHANGELOG = {
-  version: '1.6.5',
+  version: '1.6.6-draft',
   features: [
-    "Detaylı Cari Ekstre Geliştirmesi: Cari Kart listesinde isimler tıklanabilir hale getirildi ve 'Detaylı Ekstre' butonları isimlerin altına konumlandırıldı.",
-    "Müşteri Notları Bölümü: Cari hesap ekstresi penceresinin sağ tarafına, her müşteriye/tedarikçiye özel notlar alabileceğiniz ve anlık olarak kaydedebileceğiniz entegre bir 'Müşteri Notları' paneli eklendi.",
-    "Ekstre İçi Hızlı Alış, Tahsilat ve Ödeme Girişi: Ekstre incelenirken pencereyi kapatmadan doğrudan alış, tahsilat ve ödeme işlemlerini kaydedebileceğiniz akıllı bir hızlı işlem formu entegre edildi."
+    "Esnek Stok Kartı Girişi: Stok kartı eklerken Alış Fiyatı ve Satış Fiyatı alanlarının zorunlu olması kaldırıldı; böylece fiyat belirtmeden de hızlıca stok kartı kaydedebilirsiniz.",
+    "Varsayılan KDV Oranı Güncellemesi: Yeni stok kartı oluştururken varsayılan KDV oranı artık %0 (KDV Muaf) olarak başlar."
   ],
   fixes: [
-    "Hızlı işlem yapıldığında cari hesap bakiyesinin ve ekstre hareketlerinin anında güncellenmesi sağlandı."
+    "Storm AI Sesli İletişim Hatası Giderildi: Masaüstü (Electron) uygulamasında Chromium kısıtlamaları nedeniyle 'Google API bağlantı hatası' veren eski ses tanıma sistemi yerine, çok daha kararlı ve yüksek doğruluklu çalışan yenilikçi 'MediaRecorder + Gemini Multimodal Ses Analizi' altyapısına geçildi. Bu sayede sesli komutlar artık masaüstünde kusursuz çalışmaktadır."
   ]
 };
 
@@ -336,7 +335,7 @@ export const COLOR_PRESETS = [
   },
   {
     id: 'red',
-    name: 'Storm Kırmızı',
+    name: 'Kırmızı',
     preview: '#b91c1c',
     colors: {
       '--accent-50': '#fef2f2',
@@ -387,6 +386,96 @@ export const COLOR_PRESETS = [
       '--accent-900': '#18181b',
       '--accent-950': '#09090b',
     }
+  },
+  {
+    id: 'purple',
+    name: 'Mor',
+    preview: '#8b5cf6',
+    colors: {
+      '--accent-50': '#f5f3ff',
+      '--accent-100': '#ede9fe',
+      '--accent-200': '#ddd6fe',
+      '--accent-300': '#c4b5fd',
+      '--accent-400': '#a78bfa',
+      '--accent-500': '#8b5cf6',
+      '--accent-600': '#7c3aed',
+      '--accent-700': '#6d28d9',
+      '--accent-800': '#5b21b6',
+      '--accent-900': '#4c1d95',
+      '--accent-950': '#2e1065',
+    }
+  },
+  {
+    id: 'orange',
+    name: 'Turuncu',
+    preview: '#f97316',
+    colors: {
+      '--accent-50': '#fff7ed',
+      '--accent-100': '#ffedd5',
+      '--accent-200': '#fed7aa',
+      '--accent-300': '#fdba74',
+      '--accent-400': '#fb923c',
+      '--accent-500': '#f97316',
+      '--accent-600': '#ea580c',
+      '--accent-700': '#c2410c',
+      '--accent-800': '#9a3412',
+      '--accent-900': '#7c2d12',
+      '--accent-950': '#431407',
+    }
+  },
+  {
+    id: 'rose',
+    name: 'Gül Rengi',
+    preview: '#f43f5e',
+    colors: {
+      '--accent-50': '#fff1f2',
+      '--accent-100': '#ffe4e6',
+      '--accent-200': '#fecdd3',
+      '--accent-300': '#fda4af',
+      '--accent-400': '#fb7185',
+      '--accent-500': '#f43f5e',
+      '--accent-600': '#e11d48',
+      '--accent-700': '#be123c',
+      '--accent-800': '#9f1239',
+      '--accent-900': '#881337',
+      '--accent-950': '#4c0519',
+    }
+  },
+  {
+    id: 'indigo',
+    name: 'İndigo',
+    preview: '#6366f1',
+    colors: {
+      '--accent-50': '#eef2ff',
+      '--accent-100': '#e0e7ff',
+      '--accent-200': '#c7d2fe',
+      '--accent-300': '#a5b4fc',
+      '--accent-400': '#818cf8',
+      '--accent-500': '#6366f1',
+      '--accent-600': '#4f46e5',
+      '--accent-700': '#4338ca',
+      '--accent-800': '#3730a3',
+      '--accent-900': '#312e81',
+      '--accent-950': '#1e1b4b',
+    }
+  },
+  {
+    id: 'pink',
+    name: 'Pembe',
+    preview: '#ec4899',
+    colors: {
+      '--accent-50': '#fdf2f8',
+      '--accent-100': '#fce7f3',
+      '--accent-200': '#fbcfe8',
+      '--accent-300': '#f9a8d4',
+      '--accent-400': '#f472b6',
+      '--accent-500': '#ec4899',
+      '--accent-600': '#db2777',
+      '--accent-700': '#be185d',
+      '--accent-800': '#9d174d',
+      '--accent-900': '#831843',
+      '--accent-950': '#500724',
+    }
   }
 ];
 
@@ -429,7 +518,7 @@ export const SIDEBAR_BG_PRESETS = [
   { id: 'vibrant-blue', name: 'Okyanus Mavisi (Mavi)', value: '#0284c7', border: 'rgba(255,255,255,0.15)' },
   { id: 'vibrant-amber', name: 'Altın Kehribar (Kehribar)', value: '#d97706', border: 'rgba(255,255,255,0.15)' },
   { id: 'forest-teal', name: 'Zümrüt Yeşili (Turkuaz)', value: '#0d9488', border: 'rgba(255,255,255,0.15)' },
-  { id: 'storm-red', name: 'Storm Kırmızı', value: '#b91c1c', border: 'rgba(255,255,255,0.15)' }
+  { id: 'storm-red', name: 'Kırmızı', value: '#b91c1c', border: 'rgba(255,255,255,0.15)' }
 ];
 
 export const SIDEBAR_PATTERNS = [
@@ -449,6 +538,15 @@ export const PIN_ACCOUNTS = [
 ];
 
 const changelogData = [
+  {
+    version: "1.6.6-draft",
+    date: "13.07.2026 (Taslak)",
+    changes: [
+      "Esnek Stok Kartı Girişi: Stok kartı eklerken Alış Fiyatı ve Satış Fiyatı alanlarının zorunlu olması kaldırıldı; böylece fiyat belirtmeden de hızlıca stok kartı kaydedebilirsiniz.",
+      "Varsayılan KDV Oranı Güncellemesi: Yeni stok kartı oluştururken varsayılan KDV oranı artık %0 (KDV Muaf) olarak başlar.",
+      "Storm AI Sesli İletişim Hatası Giderildi: Masaüstü (Electron) uygulamasında Chromium kısıtlamaları nedeniyle 'Google API bağlantı hatası' veren eski ses tanıma sistemi yerine, çok daha kararlı ve yüksek doğruluklu çalışan yenilikçi 'MediaRecorder + Gemini Multimodal Ses Analizi' altyapısına geçildi. Bu sayede sesli komutlar artık masaüstünde kusursuz çalışmaktadır."
+    ]
+  },
   {
     version: "1.6.5",
     date: "13.07.2026",

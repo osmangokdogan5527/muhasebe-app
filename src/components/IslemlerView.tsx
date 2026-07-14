@@ -1580,7 +1580,7 @@ export default function IslemlerView({
                               </option>
                               {stoklar.map(stok => (
                                 <option key={stok.id} value={stok.id}>
-                                  {stok.name} (Mevcut: {stok.quantity} {stok.unit})
+                                  {stok.name} {stok.brand ? `[${stok.brand}]` : ''} {stok.category ? `(${stok.category})` : ''} (Mevcut: {stok.quantity} {stok.unit})
                                 </option>
                               ))}
                             </select>
@@ -2634,6 +2634,34 @@ export default function IslemlerView({
                           </div>
                         ) : (() => {
                           const style = activeTemplate?.designStyle || 'minimal';
+
+                          const printedBankDetails = activeTemplate?.showBankDetails && (
+                            <div className="mt-4 border border-zinc-200 bg-zinc-50/50 rounded-lg p-2.5 text-left font-mono text-[8px] text-zinc-600">
+                              <span className="font-extrabold text-[9px] text-zinc-800 tracking-wider block mb-1 uppercase font-sans">
+                                {activeTemplate.bankDetailsTitle || 'BANKA HESAP BİLGİLERİ'}
+                              </span>
+                              <div className="whitespace-pre-line leading-relaxed font-mono">
+                                {activeTemplate.bankDetailsContent}
+                              </div>
+                            </div>
+                          );
+
+                          const printedSignatureArea = activeTemplate?.showSignatureArea !== false && (
+                            <div className="grid grid-cols-2 gap-4 text-center mt-6 pt-4 border-t border-dashed border-zinc-200">
+                              <div>
+                                <span className="text-[8px] font-bold text-zinc-400 tracking-widest uppercase block mb-8 font-sans">
+                                  {activeTemplate?.deliveryDelivererLabel || 'TESLİM EDEN (İMZA)'}
+                                </span>
+                                <div className="border-t border-dashed border-zinc-200 w-28 mx-auto"></div>
+                              </div>
+                              <div>
+                                <span className="text-[8px] font-bold text-zinc-400 tracking-widest uppercase block mb-8 font-sans">
+                                  {activeTemplate?.deliveryReceiverLabel || 'TESLİM ALAN (İMZA)'}
+                                </span>
+                                <div className="border-t border-dashed border-zinc-200 w-28 mx-auto"></div>
+                              </div>
+                            </div>
+                          );
                           
                           if (style === 'corporate') {
                             return (
@@ -2734,7 +2762,19 @@ export default function IslemlerView({
                                               {String(idx + 1).padStart(2, '0')}
                                             </td>
                                             <td className="py-2.5 px-3">
-                                              <span className="font-bold text-zinc-900 block uppercase text-[10px]">{item.stockName}</span>
+                                              <div className="flex items-center gap-2">
+                                                {activeTemplate?.showProductImage && (() => {
+                                                  const matchedStock = stoklar?.find(s => s.id === item.stockId);
+                                                  return matchedStock?.imageUrl ? (
+                                                    <img src={matchedStock.imageUrl} alt={item.stockName} className="w-5 h-5 object-cover rounded shrink-0 border border-zinc-200" referrerPolicy="no-referrer" />
+                                                  ) : (
+                                                    <div className="w-5 h-5 bg-zinc-100 border border-zinc-200 rounded shrink-0 flex items-center justify-center">
+                                                      <span className="text-[8px] font-bold text-zinc-400">{item.stockName?.charAt(0).toLocaleUpperCase('tr-TR')}</span>
+                                                    </div>
+                                                  );
+                                                })()}
+                                                <span className="font-bold text-zinc-900 block uppercase text-[10px]">{item.stockName}</span>
+                                              </div>
                                             </td>
                                             <td className="py-2.5 px-3 text-zinc-700 text-center font-mono">
                                               {item.quantity} {item.unit || 'Adet'}
@@ -2810,17 +2850,8 @@ export default function IslemlerView({
                                       </div>
                                     )}
 
-                                    {/* Signatures Area */}
-                                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-dashed border-zinc-200 mt-6">
-                                      <div className="text-center">
-                                        <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest block mb-8 font-sans">TESLİM EDEN (İMZA)</span>
-                                        <div className="border-t border-dashed border-zinc-200 w-28 mx-auto"></div>
-                                      </div>
-                                      <div className="text-center">
-                                        <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest block mb-8 font-sans">TESLİM ALAN (İMZA)</span>
-                                        <div className="border-t border-dashed border-zinc-200 w-28 mx-auto"></div>
-                                      </div>
-                                    </div>
+                                    {printedBankDetails}
+                                    {printedSignatureArea}
                                   </div>
 
                                   <div className="col-span-5 flex flex-col items-stretch pl-4 border-l border-dashed border-zinc-200">
@@ -2965,9 +2996,16 @@ export default function IslemlerView({
                                         <tr key={idx} className="border-b border-zinc-100">
                                           <td className="py-3 px-1">
                                             <div className="flex items-center gap-2">
-                                              {activeTemplate?.showProductImage && (
-                                                <div className="w-6 h-6 bg-zinc-100 border border-zinc-200 rounded-md shrink-0"></div>
-                                              )}
+                                              {activeTemplate?.showProductImage && (() => {
+                                                const matchedStock = stoklar?.find(s => s.id === item.stockId);
+                                                return matchedStock?.imageUrl ? (
+                                                  <img src={matchedStock.imageUrl} alt={item.stockName} className="w-6 h-6 object-cover rounded-md shrink-0 border border-zinc-200" referrerPolicy="no-referrer" />
+                                                ) : (
+                                                  <div className="w-6 h-6 bg-zinc-100 border border-zinc-200 rounded-md shrink-0 flex items-center justify-center">
+                                                    <span className="text-[9px] font-bold text-zinc-400">{item.stockName?.charAt(0).toLocaleUpperCase('tr-TR')}</span>
+                                                  </div>
+                                                );
+                                              })()}
                                               <div>
                                                 <span className="font-bold text-zinc-900 text-[10px] block uppercase">{item.stockName}</span>
                                                 <span className="text-[8px] text-zinc-400 block mt-0.5">Sistem Stok Tanımlı Ürün</span>
@@ -3032,6 +3070,7 @@ export default function IslemlerView({
                                         <p className="text-[9px] text-zinc-600 whitespace-pre-line">{dynamicPrintVars.notes}</p>
                                       </div>
                                     )}
+                                    {printedBankDetails}
                                   </div>
                                   
                                   <div className="w-72 bg-zinc-50 rounded-xl p-3 border border-zinc-100 font-mono text-[9px] text-zinc-600 space-y-1">
@@ -3049,6 +3088,8 @@ export default function IslemlerView({
                                     </div>
                                   </div>
                                 </div>
+
+                                {printedSignatureArea}
 
                                 {/* Footer */}
                                 {activeTemplate?.showFooter !== false && (
@@ -3132,9 +3173,16 @@ export default function IslemlerView({
                                         <tr key={idx} className="border-b border-zinc-100 hover:bg-zinc-50/20">
                                           <td className="py-3 px-1">
                                             <div className="flex items-center gap-2">
-                                              {activeTemplate?.showProductImage && (
-                                                <div className="w-5 h-5 border border-zinc-200 shrink-0"></div>
-                                              )}
+                                              {activeTemplate?.showProductImage && (() => {
+                                                const matchedStock = stoklar?.find(s => s.id === item.stockId);
+                                                return matchedStock?.imageUrl ? (
+                                                  <img src={matchedStock.imageUrl} alt={item.stockName} className="w-5 h-5 object-cover rounded shrink-0 border border-zinc-200" referrerPolicy="no-referrer" />
+                                                ) : (
+                                                  <div className="w-5 h-5 bg-zinc-100 border border-zinc-200 rounded shrink-0 flex items-center justify-center">
+                                                    <span className="text-[8px] font-bold text-zinc-400">{item.stockName?.charAt(0).toLocaleUpperCase('tr-TR')}</span>
+                                                  </div>
+                                                );
+                                              })()}
                                               <span className="font-medium text-zinc-900 font-serif text-[10px] tracking-wide">{item.stockName}</span>
                                             </div>
                                           </td>
@@ -3194,6 +3242,7 @@ export default function IslemlerView({
                                         <p className="whitespace-pre-line">{dynamicPrintVars.notes}</p>
                                       </div>
                                     )}
+                                    {printedBankDetails}
                                   </div>
 
                                   <div className="w-64 border-t-2 border-zinc-300 pt-3 space-y-1 text-[9px] text-zinc-600 font-mono">
@@ -3211,6 +3260,8 @@ export default function IslemlerView({
                                     </div>
                                   </div>
                                 </div>
+
+                                {printedSignatureArea}
 
                                 {/* Footer */}
                                 {activeTemplate?.showFooter !== false && (
@@ -3297,7 +3348,21 @@ export default function IslemlerView({
                                         selectedPrintTransaction.items.map((item, idx) => (
                                           <tr key={idx} className="border-b border-zinc-300">
                                             <td className="py-1.5 px-2 border-r border-zinc-400 text-center">{idx + 1}</td>
-                                            <td className="py-1.5 px-2 border-r border-zinc-400 font-bold">{item.stockName}</td>
+                                            <td className="py-1.5 px-2 border-r border-zinc-400 font-bold">
+                                              <div className="flex items-center gap-1.5">
+                                                {activeTemplate?.showProductImage && (() => {
+                                                  const matchedStock = stoklar?.find(s => s.id === item.stockId);
+                                                  return matchedStock?.imageUrl ? (
+                                                    <img src={matchedStock.imageUrl} alt={item.stockName} className="w-4 h-4 object-cover rounded shrink-0 border border-zinc-200" referrerPolicy="no-referrer" />
+                                                  ) : (
+                                                    <div className="w-4 h-4 bg-zinc-100 border border-zinc-200 rounded shrink-0 flex items-center justify-center">
+                                                      <span className="text-[7px] font-bold text-zinc-400">{item.stockName?.charAt(0).toLocaleUpperCase('tr-TR')}</span>
+                                                    </div>
+                                                  );
+                                                })()}
+                                                <span>{item.stockName}</span>
+                                              </div>
+                                            </td>
                                             <td className="py-1.5 px-2 border-r border-zinc-400 text-center">{item.quantity} {item.unit || 'Adet'}</td>
                                             {activeTemplate?.showUnitPrice !== false && (
                                               <td className="py-1.5 px-2 border-r border-zinc-400 text-right">{formatPrintCurrency(item.price, selectedPrintTransaction.currency || 'TRY')}</td>
@@ -3335,7 +3400,8 @@ export default function IslemlerView({
                                           <p className="text-zinc-600">{dynamicPrintVars.notes}</p>
                                         </div>
                                       )}
-                                      <p>MUTABAKAT AMACIYLA DÜZENLENMİŞTİR. FİRMAMIZ KAYITLARI ESAS ALINMALIDIR.</p>
+                                      {printedBankDetails}
+                                      <p className="mt-2">MUTABAKAT AMACIYLA DÜZENLENMİŞTİR. FİRMAMIZ KAYITLARI ESAS ALINMALIDIR.</p>
                                     </div>
                                     <div className="col-span-4 border border-zinc-400 rounded p-2 text-[9px] space-y-1 bg-zinc-50">
                                       <div className="flex justify-between">
@@ -3352,6 +3418,8 @@ export default function IslemlerView({
                                       </div>
                                     </div>
                                   </div>
+
+                                  {printedSignatureArea}
                                 </div>
                               </div>
                             );
@@ -3437,7 +3505,19 @@ export default function IslemlerView({
                                     selectedPrintTransaction.items.map((item, idx) => (
                                       <tr key={idx} className="border-b border-zinc-200/60">
                                         <td className="py-2.5 px-3 text-zinc-800 font-normal">
-                                          {item.stockName}
+                                          <div className="flex items-center gap-2">
+                                            {activeTemplate?.showProductImage && (() => {
+                                              const matchedStock = stoklar?.find(s => s.id === item.stockId);
+                                              return matchedStock?.imageUrl ? (
+                                                <img src={matchedStock.imageUrl} alt={item.stockName} className="w-6 h-6 object-cover rounded shrink-0 border border-zinc-200" referrerPolicy="no-referrer" />
+                                              ) : (
+                                                <div className="w-6 h-6 bg-zinc-100 border border-zinc-200 rounded shrink-0 flex items-center justify-center">
+                                                  <span className="text-[9px] font-bold text-zinc-400">{item.stockName?.charAt(0).toLocaleUpperCase('tr-TR')}</span>
+                                                </div>
+                                              );
+                                            })()}
+                                            <span>{item.stockName}</span>
+                                          </div>
                                         </td>
                                         <td className="py-2.5 px-3 text-zinc-500 text-center">
                                           {item.quantity} {item.unit || 'Adet'}
@@ -3494,6 +3574,7 @@ export default function IslemlerView({
                                 <div className="w-full mt-10 grid grid-cols-2 gap-4 items-start text-left">
                                   <div className="text-[10px] text-zinc-400 font-mono leading-relaxed">
                                     <span className="font-bold tracking-wider text-zinc-300 uppercase">Bizi Tercih Ettiğiniz İçin Teşekkür Ederiz</span>
+                                    {printedBankDetails}
                                   </div>
                                   {dynamicPrintVars?.notes && (
                                     <div className="text-right">
@@ -3505,6 +3586,8 @@ export default function IslemlerView({
                                   )}
                                 </div>
                               </div>
+
+                              {printedSignatureArea}
                             </div>
                           );
                         })()}
