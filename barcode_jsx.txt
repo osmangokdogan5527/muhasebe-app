@@ -1,0 +1,46 @@
+<BarcodeScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={(code) => {
+          const parsed = parseScannedQrCode(code);
+          const scannedStock = stoklar.find(s => s.barcode === parsed || s.code === parsed);
+          if (scannedStock) {
+            const existingItemIndex = invoiceItems.findIndex(item => item.stockId === scannedStock.id);
+            if (existingItemIndex >= 0) {
+              const updatedItems = [...invoiceItems];
+              const item = updatedItems[existingItemIndex];
+              const newQty = (item.quantity || 0) + 1;
+              updatedItems[existingItemIndex] = {
+                ...item,
+                quantity: newQty,
+                total: newQty * item.price * (1 + item.taxRate / 100)
+              };
+              setInvoiceItems(updatedItems);
+            } else {
+              const price = modalType === 'sale' ? scannedStock.salesPrice : scannedStock.purchasePrice;
+              const emptyRowIndex = invoiceItems.findIndex(item => !item.stockId);
+              const newItem = {
+                stockId: scannedStock.id,
+                stockName: scannedStock.name,
+                quantity: 1,
+                unit: scannedStock.unit,
+                price: price,
+                taxRate: scannedStock.taxRate,
+                total: price * (1 + scannedStock.taxRate / 100)
+              };
+              if (emptyRowIndex >= 0) {
+                const updatedItems = [...invoiceItems];
+                updatedItems[emptyRowIndex] = newItem;
+                setInvoiceItems(updatedItems);
+              } else {
+                setInvoiceItems([...invoiceItems, newItem]);
+              }
+            }
+            setFormError('');
+          } else {
+            setFormError(`"${parsed}" kodlu/barkodlu ürün bulunamadı.`);
+          }
+        }}
+        title="Faturaya Ürün Barkod/QR Kod Okut"
+        multiScan={true}
+      />

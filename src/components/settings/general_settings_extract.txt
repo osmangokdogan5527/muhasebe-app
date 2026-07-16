@@ -1,0 +1,634 @@
+   472	        {settingsSubTab === 'general' && (
+   473	          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+   474	            {/* Card 1: Vurgu Rengi / Tema Seçimi */}
+   475	            <div className="bg-[#ffffff] p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+   476	              <div>
+   477	                <div className="flex items-center gap-3 mb-4">
+   478	                  <div className="w-8 h-8 rounded-lg bg-teal-500/10 text-teal-600 flex items-center justify-center">
+   479	                    <Palette size={18} />
+   480	                  </div>
+   481	                  <div>
+   482	                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Arayüz Vurgu Rengi</h3>
+   483	                    <p className="text-xs text-slate-500 mt-0.5">Uygulama genelinde kullanılacak buton ve vurgu renk paleti</p>
+   484	                  </div>
+   485	                </div>
+   486	
+   487	                <div className="grid grid-cols-2 gap-3 mt-6">
+   488	                  {COLOR_PRESETS.map((preset) => {
+   489	                    const isSelected = activeTheme === preset.id;
+   490	                    return (
+   491	                      <button
+   492	                        key={preset.id}
+   493	                        onClick={() => {
+   494	                          setActiveTheme(preset.id);
+   495	                          localStorage.setItem('kolay_hesap_accent_theme', preset.id);
+   496	                        }}
+   497	                        className={`flex items-center gap-3 p-3 rounded-xl border text-left transition cursor-pointer ${
+   498	                          isSelected 
+   499	                            ? 'border-teal-500 bg-teal-500/5 shadow-[0_2px_8px_rgba(45,212,191,0.1)]' 
+   500	                            : 'border-slate-200 hover:border-slate-300 bg-white'
+   501	                        }`}
+   502	                      >
+   503	                        <span 
+   504	                          className="w-5 h-5 rounded-full block border border-black/5 shrink-0" 
+   505	                          style={{ backgroundColor: preset.preview }}
+   506	                        />
+   507	                        <span className={`text-xs font-semibold ${isSelected ? 'text-slate-900' : 'text-slate-600'}`}>
+   508	                          {preset.name}
+   509	                        </span>
+   510	                      </button>
+   511	                    );
+   512	                  })}
+   513	                </div>
+   514	              </div>
+   515	              
+   516	              <div className="mt-6 pt-4 border-t border-slate-100 text-[10px] text-slate-400 font-mono uppercase tracking-wider">
+   517	                Seçilen Tema: {currentThemeData.name}
+   518	              </div>
+   519	            </div>
+   520	
+   521	            {/* Card: Storm Logo Rengi Seçimi */}
+   522	            <div className="bg-[#ffffff] p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+   523	              <div>
+   524	                <div className="flex items-center gap-3 mb-4">
+   525	                  <div className="w-8 h-8 rounded-lg bg-red-500/10 text-red-600 flex items-center justify-center">
+   526	                    <Palette size={18} />
+   527	                  </div>
+   528	                  <div>
+   529	                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Storm Logo Rengi</h3>
+   530	                    <p className="text-xs text-slate-500 mt-0.5">Uygulama logosunun rengini özelleştirin</p>
+   531	                  </div>
+   532	                </div>
+   533	
+   534	                <div className="grid grid-cols-2 gap-3 mt-6">
+   535	                  {/* Dynamic Option: Follow Theme */}
+   536	                  <button
+   537	                    onClick={() => {
+   538	                      setActiveLogoTheme('theme');
+   539	                      localStorage.setItem('storm_muhasebe_logo_theme', 'theme');
+   540	                    }}
+   541	                    className={`flex items-center gap-3 p-3 rounded-xl border text-left transition cursor-pointer col-span-2 ${
+   542	                      activeLogoTheme === 'theme'
+   543	                        ? 'border-teal-500 bg-teal-500/5 shadow-[0_2px_8px_rgba(45,212,191,0.1)]'
+   544	                        : 'border-slate-200 hover:border-slate-300 bg-white'
+   545	                    }`}
+   546	                  >
+   547	                    <span 
+   548	                      className="w-5 h-5 rounded-full flex items-center justify-center border border-black/5 shrink-0 bg-gradient-to-tr from-red-500 via-teal-500 to-amber-500"
+   549	                    />
+   550	                    <div className="flex flex-col">
+   551	                      <span className={`text-xs font-semibold ${activeLogoTheme === 'theme' ? 'text-slate-900' : 'text-slate-600'}`}>
+   552	                        Vurgu Rengine Göre (Dinamik)
+   553	                      </span>
+   554	                      <span className="text-[10px] text-slate-400 mt-0.5">Logo rengi, seçilen arayüz vurgu rengini takip eder</span>
+   555	                    </div>
+   556	                  </button>
+   557	
+   558	                  {COLOR_PRESETS.map((preset) => {
+   559	                    const isSelected = activeLogoTheme === preset.id;
+   560	                    let displayColor = preset.preview;
+   561	                    if (preset.id === 'sky') displayColor = '#0ea5e9'; // Flat sky is #0ea5e9
+   562	                    return (
+   563	                      <button
+   564	                        key={preset.id}
+   565	                        onClick={() => {
+   566	                          setActiveLogoTheme(preset.id);
+   567	                          localStorage.setItem('storm_muhasebe_logo_theme', preset.id);
+   568	                        }}
+   569	                        className={`flex items-center gap-3 p-3 rounded-xl border text-left transition cursor-pointer ${
+   570	                          isSelected 
+   571	                            ? 'border-teal-500 bg-teal-500/5 shadow-[0_2px_8px_rgba(45,212,191,0.1)]' 
+   572	                            : 'border-slate-200 hover:border-slate-300 bg-white'
+   573	                        }`}
+   574	                      >
+   575	                        <span 
+   576	                          className="w-5 h-5 rounded-full block border border-black/5 shrink-0" 
+   577	                          style={{ backgroundColor: displayColor }}
+   578	                        />
+   579	                        <span className={`text-xs font-semibold ${isSelected ? 'text-slate-900' : 'text-slate-600'}`}>
+   580	                          {preset.name}
+   581	                        </span>
+   582	                      </button>
+   583	                    );
+   584	                  })}
+   585	                </div>
+   586	
+   587	                {/* Desktop Icon Export Options */}
+   588	                <div className="mt-5 p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col gap-2">
+   589	                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+   590	                    <Download size={13} className="text-teal-600" />
+   591	                    Masaüstü Simgesi Olarak İndir
+   592	                  </div>
+   593	                  <div className="grid grid-cols-2 gap-2">
+   594	                    <button
+   595	                      onClick={handleDownloadLogoPng}
+   596	                      className="flex items-center justify-center gap-1.5 py-2 px-3 text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-600 hover:text-white border border-teal-200/50 hover:border-teal-600 rounded-lg transition shadow-xs cursor-pointer active:scale-95"
+   597	                    >
+   598	                      PNG Simgesi
+   599	                    </button>
+   600	                    <button
+   601	                      onClick={handleDownloadLogoSvg}
+   602	                      className="flex items-center justify-center gap-1.5 py-2 px-3 text-[11px] font-bold text-slate-700 bg-white hover:bg-slate-800 hover:text-white border border-slate-200 hover:border-slate-800 rounded-lg transition shadow-xs cursor-pointer active:scale-95"
+   603	                    >
+   604	                      SVG Vektör
+   605	                    </button>
+   606	                  </div>
+   607	                </div>
+   608	              </div>
+   609	              
+   610	              <div className="mt-6 pt-4 border-t border-slate-100 text-[10px] text-slate-400 font-mono uppercase tracking-wider flex items-center justify-between">
+   611	                <span>Mevcut Logo Rengi:</span>
+   612	                <span className="font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+   613	                  {activeLogoTheme === 'theme' ? 'Dinamik' : (COLOR_PRESETS.find(p => p.id === activeLogoTheme)?.name || 'Mavi')}
+   614	                </span>
+   615	              </div>
+   616	            </div>
+   617	
+   618	            {/* Card: Görsel Tasarım Teması Seçici */}
+   619	            <div className="bg-[#ffffff] p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between md:col-span-2">
+   620	              <div>
+   621	                <div className="flex items-center gap-3 mb-4">
+   622	                  <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
+   623	                    <Sparkles size={18} />
+   624	                  </div>
+   625	                  <div>
+   626	                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Arayüz Tasarım Stili</h3>
+   627	                    <p className="text-xs text-slate-500 mt-0.5">Uygulamanın genel görsel dilini, derinliğini ve atmosferini değiştirin</p>
+   628	                  </div>
+   629	                </div>
+   630	
+   631	                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+   632	                  {[
+   633	                    {
+   634	                      id: 'modern',
+   635	                      name: 'Modern Klasik',
+   636	                      desc: 'Yüksek kontrastlı, sade ve profesyonel aydınlık ofis arayüzü.',
+   637	                      badge: 'Önerilen',
+   638	                      preview: (
+   639	                        <div className="h-20 w-full rounded-lg bg-slate-50 border border-slate-200 p-2 flex flex-col justify-between overflow-hidden relative">
+   640	                          <div className="flex items-center gap-1">
+   641	                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+   642	                            <span className="w-8 h-1 bg-slate-200 rounded" />
+   643	                          </div>
+   644	                          <div className="space-y-1">
+   645	                            <div className="w-full h-2 bg-white border border-slate-100 rounded shadow-[0_1px_2px_rgba(0,0,0,0.02)]" />
+   646	                            <div className="w-2/3 h-2 bg-white border border-slate-100 rounded shadow-[0_1px_2px_rgba(0,0,0,0.02)]" />
+   647	                          </div>
+   648	                        </div>
+   649	                      )
+   650	                    },
+   651	                    {
+   652	                      id: 'glass',
+   653	                      name: 'Cam Arayüz (Glassmorphism)',
+   654	                      desc: 'Buzlu cam dokusu, derinlik veren blurlar ve modern neon parıltıları.',
+   655	                      badge: 'Sanat Eseri',
+   656	                      preview: (
+   657	                        <div className="h-20 w-full rounded-lg bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 p-2 flex flex-col justify-between overflow-hidden relative">
+   658	                          <span className="absolute -right-2 -top-2 w-10 h-10 rounded-full bg-pink-500/20 blur-sm animate-pulse" />
+   659	                          <span className="absolute -left-2 -bottom-2 w-10 h-10 rounded-full bg-teal-500/20 blur-sm" />
+   660	                          <div className="flex items-center gap-1 relative z-10">
+   661	                            <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
+   662	                            <span className="w-8 h-1 bg-white/20 rounded" />
+   663	                          </div>
+   664	                          <div className="space-y-1 relative z-10">
+   665	                            <div className="w-full h-2 bg-white/5 border border-white/10 backdrop-blur-xs rounded" />
+   666	                            <div className="w-2/3 h-2 bg-white/5 border border-white/10 backdrop-blur-xs rounded" />
+   667	                          </div>
+   668	                        </div>
+   669	                      )
+   670	                    }
+   671	                  ].map((styleOpt) => {
+   672	                    const isSelected = designStyle === styleOpt.id;
+   673	                    return (
+   674	                      <button
+   675	                        key={styleOpt.id}
+   676	                        onClick={() => {
+   677	                          setDesignStyle(styleOpt.id);
+   678	                          localStorage.setItem('storm_muhasebe_design_style', styleOpt.id);
+   679	                          showToast(`${styleOpt.name} stili uygulandı!`, 'success');
+   680	                        }}
+   681	                        className={`group flex flex-col text-left rounded-xl border p-4 transition-all cursor-pointer relative overflow-hidden ${
+   682	                          isSelected 
+   683	                            ? 'border-indigo-500 bg-indigo-500/5 ring-2 ring-indigo-500/10 shadow-[0_4px_16px_rgba(99,102,241,0.15)]' 
+   684	                            : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 bg-white shadow-xs'
+   685	                        }`}
+   686	                      >
+   687	                        {styleOpt.preview}
+   688	                        
+   689	                        <div className="mt-3">
+   690	                          <div className="flex items-center justify-between">
+   691	                            <span className={`text-xs font-bold transition-colors ${isSelected ? 'text-indigo-900' : 'text-slate-800 group-hover:text-slate-950'}`}>
+   692	                              {styleOpt.name}
+   693	                            </span>
+   694	                            {styleOpt.badge && (
+   695	                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+   696	                                isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'
+   697	                              }`}>
+   698	                                {styleOpt.badge}
+   699	                              </span>
+   700	                            )}
+   701	                          </div>
+   702	                          <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+   703	                            {styleOpt.desc}
+   704	                          </p>
+   705	                        </div>
+   706	
+   707	                        {isSelected && (
+   708	                          <div className="absolute top-1.5 right-1.5 bg-indigo-600 text-white rounded-full p-0.5 shadow-sm">
+   709	                            <Check size={10} className="stroke-[3px]" />
+   710	                          </div>
+   711	                        )}
+   712	                      </button>
+   713	                    );
+   714	                  })}
+   715	                </div>
+   716	              </div>
+   717	
+   718	              <div className="mt-6 pt-4 border-t border-slate-100 text-[10px] text-slate-400 font-mono uppercase tracking-wider flex justify-between items-center">
+   719	                <span>Aktif Tasarım Dili:</span>
+   720	                <span className="font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+   721	                  {designStyle === 'modern' ? 'Modern Klasik' : 'Cam Arayüz (Glassmorphism)'}
+   722	                </span>
+   723	              </div>
+   724	            </div>
+   725	
+   726	            {/* Card 2: Firma ve Görünüm Ayarları */}
+   727	            <div className="bg-[#ffffff] p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+   728	              <div>
+   729	                <div className="flex items-center gap-3 mb-4">
+   730	                  <div className="w-8 h-8 rounded-lg bg-orange-500/10 text-orange-600 flex items-center justify-center">
+   731	                    <Printer size={18} />
+   732	                  </div>
+   733	                  <div>
+   734	                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Firma ve Görünüm Ayarları</h3>
+   735	                    <p className="text-xs text-slate-500 mt-0.5 leading-tight">Basılı evrakların üst kısmında yer alacak firma bilgileri ve logo seçenekleri.</p>
+   736	                  </div>
+   737	                </div>
+   738	
+   739	                {printSettingsSuccess && (
+   740	                  <div className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg flex items-center gap-2 mb-4">
+   741	                    <Check size={14} />
+   742	                    {printSettingsSuccess}
+   743	                  </div>
+   744	                )}
+   745	
+   746	                <div className="space-y-4 mt-6">
+   747	                  <div className="space-y-1.5">
+   748	                    <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Logo Tipi</label>
+   749	                    <div className="grid grid-cols-2 gap-2">
+   750	                      <button type="button" onClick={() => setLogoType('text')} className={`py-1.5 px-3 text-[10px] font-bold rounded-lg border transition-all ${logoType === 'text' ? 'bg-orange-50 border-orange-500 text-orange-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>✍️ Metin</button>
+   751	                      <button type="button" onClick={() => setLogoType('image')} className={`py-1.5 px-3 text-[10px] font-bold rounded-lg border transition-all ${logoType === 'image' ? 'bg-orange-50 border-orange-500 text-orange-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>🖼️ Resim</button>
+   752	                    </div>
+   753	                  </div>
+   754	
+   755	                  {logoType === 'image' && (
+   756	                    <div className="space-y-1.5 animate-fade-in">
+   757	                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Logo Görseli</label>
+   758	                      <div className="flex gap-2">
+   759	                        <input type="text" value={logoImageUrl} onChange={(e) => setLogoImageUrl(e.target.value)} className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-900 rounded-lg text-xs focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500" placeholder="Resim linki (https://...)" />
+   760	                      </div>
+   761	                    </div>
+   762	                  )}
+   763	
+   764	                  <div className="space-y-1.5">
+   765	                    <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Firma İsmi</label>
+   766	                    <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-900 rounded-lg text-xs focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500" placeholder="Firma Adı" />
+   767	                  </div>
+   768	
+   769	                  <div className="space-y-1.5">
+   770	                    <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Telefon</label>
+   771	                    <input type="text" value={companyPhone} onChange={(e) => setCompanyPhone(e.target.value)} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-900 rounded-lg text-xs focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500" placeholder="05XX XXX XX XX" />
+   772	                  </div>
+   773	
+   774	                  <div className="space-y-1.5">
+   775	                    <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Adres</label>
+   776	                    <textarea value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} rows={2} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-900 rounded-lg text-xs focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 resize-none" placeholder="Adres" />
+   777	                  </div>
+   778	                </div>
+   779	              </div>
+   780	              
+   781	              <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end">
+   782	                <button
+   783	                  onClick={handleSavePrintSettings}
+   784	                  className="flex items-center justify-center gap-2 px-4 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-sm hover:shadow-md"
+   785	                >
+   786	                  <Save size={14} />
+   787	                  <span>Kaydet</span>
+   788	                </button>
+   789	              </div>
+   790	            </div>
+   791	
+   792	            {/* Card: Yazı Boyutu */}
+   793	            <div className="bg-[#ffffff] p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+   794	              <div>
+   795	                <div className="flex items-center gap-3 mb-4">
+   796	                  <div className="w-8 h-8 rounded-lg bg-teal-500/10 text-teal-600 flex items-center justify-center">
+   797	                    <span className="font-serif font-bold text-lg">A</span>
+   798	                  </div>
+   799	                  <div>
+   800	                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Uygulama Yazı Boyutu</h3>
+   801	                    <p className="text-xs text-slate-500 mt-0.5">Uygulama genelindeki metinlerin büyüklüğünü ayarlayın</p>
+   802	                  </div>
+   803	                </div>
+   804	
+   805	                <div className="grid grid-cols-3 gap-3 mt-6">
+   806	                  {[
+   807	                    { id: 'small', name: 'Küçük', desc: '14px' },
+   808	                    { id: 'medium', name: 'Normal', desc: '16px' },
+   809	                    { id: 'large', name: 'Büyük', desc: '18px' },
+   810	                  ].map((preset) => {
+   811	                    const isSelected = appFontSize === preset.id;
+   812	                    return (
+   813	                      <button
+   814	                        key={preset.id}
+   815	                        onClick={() => {
+   816	                          setAppFontSize(preset.id as 'small' | 'medium' | 'large');
+   817	                          localStorage.setItem('storm_muhasebe_font_size', preset.id);
+   818	                        }}
+   819	                        className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl border transition cursor-pointer ${
+   820	                          isSelected 
+   821	                            ? 'border-teal-500 bg-teal-500/5 shadow-[0_2px_8px_rgba(45,212,191,0.1)]' 
+   822	                            : 'border-slate-200 hover:border-slate-300 bg-white'
+   823	                        }`}
+   824	                      >
+   825	                        <span className={`font-semibold ${isSelected ? 'text-slate-900' : 'text-slate-600'}`}>
+   826	                          {preset.name}
+   827	                        </span>
+   828	                        <span className="text-[10px] text-slate-400 font-mono">
+   829	                          {preset.desc}
+   830	                        </span>
+   831	                      </button>
+   832	                    );
+   833	                  })}
+   834	                </div>
+   835	              </div>
+   836	            </div>
+   837	
+   838	            {/* Card 3: Sol Panel Arka Plan Rengi ve Deseni */}
+   839	            <div className="bg-[#ffffff] p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between md:col-span-2">
+   840	              <div>
+   841	                <div className="flex items-center gap-3 mb-4">
+   842	                  <div className="w-8 h-8 rounded-lg bg-teal-500/10 text-teal-600 flex items-center justify-center">
+   843	                    <Palette size={18} />
+   844	                  </div>
+   845	                  <div>
+   846	                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Sol Panel Görünümü</h3>
+   847	                    <p className="text-xs text-slate-500 mt-0.5">Sol taraftaki navigasyon panelinin arka plan rengi ve deseni</p>
+   848	                  </div>
+   849	                </div>
+   850	
+   851	                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+   852	                  {/* Renk Seçimi */}
+   853	                  <div>
+   854	                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Arka Plan Rengi</h4>
+   855	                    <div className="grid grid-cols-1 gap-2">
+   856	                      {SIDEBAR_BG_PRESETS.map((preset) => {
+   857	                        const isSelected = sidebarBg === preset.value;
+   858	                        return (
+   859	                          <button
+   860	                            key={preset.id}
+   861	                            onClick={() => {
+   862	                              setSidebarBg(preset.value);
+   863	                              localStorage.setItem('storm_muhasebe_sidebar_bg', preset.value);
+   864	                            }}
+   865	                            className={`flex items-center gap-3 p-3 rounded-xl border text-left transition cursor-pointer ${
+   866	                              isSelected 
+   867	                                ? 'border-teal-500 bg-teal-500/5 shadow-[0_2px_8px_rgba(45,212,191,0.1)]' 
+   868	                                : 'border-slate-200 hover:border-slate-300 bg-white'
+   869	                            }`}
+   870	                          >
+   871	                            <span 
+   872	                              className="w-5 h-5 rounded-full block border border-black/5 shrink-0" 
+   873	                              style={{ backgroundColor: preset.value }}
+   874	                            />
+   875	                            <span className={`text-xs font-semibold ${isSelected ? 'text-slate-900' : 'text-slate-600'}`}>
+   876	                              {preset.name}
+   877	                            </span>
+   878	                          </button>
+   879	                        );
+   880	                      })}
+   881	                    </div>
+   882	                  </div>
+   883	
+   884	                  {/* Desen Seçimi ve Saydamlık */}
+   885	                  <div>
+   886	                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Arka Plan Deseni</h4>
+   887	                    <div className="grid grid-cols-1 gap-2 mb-6">
+   888	                      {SIDEBAR_PATTERNS.map((pattern) => {
+   889	                        const isSelected = sidebarPattern === pattern.id;
+   890	                        return (
+   891	                          <button
+   892	                            key={pattern.id}
+   893	                            onClick={() => {
+   894	                              setSidebarPattern(pattern.id);
+   895	                              localStorage.setItem('storm_muhasebe_sidebar_pattern', pattern.id);
+   896	                            }}
+   897	                            className={`flex items-center gap-3 p-3 rounded-xl border text-left transition cursor-pointer ${
+   898	                              isSelected 
+   899	                                ? 'border-teal-500 bg-teal-500/5 shadow-[0_2px_8px_rgba(45,212,191,0.1)]' 
+   900	                                : 'border-slate-200 hover:border-slate-300 bg-white'
+   901	                            }`}
+   902	                          >
+   903	                            <span className={`text-xs font-semibold ${isSelected ? 'text-slate-900' : 'text-slate-600'}`}>
+   904	                              {pattern.name}
+   905	                            </span>
+   906	                          </button>
+   907	                        );
+   908	                      })}
+   909	                    </div>
+   910	
+   911	                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Desen Saydamlığı</h4>
+   912	                    <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
+   913	                      <input 
+   914	                        type="range" 
+   915	                        min="0" 
+   916	                        max="1" 
+   917	                        step="0.01" 
+   918	                        value={sidebarPatternOpacity}
+   919	                        onChange={(e) => {
+   920	                          const val = parseFloat(e.target.value);
+   921	                          setSidebarPatternOpacity(val);
+   922	                          localStorage.setItem('storm_muhasebe_sidebar_pattern_opacity', val.toString());
+   923	                        }}
+   924	                        className="flex-1 accent-teal-600 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+   925	                      />
+   926	                      <span className="text-xs font-mono font-bold text-teal-700 bg-teal-100 px-3 py-1.5 rounded-lg border border-teal-200">
+   927	                        {Math.round(sidebarPatternOpacity * 100)}%
+   928	                      </span>
+   929	                    </div>
+   930	
+   931	                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Desen Rengi</h4>
+   932	                    <div className="grid grid-cols-3 gap-2">
+   933	                      <button
+   934	                        onClick={() => {
+   935	                          setSidebarPatternColor('white');
+   936	                          localStorage.setItem('storm_muhasebe_sidebar_pattern_color', 'white');
+   937	                        }}
+   938	                        className={`p-2 text-[10px] font-bold uppercase tracking-wider rounded-lg border transition ${
+   939	                          sidebarPatternColor === 'white' ? 'bg-teal-500/10 border-teal-500 text-teal-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+   940	                        }`}
+   941	                      >
+   942	                        Beyaz
+   943	                      </button>
+   944	                      <button
+   945	                        onClick={() => {
+   946	                          setSidebarPatternColor('black');
+   947	                          localStorage.setItem('storm_muhasebe_sidebar_pattern_color', 'black');
+   948	                        }}
+   949	                        className={`p-2 text-[10px] font-bold uppercase tracking-wider rounded-lg border transition ${
+   950	                          sidebarPatternColor === 'black' ? 'bg-teal-500/10 border-teal-500 text-teal-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+   951	                        }`}
+   952	                      >
+   953	                        Siyah
+   954	                      </button>
+   955	                      <button
+   956	                        onClick={() => {
+   957	                          setSidebarPatternColor('theme');
+   958	                          localStorage.setItem('storm_muhasebe_sidebar_pattern_color', 'theme');
+   959	                        }}
+   960	                        className={`p-2 text-[10px] font-bold uppercase tracking-wider rounded-lg border transition ${
+   961	                          sidebarPatternColor === 'theme' ? 'bg-teal-500/10 border-teal-500 text-teal-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+   962	                        }`}
+   963	                      >
+   964	                        Arayüz Rengi
+   965	                      </button>
+   966	                    </div>
+   967	                  </div>
+   968	                </div>
+   969	              </div>
+   970	            </div>
+   971	
+   972	            {/* Card 4: Sol Menü Sekme Yönetimi */}
+   973	            <div className="bg-[#ffffff] p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between md:col-span-2">
+   974	              <div>
+   975	                <div className="flex items-center gap-3 mb-4">
+   976	                  <div className="w-8 h-8 rounded-lg bg-teal-500/10 text-teal-600 flex items-center justify-center">
+   977	                    <Menu size={18} />
+   978	                  </div>
+   979	                  <div>
+   980	                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Sol Menü Sekme Yönetimi</h3>
+   981	                    <p className="text-xs text-slate-500 mt-0.5">Sekmelerin sol paneldeki yerlerini değiştirin, istediğiniz sekmeleri gizleyin veya ekleyin</p>
+   982	                  </div>
+   983	                </div>
+   984	
+   985	                <div className="mt-6 space-y-2 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin">
+   986	                  {tabOrder.map((tabId, index) => {
+   987	                    const def = TAB_DEFS[tabId];
+   988	                    if (!def) return null;
+   989	
+   990	                    const isHidden = hiddenTabs.includes(tabId);
+   991	                    const isFirst = index === 0;
+   992	                    const isLast = index === tabOrder.length - 1;
+   993	                    const isCritical = ['dashboard', 'ayarlar'].includes(tabId);
+   994	
+   995	                    return (
+   996	                      <div
+   997	                        key={tabId}
+   998	                        className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
+   999	                          isHidden 
+  1000	                            ? 'bg-slate-50 border-slate-200 opacity-60' 
+  1001	                            : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+  1002	                        }`}
+  1003	                      >
+  1004	                        <div className="flex items-center gap-3">
+  1005	                          <div className={`p-2 rounded-lg ${isHidden ? 'bg-slate-200/50 text-slate-400' : 'bg-teal-500/10 text-teal-600'}`}>
+  1006	                            {def.icon}
+  1007	                          </div>
+  1008	                          <div>
+  1009	                            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">{def.label}</span>
+  1010	                            <span className="text-[9px] text-slate-400 font-mono mt-0.5 block">TAB ID: {tabId.toUpperCase()}</span>
+  1011	                          </div>
+  1012	                        </div>
+  1013	
+  1014	                        <div className="flex items-center gap-3">
+  1015	                          <button
+  1016	                            disabled={isCritical}
+  1017	                            onClick={() => toggleTabVisibility(tabId)}
+  1018	                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition ${
+  1019	                              isCritical
+  1020	                                ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-50'
+  1021	                                : isHidden
+  1022	                                ? 'bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 border border-teal-500/20 cursor-pointer active:scale-95'
+  1023	                                : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/20 cursor-pointer active:scale-95'
+  1024	                            }`}
+  1025	                            title={isCritical ? 'Bu sekme sistem güvenliği için gizlenemez' : isHidden ? 'Menüde Göster' : 'Menüden Gizle'}
+  1026	                          >
+  1027	                            {isHidden ? (
+  1028	                              <>
+  1029	                                <Eye size={13} />
+  1030	                                <span>Ekle (Göster)</span>
+  1031	                              </>
+  1032	                            ) : (
+  1033	                              <>
+  1034	                                <EyeOff size={13} />
+  1035	                                <span>Kaldır (Gizle)</span>
+  1036	                              </>
+  1037	                            )}
+  1038	                          </button>
+  1039	
+  1040	                          <div className="flex items-center gap-1">
+  1041	                            <button
+  1042	                              disabled={isFirst}
+  1043	                              onClick={() => moveTab(index, 'up')}
+  1044	                              className={`p-1.5 rounded bg-white border border-slate-200 text-slate-500 hover:text-teal-600 hover:border-teal-300 transition ${
+  1045	                                isFirst ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer active:scale-90'
+  1046	                              }`}
+  1047	                              title="Yukarı Taşı"
+  1048	                            >
+  1049	                              <ChevronUp size={16} />
+  1050	                            </button>
+  1051	                            <button
+  1052	                              disabled={isLast}
+  1053	                              onClick={() => moveTab(index, 'down')}
+  1054	                              className={`p-1.5 rounded bg-white border border-slate-200 text-slate-500 hover:text-teal-600 hover:border-teal-300 transition ${
+  1055	                                isLast ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer active:scale-90'
+  1056	                              }`}
+  1057	                              title="Aşağı Taşı"
+  1058	                            >
+  1059	                              <ChevronDown size={16} />
+  1060	                            </button>
+  1061	                          </div>
+  1062	                        </div>
+  1063	                      </div>
+  1064	                    );
+  1065	                  })}
+  1066	                </div>
+  1067	
+  1068	                <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col sm:flex-row gap-3 justify-between items-center text-[10px] text-slate-400 font-mono uppercase tracking-wider">
+  1069	                  <span>Ayarlar Tarayıcıya Otomatik Kaydedilir</span>
+  1070	                  <button
+  1071	                    onClick={() => {
+  1072	                      const defaultOrder = ['dashboard', 'cariler', 'kasa', 'islemler', 'stoklar', 'masraflar', 'calisanlar', 'ceksenet', 'krediler', 'raporlar', 'ayarlar'];
+  1073	                      setTabOrder(defaultOrder);
+  1074	                      setHiddenTabs([]);
+  1075	                      localStorage.setItem('storm_muhasebe_tab_order', JSON.stringify(defaultOrder));
+  1076	                      localStorage.setItem('storm_muhasebe_hidden_tabs', JSON.stringify([]));
+  1077	                      
+  1078	                      // Also reset visual settings to user requested defaults
+  1079	                      setActiveTheme('sky');
+  1080	                      localStorage.setItem('kolay_hesap_accent_theme', 'sky');
+  1081	                      
+  1082	                      setActiveLogoTheme('theme');
+  1083	                      localStorage.setItem('storm_muhasebe_logo_theme', 'theme');
+  1084	                      
+  1085	                      setSidebarBg('#1e293b');
+  1086	                      localStorage.setItem('storm_muhasebe_sidebar_bg', '#1e293b');
+  1087	                      
+  1088	                      setSidebarPattern('crystal');
+  1089	                      localStorage.setItem('storm_muhasebe_sidebar_pattern', 'crystal');
+  1090	                      
+  1091	                      setSidebarPatternOpacity(0.75);
+  1092	                      localStorage.setItem('storm_muhasebe_sidebar_pattern_opacity', '0.75');
+  1093	                      
+  1094	                      setSidebarPatternColor('theme');
+  1095	                      localStorage.setItem('storm_muhasebe_sidebar_pattern_color', 'theme');
+  1096	                    }}
+  1097	                    className="text-teal-600 hover:text-teal-700 font-bold transition uppercase tracking-widest text-[9px] hover:underline"
+  1098	                  >
+  1099	                    Varsayılan Düzen & Sıralamaya Dön
+  1100	                  </button>
+  1101	                </div>
+  1102	              </div>
+  1103	            </div>
+  1104	          </div>
+  1105	        )}

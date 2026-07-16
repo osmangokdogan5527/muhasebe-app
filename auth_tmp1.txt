@@ -1,0 +1,101 @@
+  if (!user) {
+    return (
+      <main className={`min-h-screen ${(currentThemeData as any).bgClass || 'bg-[#050505]'} flex flex-col items-center p-6 overflow-y-auto`}>
+        <style>{`
+          :root {
+            ${themeCssRules}
+          }
+        `}</style>
+        
+        <div className="w-full max-w-md my-auto">
+          <div className="text-center mb-10 flex flex-col items-center">
+            <StormLogo className="w-44 h-auto mx-auto mb-6" logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern={sidebarPattern} sidebarPatternOpacity={sidebarPatternOpacity} designStyle={designStyle} />
+            <p className="text-xs text-white/40 uppercase tracking-widest font-mono">Güvenli Yönetim Paneli</p>
+          </div>
+
+          {!selectedPinAccount ? (
+            <div className="space-y-3 animate-fade-in">
+              <h2 className="text-xs font-bold text-white/60 uppercase tracking-widest mb-6 text-center">Hesabınızı Seçin</h2>
+              {usersList.map((u) => (
+                <button
+                  key={u.id}
+                  onClick={() => setSelectedPinAccount(u)}
+                  className="w-full flex items-center justify-between p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-teal-500/10 hover:border-teal-500/30 transition group cursor-pointer"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-teal-500/20 text-white/40 group-hover:text-teal-400 transition">
+                      <User size={20} />
+                    </div>
+                    <span className="font-bold text-white tracking-wide">{u.name}</span>
+                  </div>
+                  <ChevronDown className="text-white/20 group-hover:text-teal-400 -rotate-90 transition" size={18} />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-8 animate-fade-in">
+              <button 
+                onClick={() => {
+                  setSelectedPinAccount(null);
+                  setEnteredPin('');
+                  setAuthError(null);
+                }}
+                className="flex items-center gap-2 text-xs text-white/40 hover:text-white uppercase tracking-widest font-bold mb-8 transition cursor-pointer"
+              >
+                <ChevronDown className="rotate-90" size={14} />
+                Geri Dön
+              </button>
+              
+              <div className="text-center mb-8">
+                <div className="w-12 h-12 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center mx-auto mb-4">
+                  <User size={24} />
+                </div>
+                <h3 className="text-lg font-bold text-white tracking-wider">{selectedPinAccount.name}</h3>
+                <p className="text-xs text-white/40 mt-1">Lütfen 6 haneli erişim şifrenizi girin</p>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <input
+                    type="password"
+                    maxLength={6}
+                    value={enteredPin}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, '');
+                      setEnteredPin(val);
+                      if (authError) setAuthError(null);
+                      
+                      if (val.length === 6) {
+                        if (val === selectedPinAccount.pin) {
+                          const userData = {
+                            uid: selectedPinAccount.id,
+                            displayName: selectedPinAccount.name,
+                            email: `${selectedPinAccount.id}@storm.com`
+                          };
+                          localStorage.setItem('storm_muhasebe_active_user', JSON.stringify(userData));
+                          setUserRole('employee');
+                          setActiveTab('cariler');
+                          setActiveUser(selectedPinAccount.id);
+                          setUser(userData as any);
+                        } else {
+                          setAuthError('Hatalı şifre girdiniz.');
+                          setEnteredPin('');
+                        }
+                      }
+                    }}
+                    placeholder="••••••"
+                    className="w-full bg-white/5 border border-white/10 focus:border-teal-500/50 rounded-xl px-4 py-4 text-center text-3xl tracking-[1em] text-white placeholder-slate-400 transition outline-none font-mono"
+                    autoFocus
+                  />
+                  {authError && (
+                    <p className="text-rose-400 text-xs text-center mt-3 font-bold">{authError}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* Admin Login Section */}
+        <div className="hidden md:block absolute top-8 left-8 w-[360px]">
