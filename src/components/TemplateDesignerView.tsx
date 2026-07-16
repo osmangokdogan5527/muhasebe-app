@@ -45,6 +45,7 @@ export interface PrintTemplateConfig {
   barcodeFontSize?: number;
   
   barcodePosition?: 'bottom' | 'top';
+  barcodeAlignment?: 'left' | 'center' | 'right';
   imagePosition?: 'top' | 'bottom';
 
   // Granular sizing and spacing
@@ -461,6 +462,7 @@ export default function TemplateDesignerView() {
   };
 
   const getPaperDimensions = (size: string) => {
+    const padVal = activeTemplate && activeTemplate.barcodePadding !== undefined ? `${activeTemplate.barcodePadding}px` : '8px';
     switch (size) {
       case 'a4': return { maxWidth: '794px', aspectRatio: '1 / 1.414', padding: '40px' };
       case 'a4_yatay': return { maxWidth: '1123px', aspectRatio: '1.414 / 1', padding: '40px' };
@@ -477,7 +479,7 @@ export default function TemplateDesignerView() {
         const w = activeTemplate.customWidthCm || 6;
         const h = activeTemplate.customHeightCm || 4;
         return { 
-          maxWidth: `${w * 50}px`, 
+          maxWidth: `${w * 37.8}px`, 
           aspectRatio: `${w} / ${h}`, 
           padding: `${activeTemplate.barcodePadding !== undefined ? activeTemplate.barcodePadding : 8}px`, 
           minHeight: 'auto' 
@@ -508,7 +510,15 @@ export default function TemplateDesignerView() {
   const renderDraggableItem = (key: string, label: string, element: React.ReactNode) => {
     if (!element) return null;
     const positions = activeTemplate.customPositions || {};
-    const pos = positions[key] || { x: 50, y: 50, scale: 1 };
+    const defaultPositions: Record<string, { x: number; y: number; scale?: number }> = {
+      image: { x: 50, y: 15, scale: 1 },
+      name: { x: 50, y: 35, scale: 1 },
+      code: { x: 50, y: 50, scale: 1 },
+      customText: { x: 50, y: 62, scale: 1 },
+      price: { x: 50, y: 74, scale: 1 },
+      barcode: { x: 50, y: 88, scale: 1 }
+    };
+    const pos = positions[key] || defaultPositions[key] || { x: 50, y: 50, scale: 1 };
     const isDragging = draggingElement === key;
     const isResizing = resizingElement === key;
     
@@ -629,7 +639,7 @@ export default function TemplateDesignerView() {
               const nameEl = activeTemplate.showBarcodeName ? (
                 <div 
                   key="name" 
-                  className="font-bold text-slate-900 px-1 text-center whitespace-nowrap leading-tight"
+                  className="font-bold text-slate-900 px-1 whitespace-nowrap leading-tight"
                   style={{
                     fontSize: activeTemplate.barcodeNameSize ? `${activeTemplate.barcodeNameSize}px` : undefined,
                   }}
@@ -641,7 +651,7 @@ export default function TemplateDesignerView() {
               const codeEl = activeTemplate.showBarcodeCode !== false ? (
                 <div 
                   key="code" 
-                  className="font-medium text-slate-700 px-1 text-center whitespace-nowrap leading-tight"
+                  className="font-medium text-slate-700 px-1 whitespace-nowrap leading-tight"
                   style={{
                     fontSize: activeTemplate.barcodeCodeSize ? `${activeTemplate.barcodeCodeSize}px` : undefined,
                   }}
@@ -653,7 +663,7 @@ export default function TemplateDesignerView() {
               const customEl = (activeTemplate.showCustomText && activeTemplate.customTextContent) ? (
                 <div 
                   key="custom" 
-                  className="font-medium text-slate-800 px-1 text-center whitespace-nowrap leading-tight"
+                  className="font-medium text-slate-800 px-1 whitespace-nowrap leading-tight"
                   style={{
                     fontSize: activeTemplate.barcodeCustomTextSize ? `${activeTemplate.barcodeCustomTextSize}px` : undefined,
                   }}
@@ -665,7 +675,7 @@ export default function TemplateDesignerView() {
               const priceEl = activeTemplate.showBarcodePrice ? (
                 <div 
                   key="price" 
-                  className="font-black text-slate-900 px-1 text-center whitespace-nowrap leading-tight"
+                  className="font-black text-slate-900 px-1 whitespace-nowrap leading-tight"
                   style={{
                     fontSize: activeTemplate.barcodePriceSize ? `${activeTemplate.barcodePriceSize}px` : undefined,
                   }}
@@ -675,7 +685,7 @@ export default function TemplateDesignerView() {
               ) : null;
               
               const barcodeEl = (
-                <div key="barcode" className="flex justify-center barcode-svg-container">
+                <div key="barcode" className="flex justify-center barcode-svg-container w-full max-w-full overflow-visible">
                   <Barcode renderer="img" 
                     value={activeTemplate.barcodeFormat === 'EAN13' ? "8691234567890" : "STK-10001"} 
                     format={activeTemplate.barcodeFormat || "CODE128"} 
@@ -722,9 +732,16 @@ export default function TemplateDesignerView() {
                 );
               }
 
+              const alignVal = activeTemplate.barcodeAlignment || 'center';
+              const alignmentClass = alignVal === 'left' 
+                ? 'items-start text-left pl-2.5 pr-2.5' 
+                : alignVal === 'right' 
+                  ? 'items-end text-right pl-2.5 pr-2.5' 
+                  : 'items-center text-center';
+
               return (
                 <div 
-                  className="flex flex-col items-center justify-center h-full w-full text-center"
+                  className={`flex flex-col justify-center h-full w-full ${alignmentClass}`}
                   style={{ 
                     gap: activeTemplate.barcodeGap !== undefined ? `${activeTemplate.barcodeGap}px` : '4px' 
                   }}

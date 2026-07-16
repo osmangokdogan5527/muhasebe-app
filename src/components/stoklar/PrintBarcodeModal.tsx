@@ -111,15 +111,15 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
                       const is80x50 = t.paperSize === 'etiket_80x50';
                       const isOzel = t.paperSize === 'etiket_ozel';
                       
-                      let w = 200; // 40mm scaled x5
-                      let h = 150; // 30mm scaled x5
+                      let w = 151; // 40mm scaled to pixels for rendering
+                      let h = 113; // 30mm
                       if (isOzel) {
-                        w = (t.customWidthCm || 6) * 50;
-                        h = (t.customHeightCm || 4) * 50;
-                      } else if (is60x40) { w = 300; h = 200; }
-                      else if (is40x60) { w = 200; h = 300; }
-                      else if (is80x50) { w = 400; h = 250; }
-                      else if (is40x20) { w = 200; h = 100; }
+                        w = (t.customWidthCm || 6) * 37.8;
+                        h = (t.customHeightCm || 4) * 37.8;
+                      } else if (is60x40) { w = 226; h = 151; }
+                      else if (is40x60) { w = 151; h = 226; }
+                      else if (is80x50) { w = 302; h = 189; }
+                      else if (is40x20) { w = 151; h = 75; }
                       
                       let bcWidth = 1;
                       let bcHeight = 40;
@@ -146,7 +146,7 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
                       const nameEl = t.showBarcodeName !== false ? (
                         <div 
                           key="name" 
-                          className="font-bold text-center whitespace-nowrap leading-tight uppercase px-1 text-black"
+                          className="font-bold whitespace-nowrap px-1 text-black"
                           style={{
                             fontSize: t.barcodeNameSize ? `${t.barcodeNameSize * 0.5}px` : (is60x40 || is80x50 ? '12px' : '10px'),
                           }}
@@ -158,7 +158,7 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
                       const codeEl = (t.showBarcodeCode !== false && printingStock.code) ? (
                         <div 
                           key="code" 
-                          className="font-medium text-gray-700 text-center whitespace-nowrap leading-tight uppercase px-1"
+                          className="font-medium text-gray-700 whitespace-nowrap px-1"
                           style={{
                             fontSize: t.barcodeCodeSize ? `${t.barcodeCodeSize * 0.5}px` : (is60x40 || is80x50 ? '10px' : '9px'),
                           }}
@@ -170,7 +170,7 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
                       const customEl = (t.showCustomText && t.customTextContent) ? (
                         <div 
                           key="custom" 
-                          className="font-medium text-gray-800 text-center whitespace-nowrap leading-tight uppercase px-1"
+                          className="font-medium text-gray-800 whitespace-nowrap px-1"
                           style={{
                             fontSize: t.barcodeCustomTextSize ? `${t.barcodeCustomTextSize * 0.5}px` : (is60x40 || is80x50 ? '11px' : '10px'),
                           }}
@@ -182,7 +182,7 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
                       const priceEl = t.showBarcodePrice !== false ? (
                         <div 
                           key="price" 
-                          className="font-black text-center text-black px-1 whitespace-nowrap"
+                          className="font-black text-black px-1 whitespace-nowrap"
                           style={{
                             fontSize: t.barcodePriceSize ? `${t.barcodePriceSize * 0.5}px` : (is60x40 || is80x50 ? '16px' : '14px'),
                           }}
@@ -192,7 +192,7 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
                       ) : null;
                       
                       const barcodeEl = (
-                        <div key="barcode" className="flex justify-center overflow-hidden barcode-svg-container">
+                        <div key="barcode" className="flex justify-center barcode-svg-container w-full max-w-full overflow-visible">
                           <Barcode renderer="img" 
                             value={barcodeValue} 
                             format={t.barcodeFormat || "CODE128"} 
@@ -255,9 +255,16 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
                         );
                       }
 
+                      const alignVal = t.barcodeAlignment || 'center';
+                      const alignmentClass = alignVal === 'left' 
+                        ? 'items-start text-left pl-2.5 pr-2.5' 
+                        : alignVal === 'right' 
+                          ? 'items-end text-right pl-2.5 pr-2.5' 
+                          : 'items-center text-center';
+
                       return (
                         <div 
-                          className="border border-zinc-200 shadow-sm flex flex-col items-center justify-center bg-white"
+                          className={`border border-zinc-200 shadow-sm flex flex-col justify-center bg-white ${alignmentClass}`}
                           style={{ 
                             width: `${w}px`, 
                             height: `${h}px`,
@@ -467,7 +474,7 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
             const nameEl = t.showBarcodeName !== false ? (
               <div 
                 key="name" 
-                className="font-bold px-1 text-center whitespace-nowrap leading-tight uppercase text-black"
+                className="font-bold px-1 whitespace-nowrap uppercase text-black"
                 style={{
                   fontSize: `${(t.barcodeNameSize || 12) * scaleFactor}px`
                 }}
@@ -479,7 +486,7 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
             const codeEl = (t.showBarcodeCode !== false && printingStock.code) ? (
               <div 
                 key="code" 
-                className="font-medium text-gray-700 px-1 text-center whitespace-nowrap leading-tight uppercase"
+                className="font-medium text-gray-700 px-1 whitespace-nowrap uppercase text-ellipsis overflow-hidden"
                 style={{
                   fontSize: `${(t.barcodeCodeSize || 10) * scaleFactor}px`
                 }}
@@ -491,7 +498,7 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
             const customEl = (t.showCustomText && t.customTextContent) ? (
               <div 
                 key="custom" 
-                className="font-medium text-gray-800 px-1 text-center whitespace-nowrap leading-tight uppercase"
+                className="font-medium text-gray-800 px-1 whitespace-nowrap uppercase"
                 style={{
                   fontSize: `${(t.barcodeCustomTextSize || 11) * scaleFactor}px`
                 }}
@@ -503,7 +510,7 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
             const priceEl = t.showBarcodePrice !== false ? (
               <div 
                 key="price" 
-                className="font-black text-black text-center px-1 whitespace-nowrap"
+                className="font-black text-black px-1 whitespace-nowrap"
                 style={{
                   fontSize: `${(t.barcodePriceSize || 14) * scaleFactor}px`
                 }}
@@ -517,7 +524,7 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
             const bcFontSize = (t.barcodeFontSize || (t.paperSize === 'etiket_40x20' ? 8 : 12)) * scaleFactor;
 
             const barcodeEl = (
-              <div key="barcode" className="flex justify-center barcode-svg-container">
+              <div key="barcode" className="flex justify-center barcode-svg-container w-full max-w-full overflow-visible">
                 <Barcode renderer="img" 
                   value={barcodeValue} 
                   format={t.barcodeFormat || "CODE128"} 
@@ -585,10 +592,17 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
               );
             }
 
+            const alignVal = t.barcodeAlignment || 'center';
+            const alignmentClass = alignVal === 'left' 
+              ? 'items-start text-left pl-[10%] pr-[10%]' 
+              : alignVal === 'right' 
+                ? 'items-end text-right pl-[10%] pr-[10%]' 
+                : 'items-center text-center';
+
             return (
               <div 
                 id="printable-barcode-content" 
-                className="text-center flex flex-col items-center justify-center overflow-hidden bg-white text-black" 
+                className={`flex flex-col justify-center overflow-hidden bg-white text-black ${alignmentClass}`} 
                 style={{
                   ...widthStyle,
                   padding: `${finalPadding}px`,

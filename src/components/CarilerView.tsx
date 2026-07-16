@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { VirtualTableBody } from './VirtualTableBody';
 import { CariModal } from './cariler/CariModal';
 import { LedgerDrawer } from './cariler/LedgerDrawer';
 import { Cari, Transaction, Stock } from "../types";
@@ -39,7 +40,7 @@ interface CarilerViewProps {
   onSelectCariForDetails?: (cariId: string | null) => void;
 }
 
-export default function CarilerView({
+function CarilerView({
   cariler,
   islemler,
   stoklar = [],
@@ -71,21 +72,21 @@ export default function CarilerView({
     return localSelectedCariForDetails;
   }, [selectedCariIdForDetails, localSelectedCariForDetails, cariler]);
 
-  const setSelectedCariForDetails = (cari: Cari | null) => {
+  const setSelectedCariForDetails = useCallback((cari: Cari | null) => {
     if (onSelectCariForDetails) {
       onSelectCariForDetails(cari ? cari.id : null);
     } else {
       setLocalSelectedCariForDetails(cari);
     }
-  };
+  }, [onSelectCariForDetails]);
 
   // Format currency helper
-  const formatCurrency = (val: number, cur: string = "TRY") => {
+  const formatCurrency = useCallback((val: number, cur: string = "TRY") => {
     return new Intl.NumberFormat("tr-TR", {
       style: "currency",
       currency: cur,
     }).format(val);
-  };
+  }, []);
 
   const [ekstreType, setEkstreType] = useState<"summary" | "detailed">("summary");
   const [deleteConfirmCari, setDeleteConfirmCari] = useState<Cari | null>(null);
@@ -153,23 +154,23 @@ export default function CarilerView({
     }
   }, [pendingAddCari, onCariAdded]);
 
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateModal = useCallback(() => {
     setEditingCari(null);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleOpenEditModal = (cari: Cari) => {
+  const handleOpenEditModal = useCallback((cari: Cari) => {
     setEditingCari(cari);
     setIsModalOpen(true);
-  };
+  }, []);
 
   // Handle deletion of Cari
-  const handleDelete = (cari: Cari) => {
+  const handleDelete = useCallback((cari: Cari) => {
     setDeleteConfirmCari(cari);
     setDeleteError(null);
-  };
+  }, []);
 
-  const handleExecuteDelete = async () => {
+  const handleExecuteDelete = useCallback(async () => {
     if (!deleteConfirmCari) return;
     setIsDeleting(true);
     setDeleteError(null);
@@ -185,7 +186,184 @@ export default function CarilerView({
     } finally {
       setIsDeleting(false);
     }
-  };
+  }, [deleteConfirmCari, selectedCariForDetails, setSelectedCariForDetails]);
+
+  const renderCariRow = useCallback((cari: Cari, index: number) => {
+    const balance = cari.balance || 0;
+    return (
+      <tr
+        key={cari.id}
+        id={`cari-row-${cari.id}`}
+        className={`hover:bg-white/[0.02] transition h-[72px] ${cari.isActive === false ? "opacity-60" : ""}`}
+      >
+        <td className="p-4">
+          <div className="flex items-center gap-3">
+            {cari.imageUrl ? (
+              <div className="w-10 h-10 rounded-full overflow-hidden bg-white/5 border border-white/10 shrink-0">
+                <img src={cari.imageUrl} alt={cari.name} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/20 shrink-0 uppercase font-bold text-sm">
+                {cari.name.charAt(0)}
+              </div>
+            )}
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCariForDetails(cari);
+                    setEkstreType("detailed");
+                  }}
+                  className="font-bold text-teal-400 hover:text-teal-300 text-sm hover:underline cursor-pointer transition text-left leading-tight"
+                >
+                  {cari.name}
+                </button>
+                {cari.isActive === false && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] uppercase font-mono font-bold tracking-wider bg-red-500/20 text-red-400">
+                    PASİF
+                  </span>
+                )}
+              </div>
+              <div className="text-[10px] text-white/40 mt-1 font-mono tracking-wider">
+                {cari.code}
+              </div>
+            </div>
+          </div>
+        </td>
+        <td className="p-4">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] uppercase tracking-wider font-semibold ${
+                cari.type === "customer"
+                  ? "bg-teal-500/10 text-teal-400"
+                  : cari.type === "supplier"
+                    ? "bg-amber-500/10 text-amber-400"
+                    : "bg-purple-500/10 text-purple-400"
+              }`}
+            >
+              {cari.type === "customer"
+                ? "Müşteri"
+                : cari.type === "supplier"
+                  ? "Tedarikçi"
+                  : "Müşteri+Tedarikçi"}
+            </span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase font-mono font-bold tracking-wider bg-white/5 border border-white/10 text-white/70">
+              {cari.currency || "TRY"}
+            </span>
+          </div>
+        </td>
+        <td className="p-4 text-xs text-white/60 space-y-1 font-mono">
+          {cari.phone && (
+            <div className="flex items-center gap-1.5">
+              <Phone size={12} className="text-white/30" />{" "}
+              {cari.phone}
+            </div>
+          )}
+          {cari.email && (
+            <div className="flex items-center gap-1.5">
+              <Mail size={12} className="text-white/30" />{" "}
+              {cari.email}
+            </div>
+          )}
+        </td>
+        <td className="p-4 text-right">
+          <div
+            className={`font-semibold text-sm ${
+              balance > 0
+                ? "text-teal-400"
+                : balance < 0
+                  ? "text-red-400"
+                  : "text-white/50"
+            }`}
+            style={{ fontFamily: "Georgia, serif" }}
+          >
+            {formatCurrency(balance, cari.currency || "TRY")}
+          </div>
+          <div className="text-[9px] text-white/30 mt-1 uppercase tracking-wider font-medium">
+            {balance > 0
+              ? "Alacaklıyız (Müşteri Borçlu)"
+              : balance < 0
+                ? "Borçluyuz (Bizim Borcumuz)"
+                : "Hesap Dengede"}
+          </div>
+        </td>
+        <td className="p-4">
+          <div className="flex items-center justify-center gap-2">
+            {onQuickTransaction && (
+              <div className="flex items-center gap-1.5 border-r border-white/5 pr-2.5 mr-1">
+                {(cari.type === "customer" ||
+                  cari.type === "both") && (
+                  <>
+                    <button
+                      onClick={() =>
+                        onQuickTransaction("sale", cari.id)
+                      }
+                      title="Hızlı Satış Faturası Girişi"
+                      className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-teal-500/10 hover:bg-teal-500 text-teal-400 hover:text-black rounded transition cursor-pointer shrink-0"
+                    >
+                      Satış
+                    </button>
+                    <button
+                      onClick={() =>
+                        onQuickTransaction(
+                          "collection",
+                          cari.id,
+                        )
+                      }
+                      title="Hızlı Tahsilat Girişi"
+                      className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-black rounded transition cursor-pointer shrink-0"
+                    >
+                      Tahsilat
+                    </button>
+                  </>
+                )}
+                {(cari.type === "supplier" ||
+                  cari.type === "both") && (
+                  <>
+                    <button
+                      onClick={() =>
+                        onQuickTransaction("purchase", cari.id)
+                      }
+                      title="Hızlı Alış Faturası Girişi"
+                      className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-orange-500/10 hover:bg-orange-500 text-orange-400 hover:text-black rounded transition cursor-pointer shrink-0"
+                    >
+                      Alış
+                    </button>
+                    <button
+                      onClick={() =>
+                        onQuickTransaction("payment", cari.id)
+                      }
+                      title="Hızlı Ödeme Girişi"
+                      className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-black rounded transition cursor-pointer shrink-0"
+                    >
+                      Ödeme
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+            <button
+              id={`btn-edit-cari-${cari.id}`}
+              onClick={() => handleOpenEditModal(cari)}
+              title="Düzenle"
+              className="p-2 text-amber-400 hover:bg-white/5 rounded transition shrink-0"
+            >
+              <Edit2 size={16} />
+            </button>
+            <button
+              id={`btn-delete-cari-${cari.id}`}
+              onClick={() => handleDelete(cari)}
+              title="Sil"
+              className="p-2 text-red-400 hover:bg-white/5 rounded transition shrink-0"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  }, [formatCurrency, onQuickTransaction, setSelectedCariForDetails, handleOpenEditModal, handleDelete]);
 
   // Extract ledger details for the selected Cari
   const cariLedger = useMemo(() => {
@@ -436,183 +614,11 @@ export default function CarilerView({
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
-                  {filteredCariler.map((cari) => {
-                    const balance = cari.balance || 0;
-                    return (
-                      <tr
-                        key={cari.id}
-                        className={`hover:bg-white/[0.02] transition ${cari.isActive === false ? "opacity-60" : ""}`}
-                      >
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            {cari.imageUrl ? (
-                              <div className="w-10 h-10 rounded-full overflow-hidden bg-white/5 border border-white/10 shrink-0">
-                                <img src={cari.imageUrl} alt={cari.name} className="w-full h-full object-cover" />
-                              </div>
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/20 shrink-0 uppercase font-bold text-sm">
-                                {cari.name.charAt(0)}
-                              </div>
-                            )}
-                            <div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedCariForDetails(cari);
-                                    setEkstreType("detailed");
-                                  }}
-                                  className="font-bold text-teal-400 hover:text-teal-300 text-sm hover:underline cursor-pointer transition text-left leading-tight"
-                                >
-                                  {cari.name}
-                                </button>
-                                {cari.isActive === false && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] uppercase font-mono font-bold tracking-wider bg-red-500/20 text-red-400">
-                                    PASİF
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-[10px] text-white/40 mt-1 font-mono tracking-wider">
-                                {cari.code}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] uppercase tracking-wider font-semibold ${
-                                cari.type === "customer"
-                                  ? "bg-teal-500/10 text-teal-400"
-                                  : cari.type === "supplier"
-                                    ? "bg-amber-500/10 text-amber-400"
-                                    : "bg-purple-500/10 text-purple-400"
-                              }`}
-                            >
-                              {cari.type === "customer"
-                                ? "Müşteri"
-                                : cari.type === "supplier"
-                                  ? "Tedarikçi"
-                                  : "Müşteri+Tedarikçi"}
-                            </span>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase font-mono font-bold tracking-wider bg-white/5 border border-white/10 text-white/70">
-                              {cari.currency || "TRY"}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-4 text-xs text-white/60 space-y-1 font-mono">
-                          {cari.phone && (
-                            <div className="flex items-center gap-1.5">
-                              <Phone size={12} className="text-white/30" />{" "}
-                              {cari.phone}
-                            </div>
-                          )}
-                          {cari.email && (
-                            <div className="flex items-center gap-1.5">
-                              <Mail size={12} className="text-white/30" />{" "}
-                              {cari.email}
-                            </div>
-                          )}
-                        </td>
-                        <td className="p-4 text-right">
-                          <div
-                            className={`font-semibold text-sm ${
-                              balance > 0
-                                ? "text-teal-400"
-                                : balance < 0
-                                  ? "text-red-400"
-                                  : "text-white/50"
-                            }`}
-                            style={{ fontFamily: "Georgia, serif" }}
-                          >
-                            {formatCurrency(balance, cari.currency || "TRY")}
-                          </div>
-                          <div className="text-[9px] text-white/30 mt-1 uppercase tracking-wider font-medium">
-                            {balance > 0
-                              ? "Alacaklıyız (Müşteri Borçlu)"
-                              : balance < 0
-                                ? "Borçluyuz (Bizim Borcumuz)"
-                                : "Hesap Dengede"}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center justify-center gap-2">
-                            {onQuickTransaction && (
-                              <div className="flex items-center gap-1.5 border-r border-white/5 pr-2.5 mr-1">
-                                {(cari.type === "customer" ||
-                                  cari.type === "both") && (
-                                  <>
-                                    <button
-                                      onClick={() =>
-                                        onQuickTransaction("sale", cari.id)
-                                      }
-                                      title="Hızlı Satış Faturası Girişi"
-                                      className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-teal-500/10 hover:bg-teal-500 text-teal-400 hover:text-black rounded transition cursor-pointer shrink-0"
-                                    >
-                                      Satış
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        onQuickTransaction(
-                                          "collection",
-                                          cari.id,
-                                        )
-                                      }
-                                      title="Hızlı Tahsilat Girişi"
-                                      className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-black rounded transition cursor-pointer shrink-0"
-                                    >
-                                      Tahsilat
-                                    </button>
-                                  </>
-                                )}
-                                {(cari.type === "supplier" ||
-                                  cari.type === "both") && (
-                                  <>
-                                    <button
-                                      onClick={() =>
-                                        onQuickTransaction("purchase", cari.id)
-                                      }
-                                      title="Hızlı Alış Faturası Girişi"
-                                      className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-orange-500/10 hover:bg-orange-500 text-orange-400 hover:text-black rounded transition cursor-pointer shrink-0"
-                                    >
-                                      Alış
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        onQuickTransaction("payment", cari.id)
-                                      }
-                                      title="Hızlı Ödeme Girişi"
-                                      className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-black rounded transition cursor-pointer shrink-0"
-                                    >
-                                      Ödeme
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            )}
-                            <button
-                              id={`btn-edit-cari-${cari.id}`}
-                              onClick={() => handleOpenEditModal(cari)}
-                              title="Düzenle"
-                              className="p-2 text-amber-400 hover:bg-white/5 rounded transition shrink-0"
-                            >
-                              <Edit2 size={16} />
-                            </button>
-                            <button
-                              id={`btn-delete-cari-${cari.id}`}
-                              onClick={() => handleDelete(cari)}
-                              title="Sil"
-                              className="p-2 text-red-400 hover:bg-white/5 rounded transition shrink-0"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
+                <VirtualTableBody
+                  items={filteredCariler}
+                  rowHeight={72}
+                  renderRow={renderCariRow}
+                />
               </table>
             </div>
 
@@ -931,3 +937,5 @@ export default function CarilerView({
     </div>
   );
 }
+
+export default React.memo(CarilerView);

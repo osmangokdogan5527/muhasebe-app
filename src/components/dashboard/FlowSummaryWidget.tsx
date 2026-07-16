@@ -9,7 +9,7 @@ interface FlowSummaryWidgetProps {
   renderWidgetControls: () => React.ReactNode;
 }
 
-export const FlowSummaryWidget: React.FC<FlowSummaryWidgetProps> = ({
+export const FlowSummaryWidget = React.memo<FlowSummaryWidgetProps>(({
   stats,
   dashboardCurrency,
   formatCurrency,
@@ -95,5 +95,5 @@ export const FlowSummaryWidget: React.FC<FlowSummaryWidgetProps> = ({
                     </div>
                   </div>
   );
-};
+});
 

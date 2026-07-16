@@ -221,7 +221,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                   {[
                     {
                       id: 'glass',
@@ -242,6 +242,27 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                           </div>
                         </div>
                       )
+                    },
+                    {
+                      id: 'fluid-mesh',
+                      name: 'Sıvı Mesh Gradient (Aurora Mesh)',
+                      desc: 'Renklerin akıcı bir şekilde süzüldüğü, göz alıcı neon geçişler ve parıldayan ultra şeffaf cam paneller.',
+                      badge: 'Seçkin & Canlı',
+                      preview: (
+                        <div className="h-20 w-full rounded-lg bg-[#06040e] p-2 flex flex-col justify-between overflow-hidden relative border border-white/10">
+                          <div className="absolute top-0 left-0 w-full h-full opacity-60 bg-gradient-to-tr from-violet-600/30 via-pink-600/20 to-teal-500/20 blur-md" />
+                          <div className="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-orange-500/20 blur-md" />
+                          <div className="absolute -bottom-6 -left-6 w-16 h-16 rounded-full bg-teal-500/20 blur-md" />
+                          <div className="flex items-center gap-1 relative z-10">
+                            <span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-bounce" />
+                            <span className="w-8 h-1 bg-white/40 rounded" />
+                          </div>
+                          <div className="space-y-1 relative z-10">
+                            <div className="w-full h-2 bg-white/10 border border-white/20 backdrop-blur-md rounded shadow-sm" />
+                            <div className="w-2/3 h-2 bg-white/10 border border-white/20 backdrop-blur-md rounded shadow-sm" />
+                          </div>
+                        </div>
+                      )
                     }
                   ].map((styleOpt) => {
                     const isSelected = designStyle === styleOpt.id;
@@ -256,14 +277,14 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                         className={`group flex flex-col text-left rounded-xl border p-4 transition-all cursor-pointer relative overflow-hidden ${
                           isSelected 
                             ? 'border-indigo-500 bg-indigo-500/5 ring-2 ring-indigo-500/10 shadow-[0_4px_16px_rgba(99,102,241,0.15)]' 
-                            : 'border-white/10 hover:border-white/20 hover:bg-white/5/50 bg-white shadow-xs'
+                            : 'border-white/10 hover:border-white/20 hover:bg-white/5/50 bg-slate-900 shadow-xs'
                         }`}
                       >
                         {styleOpt.preview}
                         
                         <div className="mt-3">
                           <div className="flex items-center justify-between">
-                            <span className={`text-xs font-bold transition-colors ${isSelected ? 'text-indigo-900' : 'text-white/90 group-hover:text-slate-950'}`}>
+                            <span className="text-xs font-bold text-white/90">
                               {styleOpt.name}
                             </span>
                             {styleOpt.badge && (
@@ -293,7 +314,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
               <div className="mt-6 pt-4 border-t border-white/5 text-[10px] text-slate-400 font-mono uppercase tracking-wider flex justify-between items-center">
                 <span>Aktif Tasarım Dili:</span>
                 <span className="font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">
-                  Cam Arayüz (Glassmorphism)
+                  {designStyle === 'fluid-mesh' ? 'Sıvı Mesh Gradient (Aurora)' : 'Cam Arayüz (Glassmorphism)'}
                 </span>
               </div>
             </div>

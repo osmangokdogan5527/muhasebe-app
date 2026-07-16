@@ -9,7 +9,7 @@ interface AnalysisChartWidgetProps {
   renderWidgetControls: () => React.ReactNode;
 }
 
-export const AnalysisChartWidget: React.FC<AnalysisChartWidgetProps> = ({
+export const AnalysisChartWidget = React.memo<AnalysisChartWidgetProps>(({
   chartData,
   dashboardCurrency,
   formatCurrency,
@@ -142,5 +142,5 @@ export const AnalysisChartWidget: React.FC<AnalysisChartWidgetProps> = ({
                     </div>
                   </div>
   );
-};
+});
 

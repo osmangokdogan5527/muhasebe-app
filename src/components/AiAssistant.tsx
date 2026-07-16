@@ -3,6 +3,10 @@ import { X, Send, Loader2, Sparkles, AlertCircle, Settings, Bot, Mic } from 'luc
 
 interface AiAssistantProps {
   apiKey: string;
+  userRole?: 'admin' | 'employee';
+  isSecurityActive?: boolean;
+  sensitiveTabs?: string[];
+  actionPermissions?: any;
   onNavigateToSettings: () => void;
   onCommandParsed: (command: any) => void;
 }
@@ -28,7 +32,15 @@ const AI_EXAMPLES = [
   '"Geçen ayki satış analizimi nasıl görebilirim?"'
 ];
 
-export default function AiAssistant({ apiKey, onNavigateToSettings, onCommandParsed }: AiAssistantProps) {
+export default function AiAssistant({ 
+  apiKey, 
+  userRole = 'employee',
+  isSecurityActive = false,
+  sensitiveTabs = [],
+  actionPermissions = {},
+  onNavigateToSettings, 
+  onCommandParsed 
+}: AiAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -158,6 +170,31 @@ export default function AiAssistant({ apiKey, onNavigateToSettings, onCommandPar
 
     try {
       const today = new Date().toLocaleDateString('tr-TR');
+
+      let securityGuideline = '';
+      if (isSecurityActive && userRole === 'employee') {
+        const restrictedTabsList = sensitiveTabs.map(t => {
+          if (t === 'dashboard') return 'Yönetim Paneli (dashboard)';
+          if (t === 'kasa') return 'Kasa ve Banka Hesapları (kasa)';
+          if (t === 'ceksenet') return 'Çek/Senet Yönetimi (ceksenet)';
+          if (t === 'masraflar') return 'Gider Girişi ve Masraflar (masraflar)';
+          if (t === 'calisanlar') return 'Personel Yönetimi ve Maaş Ödemeleri (calisanlar)';
+          if (t === 'krediler') return 'Krediler Takibi (krediler)';
+          if (t === 'raporlar') return 'Detaylı Raporlama ve Analiz (raporlar)';
+          if (t === 'ayarlar') return 'Uygulama ve Sistem Ayarları (ayarlar)';
+          return t;
+        }).join(', ');
+
+        securityGuideline = `
+[KRİTİK GÜVENLİK KISITLAMASI]
+Aktif kullanıcı rolünüz "Personel" (Sınırlı Yetki) ve güvenlik PIN koruma modu aktiftir.
+Erişiminiz dışındaki menüler: [${restrictedTabsList}].
+Kullanıcı bu yasaklı alanlardan birine ait bir işlem yapmaya çalışırsa (örneğin: masraf girişi 'masraf', personel ödemesi 'personel', kasa raporu sorma vb.) veya bu menülere gitmek isterse:
+KESİNLİKLE bu işlemi gerçekleştirmeyin ve SADECE şu JSON formatını döndürün:
+{ "tip": "bilgi", "mesaj": "Yetki Kısıtlaması: Giriş yaptığınız kullanıcı rolü (Personel) nedeniyle bu işlemi gerçekleştirmeye veya bu menüye erişmeye yetkiniz bulunmamaktadır. Lütfen yönetici girişi yapınız.", "transcription": "ses kaydının metin hali" }
+`;
+      }
+
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: {
@@ -165,7 +202,7 @@ export default function AiAssistant({ apiKey, onNavigateToSettings, onCommandPar
         },
         body: JSON.stringify({
           system_instruction: {
-            parts: [{ text: `Sen Storm Muhasebe asistanısın. Kullanıcının ses kaydını analiz et. Bugünün tarihi: ${today}.
+            parts: [{ text: `Sen Storm Muhasebe asistanısın. Kullanıcının ses kaydını analiz et. Bugünün tarihi: ${today}.${securityGuideline}
 Öncelikle ses kaydındaki konuşmayı birebir veya en yakın anlamıyla Türkçe olarak yazıya dök (transcribe et) ve JSON sonucundaki "transcription" alanına yaz.
 
 Eğer girdi bir finansal işlem (satış, alış, tahsilat, ödeme, masraf, personel maaş/avans ödemesi) içeriyorsa, SADECE şu JSON formatını döndür: 
@@ -255,6 +292,24 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
         else if (parsedCommand.islem === 'tedarikci_ekle') parsedCommand.islem = 'add_supplier';
         else if (parsedCommand.islem === 'urun_ekle') parsedCommand.islem = 'add_product';
 
+        // Code enforcement guard for sensitive operations
+        let targetTab = 'islemler';
+        if (parsedCommand.islem === 'expense') targetTab = 'masraflar';
+        else if (parsedCommand.islem === 'employee_payment') targetTab = 'calisanlar';
+        else if (parsedCommand.islem === 'add_customer' || parsedCommand.islem === 'add_supplier') targetTab = 'cariler';
+        else if (parsedCommand.islem === 'add_product') targetTab = 'stoklar';
+
+        if (isSecurityActive && userRole === 'employee' && sensitiveTabs.includes(targetTab)) {
+          setMessages(prev => [...prev, { 
+            id: Date.now().toString(), 
+            role: 'assistant', 
+            text: `Yetki Kısıtlaması: Giriş yaptığınız kullanıcı rolü (Personel) nedeniyle bu işlemi gerçekleştirmeye veya "${targetTab.toUpperCase()}" menüsüne erişmeye yetkiniz bulunmamaktadır. Lütfen yönetici girişi yapınız.`,
+            isError: true
+          }]);
+          setIsTyping(false);
+          return;
+        }
+
         setMessages(prev => [...prev, { 
           id: Date.now().toString(), 
           role: 'assistant', 
@@ -329,6 +384,31 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
 
     try {
       const today = new Date().toLocaleDateString('tr-TR');
+
+      let securityGuideline = '';
+      if (isSecurityActive && userRole === 'employee') {
+        const restrictedTabsList = sensitiveTabs.map(t => {
+          if (t === 'dashboard') return 'Yönetim Paneli (dashboard)';
+          if (t === 'kasa') return 'Kasa ve Banka Hesapları (kasa)';
+          if (t === 'ceksenet') return 'Çek/Senet Yönetimi (ceksenet)';
+          if (t === 'masraflar') return 'Gider Girişi ve Masraflar (masraflar)';
+          if (t === 'calisanlar') return 'Personel Yönetimi ve Maaş Ödemeleri (calisanlar)';
+          if (t === 'krediler') return 'Krediler Takibi (krediler)';
+          if (t === 'raporlar') return 'Detaylı Raporlama ve Analiz (raporlar)';
+          if (t === 'ayarlar') return 'Uygulama ve Sistem Ayarları (ayarlar)';
+          return t;
+        }).join(', ');
+
+        securityGuideline = `
+[KRİTİK GÜVENLİK KISITLAMASI]
+Aktif kullanıcı rolünüz "Personel" (Sınırlı Yetki) ve güvenlik PIN koruma modu aktiftir.
+Erişiminiz dışındaki menüler: [${restrictedTabsList}].
+Kullanıcı bu yasaklı alanlardan birine ait bir işlem yapmaya çalışırsa (örneğin: masraf girişi 'masraf', personel ödemesi 'personel', kasa raporu sorma vb.) veya bu menülere gitmek isterse:
+KESİNLİKLE bu işlemi gerçekleştirmeyin ve SADECE şu JSON formatını döndürün:
+{ "tip": "bilgi", "mesaj": "Yetki Kısıtlaması: Giriş yaptığınız kullanıcı rolü (Personel) nedeniyle bu işlemi gerçekleştirmeye veya bu menüye erişmeye yetkiniz bulunmamaktadır. Lütfen yönetici girişi yapınız." }
+`;
+      }
+
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: {
@@ -336,7 +416,7 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
         },
         body: JSON.stringify({
           system_instruction: {
-            parts: [{ text: `Sen Storm Muhasebe asistanısın. Kullanıcının girdisini analiz et. Bugünün tarihi: ${today}.
+            parts: [{ text: `Sen Storm Muhasebe asistanısın. Kullanıcının girdisini analiz et. Bugünün tarihi: ${today}.${securityGuideline}
 Eğer girdi bir finansal işlem (satış, alış, tahsilat, ödeme, masraf, personel maaş/avans ödemesi) içeriyorsa, SADECE şu JSON formatını döndür: 
 { "tip": "islem", "islem": "satis|alis|tahsilat|odeme|masraf|personel", "cariAdi": "string", "urunAdi": "string", "miktar": number, "fiyat": number, "kdv": number, "tarih": "YYYY-MM-DD" }
 KDV belirtilmemişse her zaman 0 yap. Personel ödemelerinde "cariAdi" veya "urunAdi" alanına personelin adını yaz. Masraflarda (ör: su faturası, elektrik) faturanın cinsini "urunAdi" kısmına yaz. Eğer tarih belirtilmemişse veya 'bugün' denilmişse bugünün tarihini ver. Eğer belirsiz bir şey varsa mantıksal tahmin yürüt.
@@ -401,6 +481,24 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
         else if (parsedCommand.islem === 'musteri_ekle') parsedCommand.islem = 'add_customer';
         else if (parsedCommand.islem === 'tedarikci_ekle') parsedCommand.islem = 'add_supplier';
         else if (parsedCommand.islem === 'urun_ekle') parsedCommand.islem = 'add_product';
+
+        // Code enforcement guard for sensitive operations
+        let targetTab = 'islemler';
+        if (parsedCommand.islem === 'expense') targetTab = 'masraflar';
+        else if (parsedCommand.islem === 'employee_payment') targetTab = 'calisanlar';
+        else if (parsedCommand.islem === 'add_customer' || parsedCommand.islem === 'add_supplier') targetTab = 'cariler';
+        else if (parsedCommand.islem === 'add_product') targetTab = 'stoklar';
+
+        if (isSecurityActive && userRole === 'employee' && sensitiveTabs.includes(targetTab)) {
+          setMessages(prev => [...prev, { 
+            id: Date.now().toString(), 
+            role: 'assistant', 
+            text: `Yetki Kısıtlaması: Giriş yaptığınız kullanıcı rolü (Personel) nedeniyle bu işlemi gerçekleştirmeye veya "${targetTab.toUpperCase()}" menüsüne erişmeye yetkiniz bulunmamaktadır. Lütfen yönetici girişi yapınız.`,
+            isError: true
+          }]);
+          setIsTyping(false);
+          return;
+        }
 
         setMessages(prev => [...prev, { 
           id: Date.now().toString(), 

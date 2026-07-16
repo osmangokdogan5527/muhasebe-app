@@ -8,7 +8,7 @@ interface StockAlertsWidgetProps {
   onNavigate: (view: any) => void;
 }
 
-export const StockAlertsWidget: React.FC<StockAlertsWidgetProps> = ({
+export const StockAlertsWidget = React.memo<StockAlertsWidgetProps>(({
   criticalStocks,
   renderWidgetControls,
   onNavigate
@@ -91,5 +91,5 @@ export const StockAlertsWidget: React.FC<StockAlertsWidgetProps> = ({
                     </div>
                   </div>
   );
-};
+});
 

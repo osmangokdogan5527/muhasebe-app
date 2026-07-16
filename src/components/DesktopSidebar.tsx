@@ -106,7 +106,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                         style={isActive ? { backgroundColor: 'color-mix(in srgb, var(--accent-500) 15%, transparent)' } : {}}
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="scale-90 transform-origin-left shrink-0"><StormIconWrapper iconElement={def.icon} isActive={isActive} /></div>
+                          <StormIconWrapper iconElement={def.icon} isActive={isActive} />
                           <span className="whitespace-nowrap truncate">{def.label}</span>
                         </div>
                         <div 
@@ -178,7 +178,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                     style={isActive ? { backgroundColor: 'color-mix(in srgb, var(--accent-500) 15%, transparent)' } : {}}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="scale-90 transform-origin-left shrink-0"><StormIconWrapper iconElement={def.icon} isActive={isActive} /></div>
+                      <StormIconWrapper iconElement={def.icon} isActive={isActive} />
                       <span className="whitespace-nowrap truncate">{def.label}</span>
                     </div>
                     {isSecurityActive && userRole === 'employee' && sensitiveTabs.includes(tabId) && (

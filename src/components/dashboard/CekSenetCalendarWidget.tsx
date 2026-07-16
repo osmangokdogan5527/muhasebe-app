@@ -10,7 +10,7 @@ interface CekSenetCalendarWidgetProps {
   renderWidgetControls: () => React.ReactNode;
 }
 
-export const CekSenetCalendarWidget: React.FC<CekSenetCalendarWidgetProps> = ({
+export const CekSenetCalendarWidget = React.memo<CekSenetCalendarWidgetProps>(({
   activeCekSenetList,
   getDaysRemaining,
   onNavigate,
@@ -164,5 +164,5 @@ export const CekSenetCalendarWidget: React.FC<CekSenetCalendarWidgetProps> = ({
                     </div>
                   </div>
   );
-};
+});
 

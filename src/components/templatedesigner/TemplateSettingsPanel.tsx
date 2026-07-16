@@ -259,6 +259,20 @@ export function TemplateSettingsPanel({ activeTemplateId, setActiveTemplateId, t
                       </select>
                     </div>
                     <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Yatay Hizalama</label>
+                      <select 
+                        value={activeTemplate.barcodeAlignment || 'center'}
+                        onChange={(e) => handleUpdateActiveTemplate({ barcodeAlignment: e.target.value as any })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                      >
+                        <option value="left">Sola Hizala</option>
+                        <option value="center">Ortala</option>
+                        <option value="right">Sağa Hizala</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="pt-2 pb-2 border-t border-slate-100">
+                    <div>
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Ürün Resmi Konumu</label>
                       <select 
                         value={activeTemplate.imagePosition || 'top'}

@@ -10,7 +10,7 @@ interface StatsGridWidgetProps {
   stoklar: any[];
 }
 
-export const StatsGridWidget: React.FC<StatsGridWidgetProps> = ({
+export const StatsGridWidget = React.memo<StatsGridWidgetProps>(({
   stats,
   dashboardCurrency,
   formatCurrency,
@@ -194,5 +194,5 @@ export const StatsGridWidget: React.FC<StatsGridWidgetProps> = ({
                     </div>
                   </div>
   );
-};
+});
 

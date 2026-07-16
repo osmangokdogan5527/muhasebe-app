@@ -2,17 +2,28 @@ import { useState, useEffect } from 'react';
 
 export function useAppSettings() {
   const [activeTheme, setActiveTheme] = useState<string>(() => {
+    // Migration check to ensure previous users get the new default 'sky' with 'fluid-mesh'
+    const isInitializedV2 = localStorage.getItem('storm_default_setup_v2');
+    if (!isInitializedV2) {
+      localStorage.setItem('storm_default_setup_v2', 'true');
+      localStorage.setItem('kolay_hesap_accent_theme', 'sky');
+      localStorage.setItem('storm_muhasebe_design_style', 'fluid-mesh');
+      localStorage.setItem('storm_muhasebe_logo_theme', 'theme');
+      return 'sky';
+    }
+
     const saved = localStorage.getItem('kolay_hesap_accent_theme');
     if (saved === 'rose') return 'red';
-    return saved || 'red';
+    return saved || 'sky';
   });
 
   const [designStyle, setDesignStyle] = useState<string>(() => {
-    return 'glass';
+    return localStorage.getItem('storm_muhasebe_design_style') || 'fluid-mesh';
   });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-design-style', designStyle);
+    localStorage.setItem('storm_muhasebe_design_style', designStyle);
   }, [designStyle]);
 
   const [activeLogoTheme, setActiveLogoTheme] = useState<string>(() => {

@@ -4,6 +4,8 @@ import { useAppData } from './hooks/useAppData';
 import { useAppAuth } from './hooks/useAppAuth';
 import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { usePrintSettings } from './hooks/usePrintSettings';
+import { useBackupActions } from './hooks/useBackupActions';
+import { useLogoActions } from './hooks/useLogoActions';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Cari, Stock, Transaction, CekSenet, Expense, Employee, EmployeeTransaction, Credit, BankAccount, AccountTransaction, KeyboardShortcut } from './types';
 import { 
@@ -96,8 +98,6 @@ export default function App() {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [isBackupLoading, setIsBackupLoading] = useState(false);
-  const [backupMessage, setBackupMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -133,87 +133,27 @@ export default function App() {
     autoBackupEnabled, setAutoBackupEnabled
   } = useAppSettings();
 
+  const {
+    isBackupLoading,
+    backupMessage,
+    setBackupMessage,
+    handleManualBackup,
+    handleRestoreBackup,
+    toggleAutoBackup,
+    handleOpenBackupFolder
+  } = useBackupActions(showToast, autoBackupEnabled, setAutoBackupEnabled);
 
-  const handleDownloadLogoSvg = () => {
-    const rawSvg = renderToStaticMarkup(
-      <StormLogo 
-        logoTheme={activeLogoTheme} 
-        theme={activeTheme} 
-        sidebarPattern={sidebarPattern} 
-        sidebarPatternOpacity={sidebarPatternOpacity} 
-        designStyle={designStyle}
-        width="512"
-        height="512"
-        downloadMode={true}
-        sidebarBg={sidebarBg}
-      />
-    );
-    
-    // Ensure xmlns is present (renderToStaticMarkup should include it since StormLogo has it, but just in case)
-    let svgContent = rawSvg;
-    if (!svgContent.includes('xmlns=')) {
-      svgContent = svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
-    }
-
-    const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'storm-muhasebe-logo.svg';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleDownloadLogoPng = () => {
-    const rawSvg = renderToStaticMarkup(
-      <StormLogo 
-        logoTheme={activeLogoTheme} 
-        theme={activeTheme} 
-        sidebarPattern={sidebarPattern} 
-        sidebarPatternOpacity={sidebarPatternOpacity} 
-        designStyle={designStyle}
-        width="512"
-        height="512"
-        downloadMode={true}
-        sidebarBg={sidebarBg}
-      />
-    );
-    
-    let svgContent = rawSvg;
-    if (!svgContent.includes('xmlns=')) {
-      svgContent = svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
-    }
-
-    const img = new Image();
-    const svgBlob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(svgBlob);
-    
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 512;
-      canvas.height = 512;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, 512, 512);
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const pngUrl = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = pngUrl;
-            link.download = 'storm-muhasebe-logo.png';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(pngUrl);
-          }
-        }, 'image/png');
-      }
-      URL.revokeObjectURL(url);
-    };
-    img.src = url;
-  };
+  const {
+    handleDownloadLogoSvg,
+    handleDownloadLogoPng
+  } = useLogoActions(
+    activeLogoTheme,
+    activeTheme,
+    sidebarPattern,
+    sidebarPatternOpacity,
+    designStyle,
+    sidebarBg
+  );
 
   
   // Auth state variables
@@ -730,75 +670,6 @@ export default function App() {
     }
   };
 
-  const handleManualBackup = async () => {
-    if (!(window as any).electronAPI || !(window as any).electronAPI.createManualBackup) {
-      showToast("Bu özellik yalnızca masaüstü uygulamasında (Electron) kullanılabilir.", "error");
-      return;
-    }
-    setIsBackupLoading(true);
-    try {
-      const result = await (window as any).electronAPI.createManualBackup();
-      if (result.success) {
-        showToast("Yedekleme başarıyla tamamlandı.", "success");
-      } else {
-        showToast(`Yedekleme başarısız oldu: ${result.error}`, "error");
-      }
-    } catch (err) {
-      showToast("Yedekleme sırasında bir hata oluştu.", "error");
-    } finally {
-      setIsBackupLoading(false);
-    }
-  };
-
-  const handleRestoreBackup = async () => {
-    if (!(window as any).electronAPI || !(window as any).electronAPI.restoreFromBackup) {
-      showToast("Bu özellik yalnızca masaüstü uygulamasında (Electron) kullanılabilir.", "error");
-      return;
-    }
-    setIsBackupLoading(true);
-    try {
-      const result = await (window as any).electronAPI.restoreFromBackup();
-      if (result.success) {
-        showToast("Yedekleme başarıyla geri yüklendi. Uygulama yeniden başlatılacak...", "success");
-        setTimeout(() => {
-            if ((window as any).electronAPI && (window as any).electronAPI.restartApp) {
-                (window as any).electronAPI.restartApp();
-            } else {
-                window.location.reload();
-            }
-        }, 2000);
-      } else if (result.canceled) {
-        // Canceled, do nothing
-      } else {
-        showToast(`Yedekleme geri yüklenemedi: ${result.error}`, "error");
-      }
-    } catch (err) {
-      showToast("Yedekleme geri yüklenirken bir hata oluştu.", "error");
-    } finally {
-      setIsBackupLoading(false);
-    }
-  };
-
-  const toggleAutoBackup = () => {
-      setAutoBackupEnabled(!autoBackupEnabled);
-  };
-
-  const handleOpenBackupFolder = async () => {
-    if (!(window as any).electronAPI || !(window as any).electronAPI.openAutoBackupFolder) {
-      showToast("Bu özellik yalnızca masaüstü uygulamasında (Electron) kullanılabilir.", "error");
-      return;
-    }
-    try {
-      const result = await (window as any).electronAPI.openAutoBackupFolder();
-      if (!result.success) {
-        showToast(`Klasör açılamadı: ${result.error}`, "error");
-      }
-    } catch (err) {
-      showToast("Klasör açılırken bir hata oluştu.", "error");
-    }
-  };
-
-
   if (!user) {
     return (
       <AuthScreen
@@ -850,8 +721,20 @@ export default function App() {
     );
   }
   return (
-    <div data-design-style="glass" className={`min-h-screen ${(currentThemeData as any).bgClass || 'bg-[#050505]'} text-[#e0e0e0] flex flex-col md:flex-row font-sans`}>
+    <div data-design-style={designStyle} className={`min-h-screen relative ${(currentThemeData as any).bgClass || 'bg-[#050505]'} text-[#e0e0e0] flex flex-col md:flex-row font-sans overflow-x-hidden`}>
       <GlobalStyles themeCssRules={themeCssRules} bodyPatternSvg={bodyPatternSvg} activePattern={activePatternObj} />
+
+      {designStyle === 'fluid-mesh' && (
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 select-none">
+          {/* Base deep purple/black background */}
+          <div className="absolute inset-0 bg-[#06040e]" />
+          {/* Floating fluid blobs with blur */}
+          <div className="absolute -top-1/4 -left-1/4 w-[70vw] h-[70vw] rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 opacity-[0.35] blur-[120px] animate-mesh-float-1" />
+          <div className="absolute -bottom-1/4 -right-1/4 w-[75vw] h-[75vw] rounded-full bg-gradient-to-br from-pink-500 to-rose-600 opacity-[0.35] blur-[120px] animate-mesh-float-2" />
+          <div className="absolute top-1/4 right-1/4 w-[60vw] h-[60vw] rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 opacity-[0.25] blur-[100px] animate-mesh-float-3" />
+          <div className="absolute bottom-1/4 left-1/4 w-[65vw] h-[65vw] rounded-full bg-gradient-to-br from-amber-500 to-orange-500 opacity-[0.25] blur-[100px] animate-mesh-float-4" />
+        </div>
+      )}
 
 
       
@@ -918,7 +801,7 @@ export default function App() {
         isSecurityActive={isSecurityActive}
       />
 {/* 3. MAIN WORKSPACE CONTENT */}
-      <main className="flex-1 p-4 sm:p-6 overflow-y-auto max-w-7xl mx-auto w-full pb-20 md:pb-6">
+      <main className="relative z-10 flex-1 p-4 sm:p-6 overflow-y-auto max-w-7xl mx-auto w-full pb-20 md:pb-6">
         <div className={activeTab === 'dashboard' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('dashboard', <DashboardView cariler={cariler} stoklar={stoklar} islemler={islemler} ceksenet={ceksenet} expenses={expenses} employeeTransactions={employeeTransactions} onNavigate={handleNavigate} />)}
         </div>
@@ -1068,6 +951,11 @@ export default function App() {
         setActiveTab={setActiveTab}
         setAiPrefilledData={setAiPrefilledData}
         setFeedbackList={setFeedbackList}
+        userRole={userRole}
+        isSecurityActive={isSecurityActive}
+        sensitiveTabs={sensitiveTabs}
+        actionPermissions={actionPermissions}
+        handleNavigate={handleNavigate}
       />
     </div>
   );

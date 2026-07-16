@@ -55,6 +55,11 @@ interface AppModalsProps {
   setActiveTab: (tab: any) => void;
   setAiPrefilledData,
   setFeedbackList: (data: any) => void;
+  userRole: 'admin' | 'employee';
+  isSecurityActive: boolean;
+  sensitiveTabs: string[];
+  actionPermissions: any;
+  handleNavigate: (tabId: string) => void;
 }
 
 export const AppModals: React.FC<AppModalsProps> = ({
@@ -108,7 +113,12 @@ export const AppModals: React.FC<AppModalsProps> = ({
   geminiApiKey,
   setActiveTab,
   setAiPrefilledData,
-  setFeedbackList
+  setFeedbackList,
+  userRole,
+  isSecurityActive,
+  sensitiveTabs,
+  actionPermissions,
+  handleNavigate
 }) => {
   return (
     <>
@@ -554,23 +564,33 @@ export const AppModals: React.FC<AppModalsProps> = ({
       {user && (
         <AiAssistant 
           apiKey={geminiApiKey} 
+          userRole={userRole}
+          isSecurityActive={isSecurityActive}
+          sensitiveTabs={sensitiveTabs}
+          actionPermissions={actionPermissions}
           onNavigateToSettings={() => {
-            setActiveTab('ayarlar');
+            handleNavigate('ayarlar');
           }}
           onCommandParsed={(commandData) => {
-            setAiPrefilledData(commandData);
-  setFeedbackList(commandData);
+            let targetTab = 'islemler';
             if (commandData.islem === 'expense') {
-              setActiveTab('masraflar');
+              targetTab = 'masraflar';
             } else if (commandData.islem === 'employee_payment') {
-              setActiveTab('calisanlar');
+              targetTab = 'calisanlar';
             } else if (commandData.islem === 'add_customer' || commandData.islem === 'add_supplier') {
-              setActiveTab('cariler');
+              targetTab = 'cariler';
             } else if (commandData.islem === 'add_product') {
-              setActiveTab('stoklar');
-            } else {
-              setActiveTab('islemler');
+              targetTab = 'stoklar';
             }
+
+            if (isSecurityActive && userRole === 'employee' && sensitiveTabs.includes(targetTab)) {
+              handleNavigate(targetTab);
+              return;
+            }
+
+            setAiPrefilledData(commandData);
+            setFeedbackList(commandData);
+            setActiveTab(targetTab);
           }}
         />
       )}

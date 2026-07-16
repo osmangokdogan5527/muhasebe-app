@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { VirtualTableBody } from './VirtualTableBody';
 import { Transaction, Cari, Stock, InvoiceItem, BankAccount } from '../types';
 import { createTransaction, removeTransaction } from '../firebase';
 import { 
@@ -60,7 +61,7 @@ interface IslemlerViewProps {
   onViewCariDetails?: (cariId: string) => void;
 }
 
-export default function IslemlerView({ 
+function IslemlerView({ 
   islemler, 
   cariler, 
   stoklar,
@@ -85,7 +86,7 @@ export default function IslemlerView({
   const [pinError, setPinError] = useState('');
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
 
-  const checkPermissionAndExecute = (actionKey: 'delete_sale' | 'delete_payment' | 'edit_sale' | 'edit_payment', executeAction: () => void) => {
+  const checkPermissionAndExecute = useCallback((actionKey: 'delete_sale' | 'delete_payment' | 'edit_sale' | 'edit_payment', executeAction: () => void) => {
     if (!isSecurityActive || userRole === 'admin' || actionPermissions[actionKey]) {
       executeAction();
     } else {
@@ -94,16 +95,16 @@ export default function IslemlerView({
       setPinError('');
       setIsPinModalOpen(true);
     }
-  };
+  }, [isSecurityActive, userRole, actionPermissions]);
 
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
   
   // Print PDF Receipt states
   const [selectedPrintTransaction, setSelectedPrintTransaction] = useState<Transaction | null>(null);
 
-  const handleOpenPrintModal = (islem: Transaction) => {
+  const handleOpenPrintModal = useCallback((islem: Transaction) => {
     setSelectedPrintTransaction(islem);
-  };
+  }, []);
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -153,15 +154,15 @@ export default function IslemlerView({
   }, [aiPrefilledData]);
 
   // Open modal with default settings
-  const handleOpenModal = (type: 'sale' | 'purchase' | 'collection' | 'payment' | 'sale_return' | 'purchase_return', preselectedCariId?: string) => {
+  const handleOpenModal = useCallback((type: 'sale' | 'purchase' | 'collection' | 'payment' | 'sale_return' | 'purchase_return', preselectedCariId?: string) => {
     setModalType(type);
     setEditingTransaction(null);
     setSelectedCariId(preselectedCariId || '');
     setIsModalOpen(true);
-  };
+  }, []);
 
   // Handle invoice item changes (dropdown selection, quantity/price changes)
-  const handleEditTransaction = (islem: Transaction) => {
+  const handleEditTransaction = useCallback((islem: Transaction) => {
     const isSaleType = ['sale', 'sale_return'].includes(islem.type);
     const actionKey = isSaleType ? 'edit_sale' : 'edit_payment';
 
@@ -170,20 +171,20 @@ export default function IslemlerView({
       setModalType(islem.type);
       setIsModalOpen(true);
     });
-  };
+  }, [checkPermissionAndExecute]);
 
   // Handle transaction deletion trigger
-  const handleDeleteTransaction = (islem: Transaction) => {
+  const handleDeleteTransaction = useCallback((islem: Transaction) => {
     const isSaleType = ['sale', 'sale_return'].includes(islem.type);
     const actionKey = isSaleType ? 'delete_sale' : 'delete_payment';
 
     checkPermissionAndExecute(actionKey, () => {
       setDeleteConfirmTransaction(islem);
     });
-  };
+  }, [checkPermissionAndExecute]);
 
   // Perform actual deletion
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = useCallback(async () => {
     if (!deleteConfirmTransaction) return;
     setIsDeleting(true);
     try {
@@ -195,13 +196,134 @@ export default function IslemlerView({
     } finally {
       setIsDeleting(false);
     }
-  };
+  }, [deleteConfirmTransaction]);
 
   // Handle form submission to database
   // Format currency helper
-  const formatCurrency = (val: number, cur: string = 'TRY') => {
+  const formatCurrency = useCallback((val: number, cur: string = 'TRY') => {
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: cur }).format(val);
-  };
+  }, []);
+
+  const renderIslemRow = useCallback((islem: Transaction, index: number) => {
+    const isIncoming = ['sale', 'collection', 'purchase_return'].includes(islem.type);
+    const isCariDeleted = islem.cariId ? !cariler.some(c => c.id === islem.cariId) : false;
+    const isStockDeleted = islem.items ? islem.items.some(item => item.stockId && !stoklar.some(s => s.id === item.stockId)) : false;
+    const isOrphaned = isCariDeleted || isStockDeleted;
+    return (
+      <tr key={islem.id} className={`transition h-[72px] ${isOrphaned ? 'bg-amber-500/[0.02] hover:bg-amber-500/[0.04]' : 'hover:bg-white/[0.02]'}`}>
+        <td className="p-4 text-xs font-semibold text-white/45 font-mono">
+          {islem.date}
+        </td>
+        <td className="p-4">
+          <div className="font-bold text-white/95 text-sm flex items-center gap-1.5">
+            {isCariDeleted || isOrphaned || !onViewCariDetails ? (
+              <span className={isOrphaned ? 'text-amber-200/90' : ''}>{islem.cariName}</span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onViewCariDetails(islem.cariId!)}
+                className="font-bold text-teal-400 hover:text-teal-300 hover:underline cursor-pointer transition text-left leading-tight"
+              >
+                {islem.cariName}
+              </button>
+            )}
+            {isCariDeleted && (
+              <span className="inline-flex items-center text-amber-500 hover:text-amber-400 cursor-help" title="Cari kayıt silinmiş! Muhasebe bütünlüğü için yasal kayıt korunmaktadır.">
+                <AlertTriangle size={13} className="animate-pulse" />
+              </span>
+            )}
+            {isStockDeleted && (
+              <span className="inline-flex items-center text-amber-500 hover:text-amber-400 cursor-help" title="Faturadaki bazı stok kalemleri silinmiş! Muhasebe bütünlüğü için yasal kayıt korunmaktadır.">
+                <AlertCircle size={13} className="animate-pulse" />
+              </span>
+            )}
+          </div>
+        </td>
+        <td className="p-4">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-sm text-[10px] uppercase font-mono tracking-wider font-semibold ${
+              islem.type === 'sale' || islem.type === 'purchase_return' ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20' :
+              islem.type === 'purchase' || islem.type === 'sale_return' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+              islem.type === 'collection' ? 'bg-teal-500/10 text-teal-400' : 'bg-red-500/10 text-red-400'
+            }`}>
+              {islem.type === 'sale' ? 'Satış' :
+               islem.type === 'purchase' ? 'Alış' :
+               islem.type === 'sale_return' ? 'Satıştan İade' :
+               islem.type === 'purchase_return' ? 'Alıştan İade' :
+               islem.type === 'collection' ? 'Tahsilat' : 'Ödeme'}
+            </span>
+            {isOrphaned ? (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase font-mono font-bold tracking-wider bg-amber-500/15 border border-amber-500/30 text-amber-400" title="Yasal muhasebe kaydı korunuyor, bu işlem geçersiz kılınmıştır.">
+                GEÇERSİZ KILINMIŞ
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-mono font-bold tracking-wider bg-white/5 border border-white/10 text-white/70">
+                {islem.currency || 'TRY'}
+              </span>
+            )}
+          </div>
+        </td>
+        <td className="p-4 text-xs font-semibold text-white/70 font-mono">
+          {islem.invoiceNo || '-'}
+        </td>
+        <td className="p-4 text-xs text-white/50 font-sans">
+          {islem.account === 'cash' ? '💵 Kasa' :
+           islem.account === 'bank' ? '🏦 Banka' : 
+           islem.account === 'pos' ? '💳 POS' : '⏳ Vadeli'}
+        </td>
+        <td className="p-4 text-xs text-white/40 max-w-xs truncate" title={islem.description}>
+          {islem.description}
+        </td>
+        <td className="p-4 text-right">
+          <div className={`font-semibold text-sm ${isIncoming ? 'text-teal-400' : 'text-red-400'}`} style={{ fontFamily: 'Georgia, serif' }}>
+            {isIncoming ? '+' : '-'}{formatCurrency(islem.amount, islem.currency || 'TRY')}
+          </div>
+          {islem.exchangeRate && islem.exchangeRate !== 1 && (
+            <div className="text-[9px] text-white/30 font-mono mt-0.5">
+              {formatCurrency(islem.convertedAmount || (islem.amount * islem.exchangeRate), 'TRY')} (Kur: {islem.exchangeRate})
+            </div>
+          )}
+        </td>
+        <td className="p-4 text-center">
+          <div className="flex items-center justify-center gap-1.5">
+            <button
+              id={`btn-print-islem-${islem.id}`}
+              onClick={() => handleOpenPrintModal(islem)}
+              className="p-1.5 text-white/30 hover:text-teal-400 hover:bg-white/5 rounded transition cursor-pointer"
+              title="Yazdır / PDF Al"
+            >
+              <Printer size={15} />
+            </button>
+            <button
+              id={`btn-edit-islem-${islem.id}`}
+              onClick={() => handleEditTransaction(islem)}
+              className="p-1.5 text-white/30 hover:text-blue-400 hover:bg-white/5 rounded transition cursor-pointer"
+              title="Düzenle"
+            >
+              <Edit size={15} />
+            </button>
+            {isOrphaned ? (
+              <span 
+                className="inline-flex p-1.5 text-amber-500/40 hover:text-amber-500/60 transition cursor-help"
+                title="Geçersiz Kılınmış (Asıl Cari veya Stok kaydı silindiği için yasal muhasebe bütünlüğünü korumak adına geri alınamaz/iptal edilemez)"
+              >
+                <Lock size={15} />
+              </span>
+            ) : (
+              <button
+                id={`btn-delete-islem-${islem.id}`}
+                onClick={() => handleDeleteTransaction(islem)}
+                className="p-1.5 text-white/30 hover:text-red-400 hover:bg-white/5 rounded transition cursor-pointer"
+                title="Geri Al / İptal Et"
+              >
+                <Trash2 size={15} />
+              </button>
+            )}
+          </div>
+        </td>
+      </tr>
+    );
+  }, [cariler, stoklar, onViewCariDetails, handleOpenPrintModal, handleEditTransaction, handleDeleteTransaction, formatCurrency]);
 
   return (
     <div className="space-y-6">
@@ -415,128 +537,11 @@ export default function IslemlerView({
                     <th className="p-4 text-[10px] font-semibold text-white/40 uppercase tracking-widest font-mono text-center">İşlem</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
-                  {filteredTransactions.map((islem) => {
-                    const isIncoming = ['sale', 'collection', 'purchase_return'].includes(islem.type);
-                    const isCariDeleted = islem.cariId ? !cariler.some(c => c.id === islem.cariId) : false;
-                    const isStockDeleted = islem.items ? islem.items.some(item => item.stockId && !stoklar.some(s => s.id === item.stockId)) : false;
-                    const isOrphaned = isCariDeleted || isStockDeleted;
-                    return (
-                      <tr key={islem.id} className={`transition ${isOrphaned ? 'bg-amber-500/[0.02] hover:bg-amber-500/[0.04]' : 'hover:bg-white/[0.02]'}`}>
-                        <td className="p-4 text-xs font-semibold text-white/45 font-mono">
-                          {islem.date}
-                        </td>
-                        <td className="p-4">
-                          <div className="font-bold text-white/95 text-sm flex items-center gap-1.5">
-                            {isCariDeleted || isOrphaned || !onViewCariDetails ? (
-                              <span className={isOrphaned ? 'text-amber-200/90' : ''}>{islem.cariName}</span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => onViewCariDetails(islem.cariId)}
-                                className="font-bold text-teal-400 hover:text-teal-300 hover:underline cursor-pointer transition text-left leading-tight"
-                              >
-                                {islem.cariName}
-                              </button>
-                            )}
-                            {isCariDeleted && (
-                              <span className="inline-flex items-center text-amber-500 hover:text-amber-400 cursor-help" title="Cari kayıt silinmiş! Muhasebe bütünlüğü için yasal kayıt korunmaktadır.">
-                                <AlertTriangle size={13} className="animate-pulse" />
-                              </span>
-                            )}
-                            {isStockDeleted && (
-                              <span className="inline-flex items-center text-amber-500 hover:text-amber-400 cursor-help" title="Faturadaki bazı stok kalemleri silinmiş! Muhasebe bütünlüğü için yasal kayıt korunmaktadır.">
-                                <AlertCircle size={13} className="animate-pulse" />
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-sm text-[10px] uppercase font-mono tracking-wider font-semibold ${
-                              islem.type === 'sale' || islem.type === 'purchase_return' ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20' :
-                              islem.type === 'purchase' || islem.type === 'sale_return' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
-                              islem.type === 'collection' ? 'bg-teal-500/10 text-teal-400' : 'bg-red-500/10 text-red-400'
-                            }`}>
-                              {islem.type === 'sale' ? 'Satış' :
-                               islem.type === 'purchase' ? 'Alış' :
-                               islem.type === 'sale_return' ? 'Satıştan İade' :
-                               islem.type === 'purchase_return' ? 'Alıştan İade' :
-                               islem.type === 'collection' ? 'Tahsilat' : 'Ödeme'}
-                            </span>
-                            {isOrphaned ? (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase font-mono font-bold tracking-wider bg-amber-500/15 border border-amber-500/30 text-amber-400" title="Yasal muhasebe kaydı korunuyor, bu işlem geçersiz kılınmıştır.">
-                                GEÇERSİZ KILINMIŞ
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-mono font-bold tracking-wider bg-white/5 border border-white/10 text-white/70">
-                                {islem.currency || 'TRY'}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-4 text-xs font-semibold text-white/70 font-mono">
-                          {islem.invoiceNo || '-'}
-                        </td>
-                        <td className="p-4 text-xs text-white/50 font-sans">
-                          {islem.account === 'cash' ? '💵 Kasa' :
-                           islem.account === 'bank' ? '🏦 Banka' : 
-                           islem.account === 'pos' ? '💳 POS' : '⏳ Vadeli'}
-                        </td>
-                        <td className="p-4 text-xs text-white/40 max-w-xs truncate" title={islem.description}>
-                          {islem.description}
-                        </td>
-                        <td className="p-4 text-right">
-                          <div className={`font-semibold text-sm ${isIncoming ? 'text-teal-400' : 'text-red-400'}`} style={{ fontFamily: 'Georgia, serif' }}>
-                            {isIncoming ? '+' : '-'}{formatCurrency(islem.amount, islem.currency || 'TRY')}
-                          </div>
-                          {islem.exchangeRate && islem.exchangeRate !== 1 && (
-                            <div className="text-[9px] text-white/30 font-mono mt-0.5">
-                              {formatCurrency(islem.convertedAmount || (islem.amount * islem.exchangeRate), 'TRY')} (Kur: {islem.exchangeRate})
-                            </div>
-                          )}
-                        </td>
-                        <td className="p-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              id={`btn-print-islem-${islem.id}`}
-                              onClick={() => handleOpenPrintModal(islem)}
-                              className="p-1.5 text-white/30 hover:text-teal-400 hover:bg-white/5 rounded transition cursor-pointer"
-                              title="Yazdır / PDF Al"
-                            >
-                              <Printer size={15} />
-                            </button>
-                            <button
-                              id={`btn-edit-islem-${islem.id}`}
-                              onClick={() => handleEditTransaction(islem)}
-                              className="p-1.5 text-white/30 hover:text-blue-400 hover:bg-white/5 rounded transition cursor-pointer"
-                              title="Düzenle"
-                            >
-                              <Edit size={15} />
-                            </button>
-                            {isOrphaned ? (
-                              <span 
-                                className="inline-flex p-1.5 text-amber-500/40 hover:text-amber-500/60 transition cursor-help"
-                                title="Geçersiz Kılınmış (Asıl Cari veya Stok kaydı silindiği için yasal muhasebe bütünlüğünü korumak adına geri alınamaz/iptal edilemez)"
-                              >
-                                <Lock size={14} />
-                              </span>
-                            ) : (
-                              <button 
-                                 id={`btn-delete-islem-${islem.id}`}
-                                 onClick={() => handleDeleteTransaction(islem)}
-                                 className="p-1.5 text-white/30 hover:text-red-400 hover:bg-white/5 rounded transition cursor-pointer"
-                                 title="Geri Al"
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
+                <VirtualTableBody
+                  items={filteredTransactions}
+                  rowHeight={72}
+                  renderRow={renderIslemRow}
+                />
               </table>
             </div>
 
@@ -832,3 +837,5 @@ export default function IslemlerView({
     </div>
   );
 }
+
+export default React.memo(IslemlerView);

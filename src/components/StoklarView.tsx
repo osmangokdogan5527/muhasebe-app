@@ -1,5 +1,6 @@
 import { StoklarExtraModals } from './stoklar/StoklarExtraModals';
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { VirtualTableBody } from './VirtualTableBody';
 import { motion } from 'motion/react';
 import Barcode from 'react-barcode';
 import * as QRCode from 'qrcode';
@@ -50,7 +51,7 @@ interface StoklarViewProps {
   onStockAdded?: () => void;
 }
 
-export default function StoklarView({
+function StoklarView({
   stoklar = [],
   islemler = [],
   cariler: _cariler = [],
@@ -143,7 +144,7 @@ export default function StoklarView({
   const [pinError, setPinError] = useState('');
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
 
-  const checkPermissionAndExecute = (actionKey: 'delete_stock' | 'decrease_stock' | 'edit_stock', executeAction: () => void) => {
+  const checkPermissionAndExecute = useCallback((actionKey: 'delete_stock' | 'decrease_stock' | 'edit_stock', executeAction: () => void) => {
     if (!isSecurityActive || userRole === 'admin' || actionPermissions[actionKey]) {
       executeAction();
     } else {
@@ -152,7 +153,7 @@ export default function StoklarView({
       setPinError('');
       setIsPinModalOpen(true);
     }
-  };
+  }, [isSecurityActive, userRole, actionPermissions]);
 
 
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -314,21 +315,21 @@ export default function StoklarView({
   }, [pendingAddStock, onStockAdded]);
 
   // Open modal for creating new Stock item
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateModal = useCallback(() => {
     setEditingStock(null);
     setIsModalOpen(true);
-  };
+  }, []);
 
   // Open modal for editing existing Stock item
-  const handleOpenEditModal = (stock: Stock) => {
+  const handleOpenEditModal = useCallback((stock: Stock) => {
     checkPermissionAndExecute('edit_stock', () => {
       setEditingStock(stock);
       setIsModalOpen(true);
     });
-  };
+  }, [checkPermissionAndExecute]);
 
   // Handle stock deletion
-  const handleDelete = async (id: string, name: string) => {
+  const handleDelete = useCallback(async (id: string, name: string) => {
     const executeDelete = async () => {
       if (window.confirm(`"${name}" isimli stok kartını silmek istediğinize emin misiniz?`)) {
         try {
@@ -341,12 +342,123 @@ export default function StoklarView({
     };
 
     checkPermissionAndExecute('delete_stock', executeDelete);
-  };
+  }, [checkPermissionAndExecute]);
 
   // Format currency helper
-  const formatCurrency = (val: number) => {
+  const formatCurrency = useCallback((val: number) => {
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(val);
-  };
+  }, []);
+
+  const renderStockRow = useCallback((stok: Stock, index: number) => {
+    const isCritical = stok.quantity <= stok.minQuantity;
+    const stockValue = (stok.quantity || 0) * (stok.purchasePrice || 0);
+    return (
+      <tr key={stok.id} className="hover:bg-white/[0.02] transition h-[72px]">
+        <td className="p-4">
+          <div className="flex items-center gap-3">
+            {stok.imageUrl ? (
+              <div className="w-10 h-10 rounded overflow-hidden bg-white/5 border border-white/10 shrink-0">
+                <img src={stok.imageUrl} alt={stok.name} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded bg-white/5 border border-white/10 flex items-center justify-center text-white/20 shrink-0">
+                <Package size={16} />
+              </div>
+            )}
+            <div>
+              <div 
+                onClick={() => setSelectedStockForDetails(stok)}
+                title="Ürün detayları ve teslimat geçmişi için tıklayın"
+                className="font-bold text-teal-400 hover:text-teal-300 cursor-pointer hover:underline transition text-sm"
+              >
+                {stok.name}
+              </div>
+              <div className="text-[10px] text-white/40 mt-1 font-mono tracking-wider flex flex-wrap items-center gap-2">
+                <span>{stok.code}</span>
+                {stok.barcode && (
+                  <span className="text-teal-400/70">| Barkod: {stok.barcode}</span>
+                )}
+                {stok.category && (
+                  <span className="bg-teal-500/10 text-teal-400 border border-teal-500/20 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider font-semibold font-sans">
+                    {stok.category}
+                  </span>
+                )}
+                {stok.brand && (
+                  <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider font-semibold font-sans">
+                    {stok.brand}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </td>
+        <td className="p-4">
+          <span className="text-[10px] font-mono tracking-wider font-semibold text-white/60 bg-white/5 border border-white/10 px-2 py-0.5 rounded">{stok.unit}</span>
+        </td>
+        <td className="p-4 text-sm font-medium text-white/70" style={{ fontFamily: 'Georgia, serif' }}>
+          {formatCurrency(stok.purchasePrice)}
+        </td>
+        <td className="p-4 text-sm font-semibold text-teal-400" style={{ fontFamily: 'Georgia, serif' }}>
+          {formatCurrency(stok.salesPrice)}
+        </td>
+        <td className="p-4 text-center text-xs font-semibold text-white/40 font-mono">
+          %{stok.taxRate}
+        </td>
+        <td className="p-4 text-right">
+          <div className={`font-bold text-sm ${
+            isCritical ? 'text-red-400' : 'text-white/90'
+          }`}>
+            {stok.quantity} {stok.unit}
+          </div>
+          {isCritical && (
+            <div className="text-[9px] text-red-400 font-medium flex items-center justify-end gap-1 mt-1 uppercase tracking-wider font-mono">
+              <AlertTriangle size={10} />
+              <span>Kritik (Sınır: {stok.minQuantity})</span>
+            </div>
+          )}
+        </td>
+        <td className="p-4 text-right font-semibold text-sm text-teal-400" style={{ fontFamily: 'Georgia, serif' }}>
+          {formatCurrency(stockValue)}
+        </td>
+        <td className="p-4">
+          <div className="flex items-center justify-center gap-2">
+            <button 
+              id={`btn-qr-stok-${stok.id}`}
+              onClick={() => { setQrStock(stok); setQrContentMode('all'); setQrCustomText(''); setIsQrModalOpen(true); }}
+              title="QR Kod Oluştur"
+              className="p-2 text-teal-400 hover:bg-white/5 rounded transition"
+            >
+              <QrCode size={16} />
+            </button>
+            <button 
+              id={`btn-print-stok-${stok.id}`}
+              onClick={() => { setPrintingStock(stok); setIsPrintModalOpen(true); }}
+              title="Barkod Yazdır"
+              className="p-2 text-blue-400 hover:bg-white/5 rounded transition"
+            >
+              <Printer size={16} />
+            </button>
+            <button 
+              id={`btn-edit-stok-${stok.id}`}
+              onClick={() => handleOpenEditModal(stok)}
+              title="Düzenle"
+              className="p-2 text-amber-400 hover:bg-white/5 rounded transition"
+            >
+              <Edit2 size={16} />
+            </button>
+            <button 
+              id={`btn-delete-stok-${stok.id}`}
+              onClick={() => handleDelete(stok.id, stok.name)}
+              title="Sil"
+              className="p-2 text-red-400 hover:bg-white/5 rounded transition"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  }, [formatCurrency, handleOpenEditModal, handleDelete]);
 
 
   return (
@@ -712,118 +824,11 @@ export default function StoklarView({
                     <th className="p-4 text-[10px] font-semibold text-white/40 uppercase tracking-widest font-mono text-center">İşlemler</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
-                  {filteredStoklar.map((stok) => {
-                    const isCritical = stok.quantity <= stok.minQuantity;
-                    const stockValue = (stok.quantity || 0) * (stok.purchasePrice || 0);
-                    return (
-                      <tr key={stok.id} className="hover:bg-white/[0.02] transition">
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            {stok.imageUrl ? (
-                              <div className="w-10 h-10 rounded overflow-hidden bg-white/5 border border-white/10 shrink-0">
-                                <img src={stok.imageUrl} alt={stok.name} className="w-full h-full object-cover" />
-                              </div>
-                            ) : (
-                              <div className="w-10 h-10 rounded bg-white/5 border border-white/10 flex items-center justify-center text-white/20 shrink-0">
-                                <Package size={16} />
-                              </div>
-                            )}
-                            <div>
-                              <div 
-                                onClick={() => setSelectedStockForDetails(stok)}
-                                title="Ürün detayları ve teslimat geçmişi için tıklayın"
-                                className="font-bold text-teal-400 hover:text-teal-300 cursor-pointer hover:underline transition text-sm"
-                              >
-                                {stok.name}
-                              </div>
-                              <div className="text-[10px] text-white/40 mt-1 font-mono tracking-wider flex flex-wrap items-center gap-2">
-                                <span>{stok.code}</span>
-                                {stok.barcode && (
-                                  <span className="text-teal-400/70">| Barkod: {stok.barcode}</span>
-                                )}
-                                {stok.category && (
-                                  <span className="bg-teal-500/10 text-teal-400 border border-teal-500/20 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider font-semibold font-sans">
-                                    {stok.category}
-                                  </span>
-                                )}
-                                {stok.brand && (
-                                  <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider font-semibold font-sans">
-                                    {stok.brand}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <span className="text-[10px] font-mono tracking-wider font-semibold text-white/60 bg-white/5 border border-white/10 px-2 py-0.5 rounded">{stok.unit}</span>
-                        </td>
-                        <td className="p-4 text-sm font-medium text-white/70" style={{ fontFamily: 'Georgia, serif' }}>
-                          {formatCurrency(stok.purchasePrice)}
-                        </td>
-                        <td className="p-4 text-sm font-semibold text-teal-400" style={{ fontFamily: 'Georgia, serif' }}>
-                          {formatCurrency(stok.salesPrice)}
-                        </td>
-                        <td className="p-4 text-center text-xs font-semibold text-white/40 font-mono">
-                          %{stok.taxRate}
-                        </td>
-                        <td className="p-4 text-right">
-                          <div className={`font-bold text-sm ${
-                            isCritical ? 'text-red-400' : 'text-white/90'
-                          }`}>
-                            {stok.quantity} {stok.unit}
-                          </div>
-                          {isCritical && (
-                            <div className="text-[9px] text-red-400 font-medium flex items-center justify-end gap-1 mt-1 uppercase tracking-wider font-mono">
-                              <AlertTriangle size={10} />
-                              <span>Kritik (Sınır: {stok.minQuantity})</span>
-                            </div>
-                          )}
-                        </td>
-                        <td className="p-4 text-right font-semibold text-sm text-teal-400" style={{ fontFamily: 'Georgia, serif' }}>
-                          {formatCurrency(stockValue)}
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <button 
-                              id={`btn-qr-stok-${stok.id}`}
-                              onClick={() => { setQrStock(stok); setQrContentMode('all'); setQrCustomText(''); setIsQrModalOpen(true); }}
-                              title="QR Kod Oluştur"
-                              className="p-2 text-teal-400 hover:bg-white/5 rounded transition"
-                            >
-                              <QrCode size={16} />
-                            </button>
-                            <button 
-                              id={`btn-print-stok-${stok.id}`}
-                              onClick={() => { setPrintingStock(stok); setIsPrintModalOpen(true); }}
-                              title="Barkod Yazdır"
-                              className="p-2 text-blue-400 hover:bg-white/5 rounded transition"
-                            >
-                              <Printer size={16} />
-                            </button>
-                            <button 
-                              id={`btn-edit-stok-${stok.id}`}
-                              onClick={() => handleOpenEditModal(stok)}
-                              title="Düzenle"
-                              className="p-2 text-amber-400 hover:bg-white/5 rounded transition"
-                            >
-                              <Edit2 size={16} />
-                            </button>
-                            <button 
-                              id={`btn-delete-stok-${stok.id}`}
-                              onClick={() => handleDelete(stok.id, stok.name)}
-                              title="Sil"
-                              className="p-2 text-red-400 hover:bg-white/5 rounded transition"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
+                <VirtualTableBody
+                  items={filteredStoklar}
+                  rowHeight={72}
+                  renderRow={renderStockRow}
+                />
               </table>
             </div>
 
@@ -983,3 +988,5 @@ export default function StoklarView({
     </div>
   );
 }
+
+export default React.memo(StoklarView);

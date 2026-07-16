@@ -79,15 +79,106 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [adminTab, setAdminTab] = React.useState<'errors' | 'feedback'>('errors');
   const [expandedLogId, setExpandedLogId] = React.useState<string | null>(null);
 
+  const isFluidMesh = designStyle === 'fluid-mesh';
+  const isGlass = designStyle === 'glass';
+
+  // Dynamic mesh background gradients matching the activeTheme!
+  const getMeshGradients = (themeId: string) => {
+    switch (themeId) {
+      case 'sky':
+      case 'sampi10-blue':
+        return {
+          blob1: 'from-blue-600 to-sky-700',
+          blob2: 'from-indigo-500 to-cyan-600',
+          blob3: 'from-cyan-500 to-blue-600',
+          blob4: 'from-indigo-700 to-slate-800'
+        };
+      case 'teal':
+        return {
+          blob1: 'from-teal-600 to-emerald-700',
+          blob2: 'from-cyan-500 to-teal-600',
+          blob3: 'from-emerald-500 to-teal-600',
+          blob4: 'from-teal-800 to-cyan-900'
+        };
+      case 'amber':
+        return {
+          blob1: 'from-amber-600 to-orange-700',
+          blob2: 'from-yellow-500 to-amber-600',
+          blob3: 'from-orange-500 to-yellow-600',
+          blob4: 'from-amber-800 to-orange-950'
+        };
+      case 'emerald':
+        return {
+          blob1: 'from-emerald-600 to-teal-700',
+          blob2: 'from-green-500 to-emerald-600',
+          blob3: 'from-teal-500 to-green-600',
+          blob4: 'from-emerald-800 to-teal-950'
+        };
+      case 'red':
+        return {
+          blob1: 'from-red-600 to-rose-700',
+          blob2: 'from-orange-500 to-red-600',
+          blob3: 'from-rose-500 to-red-600',
+          blob4: 'from-red-800 to-rose-950'
+        };
+      case 'purple':
+        return {
+          blob1: 'from-purple-600 to-indigo-700',
+          blob2: 'from-fuchsia-500 to-purple-600',
+          blob3: 'from-indigo-500 to-fuchsia-600',
+          blob4: 'from-purple-800 to-indigo-950'
+        };
+      default:
+        return {
+          blob1: 'from-indigo-600 to-purple-700',
+          blob2: 'from-pink-500 to-rose-600',
+          blob3: 'from-teal-500 to-emerald-600',
+          blob4: 'from-amber-500 to-orange-500'
+        };
+    }
+  };
+  const meshColors = getMeshGradients(activeTheme);
+
+  const mainBgStyle = isGlass 
+    ? {
+        background: `
+          radial-gradient(circle at 10% 20%, color-mix(in srgb, var(--accent-500) 18%, transparent) 0%, transparent 45%),
+          radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.14) 0%, transparent 50%),
+          radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.1) 0%, transparent 40%),
+          radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(135deg, #050505 0%, #08080a 100%)
+        `,
+        backgroundSize: '100% 100%, 100% 100%, 100% 100%, 24px 24px, 100% 100%',
+      }
+    : isFluidMesh
+    ? { backgroundColor: '#06040e' }
+    : undefined;
+
   return (
-      <main className={`min-h-screen ${(currentThemeData as any).bgClass || 'bg-black'} flex flex-col items-center p-6 overflow-y-auto`}>
+      <main 
+        data-design-style={designStyle}
+        className={`min-h-screen flex flex-col items-center p-6 overflow-y-auto relative z-10 w-full`}
+        style={mainBgStyle}
+      >
         <style>{`
           :root {
             ${themeCssRules}
           }
         `}</style>
+
+        {isFluidMesh && (
+          <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 select-none">
+            {/* Deep background */}
+            <div className="absolute inset-0 bg-[#06040e]" />
+            {/* Rotating and scaling color blobs with heavy blur */}
+            <div className={`absolute -top-[20%] -left-[20%] w-[80vw] h-[80vw] rounded-full bg-gradient-to-br ${meshColors.blob1} opacity-[0.38] blur-[120px] animate-mesh-float-1`} />
+            <div className={`absolute -bottom-[20%] -right-[20%] w-[85vw] h-[85vw] rounded-full bg-gradient-to-br ${meshColors.blob2} opacity-[0.38] blur-[120px] animate-mesh-float-2`} />
+            <div className={`absolute top-[20%] right-[10%] w-[65vw] h-[65vw] rounded-full bg-gradient-to-br ${meshColors.blob3} opacity-[0.25] blur-[100px] animate-mesh-float-3`} />
+            <div className={`absolute bottom-[20%] left-[10%] w-[70vw] h-[70vw] rounded-full bg-gradient-to-br ${meshColors.blob4} opacity-[0.25] blur-[100px] animate-mesh-float-4`} />
+          </div>
+        )}
         
-        <div className="w-full max-w-md my-auto">
+        <div className="w-full max-w-md my-auto relative z-10">
           <div className="text-center mb-10 flex flex-col items-center">
             <StormLogo className="w-44 h-auto mx-auto mb-6" logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern={sidebarPattern} sidebarPatternOpacity={sidebarPatternOpacity} designStyle={designStyle} />
             <p className="text-xs text-white/40 uppercase tracking-widest font-mono">Güvenli Yönetim Paneli</p>

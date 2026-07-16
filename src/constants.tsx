@@ -26,7 +26,9 @@ export const StormLogo = ({
   downloadMode?: boolean;
   sidebarBg?: string;
 }) => {
-  const isGlass = designStyle === 'glass' || (typeof document !== 'undefined' && document.documentElement.getAttribute('data-design-style') === 'glass') || localStorage.getItem('storm_muhasebe_design_style') === 'glass';
+  const currentDesignStyle = designStyle || (typeof document !== 'undefined' && document.documentElement.getAttribute('data-design-style')) || localStorage.getItem('storm_muhasebe_design_style') || 'glass';
+  const isGlass = currentDesignStyle === 'glass';
+  const isFluidMesh = currentDesignStyle === 'fluid-mesh';
 
   // Strip any shadow filters and transition effects to keep the logo perfectly flat and net
   const cleanedStyle = { ...style };
@@ -60,6 +62,77 @@ export const StormLogo = ({
   // Generate safe dynamic unique ID for pattern reference
   const rawId = React.useId ? React.useId() : '0';
   const patternId = 'storm-logo-pattern-' + rawId.replace(/:/g, '');
+
+  // Dynamic colors for Fluid Mesh style logo based on current active theme preset!
+  const getFluidMeshLogoColors = (themeId: string) => {
+    switch (themeId) {
+      case 'sky':
+      case 'sampi10-blue':
+        return {
+          borderGrad: ['#f43f5e', '#8b5cf6', '#3b82f6', '#14b8a6'],
+          boltGrad: ['#ffffff', '#38bdf8', '#ec4899'],
+          glow1: '#ec4899',
+          glow2: '#14b8a6',
+          glow3: '#8b5cf6',
+          dropShadow: '#ec4899'
+        };
+      case 'teal':
+        return {
+          borderGrad: ['#0d9488', '#14b8a6', '#2dd4bf', '#10b981'],
+          boltGrad: ['#ffffff', '#2dd4bf', '#10b981'],
+          glow1: '#14b8a6',
+          glow2: '#10b981',
+          glow3: '#0f766e',
+          dropShadow: '#14b8a6'
+        };
+      case 'amber':
+        return {
+          borderGrad: ['#d97706', '#f59e0b', '#fbbf24', '#f97316'],
+          boltGrad: ['#ffffff', '#fbbf24', '#f97316'],
+          glow1: '#f59e0b',
+          glow2: '#f97316',
+          glow3: '#b45309',
+          dropShadow: '#f59e0b'
+        };
+      case 'emerald':
+        return {
+          borderGrad: ['#059669', '#10b981', '#34d399', '#14b8a6'],
+          boltGrad: ['#ffffff', '#34d399', '#14b8a6'],
+          glow1: '#10b981',
+          glow2: '#14b8a6',
+          glow3: '#047857',
+          dropShadow: '#10b981'
+        };
+      case 'red':
+        return {
+          borderGrad: ['#dc2626', '#ef4444', '#f87171', '#f43f5e'],
+          boltGrad: ['#ffffff', '#f87171', '#f43f5e'],
+          glow1: '#ef4444',
+          glow2: '#f43f5e',
+          glow3: '#b91c1c',
+          dropShadow: '#ef4444'
+        };
+      case 'purple':
+        return {
+          borderGrad: ['#7c3aed', '#8b5cf6', '#a78bfa', '#ec4899'],
+          boltGrad: ['#ffffff', '#a78bfa', '#ec4899'],
+          glow1: '#8b5cf6',
+          glow2: '#ec4899',
+          glow3: '#6d28d9',
+          dropShadow: '#8b5cf6'
+        };
+      default: // 'gray', etc.
+        return {
+          borderGrad: ['#4b5563', '#9ca3af', '#d1d5db', '#6b7280'],
+          boltGrad: ['#ffffff', '#d1d5db', '#6b7280'],
+          glow1: '#9ca3af',
+          glow2: '#6b7280',
+          glow3: '#374151',
+          dropShadow: '#9ca3af'
+        };
+    }
+  };
+  const fluidColors = getFluidMeshLogoColors(effectiveTheme);
 
   let patternWidth = 120;
   let patternHeight = 104;
@@ -149,109 +222,227 @@ export const StormLogo = ({
 
   return (
     <div className={className} style={{ ...cleanedStyle, willChange: 'transform', display: 'flex', alignItems: 'center', justifyContent: 'center', width: typeof width === 'number' ? `${width}px` : (width === '100%' ? undefined : width), height: typeof height === 'number' ? `${height}px` : (height === '100%' ? undefined : height) }}>
-      <svg className={isGlass ? 'storm-logo-glass' : ''} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={width} height={height}>
+      <svg className={isGlass ? 'storm-logo-glass' : (isFluidMesh ? 'storm-logo-fluid-mesh' : '')} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={width} height={height}>
         <defs>
           <clipPath id="logo-clip">
-          <rect width="200" height="200" rx="48" />
-        </clipPath>
-        {patternContent && !isGlass && (
-          <pattern 
-            id={patternId} 
-            width={patternWidth} 
-            height={patternHeight} 
-            patternUnits="userSpaceOnUse" 
-            viewBox={patternViewBox}
-            x={(200 - patternWidth) / 2}
-            y={(200 - patternHeight) / 2}
-          >
-            {patternContent}
-          </pattern>
-        )}
-        <linearGradient id="glass-logo-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
-          <stop offset="45%" stopColor="#ffffff" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-        </linearGradient>
-        <linearGradient id="glass-border-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
-          <stop offset="30%" stopColor="#ffffff" stopOpacity="0.4" />
-          <stop offset="70%" stopColor="#ffffff" stopOpacity="0.15" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0.5" />
-        </linearGradient>
-        <linearGradient id="glass-back-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.15" />
-          <stop offset="35%" stopColor={fillCol} stopOpacity="0.1" />
-          <stop offset="70%" stopColor={fillCol} stopOpacity="0.05" />
-          <stop offset="100%" stopColor="#000000" stopOpacity="0.35" />
-        </linearGradient>
-        <linearGradient id="accent-bolt-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
-          <stop offset="50%" stopColor={fillCol} stopOpacity="0.85" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0.95" />
-        </linearGradient>
-        <linearGradient id="glass-shimmer-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
-          <stop offset="30%" stopColor="#ffffff" stopOpacity="0" />
-          <stop offset="50%" stopColor="#ffffff" stopOpacity="0.5" />
-          <stop offset="70%" stopColor="#ffffff" stopOpacity="0" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-        </linearGradient>
-        <filter id="logo-text-shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" floodColor="#000000" floodOpacity="0.35" />
-        </filter>
-      </defs>
- 
-      {/* Rounded Square Background - Dynamic Color */}
-      {isGlass ? (
-        <g clipPath="url(#logo-clip)">
-          {downloadMode && (
-            <rect width="200" height="200" fill={sidebarBg || '#0f172a'} />
+            <rect width="200" height="200" rx="48" />
+          </clipPath>
+          {patternContent && !isGlass && !isFluidMesh && (
+            <pattern 
+              id={patternId} 
+              width={patternWidth} 
+              height={patternHeight} 
+              patternUnits="userSpaceOnUse" 
+              viewBox={patternViewBox}
+              x={(200 - patternWidth) / 2}
+              y={(200 - patternHeight) / 2}
+            >
+              {patternContent}
+            </pattern>
           )}
-          {/* Base tinted dark glass backing */}
-          <rect width="200" height="200" fill="url(#glass-back-grad)" />
-          {/* Main 3D curved gloss reflection block */}
-          <path d="M 0,0 L 200,0 L 200,95 Q 100,125 0,95 Z" fill="url(#glass-logo-grad)" />
-          {/* Ambient inner soft glowing light beam */}
-          <circle cx="100" cy="50" r="70" fill="#ffffff" opacity="0.03" />
-          {/* Moving glass shimmer light beam */}
-          <rect className="storm-logo-shimmer" x="-150" y="0" width="120" height="200" fill="url(#glass-shimmer-grad)" />
-          {/* Beveled edge stroke with linear gradient */}
-          <rect width="196" height="196" x="2" y="2" rx="46" fill="none" stroke="url(#glass-border-grad)" strokeWidth="3.5" />
+          
+          {/* Glass Theme Gradients */}
+          <linearGradient id="glass-logo-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
+            <stop offset="45%" stopColor="#ffffff" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="glass-border-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
+            <stop offset="30%" stopColor="#ffffff" stopOpacity="0.4" />
+            <stop offset="70%" stopColor="#ffffff" stopOpacity="0.15" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.5" />
+          </linearGradient>
+          <linearGradient id="glass-back-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.15" />
+            <stop offset="35%" stopColor={fillCol} stopOpacity="0.1" />
+            <stop offset="70%" stopColor={fillCol} stopOpacity="0.05" />
+            <stop offset="100%" stopColor="#000000" stopOpacity="0.35" />
+          </linearGradient>
+          <linearGradient id="accent-bolt-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+            <stop offset="50%" stopColor={fillCol} stopOpacity="0.85" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.95" />
+          </linearGradient>
+          <linearGradient id="glass-shimmer-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
+            <stop offset="30%" stopColor="#ffffff" stopOpacity="0" />
+            <stop offset="50%" stopColor="#ffffff" stopOpacity="0.5" />
+            <stop offset="70%" stopColor="#ffffff" stopOpacity="0" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+          </linearGradient>
+          <filter id="logo-text-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" floodColor="#000000" floodOpacity="0.35" />
+          </filter>
+
+          {/* Fluid Mesh Theme Gradients */}
+          <linearGradient id="fluid-border-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={fluidColors.borderGrad[0]} />
+            <stop offset="40%" stopColor={fluidColors.borderGrad[1]} />
+            <stop offset="70%" stopColor={fluidColors.borderGrad[2]} />
+            <stop offset="100%" stopColor={fluidColors.borderGrad[3]} />
+          </linearGradient>
+          <linearGradient id="fluid-bolt-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={fluidColors.boltGrad[0]} />
+            <stop offset="40%" stopColor={fluidColors.boltGrad[1]} />
+            <stop offset="100%" stopColor={fluidColors.boltGrad[2]} />
+          </linearGradient>
+          <radialGradient id="fluid-bg-glow-1" cx="25%" cy="25%" r="65%">
+            <stop offset="0%" stopColor={fluidColors.glow1} stopOpacity="0.45" />
+            <stop offset="100%" stopColor={fluidColors.glow1} stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="fluid-bg-glow-2" cx="75%" cy="75%" r="65%">
+            <stop offset="0%" stopColor={fluidColors.glow2} stopOpacity="0.45" />
+            <stop offset="100%" stopColor={fluidColors.glow2} stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="fluid-bg-glow-3" cx="50%" cy="50%" r="55%">
+            <stop offset="0%" stopColor={fluidColors.glow3} stopOpacity="0.35" />
+            <stop offset="100%" stopColor={fluidColors.glow3} stopOpacity="0" />
+          </radialGradient>
+          <filter id="fluid-logo-text-glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="1" stdDeviation="2.5" floodColor={fluidColors.dropShadow} floodOpacity="0.65" />
+          </filter>
+          <filter id="fluid-bolt-glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor={fluidColors.dropShadow} floodOpacity="0.5" />
+          </filter>
+          {!downloadMode && (
+            <style>{`
+              @keyframes storm-glass-shimmer {
+                0% { transform: translate3d(0, 0, 0) skewX(-25deg); opacity: 0; }
+                8% { opacity: 0.7; }
+                32% { transform: translate3d(420px, 0, 0) skewX(-25deg); opacity: 0.7; }
+                35%, 100% { transform: translate3d(420px, 0, 0) skewX(-25deg); opacity: 0; }
+              }
+              .storm-logo-shimmer {
+                animation: storm-glass-shimmer 5s infinite cubic-bezier(0.4, 0, 0.2, 1);
+                pointer-events: none;
+                transform-origin: center;
+                mix-blend-mode: overlay;
+                will-change: transform;
+              }
+              @keyframes mesh-logo-blob-1 {
+                0% { transform: translate3d(0, 0, 0) scale3d(1, 1, 1); }
+                50% { transform: translate3d(15px, -15px, 0) scale3d(1.15, 1.15, 1); }
+                100% { transform: translate3d(0, 0, 0) scale3d(1, 1, 1); }
+              }
+              @keyframes mesh-logo-blob-2 {
+                0% { transform: translate3d(0, 0, 0) scale3d(1, 1, 1); }
+                50% { transform: translate3d(-15px, 15px, 0) scale3d(1.12, 1.12, 1); }
+                100% { transform: translate3d(0, 0, 0) scale3d(1, 1, 1); }
+              }
+              .animate-mesh-logo-blob-1 {
+                animation: mesh-logo-blob-1 12s infinite ease-in-out;
+                transform-origin: 50px 50px;
+                will-change: transform;
+              }
+              .animate-mesh-logo-blob-2 {
+                animation: mesh-logo-blob-2 15s infinite ease-in-out;
+                transform-origin: 150px 150px;
+                will-change: transform;
+              }
+            `}</style>
+          )}
+        </defs>
+
+        {isFluidMesh ? (
+          <g clipPath="url(#logo-clip)">
+            {/* Base futuristic mesh canvas backing */}
+            <rect width="200" height="200" fill="#04020a" />
+            
+            {/* Overlay orbiting colorful glowing blob waves */}
+            <circle cx="50" cy="50" r="100" fill="url(#fluid-bg-glow-1)" className={!downloadMode ? "animate-mesh-logo-blob-1" : undefined} />
+            <circle cx="150" cy="150" r="100" fill="url(#fluid-bg-glow-2)" className={!downloadMode ? "animate-mesh-logo-blob-2" : undefined} />
+            <circle cx="100" cy="100" r="80" fill="url(#fluid-bg-glow-3)" />
+
+            {/* Subtle frosted glass glare over the mesh */}
+            <path d="M 0,0 L 200,0 L 200,95 Q 100,125 0,95 Z" fill="url(#glass-logo-grad)" />
+
+            {/* Futuristic glowing multi-stop colorful border line */}
+            <rect width="194" height="194" x="3" y="3" rx="45" fill="none" stroke="url(#fluid-border-grad)" strokeWidth="4.5" />
+          </g>
+        ) : isGlass ? (
+          <g clipPath="url(#logo-clip)">
+            {downloadMode && (
+              <rect width="200" height="200" fill={sidebarBg || '#0f172a'} />
+            )}
+            {/* Base tinted dark glass backing */}
+            <rect width="200" height="200" fill="url(#glass-back-grad)" />
+            {/* Main 3D curved gloss reflection block */}
+            <path d="M 0,0 L 200,0 L 200,95 Q 100,125 0,95 Z" fill="url(#glass-logo-grad)" />
+            {/* Ambient inner soft glowing light beam */}
+            <circle cx="100" cy="50" r="70" fill="#ffffff" opacity="0.03" />
+            {/* Moving glass shimmer light beam */}
+            {!downloadMode && (
+              <rect className="storm-logo-shimmer" x="-150" y="0" width="120" height="200" fill="url(#glass-shimmer-grad)" />
+            )}
+            {/* Beveled edge stroke with linear gradient */}
+            <rect width="196" height="196" x="2" y="2" rx="46" fill="none" stroke="url(#glass-border-grad)" strokeWidth="3.5" />
+          </g>
+        ) : (
+          <rect width="200" height="200" rx="48" fill={fillCol} />
+        )}
+
+        {/* Textured overlay pattern inside the logo background */}
+        {patternContent && !isGlass && !isFluidMesh && (
+          <rect width="200" height="200" rx="48" fill={`url(#${patternId})`} />
+        )}
+
+        {/* Modern Minimalist Lightning Bolt - Enlarged and centered */}
+        <g transform="translate(70, 22) scale(1.2)">
+          <path 
+            d="M28 2 L8 38 L23 38 L15 66 L42 28 L28 28 Z" 
+            fill={isFluidMesh ? "url(#fluid-bolt-grad)" : (isGlass ? "url(#accent-bolt-grad)" : "#ffffff")} 
+            filter={isFluidMesh ? "url(#fluid-bolt-glow)" : undefined}
+          />
         </g>
-      ) : (
-        <rect width="200" height="200" rx="48" fill={fillCol} />
-      )}
 
-      {/* Textured overlay pattern inside the logo background */}
-      {patternContent && !isGlass && (
-        <rect width="200" height="200" rx="48" fill={`url(#${patternId})`} />
-      )}
-
-      {/* Modern Minimalist Lightning Bolt - Enlarged and centered */}
-      <g transform="translate(70, 22) scale(1.2)">
-        <path d="M28 2 L8 38 L23 38 L15 66 L42 28 L28 28 Z" fill={isGlass ? "url(#accent-bolt-grad)" : "#ffffff"} />
-      </g>
-
-      {/* Typography - Enlarged and high contrast for absolute sharpness */}
-      <text x="100" y="136" dx="2" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="950" fontSize="27" fill="#ffffff" letterSpacing="3.5" filter={isGlass ? "url(#logo-text-shadow)" : undefined}>STORM</text>
-      <text x="100" y="163" dx="1" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="900" fontSize="13.5" fill="#ffffff" letterSpacing="2.5" opacity="0.95" filter={isGlass ? "url(#logo-text-shadow)" : undefined}>MUHASEBE</text>
-    </svg>
+        {/* Typography - Enlarged and high contrast for absolute sharpness */}
+        <text 
+          x="100" 
+          y="136" 
+          dx="2" 
+          textAnchor="middle" 
+          fontFamily="system-ui, -apple-system, sans-serif" 
+          fontWeight="950" 
+          fontSize="27" 
+          fill="#ffffff" 
+          letterSpacing="3.5" 
+          filter={isFluidMesh ? "url(#fluid-logo-text-glow)" : (isGlass ? "url(#logo-text-shadow)" : undefined)}
+        >
+          STORM
+        </text>
+        <text 
+          x="100" 
+          y="163" 
+          dx="1" 
+          textAnchor="middle" 
+          fontFamily="system-ui, -apple-system, sans-serif" 
+          fontWeight="900" 
+          fontSize="13.5" 
+          fill="#ffffff" 
+          letterSpacing="2.5" 
+          opacity="0.95" 
+          filter={isFluidMesh ? "url(#fluid-logo-text-glow)" : (isGlass ? "url(#logo-text-shadow)" : undefined)}
+        >
+          MUHASEBE
+        </text>
+      </svg>
     </div>
   );
 };
 
-export const APP_VERSION = '1.6.6';
+export const APP_VERSION = '1.6.7';
 
 export const CHANGELOG = {
-  version: '1.6.6',
+  version: '1.6.7',
   features: [
-    "Kasa & Banka Durumu Dengelendi: Kasa ve Banka durumu görünümü 3 sütunlu grid yapısı ile optimize edilerek sayfa düzeni dengelendi.",
-    "Storm Logo Rengi Stabilizasyonu: Logo rengi seçimi kaldırılıp arayüzün aktif vurgu rengine göre dinamik olarak eşitlenmesi sağlandı. Masaüstü simge indirme butonları ise Vurgu Rengi altındaki alana konumlandırılarak arayüzde alan tasarrufu sağlandı.",
-    "Esnek Stok Kartı Girişi: Stok kartı eklerken Alış Fiyatı ve Satış Fiyatı alanlarının zorunlu olması kaldırıldı; böylece fiyat belirtmeden de hızlıca stok kartı kaydedebilirsiniz.",
-    "Varsayılan KDV Oranı Güncellemesi: Yeni stok kartı oluştururken varsayılan KDV oranı artık %0 (KDV Muaf) olarak başlar."
+    "Gelişmiş Barkod Tasarımcısı ve Hizalama Seçenekleri: Barkod etiketleri üzerine yerleştirilecek yazılar (Ürün Adı, Kod, Fiyat, Özel Yazı) ve barkod görseli için Sola, Ortaya ve Sağa Hizalama (Yatay Hizalama) desteği eklendi.",
+    "Hassas Piksel Yoğunluğu (DPI) Entegrasyonu: Barkod şablonlarının önizleme ve baskı boyutları (80x50, 60x40, 40x60, 40x30, 40x20 ve Özel) milimetre hassasiyetinden gerçekçi baskı piksellerine dönüştürüldü.",
+    "Baskı Kalitesi ve Taşma Koruması: Yazıların barkod sınırlarından taşmasını önlemek amacıyla etiket üstündeki tüm metin katmanlarına satır sarma koruması (whitespace-nowrap) entegre edildi.",
+    "Yüksek Kaliteli Logo Çıktısı (PNG): html-to-image kütüphanesinin kısıtlamaları yerine, doğrudan SVG'yi Canvas ortamına aktaran ve kayıpsız indirme sunan yenilikçi bir logo dışa aktarma mekanizması kuruldu."
   ],
   fixes: [
-    "Storm AI Sesli İletişim Hatası Giderildi: Masaüstü (Electron) uygulamasında Chromium kısıtlamaları nedeniyle 'Google API bağlantı hatası' veren eski ses tanıma sistemi yerine, çok daha kararlı ve yüksek doğruluklu çalışan yenilikçi 'MediaRecorder + Gemini Multimodal Ses Analizi' altyapısına geçildi. Bu sayede sesli komutlar artık masaüstünde kusursuz çalışmaktadır."
+    "Electron Barkod Yazdırma Uyumluluğu: Barkod şablonlarında kullanılan SVG formatındaki barkodlar, masaüstü (Electron) yazdırma motorlarında kesinti yaşanmaması adına kararlı PNG ('renderer=img') formatıyla güncellendi."
   ]
 };
 
@@ -536,17 +727,17 @@ export const StormIconWrapper = ({ iconElement, isActive }: { iconElement: React
 };
 
 export const TAB_DEFS: Record<string, { label: string; icon: React.ReactNode }> = {
-  dashboard: { label: 'Gösterge Paneli', icon: <LayoutDashboard size={16} /> },
-  cariler: { label: 'Cari Hesaplar', icon: <Users size={16} /> },
-  stoklar: { label: 'Stok Durumu', icon: <Package size={16} /> },
-  islemler: { label: 'Finansal Hareketler', icon: <Receipt size={16} /> },
-  ceksenet: { label: 'Çek ve Senet Takibi', icon: <Briefcase size={16} /> },
-  masraflar: { label: 'Gider ve Masraflar', icon: <Wallet size={16} /> },
-  kasa: { label: 'Kasa & Banka Durumu', icon: <DollarSign size={16} /> },
-  krediler: { label: 'Kredi Takip Yönetimi', icon: <Landmark size={16} /> },
-  calisanlar: { label: 'Personel & Maaşlar', icon: <Users size={16} /> },
-  raporlar: { label: 'Raporlar ve Analiz', icon: <BarChart3 size={16} /> },
-  ayarlar: { label: 'Sistem Ayarları', icon: <Settings size={16} /> }
+  dashboard: { label: 'Gösterge Paneli', icon: <LayoutDashboard size={18} strokeWidth={2.4} /> },
+  cariler: { label: 'Cari Hesaplar', icon: <Users size={18} strokeWidth={2.4} /> },
+  stoklar: { label: 'Stok Durumu', icon: <Package size={18} strokeWidth={2.4} /> },
+  islemler: { label: 'Finansal Hareketler', icon: <Receipt size={18} strokeWidth={2.4} /> },
+  ceksenet: { label: 'Çek ve Senet Takibi', icon: <Briefcase size={18} strokeWidth={2.4} /> },
+  masraflar: { label: 'Gider ve Masraflar', icon: <Wallet size={18} strokeWidth={2.4} /> },
+  kasa: { label: 'Kasa & Banka Durumu', icon: <DollarSign size={18} strokeWidth={2.4} /> },
+  krediler: { label: 'Kredi Takip Yönetimi', icon: <Landmark size={18} strokeWidth={2.4} /> },
+  calisanlar: { label: 'Personel & Maaşlar', icon: <Users size={18} strokeWidth={2.4} /> },
+  raporlar: { label: 'Raporlar ve Analiz', icon: <BarChart3 size={18} strokeWidth={2.4} /> },
+  ayarlar: { label: 'Sistem Ayarları', icon: <Settings size={18} strokeWidth={2.4} /> }
 };
 
 export const SIDEBAR_BG_PRESETS = [
@@ -578,6 +769,17 @@ export const PIN_ACCOUNTS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.6.7",
+    date: "16.07.2026",
+    changes: [
+      "Gelişmiş Barkod Tasarımcısı ve Hizalama Seçenekleri: Barkod etiketleri üzerine yerleştirilecek yazılar (Ürün Adı, Kod, Fiyat, Özel Yazı) ve barkod görseli için Sola, Ortaya ve Sağa Hizalama (Yatay Hizalama) desteği eklendi.",
+      "Hassas Piksel Yoğunluğu (DPI) Entegrasyonu: Barkod şablonlarının önizleme ve baskı boyutları (80x50, 60x40, 40x60, 40x30, 40x20 ve Özel) milimetre hassasiyetinden gerçekçi baskı piksellerine dönüştürüldü.",
+      "Baskı Kalitesi ve Taşma Koruması: Yazıların barkod sınırlarından taşmasını önlemek amacıyla etiket üstündeki tüm metin katmanlarına satır sarma koruması (whitespace-nowrap) entegre edildi.",
+      "Yüksek Kaliteli Logo Çıktısı (PNG): html-to-image kütüphanesinin kısıtlamaları yerine, doğrudan SVG'yi Canvas ortamına aktaran ve kayıpsız indirme sunan yenilikçi bir logo dışa aktarma mekanizması kuruldu.",
+      "Electron Barkod Yazdırma Uyumluluğu: Barkod şablonlarında kullanılan SVG formatındaki barkodlar, masaüstü (Electron) yazdırma motorlarında kesinti yaşanmaması adına kararlı PNG ('renderer=img') formatıyla güncellendi."
+    ]
+  },
   {
     version: "1.6.6",
     date: "16.07.2026",

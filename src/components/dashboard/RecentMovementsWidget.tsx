@@ -10,7 +10,7 @@ interface RecentMovementsWidgetProps {
   renderWidgetControls: () => React.ReactNode;
 }
 
-export const RecentMovementsWidget: React.FC<RecentMovementsWidgetProps> = ({
+export const RecentMovementsWidget = React.memo<RecentMovementsWidgetProps>(({
   filteredRecentMovements,
   onNavigate,
   dashboardCurrency,
@@ -134,5 +134,5 @@ export const RecentMovementsWidget: React.FC<RecentMovementsWidgetProps> = ({
                     </div>
                   </div>
   );
-};
+});
 
