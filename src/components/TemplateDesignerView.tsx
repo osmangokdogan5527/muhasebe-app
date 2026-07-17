@@ -4,6 +4,7 @@ import { SwitchRow } from './templates/SwitchRow';
 import React, { useState, useEffect } from 'react';
 import { Save, Plus, Settings, LayoutTemplate, Image as ImageIcon, Barcode as BarcodeIcon, Trash2 } from 'lucide-react';
 import Barcode from 'react-barcode';
+import { QrCodeImage } from './templatedesigner/QrCodeImage';
 
 export interface PrintTemplateConfig {
   id: string;
@@ -33,7 +34,7 @@ export interface PrintTemplateConfig {
   showUnitPrice: boolean;
 
   // Barcode Settings
-  barcodeFormat?: 'CODE128' | 'EAN13';
+  barcodeFormat?: 'CODE128' | 'EAN13' | 'QR';
   showBarcodePrice?: boolean;
   showBarcodeName?: boolean;
   showBarcodeCode?: boolean;
@@ -46,7 +47,7 @@ export interface PrintTemplateConfig {
   
   barcodePosition?: 'bottom' | 'top';
   barcodeAlignment?: 'left' | 'center' | 'right';
-  imagePosition?: 'top' | 'bottom';
+  imagePosition?: 'top' | 'bottom' | 'top_left' | 'top_center' | 'top_right' | 'bottom_left' | 'bottom_center' | 'bottom_right';
 
   // Granular sizing and spacing
   barcodeImageSize?: number;
@@ -81,155 +82,197 @@ export default function TemplateDesignerView() {
   const [draggingElement, setDraggingElement] = useState<string | null>(null);
   const labelContainerRef = React.useRef<HTMLDivElement>(null);
 
-  const [resizingElement, setResizingElement] = useState<string | null>(null);
-  const [resizingCorner, setResizingCorner] = useState<'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | null>(null);
-  const resizeInitialPosRef = React.useRef<{x: number, y: number, scale: number} | null>(null);
+  const dragOffsetRef = React.useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const [selectedElement, setSelectedElement] = useState<string | null>(null);
+  const [previewZoom, setPreviewZoom] = useState<number>(2.0);
+
+  // Precision Keyboard Move Support
+  useEffect(() => {
+    if (!selectedElement || !activeTemplateId) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is currently typing in an input, textarea or editable element
+      if (
+        document.activeElement?.tagName === 'INPUT' || 
+        document.activeElement?.tagName === 'TEXTAREA' ||
+        (document.activeElement as HTMLElement)?.isContentEditable
+      ) {
+        return;
+      }
+
+      let dx = 0;
+      let dy = 0;
+
+      // Handle Arrow keys for millimeter-precision positioning (0.5% or 2.5% if Shift held)
+      if (e.key === 'ArrowUp') {
+        dy = e.shiftKey ? -2.5 : -0.5;
+        e.preventDefault();
+      } else if (e.key === 'ArrowDown') {
+        dy = e.shiftKey ? 2.5 : 0.5;
+        e.preventDefault();
+      } else if (e.key === 'ArrowLeft') {
+        dx = e.shiftKey ? -2.5 : -0.5;
+        e.preventDefault();
+      } else if (e.key === 'ArrowRight') {
+        dx = e.shiftKey ? 2.5 : 0.5;
+        e.preventDefault();
+      } else if (e.key === 'Escape') {
+        setSelectedElement(null);
+        e.preventDefault();
+        return;
+      }
+
+      if (dx !== 0 || dy !== 0) {
+        setTemplates(prevTemplates => {
+          const activeT = prevTemplates.find(t => t.id === activeTemplateId);
+          if (!activeT) return prevTemplates;
+
+          const currentPositions = activeT.customPositions || {};
+          const pos = currentPositions[selectedElement] || { x: 50, y: 50, scale: 1 };
+          
+          let newX = pos.x + dx;
+          let newY = pos.y + dy;
+
+          newX = Math.max(0, Math.min(100, newX));
+          newY = Math.max(0, Math.min(100, newY));
+
+          if (activeT.snapToGrid !== false) {
+            // Keep to 0.5% increments for precision grid alignment
+            newX = Math.round(newX / 0.5) * 0.5;
+            newY = Math.round(newY / 0.5) * 0.5;
+          }
+
+          const updatedPositions = {
+            ...currentPositions,
+            [selectedElement]: {
+              ...pos,
+              x: parseFloat(newX.toFixed(1)),
+              y: parseFloat(newY.toFixed(1))
+            }
+          };
+
+          const updated = prevTemplates.map(t => t.id === activeTemplateId ? { ...t, customPositions: updatedPositions } : t);
+          localStorage.setItem('storm_print_templates', JSON.stringify(updated));
+          return updated;
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedElement, activeTemplateId]);
 
   useEffect(() => {
-    if (!draggingElement && !resizingElement) return;
+    if (!draggingElement) return;
+
+    const getPaddingBox = (element: HTMLElement) => {
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+      const borderLeft = parseFloat(style.borderLeftWidth) || 0;
+      const borderTop = parseFloat(style.borderTopWidth) || 0;
+      const borderRight = parseFloat(style.borderRightWidth) || 0;
+      const borderBottom = parseFloat(style.borderBottomWidth) || 0;
+      
+      // CSS absolute positioning left/top percentages are relative to the PADDING BOX.
+      // Padding Box = Border Box - Borders. (Padding is INCLUDED in the padding box).
+      return {
+        left: rect.left + borderLeft,
+        top: rect.top + borderTop,
+        width: rect.width - borderLeft - borderRight,
+        height: rect.height - borderTop - borderBottom
+      };
+    };
 
     const onGlobalMouseMove = (e: MouseEvent) => {
       if (!labelContainerRef.current) return;
-      const rect = labelContainerRef.current.getBoundingClientRect();
+      const pBox = getPaddingBox(labelContainerRef.current);
       
       if (draggingElement) {
-        let x = ((e.clientX - rect.left) / rect.width) * 100;
-        let y = ((e.clientY - rect.top) / rect.height) * 100;
+        // Calculate coordinate using offset to avoid jump
+        const desiredX_px = e.clientX - dragOffsetRef.current.x;
+        const desiredY_px = e.clientY - dragOffsetRef.current.y;
+
+        let x = ((desiredX_px - pBox.left) / pBox.width) * 100;
+        let y = ((desiredY_px - pBox.top) / pBox.height) * 100;
         
         x = Math.max(0, Math.min(100, x));
         y = Math.max(0, Math.min(100, y));
         
-        const activeT = templates.find(t => t.id === activeTemplateId);
-        if (!activeT) return;
-        
-        if (activeT.snapToGrid !== false) {
-          x = Math.round(x / 2.5) * 2.5;
-          y = Math.round(y / 2.5) * 2.5;
-        }
-        
-        const currentPositions = activeT.customPositions || {};
-        const updatedPositions = {
-          ...currentPositions,
-          [draggingElement]: {
-            ...currentPositions[draggingElement],
-            x: parseFloat(x.toFixed(1)),
-            y: parseFloat(y.toFixed(1))
+        setTemplates(prevTemplates => {
+          const activeT = prevTemplates.find(t => t.id === activeTemplateId);
+          if (!activeT) return prevTemplates;
+          
+          if (activeT.snapToGrid !== false) {
+            // Finer snap step (0.5% instead of 2.5%) for smoother, precise design
+            x = Math.round(x / 0.5) * 0.5;
+            y = Math.round(y / 0.5) * 0.5;
           }
-        };
-        
-        const updated = templates.map(t => t.id === activeTemplateId ? { ...t, customPositions: updatedPositions } : t);
-        setTemplates(updated);
-        localStorage.setItem('storm_print_templates', JSON.stringify(updated));
-      } else if (resizingElement && resizeInitialPosRef.current && resizingCorner) {
-        // Handle resizing based on the corner dragged
-        const dx = e.clientX - resizeInitialPosRef.current.x;
-        const dy = e.clientY - resizeInitialPosRef.current.y;
-        
-        let distance = 0;
-        if (resizingCorner === 'top-left') {
-          distance = -(dx + dy) / 2;
-        } else if (resizingCorner === 'top-right') {
-          distance = (dx - dy) / 2;
-        } else if (resizingCorner === 'bottom-left') {
-          distance = (-dx + dy) / 2;
-        } else { // bottom-right
-          distance = (dx + dy) / 2;
-        }
-        
-        const scaleDelta = distance * 0.01;
-        const newScale = Math.max(0.2, Math.min(5, resizeInitialPosRef.current.scale + scaleDelta));
-        
-        const activeT = templates.find(t => t.id === activeTemplateId);
-        if (!activeT) return;
-        
-        const currentPositions = activeT.customPositions || {};
-        const updatedPositions = {
-          ...currentPositions,
-          [resizingElement]: {
-            ...currentPositions[resizingElement],
-            scale: parseFloat(newScale.toFixed(2))
-          }
-        };
-        
-        const updated = templates.map(t => t.id === activeTemplateId ? { ...t, customPositions: updatedPositions } : t);
-        setTemplates(updated);
-        localStorage.setItem('storm_print_templates', JSON.stringify(updated));
+          
+          const currentPositions = activeT.customPositions || {};
+          const updatedPositions = {
+            ...currentPositions,
+            [draggingElement]: {
+              ...currentPositions[draggingElement],
+              x: parseFloat(x.toFixed(1)),
+              y: parseFloat(y.toFixed(1))
+            }
+          };
+          
+          return prevTemplates.map(t => t.id === activeTemplateId ? { ...t, customPositions: updatedPositions } : t);
+        });
       }
     };
 
     const onGlobalTouchMove = (e: TouchEvent) => {
       if (!labelContainerRef.current || e.touches.length === 0) return;
       const touch = e.touches[0];
-      const rect = labelContainerRef.current.getBoundingClientRect();
+      const pBox = getPaddingBox(labelContainerRef.current);
       
       if (draggingElement) {
-        let x = ((touch.clientX - rect.left) / rect.width) * 100;
-        let y = ((touch.clientY - rect.top) / rect.height) * 100;
+        const desiredX_px = touch.clientX - dragOffsetRef.current.x;
+        const desiredY_px = touch.clientY - dragOffsetRef.current.y;
+
+        let x = ((desiredX_px - pBox.left) / pBox.width) * 100;
+        let y = ((desiredY_px - pBox.top) / pBox.height) * 100;
         
         x = Math.max(0, Math.min(100, x));
         y = Math.max(0, Math.min(100, y));
         
-        const activeT = templates.find(t => t.id === activeTemplateId);
-        if (!activeT) return;
-        
-        if (activeT.snapToGrid !== false) {
-          x = Math.round(x / 2.5) * 2.5;
-          y = Math.round(y / 2.5) * 2.5;
-        }
-        
-        const currentPositions = activeT.customPositions || {};
-        const updatedPositions = {
-          ...currentPositions,
-          [draggingElement]: {
-            ...currentPositions[draggingElement],
-            x: parseFloat(x.toFixed(1)),
-            y: parseFloat(y.toFixed(1))
+        setTemplates(prevTemplates => {
+          const activeT = prevTemplates.find(t => t.id === activeTemplateId);
+          if (!activeT) return prevTemplates;
+          
+          if (activeT.snapToGrid !== false) {
+            x = Math.round(x / 0.5) * 0.5;
+            y = Math.round(y / 0.5) * 0.5;
           }
-        };
-        
-        const updated = templates.map(t => t.id === activeTemplateId ? { ...t, customPositions: updatedPositions } : t);
-        setTemplates(updated);
-        localStorage.setItem('storm_print_templates', JSON.stringify(updated));
-      } else if (resizingElement && resizeInitialPosRef.current && resizingCorner) {
-        const dx = touch.clientX - resizeInitialPosRef.current.x;
-        const dy = touch.clientY - resizeInitialPosRef.current.y;
-        
-        let distance = 0;
-        if (resizingCorner === 'top-left') {
-          distance = -(dx + dy) / 2;
-        } else if (resizingCorner === 'top-right') {
-          distance = (dx - dy) / 2;
-        } else if (resizingCorner === 'bottom-left') {
-          distance = (-dx + dy) / 2;
-        } else { // bottom-right
-          distance = (dx + dy) / 2;
-        }
-        
-        const scaleDelta = distance * 0.01;
-        const newScale = Math.max(0.2, Math.min(5, resizeInitialPosRef.current.scale + scaleDelta));
-        
-        const activeT = templates.find(t => t.id === activeTemplateId);
-        if (!activeT) return;
-        
-        const currentPositions = activeT.customPositions || {};
-        const updatedPositions = {
-          ...currentPositions,
-          [resizingElement]: {
-            ...currentPositions[resizingElement],
-            scale: parseFloat(newScale.toFixed(2))
-          }
-        };
-        
-        const updated = templates.map(t => t.id === activeTemplateId ? { ...t, customPositions: updatedPositions } : t);
-        setTemplates(updated);
-        localStorage.setItem('storm_print_templates', JSON.stringify(updated));
+          
+          const currentPositions = activeT.customPositions || {};
+          const updatedPositions = {
+            ...currentPositions,
+            [draggingElement]: {
+              ...currentPositions[draggingElement],
+              x: parseFloat(x.toFixed(1)),
+              y: parseFloat(y.toFixed(1))
+            }
+          };
+          
+          return prevTemplates.map(t => t.id === activeTemplateId ? { ...t, customPositions: updatedPositions } : t);
+        });
       }
     };
 
     const onGlobalMouseUp = () => {
+      if (draggingElement) {
+        setTemplates(prevTemplates => {
+          localStorage.setItem('storm_print_templates', JSON.stringify(prevTemplates));
+          return prevTemplates;
+        });
+      }
       setDraggingElement(null);
-      setResizingElement(null);
-      setResizingCorner(null);
     };
 
     window.addEventListener('mousemove', onGlobalMouseMove);
@@ -243,7 +286,7 @@ export default function TemplateDesignerView() {
       window.removeEventListener('touchmove', onGlobalTouchMove);
       window.removeEventListener('touchend', onGlobalMouseUp);
     };
-  }, [draggingElement, resizingElement, activeTemplateId, templates]);
+  }, [draggingElement, activeTemplateId]);
 
   const [companyName, setCompanyName] = useState('Firma Adı');
   const [companyAddress, setCompanyAddress] = useState('Firma Adresi');
@@ -462,26 +505,28 @@ export default function TemplateDesignerView() {
   };
 
   const getPaperDimensions = (size: string) => {
-    const padVal = activeTemplate && activeTemplate.barcodePadding !== undefined ? `${activeTemplate.barcodePadding}px` : '8px';
+    const isLabelOrThermal = size.startsWith('etiket_') || size.startsWith('termal_');
+    const zoomMultiplier = isLabelOrThermal ? previewZoom : 1.0;
+
     switch (size) {
       case 'a4': return { maxWidth: '794px', aspectRatio: '1 / 1.414', padding: '40px' };
       case 'a4_yatay': return { maxWidth: '1123px', aspectRatio: '1.414 / 1', padding: '40px' };
       case 'a5': return { maxWidth: '559px', aspectRatio: '1 / 1.414', padding: '24px' };
       case 'a5_yatay': return { maxWidth: '794px', aspectRatio: '1.414 / 1', padding: '24px' };
-      case 'termal_80': return { maxWidth: '302px', aspectRatio: 'auto', minHeight: '400px', padding: '12px' };
-      case 'termal_58': return { maxWidth: '219px', aspectRatio: 'auto', minHeight: '300px', padding: '8px' };
-      case 'etiket_80x50': return { maxWidth: '302px', aspectRatio: '80 / 50', padding: '12px', minHeight: 'auto' };
-      case 'etiket_60x40': return { maxWidth: '226px', aspectRatio: '60 / 40', padding: '8px', minHeight: 'auto' };
-      case 'etiket_40x60': return { maxWidth: '151px', aspectRatio: '40 / 60', padding: '8px', minHeight: 'auto' };
-      case 'etiket_40x30': return { maxWidth: '151px', aspectRatio: '40 / 30', padding: '8px', minHeight: 'auto' };
-      case 'etiket_40x20': return { maxWidth: '151px', aspectRatio: '40 / 20', padding: '8px', minHeight: 'auto' };
+      case 'termal_80': return { maxWidth: `${302 * zoomMultiplier}px`, aspectRatio: 'auto', minHeight: `${400 * zoomMultiplier}px`, padding: `${12 * zoomMultiplier}px` };
+      case 'termal_58': return { maxWidth: `${219 * zoomMultiplier}px`, aspectRatio: 'auto', minHeight: `${300 * zoomMultiplier}px`, padding: `${8 * zoomMultiplier}px` };
+      case 'etiket_80x50': return { maxWidth: `${302 * zoomMultiplier}px`, aspectRatio: '80 / 50', padding: `${12 * zoomMultiplier}px`, minHeight: 'auto' };
+      case 'etiket_60x40': return { maxWidth: `${226 * zoomMultiplier}px`, aspectRatio: '60 / 40', padding: `${8 * zoomMultiplier}px`, minHeight: 'auto' };
+      case 'etiket_40x60': return { maxWidth: `${151 * zoomMultiplier}px`, aspectRatio: '40 / 60', padding: `${8 * zoomMultiplier}px`, minHeight: 'auto' };
+      case 'etiket_40x30': return { maxWidth: `${151 * zoomMultiplier}px`, aspectRatio: '40 / 30', padding: `${8 * zoomMultiplier}px`, minHeight: 'auto' };
+      case 'etiket_40x20': return { maxWidth: `${151 * zoomMultiplier}px`, aspectRatio: '40 / 20', padding: `${8 * zoomMultiplier}px`, minHeight: 'auto' };
       case 'etiket_ozel': {
         const w = activeTemplate.customWidthCm || 6;
         const h = activeTemplate.customHeightCm || 4;
         return { 
-          maxWidth: `${w * 37.8}px`, 
+          maxWidth: `${w * 37.8 * zoomMultiplier}px`, 
           aspectRatio: `${w} / ${h}`, 
-          padding: `${activeTemplate.barcodePadding !== undefined ? activeTemplate.barcodePadding : 8}px`, 
+          padding: `${(activeTemplate.barcodePadding !== undefined ? activeTemplate.barcodePadding : 8) * zoomMultiplier}px`, 
           minHeight: 'auto' 
         };
       }
@@ -510,83 +555,86 @@ export default function TemplateDesignerView() {
   const renderDraggableItem = (key: string, label: string, element: React.ReactNode) => {
     if (!element) return null;
     const positions = activeTemplate.customPositions || {};
-    const defaultPositions: Record<string, { x: number; y: number; scale?: number }> = {
-      image: { x: 50, y: 15, scale: 1 },
-      name: { x: 50, y: 35, scale: 1 },
-      code: { x: 50, y: 50, scale: 1 },
-      customText: { x: 50, y: 62, scale: 1 },
-      price: { x: 50, y: 74, scale: 1 },
-      barcode: { x: 50, y: 88, scale: 1 }
+    const defaultPositions: Record<string, { x: number; y: number }> = {
+      image: { x: 50, y: 15 },
+      name: { x: 50, y: 35 },
+      code: { x: 50, y: 50 },
+      customText: { x: 50, y: 62 },
+      price: { x: 50, y: 74 },
+      barcode: { x: 50, y: 88 }
     };
-    const pos = positions[key] || defaultPositions[key] || { x: 50, y: 50, scale: 1 };
+    const pos = positions[key] || defaultPositions[key] || { x: 50, y: 50 };
     const isDragging = draggingElement === key;
-    const isResizing = resizingElement === key;
+    const isSelected = selectedElement === key;
     
     return (
       <div
+        id={`draggable-${key}`}
         key={key}
-        className={`absolute group select-none p-1.5 rounded-lg border border-transparent transition-all duration-100 ${
+        className={`absolute group select-none p-2 rounded-xl border border-dashed ${
           isDragging 
-            ? 'cursor-grabbing border-teal-500 bg-teal-50/70 shadow-lg z-50 ring-2 ring-teal-500/20' 
-            : isResizing 
-              ? 'border-teal-500 bg-teal-50/50 z-50'
-              : 'cursor-grab hover:border-dashed hover:border-teal-400 hover:bg-slate-50/50 hover:shadow-sm'
+            ? 'cursor-grabbing border-teal-600 bg-teal-50/80 shadow-lg z-50 ring-2 ring-teal-600/30' 
+            : isSelected
+              ? 'transition-colors duration-150 border-teal-500 bg-teal-50/30 shadow-xs ring-1 ring-teal-500/20 z-40'
+              : 'transition-colors duration-150 border-transparent cursor-grab hover:border-teal-400/60 hover:bg-slate-50/50 hover:shadow-xs'
         }`}
         style={{
           left: `${pos.x}%`,
           top: `${pos.y}%`,
-          transform: `translate(-50%, -50%) scale(${pos.scale || 1})`,
+          transform: `translate(-50%, -50%)`,
           whiteSpace: 'nowrap',
           width: 'max-content'
         }}
       >
         <div 
-          className="absolute inset-0 w-full h-full"
+          className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"
           onMouseDown={(e) => {
-            if (resizingElement) return;
             e.preventDefault();
+            
+            // Calculate starting offset to prevent jumping
+            const domNode = document.getElementById(`draggable-${key}`);
+            if (domNode && labelContainerRef.current) {
+              const elRect = domNode.getBoundingClientRect();
+              const elemX = elRect.left + elRect.width / 2;
+              const elemY = elRect.top + elRect.height / 2;
+              dragOffsetRef.current = {
+                x: e.clientX - elemX,
+                y: e.clientY - elemY
+              };
+            } else {
+              dragOffsetRef.current = { x: 0, y: 0 };
+            }
+            
             setDraggingElement(key);
+            setSelectedElement(key);
           }}
-          onTouchStart={() => {
-            if (resizingElement) return;
+          onTouchStart={(e) => {
+            e.stopPropagation();
+            const domNode = document.getElementById(`draggable-${key}`);
+            if (e.touches && e.touches.length > 0 && domNode && labelContainerRef.current) {
+              const touch = e.touches[0];
+              const elRect = domNode.getBoundingClientRect();
+              const elemX = elRect.left + elRect.width / 2;
+              const elemY = elRect.top + elRect.height / 2;
+              dragOffsetRef.current = {
+                x: touch.clientX - elemX,
+                y: touch.clientY - elemY
+              };
+            } else {
+              dragOffsetRef.current = { x: 0, y: 0 };
+            }
             setDraggingElement(key);
+            setSelectedElement(key);
           }}
         />
 
         {/* Label Badge */}
-        <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 bg-teal-600 text-white text-[9px] font-semibold px-2 py-0.5 rounded shadow-sm pointer-events-none transition-opacity duration-150 z-50 flex items-center gap-1">
+        <div className={`absolute -top-6 left-1/2 -translate-x-1/2 bg-teal-600 text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-sm pointer-events-none transition-opacity duration-150 z-50 flex items-center gap-1 ${
+          isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        }`}>
           <span>{label}</span>
           <span className="text-[8px] opacity-75">{pos.x}%, {pos.y}%</span>
         </div>
-
-        {/* Resize Handles (Four Corners) */}
-        {[
-          { name: 'top-left', cursor: 'nwse-resize', class: '-top-2 -left-2' },
-          { name: 'top-right', cursor: 'nesw-resize', class: '-top-2 -right-2' },
-          { name: 'bottom-left', cursor: 'nesw-resize', class: '-bottom-2 -left-2' },
-          { name: 'bottom-right', cursor: 'nwse-resize', class: '-bottom-2 -right-2' }
-        ].map((corner) => (
-          <div 
-            key={corner.name}
-            className={`absolute ${corner.class} w-4 h-4 bg-white border-2 border-teal-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-sm`}
-            style={{ cursor: corner.cursor }}
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              setResizingElement(key);
-              setResizingCorner(corner.name as any);
-              resizeInitialPosRef.current = { x: e.clientX, y: e.clientY, scale: pos.scale || 1 };
-            }}
-            onTouchStart={(e) => {
-              e.stopPropagation();
-              if (e.touches.length > 0) {
-                setResizingElement(key);
-                setResizingCorner(corner.name as any);
-                resizeInitialPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, scale: pos.scale || 1 };
-              }
-            }}
-          />
-        ))}
         
         <div className="relative pointer-events-none">
           {element}
@@ -599,12 +647,52 @@ export default function TemplateDesignerView() {
     <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-200px)] min-h-[600px]">
       {/* LEFT COLUMN: LIVE PREVIEW (60%) */}
       <div className="lg:w-[60%] flex flex-col bg-slate-100 rounded-2xl border border-slate-200 overflow-hidden relative">
-        <div className="bg-slate-800 p-3 flex justify-between items-center text-xs font-bold uppercase tracking-wider z-10 shrink-0" style={{ color: '#ffffff' }}>
+        <div className="bg-slate-800 p-3 flex flex-wrap gap-2 justify-between items-center text-xs font-bold uppercase tracking-wider z-10 shrink-0" style={{ color: '#ffffff' }}>
           <div className="flex items-center gap-2" style={{ color: '#ffffff' }}>
             <LayoutTemplate size={16} style={{ color: '#ffffff' }} />
             <span style={{ color: '#ffffff' }}>Canlı Önizleme</span>
           </div>
-          <div className="flex items-center gap-2">
+          
+          <div className="flex items-center flex-wrap gap-3">
+            {/* Keyboard shortcuts helper when active */}
+            {activeTemplate.paperSize === 'etiket_ozel' && (
+              <div className="hidden md:flex items-center gap-2 text-[10px] text-teal-400 font-mono tracking-normal normal-case">
+                <span>⌨️ Yön Tuşları: İnce Taşı</span>
+                <span className="opacity-45">|</span>
+                <span>Boyut: + / -</span>
+                <span className="opacity-45">|</span>
+                <span>Bırak: ESC</span>
+              </div>
+            )}
+
+            {/* Clear selection button */}
+            {selectedElement && (
+              <button
+                onClick={() => setSelectedElement(null)}
+                className="px-2 py-0.5 text-[10px] bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 rounded cursor-pointer transition uppercase"
+              >
+                Seçimi Kaldır
+              </button>
+            )}
+
+            {/* Zoom Selector for Label layouts */}
+            {(activeTemplate.paperSize.startsWith('etiket_') || activeTemplate.paperSize.startsWith('termal_')) && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-slate-400 capitalize normal-case">Yakınlaştır:</span>
+                <select
+                  value={previewZoom}
+                  onChange={(e) => setPreviewZoom(parseFloat(e.target.value))}
+                  className="bg-slate-700 border border-slate-600 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none cursor-pointer focus:border-teal-500"
+                >
+                  <option value="1.0">1.0x (100%)</option>
+                  <option value="1.5">1.5x (150%)</option>
+                  <option value="2.0">2.0x (200%)</option>
+                  <option value="2.5">2.5x (250%)</option>
+                  <option value="3.0">3.0x (300%)</option>
+                </select>
+              </div>
+            )}
+
             <span className="bg-slate-700 px-2 py-1 rounded text-[10px]" style={{ color: '#ffffff' }}>
               {getPaperLabel(activeTemplate.paperSize)}
             </span>
@@ -622,7 +710,10 @@ export default function TemplateDesignerView() {
             }}
           >
             {activeTemplate.type === 'barkod' ? (() => {
-              const imgSize = activeTemplate.barcodeImageSize || 64;
+              const isLabelOrThermal = activeTemplate.paperSize.startsWith('etiket_') || activeTemplate.paperSize.startsWith('termal_');
+              const zoomMultiplier = isLabelOrThermal ? previewZoom : 1.0;
+
+              const imgSize = (activeTemplate.barcodeImageSize || 64) * zoomMultiplier;
               const imgEl = activeTemplate.showImage ? (
                 <div 
                   key="img" 
@@ -641,7 +732,7 @@ export default function TemplateDesignerView() {
                   key="name" 
                   className="font-bold text-slate-900 px-1 whitespace-nowrap leading-tight"
                   style={{
-                    fontSize: activeTemplate.barcodeNameSize ? `${activeTemplate.barcodeNameSize}px` : undefined,
+                    fontSize: `${(activeTemplate.barcodeNameSize || (activeTemplate.paperSize === 'etiket_60x40' || activeTemplate.paperSize === 'etiket_80x50' ? 12 : 10)) * zoomMultiplier}px`
                   }}
                 >
                   ÖRNEK ÜRÜN ADI - SİYAH
@@ -653,7 +744,7 @@ export default function TemplateDesignerView() {
                   key="code" 
                   className="font-medium text-slate-700 px-1 whitespace-nowrap leading-tight"
                   style={{
-                    fontSize: activeTemplate.barcodeCodeSize ? `${activeTemplate.barcodeCodeSize}px` : undefined,
+                    fontSize: `${(activeTemplate.barcodeCodeSize || (activeTemplate.paperSize === 'etiket_60x40' || activeTemplate.paperSize === 'etiket_80x50' ? 10 : 9)) * zoomMultiplier}px`
                   }}
                 >
                   STK-10001
@@ -665,7 +756,7 @@ export default function TemplateDesignerView() {
                   key="custom" 
                   className="font-medium text-slate-800 px-1 whitespace-nowrap leading-tight"
                   style={{
-                    fontSize: activeTemplate.barcodeCustomTextSize ? `${activeTemplate.barcodeCustomTextSize}px` : undefined,
+                    fontSize: `${(activeTemplate.barcodeCustomTextSize || (activeTemplate.paperSize === 'etiket_60x40' || activeTemplate.paperSize === 'etiket_80x50' ? 11 : 10)) * zoomMultiplier}px`
                   }}
                 >
                   {activeTemplate.customTextContent}
@@ -677,33 +768,63 @@ export default function TemplateDesignerView() {
                   key="price" 
                   className="font-black text-slate-900 px-1 whitespace-nowrap leading-tight"
                   style={{
-                    fontSize: activeTemplate.barcodePriceSize ? `${activeTemplate.barcodePriceSize}px` : undefined,
+                    fontSize: `${(activeTemplate.barcodePriceSize || (activeTemplate.paperSize === 'etiket_60x40' || activeTemplate.paperSize === 'etiket_80x50' ? 16 : 14)) * zoomMultiplier}px`
                   }}
                 >
                   125,00 ₺
                 </div>
               ) : null;
               
-              const barcodeEl = (
-                <div key="barcode" className="flex justify-center barcode-svg-container w-full max-w-full overflow-visible">
-                  <Barcode renderer="img" 
-                    value={activeTemplate.barcodeFormat === 'EAN13' ? "8691234567890" : "STK-10001"} 
-                    format={activeTemplate.barcodeFormat || "CODE128"} 
-                    width={activeTemplate.barcodeWidthScale || (['etiket_40x20', 'etiket_40x60'].includes(activeTemplate.paperSize) ? 1 : 2)} 
-                    height={activeTemplate.barcodeHeight || (activeTemplate.paperSize === 'etiket_40x20' ? 30 : 50)} 
-                    fontSize={activeTemplate.barcodeFontSize || (activeTemplate.paperSize === 'etiket_40x20' ? 8 : 12)}
+              const qrSize = Math.round((activeTemplate.barcodeHeight || (activeTemplate.paperSize === 'etiket_40x20' ? 40 : 64)) * zoomMultiplier);
+              const barcodeValue = activeTemplate.barcodeFormat === 'EAN13' ? "8691234567890" : "STK-10001";
+
+              const barcodeEl = activeTemplate.barcodeFormat === 'QR' ? (
+                <div key="barcode" className="flex justify-center barcode-svg-container overflow-visible">
+                  <QrCodeImage 
+                    value={barcodeValue} 
+                    size={qrSize} 
+                  />
+                </div>
+              ) : (
+                <div key="barcode" className="flex justify-center barcode-svg-container overflow-visible">
+                  <Barcode renderer="svg" 
+                    value={barcodeValue} 
+                    format={(activeTemplate.barcodeFormat === 'EAN13' ? 'EAN13' : 'CODE128')} 
+                    width={Math.round((activeTemplate.barcodeWidthScale || (['etiket_40x20', 'etiket_40x60'].includes(activeTemplate.paperSize) ? 1 : 2)) * zoomMultiplier)} 
+                    height={Math.round((activeTemplate.barcodeHeight || (activeTemplate.paperSize === 'etiket_40x20' ? 30 : 50)) * zoomMultiplier)} 
+                    fontSize={Math.round((activeTemplate.barcodeFontSize || (activeTemplate.paperSize === 'etiket_40x20' ? 8 : 12)) * zoomMultiplier)}
                     margin={0}
                     background="#ffffff"
                   />
                 </div>
               );
 
+              // 6-way Image alignment
+              const imgPos = activeTemplate.imagePosition || 'top_center';
+              const isImageTop = ['top', 'top_left', 'top_center', 'top_right'].includes(imgPos);
+              const isImageBottom = ['bottom', 'bottom_left', 'bottom_center', 'bottom_right'].includes(imgPos);
+
+              let imgAlignClass = 'justify-center';
+              if (imgPos.endsWith('_left') || imgPos === 'left') {
+                imgAlignClass = 'justify-start';
+              } else if (imgPos.endsWith('_right') || imgPos === 'right') {
+                imgAlignClass = 'justify-end';
+              } else {
+                imgAlignClass = 'justify-center';
+              }
+
+              const wrappedImgEl = imgEl ? (
+                <div key="img-wrapper" className={`flex w-full px-2.5 ${imgAlignClass}`}>
+                  {imgEl}
+                </div>
+              ) : null;
+
               const elements = [];
-              if (activeTemplate.imagePosition === 'top') elements.push(imgEl);
+              if (isImageTop) elements.push(wrappedImgEl);
               if (activeTemplate.barcodePosition === 'top') elements.push(barcodeEl);
               elements.push(nameEl, codeEl, customEl, priceEl);
               if (activeTemplate.barcodePosition !== 'top') elements.push(barcodeEl);
-              if (activeTemplate.imagePosition === 'bottom') elements.push(imgEl);
+              if (isImageBottom) elements.push(wrappedImgEl);
 
                const filteredElements = elements.filter(Boolean);
 
@@ -711,7 +832,7 @@ export default function TemplateDesignerView() {
                 return (
                   <div 
                     ref={labelContainerRef}
-                    className="relative w-full h-full select-none"
+                    className="relative w-full h-full select-none touch-none"
                     style={{
                       backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
                       backgroundSize: '12px 12px',

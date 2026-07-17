@@ -4,6 +4,7 @@ import { X, Printer, Settings, Layers, Download } from 'lucide-react';
 import Barcode from 'react-barcode';
 import { jsPDF } from 'jspdf';
 import { toPng } from 'html-to-image';
+import { QrCodeImage } from '../templatedesigner/QrCodeImage';
 
 export interface PrintBarcodeModalProps {
   isOpen: boolean;
@@ -191,11 +192,19 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
                         </div>
                       ) : null;
                       
-                      const barcodeEl = (
+                      const qrSize = (t.barcodeHeight ? t.barcodeHeight * 0.5 : (is40x20 ? 40 : 64));
+                      const barcodeEl = t.barcodeFormat === 'QR' ? (
+                        <div key="barcode" className="flex justify-center barcode-svg-container w-full max-w-full overflow-visible">
+                          <QrCodeImage 
+                            value={barcodeValue} 
+                            size={qrSize} 
+                          />
+                        </div>
+                      ) : (
                         <div key="barcode" className="flex justify-center barcode-svg-container w-full max-w-full overflow-visible">
                           <Barcode renderer="img" 
                             value={barcodeValue} 
-                            format={t.barcodeFormat || "CODE128"} 
+                            format={(t.barcodeFormat === 'EAN13' ? 'EAN13' : 'CODE128')} 
                             width={t.barcodeWidthScale ? t.barcodeWidthScale * 0.5 : bcWidth} 
                             height={t.barcodeHeight ? t.barcodeHeight * 0.5 : bcHeight} 
                             fontSize={t.barcodeFontSize ? t.barcodeFontSize * 0.5 : bcFontSize}
@@ -206,12 +215,32 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
                         </div>
                       );
 
+                      // 6-way Image alignment
+                      const imgPos = t.imagePosition || 'top_center';
+                      const isImageTop = ['top', 'top_left', 'top_center', 'top_right'].includes(imgPos);
+                      const isImageBottom = ['bottom', 'bottom_left', 'bottom_center', 'bottom_right'].includes(imgPos);
+
+                      let imgAlignClass = 'justify-center';
+                      if (imgPos.endsWith('_left') || imgPos === 'left') {
+                        imgAlignClass = 'justify-start';
+                      } else if (imgPos.endsWith('_right') || imgPos === 'right') {
+                        imgAlignClass = 'justify-end';
+                      } else {
+                        imgAlignClass = 'justify-center';
+                      }
+
+                      const wrappedImgEl = imgEl ? (
+                        <div key="img-wrapper" className={`flex w-full ${imgAlignClass}`}>
+                          {imgEl}
+                        </div>
+                      ) : null;
+
                       const elements = [];
-                      if (t.imagePosition === 'top') elements.push(imgEl);
+                      if (isImageTop) elements.push(wrappedImgEl);
                       if (t.barcodePosition === 'top') elements.push(barcodeEl);
                       elements.push(nameEl, codeEl, customEl, priceEl);
                       if (t.barcodePosition !== 'top') elements.push(barcodeEl);
-                      if (t.imagePosition === 'bottom') elements.push(imgEl);
+                      if (isImageBottom) elements.push(wrappedImgEl);
 
                       const filteredElements = elements.filter(Boolean);
 
@@ -523,11 +552,20 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
             const bcHeight = (t.barcodeHeight || (t.paperSize === 'etiket_40x20' ? 30 : 50)) * scaleFactor;
             const bcFontSize = (t.barcodeFontSize || (t.paperSize === 'etiket_40x20' ? 8 : 12)) * scaleFactor;
 
-            const barcodeEl = (
+            const qrSize = bcHeight; // for QR code, height is square size
+
+            const barcodeEl = t.barcodeFormat === 'QR' ? (
+              <div key="barcode" className="flex justify-center barcode-svg-container w-full max-w-full overflow-visible">
+                <QrCodeImage 
+                  value={barcodeValue} 
+                  size={qrSize} 
+                />
+              </div>
+            ) : (
               <div key="barcode" className="flex justify-center barcode-svg-container w-full max-w-full overflow-visible">
                 <Barcode renderer="img" 
                   value={barcodeValue} 
-                  format={t.barcodeFormat || "CODE128"} 
+                  format={(t.barcodeFormat === 'EAN13' ? 'EAN13' : 'CODE128')} 
                   width={bcWidth} 
                   height={bcHeight} 
                   fontSize={bcFontSize}
@@ -538,12 +576,32 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
               </div>
             );
 
+            // 6-way Image alignment
+            const imgPos = t.imagePosition || 'top_center';
+            const isImageTop = ['top', 'top_left', 'top_center', 'top_right'].includes(imgPos);
+            const isImageBottom = ['bottom', 'bottom_left', 'bottom_center', 'bottom_right'].includes(imgPos);
+
+            let imgAlignClass = 'justify-center';
+            if (imgPos.endsWith('_left') || imgPos === 'left') {
+              imgAlignClass = 'justify-start';
+            } else if (imgPos.endsWith('_right') || imgPos === 'right') {
+              imgAlignClass = 'justify-end';
+            } else {
+              imgAlignClass = 'justify-center';
+            }
+
+            const wrappedImgEl = imgEl ? (
+              <div key="img-wrapper" className={`flex w-full ${imgAlignClass}`}>
+                {imgEl}
+              </div>
+            ) : null;
+
             const elements = [];
-            if (t.imagePosition === 'top') elements.push(imgEl);
+            if (isImageTop) elements.push(wrappedImgEl);
             if (t.barcodePosition === 'top') elements.push(barcodeEl);
             elements.push(nameEl, codeEl, customEl, priceEl);
             if (t.barcodePosition !== 'top') elements.push(barcodeEl);
-            if (t.imagePosition === 'bottom') elements.push(imgEl);
+            if (isImageBottom) elements.push(wrappedImgEl);
 
             const filteredElements = elements.filter(Boolean);
 

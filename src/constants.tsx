@@ -431,19 +431,14 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.6.7';
+export const APP_VERSION = '1.6.8-draft';
 
 export const CHANGELOG = {
-  version: '1.6.7',
+  version: '1.6.8-draft',
   features: [
-    "Gelişmiş Barkod Tasarımcısı ve Hizalama Seçenekleri: Barkod etiketleri üzerine yerleştirilecek yazılar (Ürün Adı, Kod, Fiyat, Özel Yazı) ve barkod görseli için Sola, Ortaya ve Sağa Hizalama (Yatay Hizalama) desteği eklendi.",
-    "Hassas Piksel Yoğunluğu (DPI) Entegrasyonu: Barkod şablonlarının önizleme ve baskı boyutları (80x50, 60x40, 40x60, 40x30, 40x20 ve Özel) milimetre hassasiyetinden gerçekçi baskı piksellerine dönüştürüldü.",
-    "Baskı Kalitesi ve Taşma Koruması: Yazıların barkod sınırlarından taşmasını önlemek amacıyla etiket üstündeki tüm metin katmanlarına satır sarma koruması (whitespace-nowrap) entegre edildi.",
-    "Yüksek Kaliteli Logo Çıktısı (PNG): html-to-image kütüphanesinin kısıtlamaları yerine, doğrudan SVG'yi Canvas ortamına aktaran ve kayıpsız indirme sunan yenilikçi bir logo dışa aktarma mekanizması kuruldu."
+    "1.6.8 Sürümü Geliştirme Süreci Başladı: Gelecek güncellemeler ve iyileştirmeler bu taslak sürümü kapsamında hazırlanmaktadır."
   ],
-  fixes: [
-    "Electron Barkod Yazdırma Uyumluluğu: Barkod şablonlarında kullanılan SVG formatındaki barkodlar, masaüstü (Electron) yazdırma motorlarında kesinti yaşanmaması adına kararlı PNG ('renderer=img') formatıyla güncellendi."
-  ]
+  fixes: []
 };
 
 export const PREDEFINED_USERS = [
@@ -769,6 +764,15 @@ export const PIN_ACCOUNTS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.6.8",
+    date: "17.07.2026",
+    changes: [
+      "Çok Yönlü Ürün Resmi Hizalaması: Ürün resmi konumu artık Üst Sol, Üst Merkez, Üst Sağ, Alt Sol, Alt Merkez, Alt Sağ olmak üzere 6 farklı hizada yerleştirilebilir.",
+      "QR Kod Desteği: Barkod şablonlarına QR Kod formatı (Hızlı Geçiş/Web Link) entegre edildi. Tasarımcı ve yazdırma modüllerinde QR Kodlar otomatik olarak üretilir.",
+      "Gereksiz Karmaşıklığın Kaldırılması: Tasarımı sadeleştirmek ve kullanım kolaylığı sağlamak amacıyla arayüzdeki eski hassas koordinat kaydırıcıları (%) kaldırıldı."
+    ]
+  },
   {
     version: "1.6.7",
     date: "16.07.2026",

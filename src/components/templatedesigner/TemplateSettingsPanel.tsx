@@ -71,25 +71,10 @@ export function TemplateSettingsPanel({ activeTemplateId, setActiveTemplateId, t
                 <div>
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Kağıt Boyutu</label>
                   <select 
-                    value={activeTemplate.paperSize}
+                    value={activeTemplate.paperSize === 'etiket_ozel' ? 'etiket_60x40' : activeTemplate.paperSize}
                     onChange={(e) => {
                       const newSize = e.target.value as any;
-                      const updates: Partial<PrintTemplateConfig> = { paperSize: newSize };
-                      if (newSize === 'etiket_ozel') {
-                        updates.customWidthCm = activeTemplate.customWidthCm || 6;
-                        updates.customHeightCm = activeTemplate.customHeightCm || 4;
-                        if (!activeTemplate.customPositions) {
-                          updates.customPositions = {
-                            image: { x: 50, y: 15 },
-                            name: { x: 50, y: 35 },
-                            code: { x: 50, y: 50 },
-                            customText: { x: 50, y: 62 },
-                            price: { x: 50, y: 74 },
-                            barcode: { x: 50, y: 88 }
-                          };
-                        }
-                      }
-                      handleUpdateActiveTemplate(updates);
+                      handleUpdateActiveTemplate({ paperSize: newSize });
                     }}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
                   >
@@ -109,7 +94,6 @@ export function TemplateSettingsPanel({ activeTemplateId, setActiveTemplateId, t
                         <option value="etiket_40x60">Barkod Etiketi (40x60mm)</option>
                         <option value="etiket_40x30">Barkod Etiketi (40x30mm)</option>
                         <option value="etiket_40x20">Barkod Etiketi (40x20mm)</option>
-                        <option value="etiket_ozel">Özel Boyutlandırma (cm)</option>
                       </>
                     )}
                   </select>
@@ -182,7 +166,7 @@ export function TemplateSettingsPanel({ activeTemplateId, setActiveTemplateId, t
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Barkod Formatı</label>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Barkod & QR Formatı</label>
                   <select 
                     value={activeTemplate.barcodeFormat || 'CODE128'}
                     onChange={(e) => handleUpdateActiveTemplate({ barcodeFormat: e.target.value as any })}
@@ -190,6 +174,7 @@ export function TemplateSettingsPanel({ activeTemplateId, setActiveTemplateId, t
                   >
                     <option value="CODE128">Code 128 (Genel Kullanım)</option>
                     <option value="EAN13">EAN-13 (Perakende - 13 Haneli)</option>
+                    <option value="QR">QR Kod (Hızlı Geçiş/Web Link)</option>
                   </select>
                 </div>
 
@@ -275,12 +260,16 @@ export function TemplateSettingsPanel({ activeTemplateId, setActiveTemplateId, t
                     <div>
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Ürün Resmi Konumu</label>
                       <select 
-                        value={activeTemplate.imagePosition || 'top'}
+                        value={activeTemplate.imagePosition || 'top_center'}
                         onChange={(e) => handleUpdateActiveTemplate({ imagePosition: e.target.value as any })}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
                       >
-                        <option value="top">Üst Kısımda</option>
-                        <option value="bottom">Alt Kısımda (Sonda)</option>
+                        <option value="top_left">Üst Sol</option>
+                        <option value="top_center">Üst Merkez</option>
+                        <option value="top_right">Üst Sağ</option>
+                        <option value="bottom_left">Alt Sol</option>
+                        <option value="bottom_center">Alt Merkez</option>
+                        <option value="bottom_right">Alt Sağ</option>
                       </select>
                     </div>
                   </div>
@@ -393,134 +382,6 @@ export function TemplateSettingsPanel({ activeTemplateId, setActiveTemplateId, t
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
                         placeholder="Örn: %100 Pamuk, Yerli Üretim vs."
                       />
-                    </div>
-                  )}
-
-                  {activeTemplate.paperSize === 'etiket_ozel' && (
-                    <div className="p-3.5 bg-teal-50/50 rounded-xl border border-teal-100 space-y-4 pt-4 mt-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-extrabold text-teal-800 uppercase tracking-wider">MİLİMETRİK BOYUTLANDIRMA (CM)</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleUpdateActiveTemplate({
-                              customPositions: {
-                                image: { x: 50, y: 15 },
-                                name: { x: 50, y: 35 },
-                                code: { x: 50, y: 50 },
-                                customText: { x: 50, y: 62 },
-                                price: { x: 50, y: 74 },
-                                barcode: { x: 50, y: 88 }
-                              }
-                            });
-                          }}
-                          className="text-[10px] font-bold text-teal-600 hover:text-teal-800 transition-colors bg-white px-2.5 py-1 rounded-lg border border-teal-200/60 shadow-xs"
-                        >
-                          Hizalamaları Sıfırla
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Etiket Eni (cm)</label>
-                          <input 
-                            type="number" 
-                            min="1" max="25" step="0.1"
-                            value={activeTemplate.customWidthCm || 6}
-                            onChange={(e) => handleUpdateActiveTemplate({ customWidthCm: parseFloat(e.target.value) || 6 })}
-                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Etiket Boyu (cm)</label>
-                          <input 
-                            type="number" 
-                            min="1" max="25" step="0.1"
-                            value={activeTemplate.customHeightCm || 4}
-                            onChange={(e) => handleUpdateActiveTemplate({ customHeightCm: parseFloat(e.target.value) || 4 })}
-                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 pt-1">
-                        <input
-                          type="checkbox"
-                          id="snap-to-grid"
-                          checked={activeTemplate.snapToGrid !== false}
-                          onChange={(e) => handleUpdateActiveTemplate({ snapToGrid: e.target.checked })}
-                          className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-slate-300"
-                        />
-                        <label htmlFor="snap-to-grid" className="text-xs font-bold text-slate-600 cursor-pointer">
-                          Kılavuz Çizgilerine Yapış (Snap Grid)
-                        </label>
-                      </div>
-
-                      <div className="pt-2 border-t border-teal-100/60 space-y-3">
-                        <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Hassas Koordinat Ayarları (%)</span>
-                        
-                        <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
-                          {[
-                            { key: 'image', label: 'Ürün Resmi', active: activeTemplate.showImage },
-                            { key: 'name', label: 'Ürün Adı', active: activeTemplate.showBarcodeName !== false },
-                            { key: 'code', label: 'Ürün Kodu', active: activeTemplate.showBarcodeCode !== false },
-                            { key: 'customText', label: 'Özel Metin', active: activeTemplate.showCustomText && activeTemplate.customTextContent },
-                            { key: 'price', label: 'Fiyat', active: activeTemplate.showBarcodePrice !== false },
-                            { key: 'barcode', label: 'Barkod Çizgisi', active: true }
-                          ].filter(item => item.active).map(item => {
-                            const pos = (activeTemplate.customPositions || {})[item.key] || { x: 50, y: 50 };
-                            return (
-                              <div key={item.key} className="bg-white p-2.5 rounded-lg border border-slate-100 space-y-1.5 shadow-2xs">
-                                <span className="text-[11px] font-bold text-slate-700">{item.label}</span>
-                                <div className="grid grid-cols-2 gap-3">
-                                  <div>
-                                    <div className="flex justify-between text-[9px] font-semibold text-slate-500">
-                                      <span>Yatay (X)</span>
-                                      <span>{pos.x}%</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min="0" max="100" step="0.5"
-                                      value={pos.x}
-                                      onChange={(e) => {
-                                        const currentPositions = activeTemplate.customPositions || {};
-                                        handleUpdateActiveTemplate({
-                                          customPositions: {
-                                            ...currentPositions,
-                                            [item.key]: { ...pos, x: parseFloat(e.target.value) }
-                                          }
-                                        });
-                                      }}
-                                      className="w-full accent-teal-600 h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer"
-                                    />
-                                  </div>
-                                  <div>
-                                    <div className="flex justify-between text-[9px] font-semibold text-slate-500">
-                                      <span>Dikey (Y)</span>
-                                      <span>{pos.y}%</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min="0" max="100" step="0.5"
-                                      value={pos.y}
-                                      onChange={(e) => {
-                                        const currentPositions = activeTemplate.customPositions || {};
-                                        handleUpdateActiveTemplate({
-                                          customPositions: {
-                                            ...currentPositions,
-                                            [item.key]: { ...pos, y: parseFloat(e.target.value) }
-                                          }
-                                        });
-                                      }}
-                                      className="w-full accent-teal-600 h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
                     </div>
                   )}
                 </div>
