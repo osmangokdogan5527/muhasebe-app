@@ -383,7 +383,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                         setUpdateStatus('available');
                       } else {
                         setUpdateStatus('not-available');
-                        alert(result.error ? `Hata: ${result.error}` : "Şu an için yeni bir güncelleme bulunmuyor.");
+                        
+                        let errMsg = result.error;
+                        if (errMsg && typeof errMsg === 'string') {
+                          if (errMsg.includes('No published versions on GitHub')) {
+                            errMsg = 'GitHub üzerinde henüz yayınlanmış (Publish edilmiş) bir uygulama sürümü bulunamadı. Lütfen GitHub deponuzun "Releases" kısmında en az bir sürüm oluşturup yayınladığınızdan emin olun.';
+                          } else if (errMsg.includes('HttpError: 404')) {
+                            errMsg = 'GitHub deponuz bulunamadı (404 Hatası). Lütfen package.json dosyasındaki "owner" ve "repo" bilgilerinin doğruluğunu ve deponun herkese açık (public) olduğunu kontrol edin.';
+                          }
+                        }
+                        
+                        alert(errMsg ? `Hata: ${errMsg}` : "Şu an için yeni bir güncelleme bulunmuyor.");
                       }
                     } catch (err) {
                       setUpdateStatus('idle');

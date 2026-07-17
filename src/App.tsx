@@ -470,8 +470,17 @@ export default function App() {
         cleanupError = (window.electronAPI as any).onUpdateError((error: string) => {
           setUpdateError(error);
           setUpdateStatus('idle'); // Hata durumunda idle'a dön
-          // Opsiyonel olarak bir alert gösterebiliriz
-          alert(`Güncelleme indirilirken hata oluştu:\n${error}`);
+          
+          let friendlyError = error;
+          if (friendlyError && typeof friendlyError === 'string') {
+            if (friendlyError.includes('No published versions on GitHub')) {
+              friendlyError = 'GitHub üzerinde henüz yayınlanmış (Publish edilmiş) bir uygulama sürümü bulunamadı. Lütfen GitHub deposunun "Releases" kısmında en az bir sürüm oluşturup yayınladığınızdan emin olun.';
+            } else if (friendlyError.includes('HttpError: 404')) {
+              friendlyError = 'GitHub deponuz bulunamadı (404 Hatası). Lütfen package.json dosyasındaki "owner" ve "repo" bilgilerinin doğruluğunu ve deponun herkese açık (public) olduğunu kontrol edin.';
+            }
+          }
+          
+          alert(`Güncelleme indirilirken hata oluştu:\n${friendlyError}`);
         });
       }
     }

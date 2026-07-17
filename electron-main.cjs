@@ -155,7 +155,13 @@ autoUpdater.autoInstallOnAppQuit = true;
 autoUpdater.on('error', (err) => {
   console.error('Update error:', err);
   if (mainWindow) {
-    mainWindow.webContents.send('update-error', err.message || 'Bilinmeyen bir hata oluştu');
+    let errMsg = err.message || 'Bilinmeyen bir hata oluştu';
+    if (errMsg.includes('No published versions on GitHub')) {
+      errMsg = 'GitHub üzerinde henüz yayınlanmış (Publish edilmiş) bir uygulama sürümü bulunamadı. Lütfen GitHub deposunun "Releases" kısmında en az bir sürüm oluşturup yayınladığınızdan emin olun.';
+    } else if (errMsg.includes('HttpError: 404')) {
+      errMsg = 'GitHub deponuz bulunamadı (404 Hatası). Lütfen package.json dosyasındaki "owner" ve "repo" bilgilerinin doğruluğunu ve deponun herkese açık (public) olduğunu kontrol edin.';
+    }
+    mainWindow.webContents.send('update-error', errMsg);
   }
 });
 
@@ -177,7 +183,16 @@ ipcMain.handle('check-for-updates', async () => {
   return new Promise((resolve) => {
     const onAvailable = (info) => { cleanup(); resolve({ available: true, version: info.version }); };
     const onNotAvailable = () => { cleanup(); resolve({ available: false }); };
-    const onError = (err) => { cleanup(); resolve({ available: false, error: err.message }); };
+    const onError = (err) => { 
+      cleanup(); 
+      let errMsg = err.message || '';
+      if (errMsg.includes('No published versions on GitHub')) {
+        errMsg = 'GitHub üzerinde henüz yayınlanmış (Publish edilmiş) bir uygulama sürümü bulunamadı. Lütfen GitHub deposunun "Releases" kısmında en az bir sürüm oluşturup yayınladığınızdan emin olun.';
+      } else if (errMsg.includes('HttpError: 404')) {
+        errMsg = 'GitHub deponuz bulunamadı (404 Hatası). Lütfen package.json dosyasındaki "owner" ve "repo" bilgilerinin doğruluğunu ve deponun herkese açık (public) olduğunu kontrol edin.';
+      }
+      resolve({ available: false, error: errMsg }); 
+    };
     
     function cleanup() {
       autoUpdater.removeListener('update-available', onAvailable);
@@ -191,7 +206,13 @@ ipcMain.handle('check-for-updates', async () => {
     
     autoUpdater.checkForUpdates().catch(err => {
       cleanup();
-      resolve({ available: false, error: err.message });
+      let errMsg = err.message || '';
+      if (errMsg.includes('No published versions on GitHub')) {
+        errMsg = 'GitHub üzerinde henüz yayınlanmış (Publish edilmiş) bir uygulama sürümü bulunamadı. Lütfen GitHub deponuzun "Releases" kısmında en az bir sürüm oluşturup yayınladığınızdan emin olun.';
+      } else if (errMsg.includes('HttpError: 404')) {
+        errMsg = 'GitHub deponuz bulunamadı (404 Hatası). Lütfen package.json dosyasındaki "owner" ve "repo" bilgilerinin doğruluğunu ve deponun herkese açık (public) olduğunu kontrol edin.';
+      }
+      resolve({ available: false, error: errMsg });
     });
   });
 });
