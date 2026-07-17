@@ -681,43 +681,46 @@ export default function App() {
 
   if (!user) {
     return (
-      <AuthScreen
-        currentThemeData={currentThemeData}
-        themeCssRules={themeCssRules}
-        activeLogoTheme={activeLogoTheme}
-        activeTheme={activeTheme}
-        sidebarPattern={sidebarPattern}
-        sidebarPatternOpacity={sidebarPatternOpacity}
-        designStyle={designStyle}
-        selectedPinAccount={selectedPinAccount}
-        setSelectedPinAccount={setSelectedPinAccount}
-        usersList={usersList}
-        enteredPin={enteredPin}
-        setEnteredPin={setEnteredPin}
-        authError={authError}
-        setAuthError={setAuthError}
-        setUserRole={setUserRole}
-        setActiveTab={setActiveTab}
-        setActiveUser={setActiveUser}
-        setUser={setUser}
-        showAdminLogin={showAdminLogin}
-        setShowAdminLogin={setShowAdminLogin}
-        adminPin={adminPin}
-        setAdminPin={setAdminPin}
-        adminAuthError={adminAuthError}
-        setAdminAuthError={setAdminAuthError}
-        showAdminDashboard={showAdminDashboard}
-        setShowAdminDashboard={setShowAdminDashboard}
-        errorLogs={errorLogs}
-        setErrorLogs={setErrorLogs}
-        feedbackList={feedbackList}
-        setFeedbackList={setFeedbackList}
-        updateStatus={updateStatus}
-        setUpdateStatus={setUpdateStatus}
-        updatePercent={updatePercent}
-        changelogData={changelogData}
-        setZoomImage={setZoomImage}
-      />
+      <div data-design-style={designStyle} className={`min-h-screen relative ${(currentThemeData as any).bgClass || 'bg-[#050505]'} text-[#e0e0e0] flex flex-col font-sans overflow-x-hidden`}>
+        <GlobalStyles themeCssRules={themeCssRules} bodyPatternSvg={bodyPatternSvg} activePattern={activePatternObj} />
+        <AuthScreen
+          currentThemeData={currentThemeData}
+          themeCssRules={themeCssRules}
+          activeLogoTheme={activeLogoTheme}
+          activeTheme={activeTheme}
+          sidebarPattern={sidebarPattern}
+          sidebarPatternOpacity={sidebarPatternOpacity}
+          designStyle={designStyle}
+          selectedPinAccount={selectedPinAccount}
+          setSelectedPinAccount={setSelectedPinAccount}
+          usersList={usersList}
+          enteredPin={enteredPin}
+          setEnteredPin={setEnteredPin}
+          authError={authError}
+          setAuthError={setAuthError}
+          setUserRole={setUserRole}
+          setActiveTab={setActiveTab}
+          setActiveUser={setActiveUser}
+          setUser={setUser}
+          showAdminLogin={showAdminLogin}
+          setShowAdminLogin={setShowAdminLogin}
+          adminPin={adminPin}
+          setAdminPin={setAdminPin}
+          adminAuthError={adminAuthError}
+          setAdminAuthError={setAdminAuthError}
+          showAdminDashboard={showAdminDashboard}
+          setShowAdminDashboard={setShowAdminDashboard}
+          errorLogs={errorLogs}
+          setErrorLogs={setErrorLogs}
+          feedbackList={feedbackList}
+          setFeedbackList={setFeedbackList}
+          updateStatus={updateStatus}
+          setUpdateStatus={setUpdateStatus}
+          updatePercent={updatePercent}
+          changelogData={changelogData}
+          setZoomImage={setZoomImage}
+        />
+      </div>
     );
   }
 

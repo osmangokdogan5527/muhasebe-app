@@ -29,6 +29,7 @@ export const StormLogo = ({
   const currentDesignStyle = designStyle || (typeof document !== 'undefined' && document.documentElement.getAttribute('data-design-style')) || localStorage.getItem('storm_muhasebe_design_style') || 'glass';
   const isGlass = currentDesignStyle === 'glass';
   const isFluidMesh = currentDesignStyle === 'fluid-mesh';
+  const isNeumorphism = currentDesignStyle === 'neumorphism';
 
   // Strip any shadow filters and transition effects to keep the logo perfectly flat and net
   const cleanedStyle = { ...style };
@@ -222,12 +223,38 @@ export const StormLogo = ({
 
   return (
     <div className={className} style={{ ...cleanedStyle, willChange: 'transform', display: 'flex', alignItems: 'center', justifyContent: 'center', width: typeof width === 'number' ? `${width}px` : (width === '100%' ? undefined : width), height: typeof height === 'number' ? `${height}px` : (height === '100%' ? undefined : height) }}>
-      <svg className={isGlass ? 'storm-logo-glass' : (isFluidMesh ? 'storm-logo-fluid-mesh' : '')} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={width} height={height}>
+      <svg className={isGlass ? 'storm-logo-glass' : (isFluidMesh ? 'storm-logo-fluid-mesh' : isNeumorphism ? 'storm-logo-neumorphism' : '')} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={width} height={height}>
         <defs>
           <clipPath id="logo-clip">
             <rect width="200" height="200" rx="48" />
           </clipPath>
-          {patternContent && !isGlass && !isFluidMesh && (
+          {/* Neumorphism Gradients and Filters */}
+          <linearGradient id="neu-bolt-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={fillCol} stopOpacity="0.95" />
+            <stop offset="100%" stopColor={fillCol} stopOpacity="0.5" />
+          </linearGradient>
+          <filter id="neu-bevel-shadow" x="-35%" y="-35%" width="170%" height="170%">
+            <feDropShadow dx="6" dy="6" stdDeviation="8" floodColor="#000000" floodOpacity="0.5" result="darkShadow" />
+            <feDropShadow dx="-6" dy="-6" stdDeviation="8" floodColor="#ffffff" floodOpacity="0.05" result="lightShadow" />
+            <feMerge>
+              <feMergeNode in="darkShadow" />
+              <feMergeNode in="lightShadow" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id="neu-bolt-shadow" x="-40%" y="-40%" width="180%" height="180%">
+            <feDropShadow dx="2" dy="2" stdDeviation="3" floodColor="#000000" floodOpacity="0.45" result="dark" />
+            <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor={fillCol} floodOpacity="0.35" result="glow" />
+            <feMerge>
+              <feMergeNode in="dark" />
+              <feMergeNode in="glow" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id="neu-text-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="1" dy="1" stdDeviation="1.5" floodColor="#000000" floodOpacity="0.45" />
+          </filter>
+          {patternContent && !isGlass && !isFluidMesh && !isNeumorphism && (
             <pattern 
               id={patternId} 
               width={patternWidth} 
@@ -378,12 +405,19 @@ export const StormLogo = ({
             {/* Beveled edge stroke with linear gradient */}
             <rect width="196" height="196" x="2" y="2" rx="46" fill="none" stroke="url(#glass-border-grad)" strokeWidth="3.5" />
           </g>
+        ) : isNeumorphism ? (
+          <g>
+            {/* Base background that matches the container for seamless neumorphism */}
+            <rect width="200" height="200" fill="#15181f" />
+            {/* Neumorphic embossed box */}
+            <rect width="176" height="176" x="12" y="12" rx="40" fill="#15181f" filter="url(#neu-bevel-shadow)" />
+          </g>
         ) : (
           <rect width="200" height="200" rx="48" fill={fillCol} />
         )}
 
         {/* Textured overlay pattern inside the logo background */}
-        {patternContent && !isGlass && !isFluidMesh && (
+        {patternContent && !isGlass && !isFluidMesh && !isNeumorphism && (
           <rect width="200" height="200" rx="48" fill={`url(#${patternId})`} />
         )}
 
@@ -391,8 +425,8 @@ export const StormLogo = ({
         <g transform="translate(70, 22) scale(1.2)">
           <path 
             d="M28 2 L8 38 L23 38 L15 66 L42 28 L28 28 Z" 
-            fill={isFluidMesh ? "url(#fluid-bolt-grad)" : (isGlass ? "url(#accent-bolt-grad)" : "#ffffff")} 
-            filter={isFluidMesh ? "url(#fluid-bolt-glow)" : undefined}
+            fill={isFluidMesh ? "url(#fluid-bolt-grad)" : (isGlass ? "url(#accent-bolt-grad)" : isNeumorphism ? "url(#neu-bolt-grad)" : "#ffffff")} 
+            filter={isFluidMesh ? "url(#fluid-bolt-glow)" : isNeumorphism ? "url(#neu-bolt-shadow)" : undefined}
           />
         </g>
 
@@ -405,9 +439,9 @@ export const StormLogo = ({
           fontFamily="system-ui, -apple-system, sans-serif" 
           fontWeight="950" 
           fontSize="27" 
-          fill="#ffffff" 
+          fill={isNeumorphism ? "#f1f5f9" : "#ffffff"} 
           letterSpacing="3.5" 
-          filter={isFluidMesh ? "url(#fluid-logo-text-glow)" : (isGlass ? "url(#logo-text-shadow)" : undefined)}
+          filter={isFluidMesh ? "url(#fluid-logo-text-glow)" : (isGlass ? "url(#logo-text-shadow)" : isNeumorphism ? "url(#neu-text-shadow)" : undefined)}
         >
           STORM
         </text>
@@ -419,10 +453,10 @@ export const StormLogo = ({
           fontFamily="system-ui, -apple-system, sans-serif" 
           fontWeight="900" 
           fontSize="13.5" 
-          fill="#ffffff" 
+          fill={isNeumorphism ? "#94a3b8" : "#ffffff"} 
           letterSpacing="2.5" 
           opacity="0.95" 
-          filter={isFluidMesh ? "url(#fluid-logo-text-glow)" : (isGlass ? "url(#logo-text-shadow)" : undefined)}
+          filter={isFluidMesh ? "url(#fluid-logo-text-glow)" : (isGlass ? "url(#logo-text-shadow)" : isNeumorphism ? "url(#neu-text-shadow)" : undefined)}
         >
           MUHASEBE
         </text>
@@ -431,14 +465,18 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.6.8-draft';
+export const APP_VERSION = '1.6.9';
 
 export const CHANGELOG = {
-  version: '1.6.8-draft',
+  version: '1.6.9',
   features: [
-    "1.6.8 Sürümü Geliştirme Süreci Başladı: Gelecek güncellemeler ve iyileştirmeler bu taslak sürümü kapsamında hazırlanmaktadır."
+    "Yenilikçi Neumorphism Tasarım Dili: Arayüz stillerine fütüristik, kabartmalı ve yumuşak gölgeli Neumorphism (Yeni Skeuomorphism) tasarım stili eklendi.",
+    "Storm AI Neumorphic Arayüz Entegrasyonu: Yapay Zeka Asistanı butonu ve yan panel kabartmaları Neumorphism temasına özel olarak optimize edildi.",
+    "Yan Panel Kabartma Dengelemesi: Sol yan panel navigasyon butonları, alt alanlar ve kullanıcı profil kutusunun kabartma ve iç çöküntü efektleri kusursuzlaştırıldı."
   ],
-  fixes: []
+  fixes: [
+    "Neumorphic tasarım modundaki girdi alanlarının arka planları ve buton vurguları düzeltildi."
+  ]
 };
 
 export const PREDEFINED_USERS = [
@@ -764,6 +802,16 @@ export const PIN_ACCOUNTS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.6.9",
+    date: "17.07.2026",
+    changes: [
+      "Yenilikçi Neumorphism Tasarım Dili: Arayüz stillerine fütüristik, kabartmalı ve yumuşak gölgeli Neumorphism tasarım stili eklendi.",
+      "Storm AI Neumorphic Arayüz Entegrasyonu: Yapay Zeka Asistanı butonu ve yan panel kabartmaları Neumorphism temasına özel olarak optimize edildi.",
+      "Yan Panel Kabartma Dengelemesi: Sol yan panel navigasyon butonları, alt alanlar ve kullanıcı profil kutusunun kabartma ve iç çöküntü efektleri kusursuzlaştırıldı.",
+      "Girdi Alanı ve Buton İyileştirmeleri: Neumorphic tasarım modundaki girdi alanlarının arka planları ve buton vurguları düzeltildi."
+    ]
+  },
   {
     version: "1.6.8",
     date: "17.07.2026",

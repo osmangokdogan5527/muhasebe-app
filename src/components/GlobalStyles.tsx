@@ -1079,6 +1079,233 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ themeCssRules, bodyP
           border-color: rgba(139, 92, 246, 0.18) !important;
         }
 
+        /* NEUMORPHISM (YUMUŞAK KABARTMA) STİLİ */
+        [data-design-style="neumorphism"] {
+          color: #f1f5f9 !important;
+        }
+
+        [data-design-style="neumorphism"] body,
+        [data-design-style="neumorphism"].bg-\\[\\#050505\\],
+        body:has([data-design-style="neumorphism"]) {
+          background: #15181f !important;
+          color: #f1f5f9 !important;
+          background-attachment: fixed !important;
+        }
+
+        /* Neumorphism Cards & Panels (Extruded / Convex) */
+        [data-design-style="neumorphism"] .bg-white:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-\\[\\#ffffff\\]:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-\\[\\#0a0a0a\\]:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-\\[\\#0c0c0c\\]:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-\\[\\#0d0d0d\\]:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-\\[\\#0f0f0f\\]:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-\\[\\#111111\\]:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-\\[\\#121212\\]:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-\\[\\#151515\\]:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-\\[\\#111111\\]\\/80:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-\\[\\#121316\\]:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-\\[\\#0b0c0e\\]:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-\\[\\#0c0c0e\\]\\/90:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-zinc-950:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-zinc-950\\/50:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-zinc-900\\/50:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-white\\/5:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-slate-50:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-slate-100:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-slate-900\\/50:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-zinc-900:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] .bg-zinc-800:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] [class*="bg-slate-"]:not(input):not(select):not(textarea):not(button),
+        [data-design-style="neumorphism"] [class*="bg-zinc-"]:not(input):not(select):not(textarea):not(button) {
+          background-color: #15181f !important;
+          border: none !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+          box-shadow: -5px -5px 12px rgba(255, 255, 255, 0.04), 5px 5px 12px rgba(0, 0, 0, 0.45) !important;
+          color: #f1f5f9 !important;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+
+        /* Hover states for Cards */
+        [data-design-style="neumorphism"] .bg-white:not(input):not(select):not(textarea):not(button):hover,
+        [data-design-style="neumorphism"] .bg-\\[\\#ffffff\\]:not(input):not(select):not(textarea):not(button):hover,
+        [data-design-style="neumorphism"] .bg-\\[\\#0a0a0a\\]:not(input):not(select):not(textarea):not(button):hover,
+        [data-design-style="neumorphism"] .bg-\\[\\#0c0c0c\\]:not(input):not(select):not(textarea):not(button):hover,
+        [data-design-style="neumorphism"] .bg-\\[\\#0d0d0d\\]:not(input):not(select):not(textarea):not(button):hover,
+        [data-design-style="neumorphism"] .bg-\\[\\#0f0f0f\\]:not(input):not(select):not(textarea):not(button):hover,
+        [data-design-style="neumorphism"] .bg-\\[\\#111111\\]:not(input):not(select):not(textarea):not(button):hover,
+        [data-design-style="neumorphism"] .bg-\\[\\#121212\\]:not(input):not(select):not(textarea):not(button):hover,
+        [data-design-style="neumorphism"] .bg-\\[\\#151515\\]:not(input):not(select):not(textarea):not(button):hover,
+        [data-design-style="neumorphism"] .bg-white\\/5:not(input):not(select):not(textarea):not(button):hover {
+          box-shadow: -2px -2px 6px rgba(255, 255, 255, 0.05), 2px 2px 6px rgba(0, 0, 0, 0.5) !important;
+          transform: translateY(1px) !important;
+        }
+
+        /* Neumorphism Buttons */
+        [data-design-style="neumorphism"] button[class*="bg-"]:not(aside button),
+        [data-design-style="neumorphism"] button.btn,
+        [data-design-style="neumorphism"] .btn {
+          border: none !important;
+          box-shadow: -4px -4px 10px rgba(255, 255, 255, 0.04), 4px 4px 10px rgba(0, 0, 0, 0.4) !important;
+          transition: all 0.2s ease !important;
+          text-shadow: none !important;
+        }
+
+        /* Default buttons without colored backgrounds get neumorphism gray background */
+        [data-design-style="neumorphism"] button[class*="bg-"]:not(aside button):not([class*="bg-indigo"]):not([class*="bg-emerald"]):not([class*="bg-teal"]):not([class*="bg-red"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-blue"]):not([class*="bg-violet"]):not([class*="bg-green"]) {
+          background-color: #15181f !important;
+          color: #f1f5f9 !important;
+        }
+
+        [data-design-style="neumorphism"] button[class*="bg-"]:not(aside button):hover,
+        [data-design-style="neumorphism"] button.btn:hover,
+        [data-design-style="neumorphism"] .btn:hover {
+          box-shadow: -2px -2px 6px rgba(255, 255, 255, 0.05), 2px 2px 6px rgba(0, 0, 0, 0.45) !important;
+          transform: translateY(1px) !important;
+        }
+
+        [data-design-style="neumorphism"] button[class*="bg-"]:not(aside button):active,
+        [data-design-style="neumorphism"] button.btn:active,
+        [data-design-style="neumorphism"] .btn:active {
+          box-shadow: inset -3px -3px 8px rgba(255, 255, 255, 0.03), inset 3px 3px 8px rgba(0, 0, 0, 0.5) !important;
+          transform: translateY(1.5px) !important;
+        }
+
+        [data-design-style="neumorphism"] button[class*="bg-indigo-"],
+        [data-design-style="neumorphism"] button[class*="bg-emerald-"],
+        [data-design-style="neumorphism"] button[class*="bg-red-"],
+        [data-design-style="neumorphism"] button[class*="bg-rose-"],
+        [data-design-style="neumorphism"] button[class*="bg-teal-"] {
+          box-shadow: -4px -4px 10px rgba(255, 255, 255, 0.04), 4px 4px 10px rgba(0, 0, 0, 0.4) !important;
+          border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        }
+
+        /* Sunken Fields (Inputs & Textareas) */
+        [data-design-style="neumorphism"] input,
+        [data-design-style="neumorphism"] input[class],
+        [data-design-style="neumorphism"] select,
+        [data-design-style="neumorphism"] select[class],
+        [data-design-style="neumorphism"] textarea,
+        [data-design-style="neumorphism"] textarea[class],
+        [data-design-style="neumorphism"] .bg-\\[\\#0c0c0c\\],
+        [data-design-style="neumorphism"] .bg-\\[\\#040509\\] {
+          background-color: #12141a !important;
+          color: #f8fafc !important;
+          border: none !important;
+          box-shadow: inset -3px -3px 7px rgba(255, 255, 255, 0.02), inset 3px 3px 7px rgba(0, 0, 0, 0.5) !important;
+          transition: all 0.2s ease !important;
+        }
+
+        [data-design-style="neumorphism"] input:focus,
+        [data-design-style="neumorphism"] select:focus,
+        [data-design-style="neumorphism"] textarea:focus {
+          box-shadow: inset -2px -2px 6px rgba(255, 255, 255, 0.03), inset 2px 2px 6px rgba(0, 0, 0, 0.6), 0 0 10px rgba(var(--accent-rgb), 0.15) !important;
+        }
+
+        /* Sidebar Neumorphic Treatment */
+        [data-design-style="neumorphism"] aside {
+          background-color: #15181f !important;
+          border: none !important;
+          box-shadow: -4px -4px 12px rgba(255, 255, 255, 0.02), 4px 4px 12px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        /* Sidebar navigation list spacing & button hover */
+        [data-design-style="neumorphism"] aside button[id^="tab-btn-"] {
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          border-radius: 12px !important;
+          margin-bottom: 4px !important;
+        }
+
+        /* Inactive Tab: flat, text is subtle, on hover it raises beautifully */
+        [data-design-style="neumorphism"] aside button[id^="tab-btn-"]:not(.font-semibold) {
+          background-color: transparent !important;
+          color: #94a3b8 !important;
+          box-shadow: none !important;
+          border: 1px solid transparent !important;
+        }
+        [data-design-style="neumorphism"] aside button[id^="tab-btn-"]:not(.font-semibold):hover {
+          background-color: #15181f !important;
+          color: #f8fafc !important;
+          box-shadow: -3px -3px 8px rgba(255, 255, 255, 0.03), 3px 3px 8px rgba(0, 0, 0, 0.4) !important;
+        }
+
+        /* Active Tab: Sunken deeply, text matches accent color with strong clarity */
+        [data-design-style="neumorphism"] aside button[id^="tab-btn-"].font-semibold {
+          background-color: #12141a !important;
+          box-shadow: inset -3px -3px 8px rgba(255, 255, 255, 0.03), inset 3px 3px 8px rgba(0, 0, 0, 0.5) !important;
+          color: #2dd4bf !important; /* Elegant light-teal active brand highlight */
+          border: none !important;
+        }
+        
+        /* Inner icons in active tab */
+        [data-design-style="neumorphism"] aside button[id^="tab-btn-"].font-semibold svg,
+        [data-design-style="neumorphism"] aside button[id^="tab-btn-"].font-semibold span {
+          color: #2dd4bf !important;
+          filter: drop-shadow(0 0 6px rgba(45, 212, 191, 0.4)) !important;
+        }
+
+        /* Submenus inside sidebar */
+        [data-design-style="neumorphism"] aside nav div.pl-3 {
+          background-color: #12141a !important;
+          box-shadow: inset -2px -2px 6px rgba(255, 255, 255, 0.02), inset 2px 2px 6px rgba(0, 0, 0, 0.4) !important;
+          border: none !important;
+          padding: 6px !important;
+        }
+        
+        [data-design-style="neumorphism"] aside nav div.pl-3 button {
+          background: transparent !important;
+          box-shadow: none !important;
+          border: none !important;
+          color: #94a3b8 !important;
+        }
+        [data-design-style="neumorphism"] aside nav div.pl-3 button:hover {
+          background-color: #15181f !important;
+          box-shadow: -2px -2px 5px rgba(255, 255, 255, 0.02), 2px 2px 5px rgba(0, 0, 0, 0.4) !important;
+          color: #f8fafc !important;
+        }
+
+        /* Footer user-profile outer box */
+        [data-design-style="neumorphism"] aside div.mt-auto > div.p-3 {
+          background-color: #15181f !important;
+          border: none !important;
+          box-shadow: inset -2px -2px 6px rgba(255, 255, 255, 0.02), inset 2px 2px 6px rgba(0, 0, 0, 0.5) !important;
+          border-radius: 18px !important;
+        }
+
+        /* Inner boxes in the footer (status indicator, user info, etc.) */
+        [data-design-style="neumorphism"] aside div.mt-auto div.border-white\/5,
+        [data-design-style="neumorphism"] aside div.mt-auto button.border-white\/5,
+        [data-design-style="neumorphism"] aside div.mt-auto button.border-teal-500\/20,
+        [data-design-style="neumorphism"] aside div.mt-auto button.border-red-500\/20 {
+          background-color: #12141a !important;
+          border: none !important;
+          box-shadow: inset -2px -2px 5px rgba(255, 255, 255, 0.01), inset 2px 2px 5px rgba(0, 0, 0, 0.4) !important;
+          border-radius: 12px !important;
+          color: #94a3b8 !important;
+        }
+
+        /* Hover on footer buttons */
+        [data-design-style="neumorphism"] aside div.mt-auto button.border-white\/5:hover,
+        [data-design-style="neumorphism"] aside div.mt-auto button.border-teal-500\/20:hover,
+        [data-design-style="neumorphism"] aside div.mt-auto button.border-red-500\/20:hover {
+          background-color: #15181f !important;
+          box-shadow: -2px -2px 5px rgba(255, 255, 255, 0.02), 2px 2px 5px rgba(0, 0, 0, 0.4) !important;
+          color: #f8fafc !important;
+        }
+
+        /* Table & Lists divider treatment */
+        [data-design-style="neumorphism"] .border-b,
+        [data-design-style="neumorphism"] .border-t,
+        [data-design-style="neumorphism"] .border-l,
+        [data-design-style="neumorphism"] .border-r,
+        [data-design-style="neumorphism"] .border {
+          border-color: rgba(255, 255, 255, 0.03) !important;
+        }
+
+        [data-design-style="neumorphism"] tr:hover {
+          background-color: #12141a !important;
+        }
+
         body,
         .bg-\\[\\#050505\\] {
           background: 
