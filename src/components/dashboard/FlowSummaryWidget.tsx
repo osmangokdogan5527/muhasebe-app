@@ -42,8 +42,7 @@ export const FlowSummaryWidget = React.memo<FlowSummaryWidgetProps>(({
                                 Tahsilat Hacmi
                               </div>
                               <div
-                                className="text-xs font-semibold text-white/90 mt-0.5"
-                                style={{ fontFamily: "Georgia, serif" }}
+                                className="text-xs font-semibold text-white/90 mt-0.5 tabular-nums font-sans"
                               >
                                 {formatCurrency(stats.totalCollections)}
                               </div>
@@ -62,8 +61,7 @@ export const FlowSummaryWidget = React.memo<FlowSummaryWidgetProps>(({
                                 Ödeme Hacmi
                               </div>
                               <div
-                                className="text-xs font-semibold text-white/90 mt-0.5"
-                                style={{ fontFamily: "Georgia, serif" }}
+                                className="text-xs font-semibold text-white/90 mt-0.5 tabular-nums font-sans"
                               >
                                 {formatCurrency(stats.totalPayments)}
                               </div>

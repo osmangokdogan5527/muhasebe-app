@@ -118,6 +118,7 @@ export interface AyarlarViewProps {
   setSensitiveTabs: (tabs: string[]) => void;
   shortcuts: KeyboardShortcut[];
   setShortcuts: React.Dispatch<React.SetStateAction<KeyboardShortcut[]>>;
+  onOpenBackupWizard?: () => void;
 }
 
 export default function AyarlarView({
@@ -188,7 +189,8 @@ export default function AyarlarView({
   sensitiveTabs: _sensitiveTabs,
   setSensitiveTabs,
   shortcuts,
-  setShortcuts
+  setShortcuts,
+  onOpenBackupWizard
 }: AyarlarViewProps) {
   
   // Local-only states for setting sub-tabs and forms
@@ -521,6 +523,7 @@ export default function AyarlarView({
             handleOpenBackupFolder={handleOpenBackupFolder}
             backupMessage={backupMessage}
             setResetModalOpen={setResetModalOpen}
+            onOpenBackupWizard={onOpenBackupWizard}
           />
         )}
         {settingsSubTab === 'template-designer' && (

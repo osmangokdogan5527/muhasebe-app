@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, ShieldCheck, Download, Upload, FolderOpen, RotateCcw } from 'lucide-react';
+import { User, ShieldCheck, Download, Upload, FolderOpen, RotateCcw, Shield } from 'lucide-react';
 
 export interface ProfileSettingsProps {
   profileName: string;
@@ -19,6 +19,7 @@ export interface ProfileSettingsProps {
   handleOpenBackupFolder: () => void;
   backupMessage: { text: string; type: 'success' | 'error' } | null;
   setResetModalOpen: (open: boolean) => void;
+  onOpenBackupWizard?: () => void;
 }
 
 export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
@@ -38,7 +39,8 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   autoBackupEnabled,
   handleOpenBackupFolder,
   backupMessage,
-  setResetModalOpen
+  setResetModalOpen,
+  onOpenBackupWizard
 }) => {
   return (
 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
@@ -122,6 +124,25 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                   <p className="text-xs text-white/50 mt-0.5">Veritabanı dosyalarınızı yedekleyin veya eski yedekten verilerinizi geri yükleyin</p>
                 </div>
               </div>
+
+              {onOpenBackupWizard && (
+                <div className="mb-6 p-5 rounded-xl border border-teal-500/20 bg-teal-500/5 hover:bg-teal-500/10 transition flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Shield size={16} />
+                      Önerilen Yedekleme Sistemi
+                    </span>
+                    <p className="text-sm font-bold text-white">Otomatik Veri Sağlığı & Yedekleme Sihirbazı</p>
+                    <p className="text-xs text-white/60">Tüm veritabanı kayıtlarınızı tek tıkla analiz edin, sağlık skorunuzu test edin ve şifreli .storm yedek paketi oluşturun.</p>
+                  </div>
+                  <button
+                    onClick={onOpenBackupWizard}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider transition cursor-pointer shadow-md active:scale-98 shrink-0"
+                  >
+                    Sihirbazı Başlat
+                  </button>
+                </div>
+              )}
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button

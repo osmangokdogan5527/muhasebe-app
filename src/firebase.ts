@@ -743,3 +743,52 @@ export async function clearAllDatabaseData() {
   }
 }
 
+export async function importAllDatabaseData(backupJson: any) {
+  try {
+    // 1. Clear first
+    await clearAllDatabaseData();
+
+    // 2. Insert collections in batches of 500
+    const collectionsMap: { [key: string]: any[] } = {
+      [CARILER_COLL]: backupJson.cariler || [],
+      [STOKLAR_COLL]: backupJson.stoklar || [],
+      [ISLEMLER_COLL]: backupJson.islemler || [],
+      [CEKSENET_COLL]: backupJson.ceksenet || [],
+      [GIDERLER_COLL]: backupJson.giderler || [],
+      [CALISANLAR_COLL]: backupJson.calisanlar || [],
+      [CALISAN_ISLEMLER_COLL]: backupJson.calisanIslemler || [],
+      [KREDILER_COLL]: backupJson.krediler || [],
+      [HESAPLAR_COLL]: backupJson.hesaplar || [],
+      [HESAP_ISLEMLER_COLL]: backupJson.hesapIslemleri || [],
+    };
+
+    for (const [colName, items] of Object.entries(collectionsMap)) {
+      if (!Array.isArray(items) || items.length === 0) continue;
+      
+      let batch = writeBatch(db);
+      let count = 0;
+      
+      for (const item of items) {
+        if (!item || !item.id) continue;
+        const docRef = doc(db, getPath(colName), item.id);
+        const cleaned = cleanUndefined(item);
+        batch.set(docRef, cleaned);
+        count++;
+        
+        if (count === 500) {
+          await batch.commit();
+          batch = writeBatch(db);
+          count = 0;
+        }
+      }
+      
+      if (count > 0) {
+        await batch.commit();
+      }
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'import_collections');
+    throw error;
+  }
+}
+

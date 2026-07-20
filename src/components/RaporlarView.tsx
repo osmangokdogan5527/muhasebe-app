@@ -60,12 +60,6 @@ interface RaporlarViewProps {
 type DatePreset = 'today' | 'yesterday' | 'last7days' | 'thisMonth' | 'lastMonth' | 'thisYear' | 'custom';
 type ReportTab = 'ozet' | 'stok' | 'cari' | 'gelirgider' | 'kdvkarzarar' | 'cariekstre';
 
-const DASHBOARD_BG_COLORS = [
-  { id: 'white', name: 'Saf Beyaz', bg: '#ffffff', headerBg: '#f8fafc', theme: 'light' },
-  { id: 'default', name: 'Klasik Siyah', bg: '#111111', headerBg: '#11111180', theme: 'dark' },
-  { id: 'sampi10-blue', name: 'Sadece Mavi', bg: '#22315b', headerBg: '#1a224080', theme: 'dark' },
-];
-
 export default function RaporlarView({
   cariler,
   stoklar,
@@ -74,14 +68,6 @@ export default function RaporlarView({
   expenses,
   employeeTransactions = []
 }: RaporlarViewProps) {
-  const widgetBgColor = (() => {
-    const saved = localStorage.getItem("storm_muhasebe_widget_bg");
-    if (saved === "midnight") return "white";
-    return saved || "default";
-  })();
-  
-  const selectedColorDef = DASHBOARD_BG_COLORS.find(c => c.id === widgetBgColor) || DASHBOARD_BG_COLORS[0];
-
   const [activeTab, setActiveTab] = useState<ReportTab>('ozet');
   const [selectedCurrency, setSelectedCurrency] = useState<'TRY' | 'USD' | 'EUR'>('TRY');
   const [datePreset, setDatePreset] = useState<DatePreset>('thisMonth');
@@ -175,11 +161,6 @@ export default function RaporlarView({
     <div 
       className="space-y-6 dashboard-wrapper" 
       id="reporting-dashboard"
-      data-theme={selectedColorDef.theme}
-      style={{
-        '--widget-bg': selectedColorDef.bg,
-        '--widget-header-bg': selectedColorDef.headerBg
-      } as React.CSSProperties}
     >
       {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-950 p-6 rounded-2xl border border-white/10 shadow-lg relative overflow-hidden">

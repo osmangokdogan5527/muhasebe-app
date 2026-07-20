@@ -113,7 +113,7 @@ export function StoklarExtraModals({ isQrModalOpen, qrStock, setIsQrModalOpen, q
                     {/* Footer: Price */}
                     <div className="text-center w-full border-t border-gray-100 pt-1 flex justify-between items-center px-1">
                       <span className="text-[7px] uppercase font-bold tracking-widest text-gray-400 font-mono">FİYAT</span>
-                      <span className="font-black text-xs text-gray-950 tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
+                      <span className="font-bold text-xs text-gray-950 tracking-tight font-sans tabular-nums">
                         {qrStock.salesPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
                       </span>
                     </div>
@@ -409,7 +409,7 @@ export function StoklarExtraModals({ isQrModalOpen, qrStock, setIsQrModalOpen, q
                 <div className="bg-[#111111] p-4 rounded-xl border border-white/5 shadow-md">
                   <span className="text-[9px] font-mono tracking-widest font-bold text-white/40 uppercase block">Toplam Ciro (Brüt)</span>
                   <div className="flex items-baseline gap-1 mt-1.5">
-                    <span className="text-xl font-semibold text-white/95" style={{ fontFamily: 'Georgia, serif' }}>
+                    <span className="text-xl font-bold text-white/95 font-sans tabular-nums">
                       {formatCurrency(salesDetails.reduce((sum, g) => sum + g.totalAmount, 0))}
                     </span>
                   </div>
@@ -467,10 +467,10 @@ export function StoklarExtraModals({ isQrModalOpen, qrStock, setIsQrModalOpen, q
 
                             <div className="flex items-center gap-6">
                               <div className="text-right">
-                                <div className="text-xs font-bold text-teal-400 font-mono">
+                                <div className="text-xs font-bold text-teal-400 font-sans tabular-nums">
                                   {cariGroup.totalQuantity} {selectedStockForDetails.unit}
                                 </div>
-                                <div className="text-[10px] text-white/40 font-medium mt-0.5" style={{ fontFamily: 'Georgia, serif' }}>
+                                <div className="text-[10px] text-white/40 font-medium mt-0.5 font-sans tabular-nums">
                                   {formatCurrency(cariGroup.totalAmount)}
                                 </div>
                               </div>
@@ -519,13 +519,13 @@ export function StoklarExtraModals({ isQrModalOpen, qrStock, setIsQrModalOpen, q
                                             {tx.type === 'sale_return' ? 'İade' : 'Satış'}
                                           </span>
                                         </td>
-                                        <td className="py-2 text-right text-white/70 font-mono" style={{ fontFamily: 'Georgia, serif' }}>
+                                        <td className="py-2 text-right text-white/70 font-sans tabular-nums">
                                           {formatCurrency(tx.price)}
                                         </td>
-                                        <td className={`py-2 text-right font-bold font-mono ${tx.quantity < 0 ? 'text-rose-400' : 'text-teal-400'}`}>
+                                        <td className={`py-2 text-right font-bold font-sans tabular-nums ${tx.quantity < 0 ? 'text-rose-400' : 'text-teal-400'}`}>
                                           {tx.quantity} {selectedStockForDetails.unit}
                                         </td>
-                                        <td className="py-2 text-right text-white/90 font-bold font-mono" style={{ fontFamily: 'Georgia, serif' }}>
+                                        <td className="py-2 text-right text-white/90 font-bold font-sans tabular-nums">
                                           {formatCurrency(tx.total)}
                                         </td>
                                       </tr>

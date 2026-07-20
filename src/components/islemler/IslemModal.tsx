@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Transaction, Cari, Stock, BankAccount, InvoiceItem } from '../../types';
 import { createTransaction, removeTransaction } from '../../firebase';
-import { Plus, Trash2, X, Search, FileText, CreditCard, Wallet, AlertCircle, Check, ScanBarcode, ArrowRightLeft, DollarSign, FileCheck, Scan, PlusCircle, MinusCircle } from 'lucide-react';
+import { Plus, Trash2, X, Search, FileText, CreditCard, Wallet, AlertCircle, Check, ScanBarcode, ArrowRightLeft, DollarSign, FileCheck, Scan, PlusCircle, MinusCircle, RefreshCw } from 'lucide-react';
 import BarcodeScannerModal from '../BarcodeScannerModal';
 import { parseScannedQrCode } from '../../utils/formatters';
+import { fetchTCMBRates, calculateExchangeRate } from '../../utils/tcmbService';
 
 export interface IslemModalProps {
   isOpen: boolean;
@@ -160,7 +161,9 @@ const activeCariCurrency = useMemo(() => {
     return selectedCari?.currency || 'TRY';
   }, [selectedCariId, cariler]);
 
-  // Fetch live exchange rate when currencies differ
+  const [tcmbLoading, setTcmbLoading] = useState(false);
+
+  // Fetch live TCMB exchange rate when currencies differ
   useEffect(() => {
     if (transactionCurrency === activeCariCurrency) {
       setExchangeRate(1);
@@ -171,33 +174,28 @@ const activeCariCurrency = useMemo(() => {
 
     const fetchLiveRate = async () => {
       try {
-        const response = await fetch('https://open.er-api.com/v6/latest/TRY');
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.rates) {
-            // we want transactionCurrency to activeCariCurrency
-            // e.g. transaction is USD, activeCari is TRY -> we need USD in TRY
-            if (transactionCurrency === 'USD' && activeCariCurrency === 'TRY') {
-               setExchangeRate(Number((1 / data.rates.USD).toFixed(4)));
-            } else if (transactionCurrency === 'EUR' && activeCariCurrency === 'TRY') {
-               setExchangeRate(Number((1 / data.rates.EUR).toFixed(4)));
-            } else if (transactionCurrency === 'TRY' && activeCariCurrency === 'USD') {
-               setExchangeRate(Number(data.rates.USD.toFixed(4)));
-            } else if (transactionCurrency === 'TRY' && activeCariCurrency === 'EUR') {
-               setExchangeRate(Number(data.rates.EUR.toFixed(4)));
-            } else if (transactionCurrency === 'USD' && activeCariCurrency === 'EUR') {
-               setExchangeRate(Number((data.rates.EUR / data.rates.USD).toFixed(4)));
-            } else if (transactionCurrency === 'EUR' && activeCariCurrency === 'USD') {
-               setExchangeRate(Number((data.rates.USD / data.rates.EUR).toFixed(4)));
-            }
-          }
-        }
+        const ratesResult = await fetchTCMBRates(false);
+        const rate = calculateExchangeRate(ratesResult, transactionCurrency, activeCariCurrency);
+        setExchangeRate(rate);
       } catch (e) {
-        console.warn('Kurlar alınamadı (Çevrimdışı)', e);
+        console.warn('TCMB kurları alınamadı (Çevrimdışı)', e);
       }
     };
     fetchLiveRate();
   }, [transactionCurrency, activeCariCurrency]);
+
+  const handleForceTcmbRate = async () => {
+    setTcmbLoading(true);
+    try {
+      const ratesResult = await fetchTCMBRates(true);
+      const rate = calculateExchangeRate(ratesResult, transactionCurrency, activeCariCurrency);
+      setExchangeRate(rate);
+    } catch (e) {
+      console.warn('TCMB kurları güncellenemedi', e);
+    } finally {
+      setTcmbLoading(false);
+    }
+  };
 
   // Sync transaction currency when a Cari is selected
   useEffect(() => {
@@ -1099,7 +1097,18 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5 font-mono">Kur</label>
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest font-mono">Kur</label>
+                          <button
+                            type="button"
+                            onClick={handleForceTcmbRate}
+                            disabled={tcmbLoading}
+                            className="text-[9px] text-teal-600 hover:text-teal-800 font-bold font-sans flex items-center gap-1 transition cursor-pointer"
+                          >
+                            <RefreshCw size={8} className={tcmbLoading ? 'animate-spin' : ''} />
+                            TCMB'den Çek
+                          </button>
+                        </div>
                         <input
                           type="number"
                           step="0.0001"

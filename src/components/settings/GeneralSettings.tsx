@@ -265,24 +265,39 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                       )
                     },
                     {
-                      id: 'neumorphism',
-                      name: 'Neumorphism (Yumuşak Kabartma)',
-                      desc: 'Işık ve gölge oyunlarıyla pürüzsüz kabartılmış veya içeri çökmüş gibi duran tertemiz, dokunsal plastik arayüz.',
-                      badge: 'Yeni & Dokunsal',
+                      id: 'navy-perf',
+                      name: 'Lacivert & Yüksek Performans (Navy Performance)',
+                      desc: 'Lacivert (#00007f) tabanlı, sıfır CPU yüküyle çalışan, göz yormayan, dinamik ve yüksek performanslı karanlık arayüz.',
+                      badge: 'Navy Hız',
                       preview: (
-                        <div className="h-20 w-full rounded-lg bg-[#15181f] p-3 flex flex-col justify-between overflow-hidden relative">
-                          <div className="flex items-center justify-between">
-                            {/* Embossed (convex) mini element */}
-                            <div className="w-4 h-4 rounded bg-[#15181f] shadow-[-2px_-2px_5px_rgba(255,255,255,0.05),_2px_2px_5px_rgba(0,0,0,0.4)]" />
-                            {/* Sunken (concave) mini element */}
-                            <div className="w-12 h-3 rounded bg-[#12141a] shadow-[inset_-1px_-1px_3px_rgba(255,255,255,0.02),_inset_1px_1px_3px_rgba(0,0,0,0.5)]" />
+                        <div className="h-20 w-full rounded-lg bg-[#000022] p-2 flex flex-col justify-between overflow-hidden relative border border-[#00007f]">
+                          <div className="absolute top-0 left-0 w-full h-full bg-[#000018]" />
+                          <div className="flex items-center gap-1 relative z-10">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                            <span className="w-8 h-1 bg-blue-300 rounded" />
                           </div>
-                          <div className="space-y-1.5">
-                            {/* Convex buttons */}
-                            <div className="w-full h-3 rounded bg-[#15181f] shadow-[-2px_-2px_5px_rgba(255,255,255,0.05),_2px_2px_5px_rgba(0,0,0,0.4)] flex items-center px-1">
-                              <div className="w-4 h-1 bg-indigo-500/50 rounded" />
-                            </div>
-                            <div className="w-2/3 h-2.5 rounded bg-[#12141a] shadow-[inset_-1px_-1px_2px_rgba(255,255,255,0.02),_inset_1px_1px_2px_rgba(0,0,0,0.4)]" />
+                          <div className="space-y-1 relative z-10">
+                            <div className="w-full h-2 bg-[#00003c] border border-[#00007f] rounded shadow-xs" />
+                            <div className="w-2/3 h-2 bg-[#00003c] border border-[#00007f] rounded shadow-xs" />
+                          </div>
+                        </div>
+                      )
+                    },
+                    {
+                      id: 'clean-light',
+                      name: 'Temiz Işık & Yüksek Performans (Pure Light)',
+                      desc: 'Sıfır CPU yüküyle çalışan, her cihazda akıcı, pürüzsüz saf beyaz zemin üzerine modern ve minimalist arayüz.',
+                      badge: 'Mikro Hız',
+                      preview: (
+                        <div className="h-20 w-full rounded-lg bg-slate-100 p-2 flex flex-col justify-between overflow-hidden relative border border-slate-200">
+                          <div className="absolute top-0 left-0 w-full h-full bg-white opacity-40" />
+                          <div className="flex items-center gap-1 relative z-10">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                            <span className="w-8 h-1 bg-slate-300 rounded" />
+                          </div>
+                          <div className="space-y-1 relative z-10">
+                            <div className="w-full h-2 bg-white border border-slate-200 rounded shadow-xs" />
+                            <div className="w-2/3 h-2 bg-white border border-slate-200 rounded shadow-xs" />
                           </div>
                         </div>
                       )
@@ -300,7 +315,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                         className={`group flex flex-col text-left rounded-xl border p-4 transition-all cursor-pointer relative overflow-hidden ${
                           isSelected 
                             ? 'border-indigo-500 bg-indigo-500/5 ring-2 ring-indigo-500/10 shadow-[0_4px_16px_rgba(99,102,241,0.15)]' 
-                            : 'border-white/10 hover:border-white/20 hover:bg-white/5 bg-slate-900 shadow-xs'
+                            : 'border-white/10 hover:border-white/20 hover:bg-white/5/50 bg-slate-900 shadow-xs'
                         }`}
                       >
                         {styleOpt.preview}
@@ -337,7 +352,11 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
               <div className="mt-6 pt-4 border-t border-white/5 text-[10px] text-slate-400 font-mono uppercase tracking-wider flex justify-between items-center">
                 <span>Aktif Tasarım Dili:</span>
                 <span className="font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">
-                  {designStyle === 'fluid-mesh' ? 'Sıvı Mesh Gradient (Aurora Mesh)' : designStyle === 'neumorphism' ? 'Neumorphism (Yumuşak Kabartma)' : 'Cam Arayüz (Glassmorphism)'}
+                  {designStyle === 'fluid-mesh' 
+                    ? 'Sıvı Mesh Gradient (Aurora)' 
+                    : designStyle === 'clean-light' 
+                      ? 'Temiz Işık & Yüksek Performans' 
+                      : 'Cam Arayüz (Glassmorphism)'}
                 </span>
               </div>
             </div>

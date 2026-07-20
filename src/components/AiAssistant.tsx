@@ -9,7 +9,6 @@ interface AiAssistantProps {
   actionPermissions?: any;
   onNavigateToSettings: () => void;
   onCommandParsed: (command: any) => void;
-  designStyle?: string;
 }
 
 interface Message {
@@ -40,8 +39,7 @@ export default function AiAssistant({
   sensitiveTabs = [],
   actionPermissions = {},
   onNavigateToSettings, 
-  onCommandParsed,
-  designStyle = 'default'
+  onCommandParsed 
 }: AiAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -697,75 +695,35 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
       {!isOpen && (
         <div className="flex flex-col items-center gap-2 relative group mt-2">
           {/* Tooltip-like or subtext */}
-          <div 
-            className="absolute -top-12 text-white text-[11px] px-4 py-2 rounded-xl shadow-xl font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20" 
-            style={{ 
-              backgroundColor: designStyle === 'neumorphism' ? '#12141a' : 'var(--accent-600, #dc2626)',
-              border: designStyle === 'neumorphism' ? '1px solid rgba(255, 255, 255, 0.05)' : 'none',
-              boxShadow: designStyle === 'neumorphism' ? '0 8px 24px rgba(0,0,0,0.5)' : ''
-            }}
-          >
+          <div className="absolute -top-12 text-white text-[11px] px-4 py-2 rounded-xl shadow-xl font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20" style={{ backgroundColor: 'var(--accent-600, #dc2626)' }}>
             SİZE NASIL YARDIMCI OLABİLİRİM?
           </div>
           
           <div className="relative">
-            {designStyle !== 'neumorphism' && (
-              <>
-                {/* Outer glowing rings */}
-                <div className="absolute inset-0 rounded-full animate-ping opacity-30" style={{ backgroundColor: 'var(--accent-500, #ef4444)', animationDuration: '2s' }}></div>
-                <div className="absolute -inset-2 rounded-full animate-pulse opacity-20" style={{ backgroundColor: 'var(--accent-400, #f87171)' }}></div>
-              </>
-            )}
+            {/* Outer glowing rings */}
+            <div className="absolute inset-0 rounded-full animate-ping opacity-30" style={{ backgroundColor: 'var(--accent-500, #ef4444)', animationDuration: '2s' }}></div>
+            <div className="absolute -inset-2 rounded-full animate-pulse opacity-20" style={{ backgroundColor: 'var(--accent-400, #f87171)' }}></div>
             
             <button
               onClick={() => setIsOpen(true)}
-              className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 relative z-10 ${
-                designStyle === 'neumorphism'
-                  ? 'bg-[#15181f] text-teal-400 border border-white/5 shadow-[-4px_-4px_10px_rgba(255,255,255,0.03),_4px_4px_10px_rgba(0,0,0,0.5)] hover:shadow-[-2px_-2px_6px_rgba(255,255,255,0.04),_2px_2px_6px_rgba(0,0,0,0.4)] active:scale-95'
-                  : 'text-white border-[3px] border-white/90 hover:brightness-125'
-              }`}
-              style={
-                designStyle === 'neumorphism'
-                  ? {}
-                  : { 
-                      background: 'linear-gradient(135deg, var(--accent-400, #f87171), var(--accent-600, #dc2626), var(--accent-900, #7f1d1d))',
-                      boxShadow: '0 0 25px color-mix(in srgb, var(--accent-500, #ef4444) 80%, transparent), inset 0 0 10px rgba(255,255,255,0.5)'
-                    }
-              }
+              className="w-16 h-16 text-white rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 border-[3px] border-white/90 relative hover:brightness-125 z-10"
+              style={{ 
+                background: 'linear-gradient(135deg, var(--accent-400, #f87171), var(--accent-600, #dc2626), var(--accent-900, #7f1d1d))',
+                boxShadow: '0 0 25px color-mix(in srgb, var(--accent-500, #ef4444) 80%, transparent), inset 0 0 10px rgba(255,255,255,0.5)'
+              }}
             >
               <div className="relative flex items-center justify-center">
-                {designStyle === 'neumorphism' ? (
-                  <>
-                    <Bot size={34} className="text-teal-400 drop-shadow-[0_0_8px_rgba(45,212,191,0.6)] transition-transform group-hover:rotate-12 group-hover:scale-105" />
-                    <Sparkles size={14} className="absolute -top-3 -right-3 text-cyan-400 animate-bounce" style={{ animationDuration: '2.5s' }} />
-                    <Sparkles size={10} className="absolute -bottom-1 -left-3 text-teal-300 animate-pulse" />
-                  </>
-                ) : (
-                  <>
-                    <Bot size={34} className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,1)] transition-transform group-hover:rotate-12" />
-                    <Sparkles size={14} className="absolute -top-3 -right-3 text-yellow-300 animate-bounce" style={{ animationDuration: '2.5s' }} />
-                    <Sparkles size={10} className="absolute -bottom-1 -left-3 text-yellow-100 animate-pulse" />
-                  </>
-                )}
+                <Bot size={34} className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,1)] transition-transform group-hover:rotate-12" />
+                <Sparkles size={14} className="absolute -top-3 -right-3 text-yellow-300 animate-bounce" style={{ animationDuration: '2.5s' }} />
+                <Sparkles size={10} className="absolute -bottom-1 -left-3 text-yellow-100 animate-pulse" />
               </div>
-              
-              {designStyle === 'neumorphism' ? (
-                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full border border-white/10 animate-pulse shadow-[0_0_8px_#2dd4bf] z-20 bg-teal-500"></div>
-              ) : (
-                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white animate-pulse shadow-[0_0_12px_#22c55e] z-20" style={{ backgroundColor: '#22c55e' }}></div>
-              )}
+              <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white animate-pulse shadow-[0_0_12px_#22c55e] z-20" style={{ backgroundColor: '#22c55e' }}></div>
             </button>
           </div>
 
-          {designStyle === 'neumorphism' ? (
-            <span className="text-[11px] font-black text-teal-400 bg-[#12141a]/90 px-3 py-1 rounded-lg shadow-[-2px_-2px_6px_rgba(255,255,255,0.02),_2px_2px_6px_rgba(0,0,0,0.4)] border border-white/5 uppercase tracking-widest mt-1.5">
-              Storm AI
-            </span>
-          ) : (
-            <span className="text-[11px] font-black text-slate-800 bg-white/95 px-3 py-1 rounded-lg shadow-md border border-slate-200 uppercase tracking-widest mt-1">
-              Storm AI
-            </span>
-          )}
+          <span className="text-[11px] font-black text-slate-800 bg-white/95 px-3 py-1 rounded-lg shadow-md border border-slate-200 uppercase tracking-widest mt-1">
+            Storm AI
+          </span>
         </div>
       )}
     </div>

@@ -21,7 +21,8 @@ export function useLogoActions(
         width: "512",
         height: "512",
         downloadMode: true,
-        sidebarBg: sidebarBg
+        sidebarBg: sidebarBg,
+        onlySvg: true
       })
     );
     
@@ -52,7 +53,8 @@ export function useLogoActions(
         width: "512",
         height: "512",
         downloadMode: true,
-        sidebarBg: sidebarBg
+        sidebarBg: sidebarBg,
+        onlySvg: true
       })
     );
     
@@ -90,9 +92,9 @@ export function useLogoActions(
     };
     
     img.onerror = () => {
+      URL.revokeObjectURL(url);
       console.error("Image loading failed with Blob URL. Trying base64 data URL fallback.");
       const base64Svg = btoa(unescape(encodeURIComponent(svgContent)));
-      img.src = 'data:image/svg+xml;base64,' + base64Svg;
       
       img.onload = () => {
         if (ctx) {
@@ -115,6 +117,8 @@ export function useLogoActions(
       img.onerror = (e) => {
         console.error("Fallback image load failed as well:", e);
       };
+
+      img.src = 'data:image/svg+xml;base64,' + base64Svg;
     };
 
     img.src = url;

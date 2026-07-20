@@ -5,6 +5,7 @@ import { StockAlertsWidget } from './dashboard/StockAlertsWidget';
 import { FlowSummaryWidget } from './dashboard/FlowSummaryWidget';
 import { RecentMovementsWidget } from './dashboard/RecentMovementsWidget';
 import React, { useMemo, useState, useRef } from "react";
+import { fetchTCMBRates, TCMBRatesResult } from '../utils/tcmbService';
 import {
   Cari,
   Stock,
@@ -96,12 +97,6 @@ const DEFAULT_WIDGET_ORDER = [
   "recent_movements",
 ];
 
-const DASHBOARD_BG_COLORS = [
-  { id: 'white', name: 'Saf Beyaz', bg: '#ffffff', headerBg: '#f8fafc', theme: 'light' },
-  { id: 'default', name: 'Klasik Siyah', bg: '#111111', headerBg: '#11111180', theme: 'dark' },
-  { id: 'sampi10-blue', name: 'Sadece Mavi', bg: '#22315b', headerBg: '#1a224080', theme: 'dark' },
-];
-
 export default function DashboardView({
   cariler,
   stoklar,
@@ -142,63 +137,29 @@ export default function DashboardView({
     return [];
   });
 
-  const [widgetBgColor, setWidgetBgColor] = useState<string>(() => {
-    const saved = localStorage.getItem("storm_muhasebe_widget_bg");
-    if (saved === "midnight") return "white";
-    return saved || "default";
-  });
-  
-  const selectedColorDef = DASHBOARD_BG_COLORS.find(c => c.id === widgetBgColor) || DASHBOARD_BG_COLORS[0];
-
   const [showManager, setShowManager] = useState<boolean>(false);
 
   // Live Currency Rates State
-  const [rates, setRates] = useState<{
-    usd: number | null;
-    eur: number | null;
-  }>({ usd: null, eur: null });
+  const [rates, setRates] = useState<TCMBRatesResult | null>(null);
   const [ratesLoading, setRatesLoading] = useState<boolean>(true);
   const [ratesError, setRatesError] = useState<boolean>(false);
 
-  const fetchRatesAbortCtrl = useRef<AbortController | null>(null);
-
-  const fetchRates = async () => {
-    if (fetchRatesAbortCtrl.current) {
-        fetchRatesAbortCtrl.current.abort();
-    }
-    fetchRatesAbortCtrl.current = new AbortController();
-    const signal = fetchRatesAbortCtrl.current.signal;
-
+  const fetchRates = async (force: boolean = false) => {
     setRatesLoading(true);
     setRatesError(false);
     try {
-      // Use exchangerate-api for free TRY base rates
-      const response = await fetch("https://open.er-api.com/v6/latest/TRY", { signal });
-      if (!response.ok) throw new Error("API Error");
-      const data = await response.json();
-
-      if (!signal.aborted && data && data.rates) {
-        // Since base is TRY, USD rate in TRY is 1 / data.rates.USD
-        const usdRate = 1 / data.rates.USD;
-        const eurRate = 1 / data.rates.EUR;
-        setRates({ usd: usdRate, eur: eurRate });
-      } else if (!signal.aborted) {
-        setRatesError(true);
-      }
+      const data = await fetchTCMBRates(force);
+      setRates(data);
     } catch (err: any) {
-      if (err.name === 'AbortError') return;
       console.warn("Kurlar alınamadı (Çevrimdışı olabilir):", err);
-      if (!signal.aborted) setRatesError(true);
+      setRatesError(true);
     } finally {
-      if (!signal.aborted) setRatesLoading(false);
+      setRatesLoading(false);
     }
   };
 
   React.useEffect(() => {
-    fetchRates();
-    return () => {
-        if (fetchRatesAbortCtrl.current) fetchRatesAbortCtrl.current.abort();
-    };
+    fetchRates(false);
   }, []);
 
   const moveWidget = (index: number, direction: "up" | "down") => {
@@ -633,14 +594,7 @@ export default function DashboardView({
   };
 
   return (
-    <div 
-      className="space-y-8 dashboard-wrapper"
-      data-theme={selectedColorDef.theme}
-      style={{
-        '--widget-bg': selectedColorDef.bg,
-        '--widget-header-bg': selectedColorDef.headerBg
-      } as React.CSSProperties}
-    >
+    <div className="space-y-8 dashboard-wrapper">
       {/* Top Welcome Panel */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[#111111] p-8 rounded-xl border border-white/5 gap-4 shadow-xl bg-gradient-to-br from-teal-500/5 via-transparent to-rose-500/5 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
@@ -662,10 +616,9 @@ export default function DashboardView({
           <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
             {ratesLoading ? (
               <span className="text-white/40 flex items-center gap-1">
-                <RotateCcw size={10} className="animate-spin" /> Kurlar
-                Yükleniyor...
+                <RotateCcw size={10} className="animate-spin" /> Kurlar Yükleniyor...
               </span>
-            ) : ratesError ? (
+            ) : ratesError || !rates ? (
               <span className="text-rose-400">Kur Hatası</span>
             ) : (
               <>
@@ -675,8 +628,8 @@ export default function DashboardView({
                     <div className="flex flex-col text-[10px] tabular-nums font-mono">
                       <div className="flex justify-between gap-3 text-white/40 uppercase text-[8px] leading-tight mb-0.5"><span>Alış</span><span>Satış</span></div>
                       <div className="flex justify-between gap-3 text-white/80 leading-none whitespace-nowrap">
-                        <span>{rates.usd ? (rates.usd * 0.995).toFixed(2) : "-"}₺</span>
-                        <span>{rates.usd ? (rates.usd * 1.005).toFixed(2) : "-"}₺</span>
+                        <span>{rates.USD ? rates.USD.buying.toFixed(4) : "-"}₺</span>
+                        <span>{rates.USD ? rates.USD.selling.toFixed(4) : "-"}₺</span>
                       </div>
                     </div>
                   </div>
@@ -688,16 +641,21 @@ export default function DashboardView({
                     <div className="flex flex-col text-[10px] tabular-nums font-mono">
                       <div className="flex justify-between gap-3 text-white/40 uppercase text-[8px] leading-tight mb-0.5"><span>Alış</span><span>Satış</span></div>
                       <div className="flex justify-between gap-3 text-white/80 leading-none whitespace-nowrap">
-                        <span>{rates.eur ? (rates.eur * 0.995).toFixed(2) : "-"}₺</span>
-                        <span>{rates.eur ? (rates.eur * 1.005).toFixed(2) : "-"}₺</span>
+                        <span>{rates.EUR ? rates.EUR.buying.toFixed(4) : "-"}₺</span>
+                        <span>{rates.EUR ? rates.EUR.selling.toFixed(4) : "-"}₺</span>
                       </div>
                     </div>
                   </div>
                 </div>
+                <div className="w-px h-6 bg-white/20 mx-1"></div>
+                <span className="text-[8px] px-1.5 py-0.5 bg-teal-500/10 text-teal-400 rounded border border-teal-500/20 font-bold font-sans self-center whitespace-nowrap uppercase tracking-wider">
+                  {rates.source === 'ExchangeRateAPI' ? 'Yedek' : rates.source === 'Fallback' ? 'Önbellek' : rates.source}
+                </span>
                 <button
-                  onClick={fetchRates}
+                  onClick={() => fetchRates(true)}
                   disabled={ratesLoading}
-                  className="ml-2 text-white/40 hover:text-teal-400 transition cursor-pointer"
+                  title="Kurları Güncelle"
+                  className="ml-1 text-white/40 hover:text-teal-400 transition cursor-pointer"
                 >
                   <RotateCcw size={12} className={ratesLoading ? "animate-spin" : ""} />
                 </button>
@@ -843,30 +801,6 @@ export default function DashboardView({
                 </div>
               );
             })}
-          </div>
-          
-          {/* Widget Renk Yönetimi */}
-          <div className="border-t border-white/10 pt-4 mt-4">
-            <h3 className="text-[10px] uppercase tracking-widest font-extrabold text-white/50 mb-3">Pano Arka Plan Rengi</h3>
-            <div className="flex flex-wrap gap-2">
-              {DASHBOARD_BG_COLORS.map(color => (
-                <button
-                  key={color.id}
-                  onClick={() => {
-                    setWidgetBgColor(color.id);
-                    localStorage.setItem("storm_muhasebe_widget_bg", color.id);
-                  }}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                    widgetBgColor === color.id 
-                      ? 'border-teal-500 bg-teal-500/10 text-teal-400' 
-                      : 'border-white/10 text-white/60 hover:bg-white/5 hover:text-white'
-                  }`}
-                >
-                  <div className="w-3 h-3 rounded-full border border-black/20" style={{ backgroundColor: color.bg }} />
-                  {color.name}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       )}

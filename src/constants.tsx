@@ -12,7 +12,8 @@ export const StormLogo = ({
   width = "100%",
   height = "100%",
   downloadMode = false,
-  sidebarBg
+  sidebarBg,
+  onlySvg = false
 }: { 
   className?: string; 
   style?: React.CSSProperties; 
@@ -25,11 +26,11 @@ export const StormLogo = ({
   height?: string | number;
   downloadMode?: boolean;
   sidebarBg?: string;
+  onlySvg?: boolean;
 }) => {
   const currentDesignStyle = designStyle || (typeof document !== 'undefined' && document.documentElement.getAttribute('data-design-style')) || localStorage.getItem('storm_muhasebe_design_style') || 'glass';
   const isGlass = currentDesignStyle === 'glass';
   const isFluidMesh = currentDesignStyle === 'fluid-mesh';
-  const isNeumorphism = currentDesignStyle === 'neumorphism';
 
   // Strip any shadow filters and transition effects to keep the logo perfectly flat and net
   const cleanedStyle = { ...style };
@@ -221,40 +222,13 @@ export const StormLogo = ({
     );
   }
 
-  return (
-    <div className={className} style={{ ...cleanedStyle, willChange: 'transform', display: 'flex', alignItems: 'center', justifyContent: 'center', width: typeof width === 'number' ? `${width}px` : (width === '100%' ? undefined : width), height: typeof height === 'number' ? `${height}px` : (height === '100%' ? undefined : height) }}>
-      <svg className={isGlass ? 'storm-logo-glass' : (isFluidMesh ? 'storm-logo-fluid-mesh' : isNeumorphism ? 'storm-logo-neumorphism' : '')} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={width} height={height}>
+  const svgElement = (
+    <svg className={isGlass ? 'storm-logo-glass' : (isFluidMesh ? 'storm-logo-fluid-mesh' : '')} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={width} height={height}>
         <defs>
           <clipPath id="logo-clip">
             <rect width="200" height="200" rx="48" />
           </clipPath>
-          {/* Neumorphism Gradients and Filters */}
-          <linearGradient id="neu-bolt-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={fillCol} stopOpacity="0.95" />
-            <stop offset="100%" stopColor={fillCol} stopOpacity="0.5" />
-          </linearGradient>
-          <filter id="neu-bevel-shadow" x="-35%" y="-35%" width="170%" height="170%">
-            <feDropShadow dx="6" dy="6" stdDeviation="8" floodColor="#000000" floodOpacity="0.5" result="darkShadow" />
-            <feDropShadow dx="-6" dy="-6" stdDeviation="8" floodColor="#ffffff" floodOpacity="0.05" result="lightShadow" />
-            <feMerge>
-              <feMergeNode in="darkShadow" />
-              <feMergeNode in="lightShadow" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <filter id="neu-bolt-shadow" x="-40%" y="-40%" width="180%" height="180%">
-            <feDropShadow dx="2" dy="2" stdDeviation="3" floodColor="#000000" floodOpacity="0.45" result="dark" />
-            <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor={fillCol} floodOpacity="0.35" result="glow" />
-            <feMerge>
-              <feMergeNode in="dark" />
-              <feMergeNode in="glow" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <filter id="neu-text-shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="1" dy="1" stdDeviation="1.5" floodColor="#000000" floodOpacity="0.45" />
-          </filter>
-          {patternContent && !isGlass && !isFluidMesh && !isNeumorphism && (
+          {patternContent && !isGlass && !isFluidMesh && (
             <pattern 
               id={patternId} 
               width={patternWidth} 
@@ -405,62 +379,64 @@ export const StormLogo = ({
             {/* Beveled edge stroke with linear gradient */}
             <rect width="196" height="196" x="2" y="2" rx="46" fill="none" stroke="url(#glass-border-grad)" strokeWidth="3.5" />
           </g>
-        ) : isNeumorphism ? (
-          <g>
-            {/* Base background that matches the container for seamless neumorphism */}
-            <rect width="200" height="200" fill="#15181f" />
-            {/* Neumorphic embossed box */}
-            <rect width="176" height="176" x="12" y="12" rx="40" fill="#15181f" filter="url(#neu-bevel-shadow)" />
-          </g>
         ) : (
           <rect width="200" height="200" rx="48" fill={fillCol} />
         )}
 
         {/* Textured overlay pattern inside the logo background */}
-        {patternContent && !isGlass && !isFluidMesh && !isNeumorphism && (
+        {patternContent && !isGlass && !isFluidMesh && (
           <rect width="200" height="200" rx="48" fill={`url(#${patternId})`} />
         )}
 
         {/* Modern Minimalist Lightning Bolt - Enlarged and centered */}
-        <g transform="translate(70, 22) scale(1.2)">
+        <g transform="translate(63.75, 12) scale(1.45)">
           <path 
             d="M28 2 L8 38 L23 38 L15 66 L42 28 L28 28 Z" 
-            fill={isFluidMesh ? "url(#fluid-bolt-grad)" : (isGlass ? "url(#accent-bolt-grad)" : isNeumorphism ? "url(#neu-bolt-grad)" : "#ffffff")} 
-            filter={isFluidMesh ? "url(#fluid-bolt-glow)" : isNeumorphism ? "url(#neu-bolt-shadow)" : undefined}
+            fill={isFluidMesh ? "url(#fluid-bolt-grad)" : (isGlass ? "url(#accent-bolt-grad)" : "#ffffff")} 
+            filter={isFluidMesh ? "url(#fluid-bolt-glow)" : undefined}
           />
         </g>
 
         {/* Typography - Enlarged and high contrast for absolute sharpness */}
         <text 
           x="100" 
-          y="136" 
+          y="139" 
           dx="2" 
           textAnchor="middle" 
           fontFamily="system-ui, -apple-system, sans-serif" 
           fontWeight="950" 
-          fontSize="27" 
-          fill={isNeumorphism ? "#f1f5f9" : "#ffffff"} 
+          fontSize="33" 
+          fill="#ffffff" 
           letterSpacing="3.5" 
-          filter={isFluidMesh ? "url(#fluid-logo-text-glow)" : (isGlass ? "url(#logo-text-shadow)" : isNeumorphism ? "url(#neu-text-shadow)" : undefined)}
+          filter={isFluidMesh ? "url(#fluid-logo-text-glow)" : (isGlass ? "url(#logo-text-shadow)" : undefined)}
         >
           STORM
         </text>
         <text 
           x="100" 
-          y="163" 
+          y="171" 
           dx="1" 
           textAnchor="middle" 
           fontFamily="system-ui, -apple-system, sans-serif" 
           fontWeight="900" 
-          fontSize="13.5" 
-          fill={isNeumorphism ? "#94a3b8" : "#ffffff"} 
+          fontSize="19" 
+          fill="#ffffff" 
           letterSpacing="2.5" 
           opacity="0.95" 
-          filter={isFluidMesh ? "url(#fluid-logo-text-glow)" : (isGlass ? "url(#logo-text-shadow)" : isNeumorphism ? "url(#neu-text-shadow)" : undefined)}
+          filter={isFluidMesh ? "url(#fluid-logo-text-glow)" : (isGlass ? "url(#logo-text-shadow)" : undefined)}
         >
           MUHASEBE
         </text>
       </svg>
+  );
+
+  if (onlySvg) {
+    return svgElement;
+  }
+
+  return (
+    <div className={className} style={{ ...cleanedStyle, willChange: 'transform', display: 'flex', alignItems: 'center', justifyContent: 'center', width: typeof width === 'number' ? `${width}px` : (width === '100%' ? undefined : width), height: typeof height === 'number' ? `${height}px` : (height === '100%' ? undefined : height) }}>
+      {svgElement}
     </div>
   );
 };
@@ -470,13 +446,14 @@ export const APP_VERSION = '1.6.9';
 export const CHANGELOG = {
   version: '1.6.9',
   features: [
-    "Yenilikçi Neumorphism Tasarım Dili: Arayüz stillerine fütüristik, kabartmalı ve yumuşak gölgeli Neumorphism (Yeni Skeuomorphism) tasarım stili eklendi.",
-    "Storm AI Neumorphic Arayüz Entegrasyonu: Yapay Zeka Asistanı butonu ve yan panel kabartmaları Neumorphism temasına özel olarak optimize edildi.",
-    "Yan Panel Kabartma Dengelemesi: Sol yan panel navigasyon butonları, alt alanlar ve kullanıcı profil kutusunun kabartma ve iç çöküntü efektleri kusursuzlaştırıldı."
+    "Döviz / Çoklu Para Birimi & TCMB Entegrasyonu: Türkiye Cumhuriyet Merkez Bankası (TCMB) günlük efektif döviz kurlarının (USD, EUR) güvenli ve kararlı bir CORS proxy kanalıyla anlık olarak çekilmesi ve sistem genelindeki döviz işlemlerinde kullanılabilmesi sağlandı.",
+    "Hata Toleranslı Kur Altyapısı: İnternet kesintisi veya TCMB servis gecikmesi durumlarında alternatif 'ExchangeRateAPI' ve akıllı tarayıcı içi yerel önbellek (local cache) sistemleri devreye alınarak sistem sürekliliği garanti altına alındı.",
+    "İşlemlerde ve Çek/Senetlerde TCMB Kur Desteği: Fatura, Tahsilat, Ödeme ve Çek/Senet girişlerinde farklı para birimleri seçildiğinde kuru manuel girmek yerine tek bir tıkla doğrudan TCMB kurlarından otomatik çeken 'TCMB'den Çek' entegrasyonu tamamlandı.",
+    "Arayüz Renk Sadeleştirmesi: Kullanıcı deneyimini iyileştirmek, karmaşıklığı azaltmak ve odaklanmayı artırmak amacıyla Gül Rengi, Mor, Pembe, Zümrüt ve Turuncu gibi ikincil vurgu renkleri arayüzden bütünüyle kaldırıldı.",
+    "Asil Lacivert Tema İyileştirmesi: 'Asil Lacivert' temasının ismi daha sade, profesyonel ve estetik durması amacıyla sadece 'Lacivert' olarak güncellendi.",
+    "Gelişmiş Tip Güvenliği: Yedekleme ve geri yükleme sihirbazı ile localStorage senkronizasyon mekanizmalarında linter hataları giderilerek TypeScript tip kararlılığı sağlandı."
   ],
-  fixes: [
-    "Neumorphic tasarım modundaki girdi alanlarının arka planları ve buton vurguları düzeltildi."
-  ]
+  fixes: []
 };
 
 export const PREDEFINED_USERS = [
@@ -488,6 +465,24 @@ export const PREDEFINED_USERS = [
 ];
 
 export const COLOR_PRESETS = [
+  {
+    id: 'navy-blue-00007f',
+    name: 'Lacivert',
+    preview: '#00007f',
+    colors: {
+      '--accent-50': '#f0f2ff',
+      '--accent-100': '#e0e4ff',
+      '--accent-200': '#c7ceff',
+      '--accent-300': '#9faeff',
+      '--accent-400': '#7084ff',
+      '--accent-500': '#3f53ff',
+      '--accent-600': '#1d2eff',
+      '--accent-700': '#000ee6',
+      '--accent-800': '#000cb5',
+      '--accent-900': '#00007f',
+      '--accent-950': '#00004c',
+    }
+  },
   {
     id: 'sampi10-blue',
     name: 'Sadece Mavi',
@@ -540,24 +535,6 @@ export const COLOR_PRESETS = [
       '--accent-800': '#92400e',
       '--accent-900': '#78350f',
       '--accent-950': '#451a03',
-    }
-  },
-  {
-    id: 'emerald',
-    name: 'Zümrüt',
-    preview: '#10b981',
-    colors: {
-      '--accent-50': '#ecfdf5',
-      '--accent-100': '#d1fae5',
-      '--accent-200': '#a7f3d0',
-      '--accent-300': '#6ee7b7',
-      '--accent-400': '#34d399',
-      '--accent-500': '#10b981',
-      '--accent-600': '#059669',
-      '--accent-700': '#047857',
-      '--accent-800': '#065f46',
-      '--accent-900': '#064e3b',
-      '--accent-950': '#022c22',
     }
   },
   {
@@ -615,60 +592,6 @@ export const COLOR_PRESETS = [
     }
   },
   {
-    id: 'purple',
-    name: 'Mor',
-    preview: '#8b5cf6',
-    colors: {
-      '--accent-50': '#f5f3ff',
-      '--accent-100': '#ede9fe',
-      '--accent-200': '#ddd6fe',
-      '--accent-300': '#c4b5fd',
-      '--accent-400': '#a78bfa',
-      '--accent-500': '#8b5cf6',
-      '--accent-600': '#7c3aed',
-      '--accent-700': '#6d28d9',
-      '--accent-800': '#5b21b6',
-      '--accent-900': '#4c1d95',
-      '--accent-950': '#2e1065',
-    }
-  },
-  {
-    id: 'orange',
-    name: 'Turuncu',
-    preview: '#f97316',
-    colors: {
-      '--accent-50': '#fff7ed',
-      '--accent-100': '#ffedd5',
-      '--accent-200': '#fed7aa',
-      '--accent-300': '#fdba74',
-      '--accent-400': '#fb923c',
-      '--accent-500': '#f97316',
-      '--accent-600': '#ea580c',
-      '--accent-700': '#c2410c',
-      '--accent-800': '#9a3412',
-      '--accent-900': '#7c2d12',
-      '--accent-950': '#431407',
-    }
-  },
-  {
-    id: 'rose',
-    name: 'Gül Rengi',
-    preview: '#f43f5e',
-    colors: {
-      '--accent-50': '#fff1f2',
-      '--accent-100': '#ffe4e6',
-      '--accent-200': '#fecdd3',
-      '--accent-300': '#fda4af',
-      '--accent-400': '#fb7185',
-      '--accent-500': '#f43f5e',
-      '--accent-600': '#e11d48',
-      '--accent-700': '#be123c',
-      '--accent-800': '#9f1239',
-      '--accent-900': '#881337',
-      '--accent-950': '#4c0519',
-    }
-  },
-  {
     id: 'indigo',
     name: 'İndigo',
     preview: '#6366f1',
@@ -684,24 +607,6 @@ export const COLOR_PRESETS = [
       '--accent-800': '#3730a3',
       '--accent-900': '#312e81',
       '--accent-950': '#1e1b4b',
-    }
-  },
-  {
-    id: 'pink',
-    name: 'Pembe',
-    preview: '#ec4899',
-    colors: {
-      '--accent-50': '#fdf2f8',
-      '--accent-100': '#fce7f3',
-      '--accent-200': '#fbcfe8',
-      '--accent-300': '#f9a8d4',
-      '--accent-400': '#f472b6',
-      '--accent-500': '#ec4899',
-      '--accent-600': '#db2777',
-      '--accent-700': '#be185d',
-      '--accent-800': '#9d174d',
-      '--accent-900': '#831843',
-      '--accent-950': '#500724',
     }
   },
   {
@@ -804,12 +709,14 @@ export const PIN_ACCOUNTS = [
 export const changelogData = [
   {
     version: "1.6.9",
-    date: "17.07.2026",
+    date: "20.07.2026",
     changes: [
-      "Yenilikçi Neumorphism Tasarım Dili: Arayüz stillerine fütüristik, kabartmalı ve yumuşak gölgeli Neumorphism tasarım stili eklendi.",
-      "Storm AI Neumorphic Arayüz Entegrasyonu: Yapay Zeka Asistanı butonu ve yan panel kabartmaları Neumorphism temasına özel olarak optimize edildi.",
-      "Yan Panel Kabartma Dengelemesi: Sol yan panel navigasyon butonları, alt alanlar ve kullanıcı profil kutusunun kabartma ve iç çöküntü efektleri kusursuzlaştırıldı.",
-      "Girdi Alanı ve Buton İyileştirmeleri: Neumorphic tasarım modundaki girdi alanlarının arka planları ve buton vurguları düzeltildi."
+      "Döviz / Çoklu Para Birimi & TCMB Entegrasyonu: Türkiye Cumhuriyet Merkez Bankası (TCMB) günlük efektif döviz kurlarının (USD, EUR) güvenli ve kararlı bir CORS proxy kanalıyla anlık olarak çekilmesi ve sistem genelindeki döviz işlemlerinde kullanılabilmesi sağlandı.",
+      "Hata Toleranslı Kur Altyapısı: İnternet kesintisi veya TCMB servis gecikmesi durumlarında alternatif 'ExchangeRateAPI' ve akıllı tarayıcı içi yerel önbellek (local cache) sistemleri devreye alınarak sistem sürekliliği garanti altına alındı.",
+      "İşlemlerde ve Çek/Senetlerde TCMB Kur Desteği: Fatura, Tahsilat, Ödeme ve Çek/Senet girişlerinde farklı para birimleri seçildiğinde kuru manuel girmek yerine tek bir tıkla doğrudan TCMB kurlarından otomatik çeken 'TCMB\'den Çek\' entegrasyonu tamamlandı.",
+      "Arayüz Renk Sadeleştirmesi: Kullanıcı deneyimini iyileştirmek, karmaşıklığı azaltmak ve odaklanmayı artırmak amacıyla Gül Rengi, Mor, Pembe, Zümrüt ve Turuncu gibi ikincil vurgu renkleri arayüzden bütünüyle kaldırıldı.",
+      "Asil Lacivert Tema İyileştirmesi: 'Asil Lacivert' temasının ismi daha sade, profesyonel ve estetik durması amacıyla sadece 'Lacivert' olarak güncellendi.",
+      "Gelişmiş Tip Güvenliği: Yedekleme ve geri yükleme sihirbazı ile localStorage senkronizasyon mekanizmalarında linter hataları giderilerek TypeScript tip kararlılığı sağlandı."
     ]
   },
   {

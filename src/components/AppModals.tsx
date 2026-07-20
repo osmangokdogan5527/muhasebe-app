@@ -568,7 +568,6 @@ export const AppModals: React.FC<AppModalsProps> = ({
           isSecurityActive={isSecurityActive}
           sensitiveTabs={sensitiveTabs}
           actionPermissions={actionPermissions}
-          designStyle={designStyle}
           onNavigateToSettings={() => {
             handleNavigate('ayarlar');
           }}

@@ -816,18 +816,12 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
                   }`}
                   title={isCardDisabled ? "Kasa filtresine dönmek için tıklayın" : "Kasa dökümünü listelemek için tıklayın"}
                 >
-                  <div className="absolute top-0 right-0 p-8 text-amber-500/5 transition-transform duration-500 group-hover:scale-110 pointer-events-none">
-                    <Wallet size={120} />
-                  </div>
                   <div className="flex justify-between items-start">
                     <div>
-                      <span className="text-[10px] text-white/40 uppercase tracking-widest block font-mono font-bold">{cardTitle}</span>
-                      <h3 className="text-3xl font-light italic tracking-tight text-white mt-2 group-hover:text-amber-300 transition-colors" style={{ fontFamily: 'Georgia, serif' }}>
-                        {formatCurrency(cardValue, selectedAccountId !== 'all' && activeAccount?.type === 'kasa' ? activeAccount.currency : selectedCurrency)}
-                      </h3>
-                    </div>
-                    <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-lg border border-amber-500/15 group-hover:bg-amber-500/20 group-hover:border-amber-500/30 transition-all">
-                      <Wallet size={18} />
+                       <span className="text-[10px] text-white/40 uppercase tracking-widest block font-mono font-bold">{cardTitle}</span>
+                       <h3 className="text-3xl font-bold tracking-tight text-white mt-2 group-hover:text-amber-300 transition-colors font-sans tabular-nums">
+                         {formatCurrency(cardValue, selectedAccountId !== 'all' && activeAccount?.type === 'kasa' ? activeAccount.currency : selectedCurrency)}
+                       </h3>
                     </div>
                   </div>
                   <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-[10px] text-white/50 font-mono">
@@ -869,18 +863,12 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
                   }`}
                   title={isCardDisabled ? "Banka filtresine dönmek için tıklayın" : "Banka dökümünü listelemek için tıklayın"}
                 >
-                  <div className="absolute top-0 right-0 p-8 text-blue-500/5 transition-transform duration-500 group-hover:scale-110 pointer-events-none">
-                    <CreditCard size={120} />
-                  </div>
                   <div className="flex justify-between items-start">
                     <div>
-                      <span className="text-[10px] text-white/40 uppercase tracking-widest block font-mono font-bold">{cardTitle}</span>
-                      <h3 className="text-3xl font-light italic tracking-tight text-white mt-2 group-hover:text-blue-300 transition-colors" style={{ fontFamily: 'Georgia, serif' }}>
-                        {formatCurrency(cardValue, selectedAccountId !== 'all' && activeAccount?.type === 'banka' ? activeAccount.currency : selectedCurrency)}
-                      </h3>
-                    </div>
-                    <div className="p-2.5 bg-blue-500/10 text-blue-400 rounded-lg border border-blue-500/15 group-hover:bg-blue-500/20 group-hover:border-blue-500/30 transition-all">
-                      <CreditCard size={18} />
+                       <span className="text-[10px] text-white/40 uppercase tracking-widest block font-mono font-bold">{cardTitle}</span>
+                       <h3 className="text-3xl font-bold tracking-tight text-white mt-2 group-hover:text-blue-300 transition-colors font-sans tabular-nums">
+                         {formatCurrency(cardValue, selectedAccountId !== 'all' && activeAccount?.type === 'banka' ? activeAccount.currency : selectedCurrency)}
+                       </h3>
                     </div>
                   </div>
                   <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-[10px] text-white/50 font-mono">
@@ -912,18 +900,12 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
                   className="bg-[#111111] border border-white/5 p-6 rounded-lg flex flex-col justify-between shadow-lg relative overflow-hidden group cursor-pointer active:scale-[0.99] transition-all duration-300 hover:shadow-[0_0_20px_rgba(45,212,191,0.05)]"
                   title="Tüm nakit hareketleri listesini görmek için tıklayın"
                 >
-                  <div className="absolute top-0 right-0 p-8 text-teal-400/5 transition-transform duration-500 group-hover:scale-110 pointer-events-none">
-                    <DollarSign size={120} />
-                  </div>
                   <div className="flex justify-between items-start">
                     <div>
-                      <span className="text-[10px] text-teal-400 uppercase tracking-widest block font-mono font-bold">{cardTitle}</span>
-                      <h3 className="text-3xl font-bold tracking-tight text-teal-400 mt-2 group-hover:text-teal-300 transition-colors" style={{ fontFamily: 'Georgia, serif' }}>
-                        {formatCurrency(cardValue, selectedAccountId !== 'all' && activeAccount ? activeAccount.currency : selectedCurrency)}
-                      </h3>
-                    </div>
-                    <div className="p-2.5 bg-teal-500/20 text-teal-400 rounded-lg border border-teal-500/30 shadow-[0_0_12px_rgba(45,212,191,0.15)] group-hover:bg-teal-500/30 transition-all">
-                      <DollarSign size={18} />
+                       <span className="text-[10px] text-teal-400 uppercase tracking-widest block font-mono font-bold">{cardTitle}</span>
+                       <h3 className="text-3xl font-bold tracking-tight text-teal-400 mt-2 group-hover:text-teal-300 transition-colors font-sans tabular-nums">
+                         {formatCurrency(cardValue, selectedAccountId !== 'all' && activeAccount ? activeAccount.currency : selectedCurrency)}
+                       </h3>
                     </div>
                   </div>
                   <div className="mt-6 pt-4 border-t border-teal-500/10 flex items-center justify-between text-[10px] text-white/50 font-mono">

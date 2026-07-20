@@ -140,8 +140,7 @@ export const CekSenetCalendarWidget = React.memo<CekSenetCalendarWidgetProps>(({
                                         Tutar:
                                       </span>
                                       <span
-                                        className="text-sm font-bold text-white font-mono"
-                                        style={{ fontFamily: "Georgia, serif" }}
+                                        className="text-sm font-bold text-white font-sans tabular-nums"
                                       >
                                         {formatCurrency(
                                           item.amount,

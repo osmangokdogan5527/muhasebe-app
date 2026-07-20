@@ -14,6 +14,7 @@ import {
   subscribeIslemler, 
   subscribeCekSenet, 
   clearAllDatabaseData, 
+  importAllDatabaseData,
   subscribeExpenses, 
   subscribeEmployees, 
   subscribeEmployeeTransactions,
@@ -29,6 +30,7 @@ import {
   setActiveUser,
   saveBankAccount
 } from './firebase';
+import { BackupWizardModal } from './components/backup/BackupWizardModal';
 import DashboardView from './components/DashboardView';
 import CarilerView from './components/CarilerView';
 import StoklarView from './components/StoklarView';
@@ -82,6 +84,7 @@ import { compressImage } from './utils/imageCompressor';
 
 import { StormLogo, APP_VERSION, CHANGELOG, PREDEFINED_USERS, COLOR_PRESETS, TAB_DEFS, SIDEBAR_PATTERNS, PIN_ACCOUNTS, changelogData, DEFAULT_SHORTCUTS } from "./constants";
 export default function App() {
+  const [isBackupWizardOpen, setIsBackupWizardOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'cariler' | 'stoklar' | 'islemler' | 'ceksenet' | 'masraflar' | 'calisanlar' | 'ayarlar' | 'kasa' | 'raporlar' | 'krediler'>('dashboard');
   const [userRole, setUserRole] = useState<'admin' | 'employee'>('employee');
   const [isAdminPinModalOpen, setIsAdminPinModalOpen] = useState(false);
@@ -448,6 +451,38 @@ export default function App() {
     setShowChangelog(false);
   };
 
+  // Automatic backup reminder check on mount
+  useEffect(() => {
+    const frequency = localStorage.getItem('storm_backup_frequency') || 'weekly';
+    if (frequency === 'disabled') return;
+
+    const lastBackupTime = localStorage.getItem('storm_last_backup_time');
+    if (!lastBackupTime) {
+      // First time using the app, set last backup to now so we count from here.
+      localStorage.setItem('storm_last_backup_time', Date.now().toString());
+      return;
+    }
+
+    const lastBackup = parseInt(lastBackupTime);
+    const diffMs = Date.now() - lastBackup;
+    
+    let limitMs = 7 * 24 * 60 * 60 * 1000; // default weekly
+    if (frequency === 'daily') {
+      limitMs = 24 * 60 * 60 * 1000;
+    } else if (frequency === 'monthly') {
+      limitMs = 30 * 24 * 60 * 60 * 1000;
+    }
+
+    if (diffMs > limitMs) {
+      // Trigger backup wizard with a gentle delay
+      const timer = setTimeout(() => {
+        setIsBackupWizardOpen(true);
+        showToast("Veri Sağlığı & Güvenlik Hatırlatıcısı: Son yedeklemeniz üzerinden uzun süre geçti. Lütfen verilerinizi yedekleyin.", "info");
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   // Listen for auto update events
   useEffect(() => {
     let cleanupProgress: (() => void) | undefined;
@@ -636,6 +671,7 @@ export default function App() {
       handleOpenBackupFolder={handleOpenBackupFolder}
       backupMessage={backupMessage}
       setResetModalOpen={setResetModalOpen}
+      onOpenBackupWizard={() => setIsBackupWizardOpen(true)}
       geminiApiKey={geminiApiKey}
       setGeminiApiKey={setGeminiApiKey}
       isSecurityActive={isSecurityActive}
@@ -681,46 +717,43 @@ export default function App() {
 
   if (!user) {
     return (
-      <div data-design-style={designStyle} className={`min-h-screen relative ${(currentThemeData as any).bgClass || 'bg-[#050505]'} text-[#e0e0e0] flex flex-col font-sans overflow-x-hidden`}>
-        <GlobalStyles themeCssRules={themeCssRules} bodyPatternSvg={bodyPatternSvg} activePattern={activePatternObj} />
-        <AuthScreen
-          currentThemeData={currentThemeData}
-          themeCssRules={themeCssRules}
-          activeLogoTheme={activeLogoTheme}
-          activeTheme={activeTheme}
-          sidebarPattern={sidebarPattern}
-          sidebarPatternOpacity={sidebarPatternOpacity}
-          designStyle={designStyle}
-          selectedPinAccount={selectedPinAccount}
-          setSelectedPinAccount={setSelectedPinAccount}
-          usersList={usersList}
-          enteredPin={enteredPin}
-          setEnteredPin={setEnteredPin}
-          authError={authError}
-          setAuthError={setAuthError}
-          setUserRole={setUserRole}
-          setActiveTab={setActiveTab}
-          setActiveUser={setActiveUser}
-          setUser={setUser}
-          showAdminLogin={showAdminLogin}
-          setShowAdminLogin={setShowAdminLogin}
-          adminPin={adminPin}
-          setAdminPin={setAdminPin}
-          adminAuthError={adminAuthError}
-          setAdminAuthError={setAdminAuthError}
-          showAdminDashboard={showAdminDashboard}
-          setShowAdminDashboard={setShowAdminDashboard}
-          errorLogs={errorLogs}
-          setErrorLogs={setErrorLogs}
-          feedbackList={feedbackList}
-          setFeedbackList={setFeedbackList}
-          updateStatus={updateStatus}
-          setUpdateStatus={setUpdateStatus}
-          updatePercent={updatePercent}
-          changelogData={changelogData}
-          setZoomImage={setZoomImage}
-        />
-      </div>
+      <AuthScreen
+        currentThemeData={currentThemeData}
+        themeCssRules={themeCssRules}
+        activeLogoTheme={activeLogoTheme}
+        activeTheme={activeTheme}
+        sidebarPattern={sidebarPattern}
+        sidebarPatternOpacity={sidebarPatternOpacity}
+        designStyle={designStyle}
+        selectedPinAccount={selectedPinAccount}
+        setSelectedPinAccount={setSelectedPinAccount}
+        usersList={usersList}
+        enteredPin={enteredPin}
+        setEnteredPin={setEnteredPin}
+        authError={authError}
+        setAuthError={setAuthError}
+        setUserRole={setUserRole}
+        setActiveTab={setActiveTab}
+        setActiveUser={setActiveUser}
+        setUser={setUser}
+        showAdminLogin={showAdminLogin}
+        setShowAdminLogin={setShowAdminLogin}
+        adminPin={adminPin}
+        setAdminPin={setAdminPin}
+        adminAuthError={adminAuthError}
+        setAdminAuthError={setAdminAuthError}
+        showAdminDashboard={showAdminDashboard}
+        setShowAdminDashboard={setShowAdminDashboard}
+        errorLogs={errorLogs}
+        setErrorLogs={setErrorLogs}
+        feedbackList={feedbackList}
+        setFeedbackList={setFeedbackList}
+        updateStatus={updateStatus}
+        setUpdateStatus={setUpdateStatus}
+        updatePercent={updatePercent}
+        changelogData={changelogData}
+        setZoomImage={setZoomImage}
+      />
     );
   }
 
@@ -968,6 +1001,22 @@ export default function App() {
         sensitiveTabs={sensitiveTabs}
         actionPermissions={actionPermissions}
         handleNavigate={handleNavigate}
+      />
+      <BackupWizardModal
+        isOpen={isBackupWizardOpen}
+        onClose={() => setIsBackupWizardOpen(false)}
+        cariler={cariler}
+        stoklar={stoklar}
+        islemler={islemler}
+        ceksenet={ceksenet}
+        expenses={expenses}
+        employees={employees}
+        employeeTransactions={employeeTransactions}
+        credits={credits}
+        bankAccounts={bankAccounts}
+        accountTransactions={accountTransactions}
+        onImportData={importAllDatabaseData}
+        showToast={showToast}
       />
     </div>
   );

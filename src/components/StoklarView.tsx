@@ -395,10 +395,10 @@ function StoklarView({
         <td className="p-4">
           <span className="text-[10px] font-mono tracking-wider font-semibold text-white/60 bg-white/5 border border-white/10 px-2 py-0.5 rounded">{stok.unit}</span>
         </td>
-        <td className="p-4 text-sm font-medium text-white/70" style={{ fontFamily: 'Georgia, serif' }}>
+        <td className="p-4 text-sm font-medium text-white/70 tabular-nums font-sans">
           {formatCurrency(stok.purchasePrice)}
         </td>
-        <td className="p-4 text-sm font-semibold text-teal-400" style={{ fontFamily: 'Georgia, serif' }}>
+        <td className="p-4 text-sm font-semibold text-teal-400 tabular-nums font-sans">
           {formatCurrency(stok.salesPrice)}
         </td>
         <td className="p-4 text-center text-xs font-semibold text-white/40 font-mono">
@@ -417,7 +417,7 @@ function StoklarView({
             </div>
           )}
         </td>
-        <td className="p-4 text-right font-semibold text-sm text-teal-400" style={{ fontFamily: 'Georgia, serif' }}>
+        <td className="p-4 text-right font-semibold text-sm text-teal-400 tabular-nums font-sans">
           {formatCurrency(stockValue)}
         </td>
         <td className="p-4">
@@ -493,7 +493,7 @@ function StoklarView({
             </div>
             <div className="flex justify-between items-end mt-4 z-10">
               <div>
-                <span className="text-2xl font-light italic text-teal-400" style={{ fontFamily: 'Georgia, serif' }}>
+                <span className="text-2xl font-bold text-teal-400 tabular-nums font-sans">
                   {formatCurrency(invStats.totalStockValue)}
                 </span>
                 <span className="block text-[9px] text-white/40 font-mono uppercase tracking-wider mt-1">Toplam Envanter Maliyeti</span>
@@ -524,7 +524,7 @@ function StoklarView({
               <AlertTriangle size={14} className={`text-red-400 ${invStats.criticalItemsCount > 0 ? 'animate-pulse' : ''}`} />
             </div>
             <div className="mt-4">
-              <span className="text-2xl font-light italic text-red-400" style={{ fontFamily: 'Georgia, serif' }}>
+              <span className="text-2xl font-bold text-red-400 tabular-nums font-sans">
                 {invStats.criticalItemsCount}
               </span>
               <span className="block text-[10px] text-white/40 uppercase font-mono tracking-wider mt-1">Kritik Seviyede Ürün</span>
@@ -880,11 +880,11 @@ function StoklarView({
                         <span className="text-[9px] font-mono tracking-wider font-semibold text-white/60 bg-white/5 border border-white/10 px-2 py-0.5 rounded">{stok.unit}</span>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 mt-3 text-xs border-t border-white/5 pt-2 text-white/50 font-mono">
-                        <div>Alış Fiyatı: <strong className="text-white/80" style={{ fontFamily: 'Georgia, serif' }}>{formatCurrency(stok.purchasePrice)}</strong></div>
-                        <div>Satış Fiyatı: <strong className="text-teal-400" style={{ fontFamily: 'Georgia, serif' }}>{formatCurrency(stok.salesPrice)}</strong></div>
-                        <div>KDV Oranı: <strong className="text-white/70">%{stok.taxRate}</strong></div>
-                        <div>Toplam Değer: <strong className="text-teal-400" style={{ fontFamily: 'Georgia, serif' }}>{formatCurrency(stockValue)}</strong></div>
+                      <div className="grid grid-cols-2 gap-2 mt-3 text-xs border-t border-white/5 pt-2 text-white/50 font-sans">
+                        <div>Alış Fiyatı: <strong className="text-white/80 font-semibold tabular-nums">{formatCurrency(stok.purchasePrice)}</strong></div>
+                        <div>Satış Fiyatı: <strong className="text-teal-400 font-semibold tabular-nums">{formatCurrency(stok.salesPrice)}</strong></div>
+                        <div>KDV Oranı: <strong className="text-white/70 font-semibold">%{stok.taxRate}</strong></div>
+                        <div>Toplam Değer: <strong className="text-teal-400 font-bold tabular-nums">{formatCurrency(stockValue)}</strong></div>
                       </div>
                     </div>
 

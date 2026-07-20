@@ -269,14 +269,13 @@ function CarilerView({
         </td>
         <td className="p-4 text-right">
           <div
-            className={`font-semibold text-sm ${
+            className={`font-semibold text-sm tabular-nums font-sans ${
               balance > 0
                 ? "text-teal-400"
                 : balance < 0
                   ? "text-red-400"
                   : "text-white/50"
             }`}
-            style={{ fontFamily: "Georgia, serif" }}
           >
             {formatCurrency(balance, cari.currency || "TRY")}
           </div>
@@ -767,14 +766,13 @@ function CarilerView({
                           Bakiye
                         </div>
                         <div
-                          className={`font-bold text-sm ${
+                          className={`font-bold text-sm tabular-nums font-sans ${
                             balance > 0
                               ? "text-teal-400"
                               : balance < 0
                                 ? "text-red-400"
                                 : "text-white/50"
                           }`}
-                          style={{ fontFamily: "Georgia, serif" }}
                         >
                           {formatCurrency(balance, cari.currency || "TRY")}
                         </div>
@@ -870,8 +868,7 @@ function CarilerView({
                     </p>
                     <div className="bg-white/5 border border-white/5 p-4 rounded-lg text-center">
                       <div 
-                        className={`text-xl font-bold ${balance > 0 ? 'text-teal-400' : 'text-red-400'}`}
-                        style={{ fontFamily: 'Georgia, serif' }}
+                        className={`text-xl font-bold font-sans tabular-nums ${balance > 0 ? 'text-teal-400' : 'text-red-400'}`}
                       >
                         {formatCurrency(balance, deleteConfirmCari.currency || "TRY")}
                       </div>

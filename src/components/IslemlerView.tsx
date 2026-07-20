@@ -275,7 +275,7 @@ function IslemlerView({
           {islem.description}
         </td>
         <td className="p-4 text-right">
-          <div className={`font-semibold text-sm ${isIncoming ? 'text-teal-400' : 'text-red-400'}`} style={{ fontFamily: 'Georgia, serif' }}>
+          <div className={`font-semibold text-sm tabular-nums font-sans ${isIncoming ? 'text-teal-400' : 'text-red-400'}`}>
             {isIncoming ? '+' : '-'}{formatCurrency(islem.amount, islem.currency || 'TRY')}
           </div>
           {islem.exchangeRate && islem.exchangeRate !== 1 && (
@@ -610,7 +610,7 @@ function IslemlerView({
                     <div className="flex items-center justify-between border-t border-white/5 pt-2 mt-1">
                       <div>
                         <div className="text-[9px] text-white/30 font-semibold uppercase tracking-wider font-mono">Tutar</div>
-                        <div className={`font-bold text-sm ${isIncoming ? 'text-teal-400' : 'text-red-400'}`} style={{ fontFamily: 'Georgia, serif' }}>
+                        <div className={`font-bold text-sm tabular-nums font-sans ${isIncoming ? 'text-teal-400' : 'text-red-400'}`}>
                           {isIncoming ? '+' : '-'}{formatCurrency(islem.amount, islem.currency || 'TRY')}
                         </div>
                         {islem.exchangeRate && islem.exchangeRate !== 1 && (

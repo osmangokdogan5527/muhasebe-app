@@ -2,6 +2,7 @@ import { CekSenetModals } from './ceksenet/CekSenetModals';
 import React, { useMemo, useState, useEffect } from 'react';
 import { Cari, CekSenet, Transaction } from '../types';
 import { saveCekSenet, deleteCekSenet, createTransaction } from '../firebase';
+import { fetchTCMBRates, calculateExchangeRate } from '../utils/tcmbService';
 import { 
   FileText, 
   Plus, 
@@ -67,7 +68,9 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
     return selectedCari?.currency || 'TRY';
   }, [selectedCariId, cariler]);
 
-  // Fetch live exchange rate when currencies differ
+  const [tcmbLoading, setTcmbLoading] = useState(false);
+
+  // Fetch live exchange rate when currencies differ using TCMB service
   useEffect(() => {
     if (currency === activeCariCurrency) {
       setExchangeRate(1);
@@ -78,31 +81,28 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
 
     const fetchLiveRate = async () => {
       try {
-        const response = await fetch('https://open.er-api.com/v6/latest/TRY');
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.rates) {
-            if (currency === 'USD' && activeCariCurrency === 'TRY') {
-               setExchangeRate(Number((1 / data.rates.USD).toFixed(4)));
-            } else if (currency === 'EUR' && activeCariCurrency === 'TRY') {
-               setExchangeRate(Number((1 / data.rates.EUR).toFixed(4)));
-            } else if (currency === 'TRY' && activeCariCurrency === 'USD') {
-               setExchangeRate(Number(data.rates.USD.toFixed(4)));
-            } else if (currency === 'TRY' && activeCariCurrency === 'EUR') {
-               setExchangeRate(Number(data.rates.EUR.toFixed(4)));
-            } else if (currency === 'USD' && activeCariCurrency === 'EUR') {
-               setExchangeRate(Number((data.rates.EUR / data.rates.USD).toFixed(4)));
-            } else if (currency === 'EUR' && activeCariCurrency === 'USD') {
-               setExchangeRate(Number((data.rates.USD / data.rates.EUR).toFixed(4)));
-            }
-          }
-        }
+        const ratesResult = await fetchTCMBRates(false);
+        const rate = calculateExchangeRate(ratesResult, currency, activeCariCurrency);
+        setExchangeRate(rate);
       } catch (e) {
-        console.warn('Kurlar alınamadı (Çevrimdışı)', e);
+        console.warn('TCMB kurları alınamadı (Çevrimdışı)', e);
       }
     };
     fetchLiveRate();
   }, [currency, activeCariCurrency]);
+
+  const handleForceTcmbRate = async () => {
+    setTcmbLoading(true);
+    try {
+      const ratesResult = await fetchTCMBRates(true);
+      const rate = calculateExchangeRate(ratesResult, currency, activeCariCurrency);
+      setExchangeRate(rate);
+    } catch (e) {
+      console.warn('TCMB kurları güncellenemedi', e);
+    } finally {
+      setTcmbLoading(false);
+    }
+  };
 
   // Sync check currency when a Cari is selected
   useEffect(() => {
@@ -919,6 +919,8 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
         setAffectCariBalance={setAffectCariBalance}
         exchangeRate={exchangeRate}
         setExchangeRate={setExchangeRate}
+        tcmbLoading={tcmbLoading}
+        handleForceTcmbRate={handleForceTcmbRate}
         customConvertedAmount={customConvertedAmount}
         setCustomConvertedAmount={setCustomConvertedAmount}
         isMultiCurrency={isMultiCurrency}

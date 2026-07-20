@@ -35,12 +35,11 @@ export const StatsGridWidget = React.memo<StatsGridWidgetProps>(({
                       <div className="bg-[#111111] border border-white/5 p-6 rounded-lg flex flex-col justify-between shadow-lg">
                         <div className="flex justify-between items-start">
                           <div>
-                            <span className="text-[10px] text-white/40 uppercase tracking-widest block">
+                            <span className="text-[10px] text-white/40 uppercase tracking-widest block font-sans font-medium">
                               Kasa, Banka & POS Mevcudu
                             </span>
                             <h3
-                              className="text-3xl font-light italic tracking-tight text-teal-400 mt-2"
-                              style={{ fontFamily: "Georgia, serif" }}
+                              className="text-3xl font-bold tracking-tight text-teal-400 mt-2 tabular-nums font-sans"
                             >
                               {formatCurrency(
                                 stats.cashBalance + stats.bankBalance + stats.posBalance,
@@ -51,22 +50,22 @@ export const StatsGridWidget = React.memo<StatsGridWidgetProps>(({
                             <Wallet size={18} />
                           </div>
                         </div>
-                        <div className="mt-4 pt-3 border-t border-white/5 grid grid-cols-3 gap-2 text-[10px] text-white/40 font-mono tracking-wider uppercase text-center">
+                        <div className="mt-4 pt-3 border-t border-white/5 grid grid-cols-3 gap-2 text-[10px] text-white/40 font-sans tracking-wide uppercase text-center">
                           <span>
                             Kasa:<br />
-                            <strong className="text-white/80">
+                            <strong className="text-white/80 font-semibold tabular-nums">
                               {formatCurrency(stats.cashBalance)}
                             </strong>
                           </span>
                           <span>
                             Banka:<br />
-                            <strong className="text-white/80">
+                            <strong className="text-white/80 font-semibold tabular-nums">
                               {formatCurrency(stats.bankBalance)}
                             </strong>
                           </span>
                           <span>
                             POS:<br />
-                            <strong className="text-white/80">
+                            <strong className="text-white/80 font-semibold tabular-nums">
                               {formatCurrency(stats.posBalance)}
                             </strong>
                           </span>
@@ -77,12 +76,11 @@ export const StatsGridWidget = React.memo<StatsGridWidgetProps>(({
                       <div className="bg-[#111111] border border-white/5 p-6 rounded-lg flex flex-col justify-between shadow-lg">
                         <div className="flex justify-between items-start">
                           <div>
-                            <span className="text-[10px] text-white/40 uppercase tracking-widest block">
+                            <span className="text-[10px] text-white/40 uppercase tracking-widest block font-sans font-medium">
                               Net Alacak / Borç
                             </span>
                             <h3
-                              className={`text-3xl font-light italic tracking-tight mt-2 ${stats.totalReceivables - stats.totalPayables >= 0 ? "text-teal-400" : "text-red-400/80"}`}
-                              style={{ fontFamily: "Georgia, serif" }}
+                              className={`text-3xl font-bold tracking-tight mt-2 tabular-nums font-sans ${stats.totalReceivables - stats.totalPayables >= 0 ? "text-teal-400" : "text-red-400/80"}`}
                             >
                               {formatCurrency(
                                 stats.totalReceivables - stats.totalPayables,
@@ -93,16 +91,16 @@ export const StatsGridWidget = React.memo<StatsGridWidgetProps>(({
                             <Users size={18} />
                           </div>
                         </div>
-                        <div className="mt-4 pt-3 border-t border-white/5 flex justify-between text-[10px] uppercase tracking-wider font-mono">
+                        <div className="mt-4 pt-3 border-t border-white/5 flex justify-between text-[10px] uppercase tracking-wide font-sans">
                           <span>
                             Alacak:{" "}
-                            <strong className="text-teal-400">
+                            <strong className="text-teal-400 font-semibold tabular-nums">
                               {formatCurrency(stats.totalReceivables)}
                             </strong>
                           </span>
                           <span>
                             Borç:{" "}
-                            <strong className="text-red-400/80">
+                            <strong className="text-red-400/80 font-semibold tabular-nums">
                               {formatCurrency(stats.totalPayables)}
                             </strong>
                           </span>
@@ -111,7 +109,7 @@ export const StatsGridWidget = React.memo<StatsGridWidgetProps>(({
 
                       {/* Monthly Net Profit / Loss card */}
                       <div className="bg-[#111111] border border-white/5 p-6 rounded-lg flex flex-col justify-between shadow-lg relative">
-                        <div className="absolute top-2 right-2 bg-teal-500/10 text-teal-400 px-2 py-1 rounded text-[8px] uppercase tracking-widest font-mono border border-teal-500/20">
+                        <div className="absolute top-2 right-2 bg-teal-500/10 text-teal-400 px-2 py-1 rounded text-[8px] uppercase tracking-widest font-sans border border-teal-500/20 font-medium">
                           Bu Ay (
                           {new Date().toLocaleDateString("tr-TR", {
                             month: "long",
@@ -120,12 +118,11 @@ export const StatsGridWidget = React.memo<StatsGridWidgetProps>(({
                         </div>
                         <div className="flex justify-between items-start mt-2">
                           <div>
-                            <span className="text-[10px] text-white/40 uppercase tracking-widest block">
+                            <span className="text-[10px] text-white/40 uppercase tracking-widest block font-sans font-medium">
                               Aylık Net Kar / Zarar
                             </span>
                             <h3
-                              className={`text-3xl font-light italic tracking-tight mt-2 ${stats.monthlyNetProfit >= 0 ? "text-teal-400" : "text-red-400/80"}`}
-                              style={{ fontFamily: "Georgia, serif" }}
+                              className={`text-3xl font-bold tracking-tight mt-2 tabular-nums font-sans ${stats.monthlyNetProfit >= 0 ? "text-teal-400" : "text-red-400/80"}`}
                             >
                               {formatCurrency(stats.monthlyNetProfit)}
                             </h3>
@@ -134,16 +131,16 @@ export const StatsGridWidget = React.memo<StatsGridWidgetProps>(({
                             <TrendingUp size={18} />
                           </div>
                         </div>
-                        <div className="mt-4 pt-3 border-t border-white/5 flex flex-col gap-1 text-[9px] uppercase tracking-wider font-mono">
+                        <div className="mt-4 pt-3 border-t border-white/5 flex flex-col gap-1 text-[9px] uppercase tracking-wide font-sans">
                           <div className="flex justify-between">
                             <span>Bu Ayki Satış:</span>
-                            <strong className="text-teal-400">
+                            <strong className="text-teal-400 font-semibold tabular-nums">
                               {formatCurrency(stats.monthlySales)}
                             </strong>
                           </div>
                           <div className="flex justify-between">
                             <span>Bu Ayki Alış/Gider:</span>
-                            <strong className="text-red-400/80">
+                            <strong className="text-red-400/80 font-semibold tabular-nums">
                               {formatCurrency(
                                 stats.monthlyPurchases +
                                   stats.monthlyExpenses +
@@ -158,12 +155,11 @@ export const StatsGridWidget = React.memo<StatsGridWidgetProps>(({
                       <div className="bg-[#111111] border border-white/5 p-6 rounded-lg flex flex-col justify-between shadow-lg">
                         <div className="flex justify-between items-start">
                           <div>
-                            <span className="text-[10px] text-white/40 uppercase tracking-widest block">
+                            <span className="text-[10px] text-white/40 uppercase tracking-widest block font-sans font-medium">
                               Stok Toplam Değeri
                             </span>
                             <h3
-                              className="text-3xl font-light italic tracking-tight text-teal-400 mt-2"
-                              style={{ fontFamily: "Georgia, serif" }}
+                              className="text-3xl font-bold tracking-tight text-teal-400 mt-2 tabular-nums font-sans"
                             >
                               {formatCurrency(stats.stockValue, "TRY")}
                             </h3>
@@ -172,16 +168,16 @@ export const StatsGridWidget = React.memo<StatsGridWidgetProps>(({
                             <Package size={18} />
                           </div>
                         </div>
-                        <div className="mt-4 pt-3 border-t border-white/5 flex justify-between text-[10px] uppercase tracking-wider font-mono">
+                        <div className="mt-4 pt-3 border-t border-white/5 flex justify-between text-[10px] uppercase tracking-wide font-sans">
                           <span>
                             Tür:{" "}
-                            <strong className="text-white/80">
+                            <strong className="text-white/80 font-semibold">
                               {stoklar.length} Ürün
                             </strong>
                           </span>
                           <span>
                             Kritik:{" "}
-                            <strong className="text-red-400/80">
+                            <strong className="text-red-400/80 font-semibold">
                               {
                                 stoklar.filter(
                                   (s) => s.quantity <= s.minQuantity,

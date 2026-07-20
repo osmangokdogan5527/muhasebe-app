@@ -104,8 +104,7 @@ export const RecentMovementsWidget = React.memo<RecentMovementsWidgetProps>(({
                                   </div>
                                   <div className="text-right shrink-0">
                                     <div
-                                      className={`text-xs font-semibold ${isIncoming ? "text-teal-400" : "text-red-400/80"}`}
-                                      style={{ fontFamily: "Georgia, serif" }}
+                                      className={`text-xs font-semibold tabular-nums font-sans ${isIncoming ? "text-teal-400" : "text-red-400/80"}`}
                                     >
                                       {isIncoming ? "+" : "-"}
                                       {formatCurrency(

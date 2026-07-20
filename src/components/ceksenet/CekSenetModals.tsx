@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, FileText, ArrowRightLeft, CreditCard, User, Tag, Calendar, AlertCircle, RefreshCw, Upload, Download } from 'lucide-react';
-export function CekSenetModals({ isModalOpen, setIsModalOpen, formError, type, setType, docType, setDocType, portfolioNo, setPortfolioNo, serialNo, setSerialNo, debtor, setDebtor, selectedCariId, setSelectedCariId, amount, setAmount, currency, setCurrency, issueDate, setIssueDate, dueDate, setDueDate, bankName, setBankName, bankBranch, setBankBranch, accountNo, setAccountNo, status, setStatus, description, setDescription, affectCariBalance, setAffectCariBalance, exchangeRate, setExchangeRate, customConvertedAmount, setCustomConvertedAmount, isMultiCurrency, setIsMultiCurrency, isConvertedAmountEdited, setIsConvertedAmountEdited, isActionModalOpen, setIsActionModalOpen, selectedItem, setSelectedItem, actionType, setActionType, endorseCariId, setEndorseCariId, endorseExchangeRate, setEndorseExchangeRate, actionAccount, setActionAccount, cariler, activeCariCurrency, handleSubmit, handleExecuteAction }: any) {
+export function CekSenetModals({ isModalOpen, setIsModalOpen, formError, type, setType, docType, setDocType, portfolioNo, setPortfolioNo, serialNo, setSerialNo, debtor, setDebtor, selectedCariId, setSelectedCariId, amount, setAmount, currency, setCurrency, issueDate, setIssueDate, dueDate, setDueDate, bankName, setBankName, bankBranch, setBankBranch, accountNo, setAccountNo, status, setStatus, description, setDescription, affectCariBalance, setAffectCariBalance, exchangeRate, setExchangeRate, tcmbLoading, handleForceTcmbRate, customConvertedAmount, setCustomConvertedAmount, isMultiCurrency, setIsMultiCurrency, isConvertedAmountEdited, setIsConvertedAmountEdited, isActionModalOpen, setIsActionModalOpen, selectedItem, setSelectedItem, actionType, setActionType, endorseCariId, setEndorseCariId, endorseExchangeRate, setEndorseExchangeRate, actionAccount, setActionAccount, cariler, activeCariCurrency, handleSubmit, handleExecuteAction }: any) {
   return (
     <>
       {/* 1. ADD NEW CHEQUE / PROMISSORY NOTE MODAL */}
@@ -240,7 +240,20 @@ export function CekSenetModals({ isModalOpen, setIsModalOpen, formError, type, s
                       </div>
 
                       <div>
-                        <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">Manuel Döviz Kuru</label>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest font-mono">Manuel Döviz Kuru</label>
+                          {handleForceTcmbRate && (
+                            <button
+                              type="button"
+                              onClick={handleForceTcmbRate}
+                              disabled={tcmbLoading}
+                              className="text-[9px] text-teal-400 hover:text-teal-300 font-semibold font-sans flex items-center gap-1 transition cursor-pointer"
+                            >
+                              <RefreshCw size={8} className={tcmbLoading ? 'animate-spin' : ''} />
+                              TCMB'den Çek
+                            </button>
+                          )}
+                        </div>
                         <div className="relative">
                           <input
                             type="number"
