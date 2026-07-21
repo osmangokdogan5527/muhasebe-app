@@ -596,7 +596,7 @@ export default function DashboardView({
   return (
     <div className="space-y-8 dashboard-wrapper">
       {/* Top Welcome Panel */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[#111111] p-8 rounded-xl border border-white/5 gap-4 shadow-xl bg-gradient-to-br from-teal-500/5 via-transparent to-rose-500/5 relative overflow-hidden">
+      <div className="flex flex-col xl:flex-row justify-between items-stretch xl:items-center bg-[#111111] p-5 sm:p-8 rounded-2xl border border-white/5 gap-6 shadow-xl bg-gradient-to-br from-teal-500/5 via-transparent to-rose-500/5 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
         <div className="relative z-10">
           <h1
@@ -611,82 +611,85 @@ export default function DashboardView({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap relative z-10">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full xl:w-auto relative z-10">
           {/* Mini Currency Ticker */}
-          <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
+          <div className="flex items-center justify-between md:justify-start gap-2.5 text-[10px] font-mono uppercase tracking-widest bg-white/5 px-3 py-2 rounded-xl border border-white/10 w-full md:w-auto overflow-x-auto scrollbar-none">
             {ratesLoading ? (
-              <span className="text-white/40 flex items-center gap-1">
+              <span className="text-white/40 flex items-center gap-1 shrink-0">
                 <RotateCcw size={10} className="animate-spin" /> Kurlar Yükleniyor...
               </span>
             ) : ratesError || !rates ? (
-              <span className="text-rose-400">Kur Hatası</span>
+              <span className="text-rose-400 shrink-0">Kur Hatası</span>
             ) : (
               <>
-                <div className="flex flex-col items-end gap-0.5">
+                <div className="flex flex-col items-end gap-0.5 shrink-0">
                   <div className="flex items-center gap-2">
                     <span className="text-teal-400 font-bold">$</span>
                     <div className="flex flex-col text-[10px] tabular-nums font-mono">
                       <div className="flex justify-between gap-3 text-white/40 uppercase text-[8px] leading-tight mb-0.5"><span>Alış</span><span>Satış</span></div>
-                      <div className="flex justify-between gap-3 text-white/80 leading-none whitespace-nowrap">
+                      <div className="flex justify-between gap-2.5 text-white/80 leading-none whitespace-nowrap">
                         <span>{rates.USD ? rates.USD.buying.toFixed(4) : "-"}₺</span>
                         <span>{rates.USD ? rates.USD.selling.toFixed(4) : "-"}₺</span>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="w-px h-6 bg-white/20 mx-2"></div>
-                <div className="flex flex-col items-end gap-0.5">
+                <div className="w-px h-6 bg-white/20 mx-1.5 sm:mx-2 shrink-0"></div>
+                <div className="flex flex-col items-end gap-0.5 shrink-0">
                   <div className="flex items-center gap-2">
                     <span className="text-teal-400 font-bold">€</span>
                     <div className="flex flex-col text-[10px] tabular-nums font-mono">
                       <div className="flex justify-between gap-3 text-white/40 uppercase text-[8px] leading-tight mb-0.5"><span>Alış</span><span>Satış</span></div>
-                      <div className="flex justify-between gap-3 text-white/80 leading-none whitespace-nowrap">
+                      <div className="flex justify-between gap-2.5 text-white/80 leading-none whitespace-nowrap">
                         <span>{rates.EUR ? rates.EUR.buying.toFixed(4) : "-"}₺</span>
                         <span>{rates.EUR ? rates.EUR.selling.toFixed(4) : "-"}₺</span>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="w-px h-6 bg-white/20 mx-1"></div>
-                <span className="text-[8px] px-1.5 py-0.5 bg-teal-500/10 text-teal-400 rounded border border-teal-500/20 font-bold font-sans self-center whitespace-nowrap uppercase tracking-wider">
-                  {rates.source === 'ExchangeRateAPI' ? 'Yedek' : rates.source === 'Fallback' ? 'Önbellek' : rates.source}
-                </span>
-                <button
-                  onClick={() => fetchRates(true)}
-                  disabled={ratesLoading}
-                  title="Kurları Güncelle"
-                  className="ml-1 text-white/40 hover:text-teal-400 transition cursor-pointer"
-                >
-                  <RotateCcw size={12} className={ratesLoading ? "animate-spin" : ""} />
-                </button>
+                <div className="w-px h-6 bg-white/20 mx-1 sm:mx-1.5 shrink-0"></div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[8px] px-1.5 py-0.5 bg-teal-500/10 text-teal-400 rounded border border-teal-500/20 font-bold font-sans self-center whitespace-nowrap uppercase tracking-wider">
+                    {rates.source === 'ExchangeRateAPI' ? 'Yedek' : rates.source === 'Fallback' ? 'Önbellek' : rates.source}
+                  </span>
+                  <button
+                    onClick={() => fetchRates(true)}
+                    disabled={ratesLoading}
+                    title="Kurları Güncelle"
+                    className="p-1 text-white/40 hover:text-teal-400 transition cursor-pointer"
+                  >
+                    <RotateCcw size={12} className={ratesLoading ? "animate-spin" : ""} />
+                  </button>
+                </div>
               </>
             )}
           </div>
 
-          <button
-            onClick={() => setShowManager(!showManager)}
-            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 rounded-lg border transition cursor-pointer ${
-              showManager
-                ? "bg-teal-500 text-black border-teal-500 font-bold shadow-[0_0_12px_rgba(45,212,191,0.2)]"
-                : "bg-white/5 text-white/60 hover:text-white border-white/10 hover:bg-white/10"
-            }`}
-          >
-            <Settings
-              size={12}
-              className={showManager ? "animate-spin" : "text-teal-400"}
-            />
-            <span>{showManager ? "Düzenlemeyi Kapat" : "Paneli Düzenle"}</span>
-          </button>
+          <div className="grid grid-cols-2 md:flex md:items-center gap-2.5 w-full md:w-auto shrink-0">
+            <button
+              onClick={() => setShowManager(!showManager)}
+              className={`flex items-center justify-center gap-2 text-[10px] font-mono uppercase tracking-widest px-3 py-2.5 rounded-xl border transition cursor-pointer w-full md:w-auto ${
+                showManager
+                  ? "bg-teal-500 text-black border-teal-500 font-bold shadow-[0_0_12px_rgba(45,212,191,0.2)]"
+                  : "bg-white/5 text-white/60 hover:text-white border-white/10 hover:bg-white/10"
+              }`}
+            >
+              <Settings
+                size={12}
+                className={showManager ? "animate-spin" : "text-teal-400"}
+              />
+              <span className="truncate">{showManager ? "Kaydet" : "Paneli Düzenle"}</span>
+            </button>
 
-          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest bg-white/5 text-white/60 px-3 py-1.5 rounded-lg border border-white/10">
-            <Calendar size={12} className="text-teal-400" />
-            <span>
-              {new Date().toLocaleDateString("tr-TR", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </span>
+            <div className="flex items-center justify-center gap-2 text-[10px] font-mono uppercase tracking-widest bg-white/5 text-white/60 px-3 py-2.5 rounded-xl border border-white/10 w-full md:w-auto">
+              <Calendar size={12} className="text-teal-400 shrink-0" />
+              <span className="truncate">
+                {new Date().toLocaleDateString("tr-TR", {
+                  day: "numeric",
+                  month: "short",
+                })}
+              </span>
+            </div>
           </div>
         </div>
       </div>

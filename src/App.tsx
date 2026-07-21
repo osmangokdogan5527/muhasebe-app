@@ -133,6 +133,7 @@ export default function App() {
     hiddenTabs, setHiddenTabs, toggleTabVisibility,
     tabOrder, setTabOrder, moveTab,
     geminiApiKey, setGeminiApiKey,
+    isAiEnabled, setIsAiEnabled,
     autoBackupEnabled, setAutoBackupEnabled
   } = useAppSettings();
 
@@ -674,6 +675,8 @@ export default function App() {
       onOpenBackupWizard={() => setIsBackupWizardOpen(true)}
       geminiApiKey={geminiApiKey}
       setGeminiApiKey={setGeminiApiKey}
+      isAiEnabled={isAiEnabled}
+      setIsAiEnabled={setIsAiEnabled}
       isSecurityActive={isSecurityActive}
       setIsSecurityActive={setIsSecurityActive}
       userRole={userRole}
@@ -993,6 +996,7 @@ export default function App() {
         zoomImage={zoomImage}
         setZoomImage={setZoomImage}
         geminiApiKey={geminiApiKey}
+        isAiEnabled={isAiEnabled}
         setActiveTab={setActiveTab}
         setAiPrefilledData={setAiPrefilledData}
         setFeedbackList={setFeedbackList}

@@ -76,7 +76,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       >
         {/* Sidebar Brand Logo */}
         <div className="pt-7 pb-4 px-6 flex items-center justify-center relative z-10">
-          <StormLogo className="w-38 h-auto mx-auto" logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern={sidebarPattern} sidebarPatternOpacity={sidebarPatternOpacity} designStyle={designStyle} />
+          <StormLogo className="w-38 h-auto mx-auto" logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern={sidebarPattern} sidebarPatternOpacity={sidebarPatternOpacity} designStyle={designStyle} sidebarBg={sidebarBg} />
         </div>
 
         {/* Navigation Items */}

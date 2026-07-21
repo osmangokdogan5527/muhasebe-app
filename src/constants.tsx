@@ -63,7 +63,8 @@ export const StormLogo = ({
 
   // Generate safe dynamic unique ID for pattern reference
   const rawId = React.useId ? React.useId() : '0';
-  const patternId = 'storm-logo-pattern-' + rawId.replace(/:/g, '');
+  const uId = rawId.replace(/:/g, '');
+  const patternId = 'storm-logo-pattern-' + uId;
 
   // Dynamic colors for Fluid Mesh style logo based on current active theme preset!
   const getFluidMeshLogoColors = (themeId: string) => {
@@ -225,7 +226,7 @@ export const StormLogo = ({
   const svgElement = (
     <svg className={isGlass ? 'storm-logo-glass' : (isFluidMesh ? 'storm-logo-fluid-mesh' : '')} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={width} height={height}>
         <defs>
-          <clipPath id="logo-clip">
+          <clipPath id={`logo-clip-${uId}`}>
             <rect width="200" height="200" rx="48" />
           </clipPath>
           {patternContent && !isGlass && !isFluidMesh && (
@@ -243,67 +244,67 @@ export const StormLogo = ({
           )}
           
           {/* Glass Theme Gradients */}
-          <linearGradient id="glass-logo-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <linearGradient id={`glass-logo-grad-${uId}`} x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
             <stop offset="45%" stopColor="#ffffff" stopOpacity="0.18" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
           </linearGradient>
-          <linearGradient id="glass-border-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={`glass-border-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
             <stop offset="30%" stopColor="#ffffff" stopOpacity="0.4" />
             <stop offset="70%" stopColor="#ffffff" stopOpacity="0.15" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0.5" />
           </linearGradient>
-          <linearGradient id="glass-back-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={`glass-back-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="0.15" />
             <stop offset="35%" stopColor={fillCol} stopOpacity="0.1" />
             <stop offset="70%" stopColor={fillCol} stopOpacity="0.05" />
             <stop offset="100%" stopColor="#000000" stopOpacity="0.35" />
           </linearGradient>
-          <linearGradient id="accent-bolt-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={`accent-bolt-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
             <stop offset="50%" stopColor={fillCol} stopOpacity="0.85" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0.95" />
           </linearGradient>
-          <linearGradient id="glass-shimmer-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <linearGradient id={`glass-shimmer-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
             <stop offset="30%" stopColor="#ffffff" stopOpacity="0" />
             <stop offset="50%" stopColor="#ffffff" stopOpacity="0.5" />
             <stop offset="70%" stopColor="#ffffff" stopOpacity="0" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
           </linearGradient>
-          <filter id="logo-text-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <filter id={`logo-text-shadow-${uId}`} x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" floodColor="#000000" floodOpacity="0.35" />
           </filter>
 
           {/* Fluid Mesh Theme Gradients */}
-          <linearGradient id="fluid-border-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={`fluid-border-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor={fluidColors.borderGrad[0]} />
             <stop offset="40%" stopColor={fluidColors.borderGrad[1]} />
             <stop offset="70%" stopColor={fluidColors.borderGrad[2]} />
             <stop offset="100%" stopColor={fluidColors.borderGrad[3]} />
           </linearGradient>
-          <linearGradient id="fluid-bolt-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={`fluid-bolt-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor={fluidColors.boltGrad[0]} />
             <stop offset="40%" stopColor={fluidColors.boltGrad[1]} />
             <stop offset="100%" stopColor={fluidColors.boltGrad[2]} />
           </linearGradient>
-          <radialGradient id="fluid-bg-glow-1" cx="25%" cy="25%" r="65%">
+          <radialGradient id={`fluid-bg-glow-1-${uId}`} cx="25%" cy="25%" r="65%">
             <stop offset="0%" stopColor={fluidColors.glow1} stopOpacity="0.45" />
             <stop offset="100%" stopColor={fluidColors.glow1} stopOpacity="0" />
           </radialGradient>
-          <radialGradient id="fluid-bg-glow-2" cx="75%" cy="75%" r="65%">
+          <radialGradient id={`fluid-bg-glow-2-${uId}`} cx="75%" cy="75%" r="65%">
             <stop offset="0%" stopColor={fluidColors.glow2} stopOpacity="0.45" />
             <stop offset="100%" stopColor={fluidColors.glow2} stopOpacity="0" />
           </radialGradient>
-          <radialGradient id="fluid-bg-glow-3" cx="50%" cy="50%" r="55%">
+          <radialGradient id={`fluid-bg-glow-3-${uId}`} cx="50%" cy="50%" r="55%">
             <stop offset="0%" stopColor={fluidColors.glow3} stopOpacity="0.35" />
             <stop offset="100%" stopColor={fluidColors.glow3} stopOpacity="0" />
           </radialGradient>
-          <filter id="fluid-logo-text-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <filter id={`fluid-logo-text-glow-${uId}`} x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="1" stdDeviation="2.5" floodColor={fluidColors.dropShadow} floodOpacity="0.65" />
           </filter>
-          <filter id="fluid-bolt-glow" x="-30%" y="-30%" width="160%" height="160%">
+          <filter id={`fluid-bolt-glow-${uId}`} x="-30%" y="-30%" width="160%" height="160%">
             <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor={fluidColors.dropShadow} floodOpacity="0.5" />
           </filter>
           {!downloadMode && (
@@ -346,38 +347,37 @@ export const StormLogo = ({
         </defs>
 
         {isFluidMesh ? (
-          <g clipPath="url(#logo-clip)">
+          <g clipPath={`url(#logo-clip-${uId})`}>
             {/* Base futuristic mesh canvas backing */}
             <rect width="200" height="200" fill="#04020a" />
             
             {/* Overlay orbiting colorful glowing blob waves */}
-            <circle cx="50" cy="50" r="100" fill="url(#fluid-bg-glow-1)" className={!downloadMode ? "animate-mesh-logo-blob-1" : undefined} />
-            <circle cx="150" cy="150" r="100" fill="url(#fluid-bg-glow-2)" className={!downloadMode ? "animate-mesh-logo-blob-2" : undefined} />
-            <circle cx="100" cy="100" r="80" fill="url(#fluid-bg-glow-3)" />
+            <circle cx="50" cy="50" r="100" fill={`url(#fluid-bg-glow-1-${uId})`} className={!downloadMode ? "animate-mesh-logo-blob-1" : undefined} />
+            <circle cx="150" cy="150" r="100" fill={`url(#fluid-bg-glow-2-${uId})`} className={!downloadMode ? "animate-mesh-logo-blob-2" : undefined} />
+            <circle cx="100" cy="100" r="80" fill={`url(#fluid-bg-glow-3-${uId})`} />
 
             {/* Subtle frosted glass glare over the mesh */}
-            <path d="M 0,0 L 200,0 L 200,95 Q 100,125 0,95 Z" fill="url(#glass-logo-grad)" />
+            <path d="M 0,0 L 200,0 L 200,95 Q 100,125 0,95 Z" fill={`url(#glass-logo-grad-${uId})`} />
 
             {/* Futuristic glowing multi-stop colorful border line */}
-            <rect width="194" height="194" x="3" y="3" rx="45" fill="none" stroke="url(#fluid-border-grad)" strokeWidth="4.5" />
+            <rect width="194" height="194" x="3" y="3" rx="45" fill="none" stroke={`url(#fluid-border-grad-${uId})`} strokeWidth="4.5" />
           </g>
         ) : isGlass ? (
-          <g clipPath="url(#logo-clip)">
-            {downloadMode && (
-              <rect width="200" height="200" fill={sidebarBg || '#0f172a'} />
-            )}
+          <g clipPath={`url(#logo-clip-${uId})`}>
+            {/* Always render a solid premium dark/black background so it is a perfect "siyah logo" */}
+            <rect width="200" height="200" fill="#0c0b14" />
             {/* Base tinted dark glass backing */}
-            <rect width="200" height="200" fill="url(#glass-back-grad)" />
+            <rect width="200" height="200" fill={`url(#glass-back-grad-${uId})`} />
             {/* Main 3D curved gloss reflection block */}
-            <path d="M 0,0 L 200,0 L 200,95 Q 100,125 0,95 Z" fill="url(#glass-logo-grad)" />
+            <path d="M 0,0 L 200,0 L 200,95 Q 100,125 0,95 Z" fill={`url(#glass-logo-grad-${uId})`} />
             {/* Ambient inner soft glowing light beam */}
             <circle cx="100" cy="50" r="70" fill="#ffffff" opacity="0.03" />
             {/* Moving glass shimmer light beam */}
             {!downloadMode && (
-              <rect className="storm-logo-shimmer" x="-150" y="0" width="120" height="200" fill="url(#glass-shimmer-grad)" />
+              <rect className="storm-logo-shimmer" x="-150" y="0" width="120" height="200" fill={`url(#glass-shimmer-grad-${uId})`} />
             )}
             {/* Beveled edge stroke with linear gradient */}
-            <rect width="196" height="196" x="2" y="2" rx="46" fill="none" stroke="url(#glass-border-grad)" strokeWidth="3.5" />
+            <rect width="196" height="196" x="2" y="2" rx="46" fill="none" stroke={`url(#glass-border-grad-${uId})`} strokeWidth="3.5" />
           </g>
         ) : (
           <rect width="200" height="200" rx="48" fill={fillCol} />
@@ -392,8 +392,8 @@ export const StormLogo = ({
         <g transform="translate(63.75, 12) scale(1.45)">
           <path 
             d="M28 2 L8 38 L23 38 L15 66 L42 28 L28 28 Z" 
-            fill={isFluidMesh ? "url(#fluid-bolt-grad)" : (isGlass ? "url(#accent-bolt-grad)" : "#ffffff")} 
-            filter={isFluidMesh ? "url(#fluid-bolt-glow)" : undefined}
+            fill={isFluidMesh ? `url(#fluid-bolt-grad-${uId})` : (isGlass ? `url(#accent-bolt-grad-${uId})` : "#ffffff")} 
+            filter={isFluidMesh ? `url(#fluid-bolt-glow-${uId})` : undefined}
           />
         </g>
 
@@ -408,7 +408,7 @@ export const StormLogo = ({
           fontSize="33" 
           fill="#ffffff" 
           letterSpacing="3.5" 
-          filter={isFluidMesh ? "url(#fluid-logo-text-glow)" : (isGlass ? "url(#logo-text-shadow)" : undefined)}
+          filter={isFluidMesh ? `url(#fluid-logo-text-glow-${uId})` : (isGlass ? `url(#logo-text-shadow-${uId})` : undefined)}
         >
           STORM
         </text>
@@ -423,7 +423,7 @@ export const StormLogo = ({
           fill="#ffffff" 
           letterSpacing="2.5" 
           opacity="0.95" 
-          filter={isFluidMesh ? "url(#fluid-logo-text-glow)" : (isGlass ? "url(#logo-text-shadow)" : undefined)}
+          filter={isFluidMesh ? `url(#fluid-logo-text-glow-${uId})` : (isGlass ? `url(#logo-text-shadow-${uId})` : undefined)}
         >
           MUHASEBE
         </text>
@@ -441,17 +441,16 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.6.9';
+export const APP_VERSION = '1.7.0';
 
 export const CHANGELOG = {
-  version: '1.6.9',
+  version: '1.7.0',
   features: [
-    "Döviz / Çoklu Para Birimi & TCMB Entegrasyonu: Türkiye Cumhuriyet Merkez Bankası (TCMB) günlük efektif döviz kurlarının (USD, EUR) güvenli ve kararlı bir CORS proxy kanalıyla anlık olarak çekilmesi ve sistem genelindeki döviz işlemlerinde kullanılabilmesi sağlandı.",
-    "Hata Toleranslı Kur Altyapısı: İnternet kesintisi veya TCMB servis gecikmesi durumlarında alternatif 'ExchangeRateAPI' ve akıllı tarayıcı içi yerel önbellek (local cache) sistemleri devreye alınarak sistem sürekliliği garanti altına alındı.",
-    "İşlemlerde ve Çek/Senetlerde TCMB Kur Desteği: Fatura, Tahsilat, Ödeme ve Çek/Senet girişlerinde farklı para birimleri seçildiğinde kuru manuel girmek yerine tek bir tıkla doğrudan TCMB kurlarından otomatik çeken 'TCMB'den Çek' entegrasyonu tamamlandı.",
-    "Arayüz Renk Sadeleştirmesi: Kullanıcı deneyimini iyileştirmek, karmaşıklığı azaltmak ve odaklanmayı artırmak amacıyla Gül Rengi, Mor, Pembe, Zümrüt ve Turuncu gibi ikincil vurgu renkleri arayüzden bütünüyle kaldırıldı.",
-    "Asil Lacivert Tema İyileştirmesi: 'Asil Lacivert' temasının ismi daha sade, profesyonel ve estetik durması amacıyla sadece 'Lacivert' olarak güncellendi.",
-    "Gelişmiş Tip Güvenliği: Yedekleme ve geri yükleme sihirbazı ile localStorage senkronizasyon mekanizmalarında linter hataları giderilerek TypeScript tip kararlılığı sağlandı."
+    "Arayüz Arka Plan Desen Düzeltmesi: Sol menü / sidebar için seçilen arka plan desenlerinin (örneğin Kristal üçgen deseni) ana uygulama paneline sızması ve buralarda tekrarlayarak Cam Arayüz (Glassmorphism) ve Sıvı Mesh (Aurora Mesh) gibi modern görsel stilleri örtmesi engellendi.",
+    "Göz Yormayan Çalışma Deneyimi: Muhasebe tabloları ve finans listeleri arkasındaki desen gürültüsü kaldırılarak çalışma alanının mükemmel temizlikte, yüksek kontrastlı ve son derece okunabilir olması sağlandı.",
+    "Storm AI Asistanı Modernizasyonu: Yapay Zeka yüzer butonu daha kompakt, çerçevesiz, modern ve şık bir minimalist tasarıma kavuşturuldu.",
+    "Akıllı Konumlandırma: Storm AI asistan butonu, mobil cihazlarda alt gezinme çubuğuyla çakışmaması için 1 cm yukarı kaydırılarak (bottom-20) sağ alt köşeye (right-1.5) konumlandırıldı.",
+    "Yapay Zeka Açma / Kapama Desteği: Ayarlar -> Yapay Zeka (AI) Ayarları sekmesi altına asistanı hem bilgisayar hem mobil sürümlerde tamamen açıp kapatabilmeyi sağlayan yeni bir anahtar (Switch) eklendi ve bu tercih tarayıcı belleğine (localStorage) entegre edildi."
   ],
   fixes: []
 };
@@ -707,6 +706,17 @@ export const PIN_ACCOUNTS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.7.0",
+    date: "21.07.2026",
+    changes: [
+      "Arayüz Arka Plan Desen Düzeltmesi: Sol menü / sidebar için seçilen arka plan desenlerinin (örneğin Kristal üçgen deseni) ana uygulama paneline sızması ve buralarda tekrarlayarak Cam Arayüz (Glassmorphism) ve Sıvı Mesh (Aurora Mesh) gibi modern görsel stilleri örtmesi engellendi.",
+      "Göz Yormayan Çalışma Deneyimi: Muhasebe tabloları ve finans listeleri arkasındaki desen gürültüsü kaldırılarak çalışma alanının mükemmel temizlikte, yüksek kontrastlı ve son derece okunabilir olması sağlandı.",
+      "Storm AI Asistanı Modernizasyonu: Yapay Zeka yüzer butonu daha kompakt, çerçevesiz, modern ve şık bir minimalist tasarıma kavuşturuldu.",
+      "Akıllı Konumlandırma: Storm AI asistan butonu, mobil cihazlarda alt gezinme çubuğuyla çakışmaması için 1 cm yukarı kaydırılarak (bottom-20) sağ alt köşeye (right-1.5) konumlandırıldı.",
+      "Yapay Zeka Açma / Kapama Desteği: Ayarlar -> Yapay Zeka (AI) Ayarları sekmesi altına asistanı hem bilgisayar hem mobil sürümlerde tamamen açıp kapatabilmeyi sağlayan yeni bir anahtar (Switch) eklendi ve bu tercih tarayıcı belleğine (localStorage) entegre edildi."
+    ]
+  },
   {
     version: "1.6.9",
     date: "20.07.2026",

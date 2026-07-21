@@ -107,6 +107,10 @@ export function useAppSettings() {
     return localStorage.getItem('storm_muhasebe_gemini_api_key') || '';
   });
 
+  const [isAiEnabled, setIsAiEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('storm_muhasebe_ai_enabled') !== 'false';
+  });
+
   const [autoBackupEnabled, setAutoBackupEnabled] = useState<boolean>(() => {
     return localStorage.getItem('storm_auto_backup_enabled') !== 'false';
   });
@@ -130,6 +134,7 @@ export function useAppSettings() {
     hiddenTabs, setHiddenTabs, toggleTabVisibility,
     tabOrder, setTabOrder, moveTab,
     geminiApiKey, setGeminiApiKey,
+    isAiEnabled, setIsAiEnabled,
     autoBackupEnabled, setAutoBackupEnabled
   };
 }

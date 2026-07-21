@@ -52,6 +52,7 @@ interface AppModalsProps {
   zoomImage: string | null;
   setZoomImage: (img: string | null) => void;
   geminiApiKey: string;
+  isAiEnabled?: boolean;
   setActiveTab: (tab: any) => void;
   setAiPrefilledData,
   setFeedbackList: (data: any) => void;
@@ -111,6 +112,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
   zoomImage,
   setZoomImage,
   geminiApiKey,
+  isAiEnabled,
   setActiveTab,
   setAiPrefilledData,
   setFeedbackList,
@@ -192,7 +194,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
           <div className="bg-[#ffffff] rounded-2xl max-w-sm w-full border border-slate-200 shadow-2xl p-6 overflow-hidden text-center">
             <div className="mx-auto mb-6 flex justify-center">
-              <StormLogo className="w-28 h-auto" logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern={sidebarPattern} sidebarPatternOpacity={sidebarPatternOpacity} designStyle={designStyle} />
+              <StormLogo className="w-28 h-auto" logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern={sidebarPattern} sidebarPatternOpacity={sidebarPatternOpacity} designStyle={designStyle} sidebarBg="#ffffff" />
             </div>
             
             <h3 className="text-xl font-extrabold text-slate-900 mb-2">Güncelleme Hazır</h3>
@@ -317,7 +319,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
           <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-slide-up">
             <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center gap-4 shrink-0">
               <div className="shrink-0">
-                <StormLogo className="w-14 h-auto" logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern={sidebarPattern} sidebarPatternOpacity={sidebarPatternOpacity} designStyle={designStyle} />
+                <StormLogo className="w-14 h-auto" logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern={sidebarPattern} sidebarPatternOpacity={sidebarPatternOpacity} designStyle={designStyle} sidebarBg="#ffffff" />
               </div>
               <div>
                 <h3 className="text-xl font-extrabold text-slate-900 dark:text-white leading-tight">
@@ -561,7 +563,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
       )}
 
       {/* AI Assistant Chat UI */}
-      {user && (
+      {user && isAiEnabled && (
         <AiAssistant 
           apiKey={geminiApiKey} 
           userRole={userRole}

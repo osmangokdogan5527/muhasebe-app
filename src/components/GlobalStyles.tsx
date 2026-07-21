@@ -1534,10 +1534,9 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ themeCssRules, bodyP
         [data-design-style="clean-light"] .min-h-screen {
           background-color: color-mix(in srgb, var(--accent-50) 15%, #f1f5f9) !important;
           background: 
-            ${bodyPatternSvg ? `${bodyPatternSvg},` : ''}
             linear-gradient(135deg, color-mix(in srgb, var(--accent-100) 12%, #f1f5f9) 0%, color-mix(in srgb, var(--accent-50) 8%, #f8fafc) 100%) !important;
-          background-size: ${bodyPatternSvg ? `${activePattern.size || 'auto'}, 100% 100%` : '100% 100%'} !important;
-          background-repeat: ${bodyPatternSvg ? 'repeat, no-repeat' : 'no-repeat'} !important;
+          background-size: 100% 100% !important;
+          background-repeat: no-repeat !important;
           color: color-mix(in srgb, var(--accent-950) 85%, #0f172a) !important;
           background-attachment: fixed !important;
         }
@@ -1837,10 +1836,9 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ themeCssRules, bodyP
         body,
         .bg-\\[\\#050505\\] {
           background: 
-            ${bodyPatternSvg ? `${bodyPatternSvg},` : ''}
             linear-gradient(135deg, #050505 0%, #050505 100%) !important;
-          background-size: ${bodyPatternSvg ? `${activePattern.size || 'auto'}, 100% 100%` : '100% 100%'} !important;
-          background-repeat: ${bodyPatternSvg ? 'repeat, no-repeat' : 'no-repeat'} !important;
+          background-size: 100% 100% !important;
+          background-repeat: no-repeat !important;
           background-attachment: fixed !important;
         }
         

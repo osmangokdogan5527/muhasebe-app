@@ -97,6 +97,8 @@ export interface AyarlarViewProps {
   setResetModalOpen: (open: boolean) => void;
   geminiApiKey: string;
   setGeminiApiKey: (key: string) => void;
+  isAiEnabled: boolean;
+  setIsAiEnabled: (enabled: boolean) => void;
   isSecurityActive: boolean;
   setIsSecurityActive: (active: boolean) => void;
   userRole: 'admin' | 'employee';
@@ -177,6 +179,8 @@ export default function AyarlarView({
   setResetModalOpen,
   geminiApiKey,
   setGeminiApiKey,
+  isAiEnabled,
+  setIsAiEnabled,
   isSecurityActive,
   setIsSecurityActive,
   userRole,
@@ -537,6 +541,8 @@ export default function AyarlarView({
             geminiApiKey={geminiApiKey}
             setGeminiApiKey={setGeminiApiKey}
             setAiInfoModalOpen={setAiInfoModalOpen}
+            isAiEnabled={isAiEnabled}
+            setIsAiEnabled={setIsAiEnabled}
           />
         )}
         {settingsSubTab === 'permissions' && (
