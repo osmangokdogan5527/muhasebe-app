@@ -67,7 +67,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
     <>
       {/* 1. DESKTOP SIDEBAR */}
       <aside 
-        className={`hidden md:flex flex-col w-64 text-white shrink-0 transition-all duration-300 relative z-20 shadow-[0_12px_40px_-6px_rgba(0,0,0,0.5)] my-4 ml-4 rounded-3xl border ${isLightSidebar ? 'sidebar-light' : ''}`}
+        className={`hidden md:flex flex-col w-72 text-white shrink-0 transition-all duration-300 relative z-20 shadow-[0_12px_40px_-6px_rgba(0,0,0,0.5)] my-4 ml-4 rounded-3xl border ${isLightSidebar ? 'sidebar-light' : ''}`}
         style={{ 
           backgroundColor: sidebarBg,
           ...sidebarPatternStyle,

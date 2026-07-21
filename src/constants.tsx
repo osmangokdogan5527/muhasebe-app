@@ -229,7 +229,7 @@ export const StormLogo = ({
           <clipPath id={`logo-clip-${uId}`}>
             <rect width="200" height="200" rx="48" />
           </clipPath>
-          {patternContent && !isGlass && !isFluidMesh && (
+          {patternContent && !isGlass && !isFluidMesh && currentDesignStyle !== 'clean-light' && (
             <pattern 
               id={patternId} 
               width={patternWidth} 
@@ -384,7 +384,7 @@ export const StormLogo = ({
         )}
 
         {/* Textured overlay pattern inside the logo background */}
-        {patternContent && !isGlass && !isFluidMesh && (
+        {patternContent && !isGlass && !isFluidMesh && currentDesignStyle !== 'clean-light' && (
           <rect width="200" height="200" rx="48" fill={`url(#${patternId})`} />
         )}
 
@@ -441,16 +441,21 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.7.0';
+export const APP_VERSION = '1.7.3';
 
 export const CHANGELOG = {
-  version: '1.7.0',
+  version: '1.7.3',
   features: [
-    "Arayüz Arka Plan Desen Düzeltmesi: Sol menü / sidebar için seçilen arka plan desenlerinin (örneğin Kristal üçgen deseni) ana uygulama paneline sızması ve buralarda tekrarlayarak Cam Arayüz (Glassmorphism) ve Sıvı Mesh (Aurora Mesh) gibi modern görsel stilleri örtmesi engellendi.",
-    "Göz Yormayan Çalışma Deneyimi: Muhasebe tabloları ve finans listeleri arkasındaki desen gürültüsü kaldırılarak çalışma alanının mükemmel temizlikte, yüksek kontrastlı ve son derece okunabilir olması sağlandı.",
-    "Storm AI Asistanı Modernizasyonu: Yapay Zeka yüzer butonu daha kompakt, çerçevesiz, modern ve şık bir minimalist tasarıma kavuşturuldu.",
-    "Akıllı Konumlandırma: Storm AI asistan butonu, mobil cihazlarda alt gezinme çubuğuyla çakışmaması için 1 cm yukarı kaydırılarak (bottom-20) sağ alt köşeye (right-1.5) konumlandırıldı.",
-    "Yapay Zeka Açma / Kapama Desteği: Ayarlar -> Yapay Zeka (AI) Ayarları sekmesi altına asistanı hem bilgisayar hem mobil sürümlerde tamamen açıp kapatabilmeyi sağlayan yeni bir anahtar (Switch) eklendi ve bu tercih tarayıcı belleğine (localStorage) entegre edildi."
+    "Masaüstü Sol Menü (Sidebar) Genişletmesi: Bilgisayar sürümünde sol menü genişliği %10 oranında artırıldı (256px'ten 288px'e - w-72). Bu sayede 'KASA & BANKA DURUMU', 'FİNANSAL HAREKETLER', 'PERSONEL & MAAŞLAR' gibi uzun sekme metinlerinin tüm temalarda kesintisiz ve ferah bir şekilde sığması sağlandı.",
+    "Masaüstü AI Asistan Butonu & Sürükleme Hassasiyeti: Storm AI asistanının sürükleme mesafesi toleransı artırılarak tıklama/sürükleme çakışmaları tamamen giderildi; asistan butonu masaüstünde %20 oranında büyütülerek daha kolay erişilebilir ve estetik hale getirildi.",
+    "Mobil Menü Sekme Optimizasyonu: Mobil ana menü panelinde Çek ve Senet Takibi ile Kredi Takip Yönetimi sekmeleri gizlendi.",
+    "Mobil Ayarlar Görünüm Sadeleştirmesi: Ayarlar sekmesinde mobil görünümde gereksiz olan Arayüz Tasarım Stili, Arayüz Vurgu Rengi ve Firma/Görünüm Ayarları panelleri gizlenerek pürüzsüz ve dikey ekran kazancını maksimize eden sade bir yapıya geçildi.",
+    "Baskı & Şablon Tasarımcısı Mobil Koruması: Mobil cihazlarda şablon tasarımcısı sekmeleri gizlendi ve bilgisayardan tasarlanan şablonların kullanılması yönünde bilgilendirme kartı yerleştirildi.",
+    "Klavye Kısayolları Mobil Koruması: Mobil cihazlarda zaten kullanılamayan klavye kısayolları sekmesi gizlenerek dikey alan israfı engellendi.",
+    "Yapışkan Onay & Kaydet Barı (Sticky Footer): Satış Faturası, Alış Faturası, Tahsilat ve Ödeme makbuzu formlarında (IslemModal) 'İptal' ve 'Kaydet' butonları ekranın en altına yapışık (sticky footer) hale getirildi.",
+    "Sürüklenebilir Yapay Zeka Asistanı: Mobil ve masaüstü ekranlarda Storm AI asistan butonu serbestçe sürüklenebilir hale getirildi; ekranın istenilen köşesine yerleştirilerek çalışma alanının kapatılması önlendi.",
+    "Mobil Profil ve Güvenlik Koruması: Mobil cihazlarda gereksiz yer kaplayan Profil & Güvenlik ayarlar alt sekmesi gizlendi.",
+    "Gelişmiş Gösterge Paneli Takvimi: Gösterge panelindeki takvim kutusu mobil ve masaüstü görünümlerde ay adını kısaltılmış yerine tam adıyla ve yıl bilgisiyle (örn. 21 Temmuz 2026) gösterecek şekilde güncellendi."
   ],
   fixes: []
 };
@@ -706,6 +711,40 @@ export const PIN_ACCOUNTS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.7.3",
+    date: "21.07.2026",
+    changes: [
+      "Masaüstü Sol Menü (Sidebar) Genişletmesi: Bilgisayar sürümünde sol menü genişliği %10 oranında artırıldı (256px'ten 288px'e - w-72). Bu sayede 'KASA & BANKA DURUMU', 'FİNANSAL HAREKETLER', 'PERSONEL & MAAŞLAR' gibi uzun sekme metinlerinin tüm temalarda kesintisiz ve ferah bir şekilde sığması sağlandı.",
+      "Masaüstü AI Asistan Butonu & Sürükleme Hassasiyeti: Storm AI asistanının sürükleme mesafesi toleransı artırılarak tıklama/sürükleme çakışmaları tamamen giderildi; asistan butonu masaüstünde %20 oranında büyütülerek daha kolay erişilebilir ve estetik hale getirildi.",
+      "Mobil Menü Sekme Optimizasyonu: Mobil ana menü panelinde Çek ve Senet Takibi ile Kredi Takip Yönetimi sekmeleri gizlendi.",
+      "Mobil Ayarlar Görünüm Sadeleştirmesi: Ayarlar sekmesinde mobil görünümde gereksiz olan Arayüz Tasarım Stili, Arayüz Vurgu Rengi ve Firma/Görünüm Ayarları panelleri gizlenerek pürüzsüz ve dikey ekran kazancını maksimize eden sade bir yapıya geçildi.",
+      "Baskı & Şablon Tasarımcısı Mobil Koruması: Mobil cihazlarda şablon tasarımcısı sekmeleri gizlendi ve bilgisayardan tasarlanan şablonların kullanılması yönünde bilgilendirme kartı yerleştirildi.",
+      "Klavye Kısayolları Mobil Koruması: Mobil cihazlarda zaten kullanılamayan klavye kısayolları sekmesi gizlenerek dikey alan israfı engellendi.",
+      "Yapışkan Onay & Kaydet Barı (Sticky Footer): Satış Faturası, Alış Faturası, Tahsilat ve Ödeme makbuzu formlarında (IslemModal) 'İptal' ve 'Kaydet' butonları ekranın en altına yapışık (sticky footer) hale getirildi.",
+      "Sürüklenebilir Yapay Zeka Asistanı: Mobil ve masaüstü ekranlarda Storm AI asistan butonu serbestçe sürüklenebilir hale getirildi; ekranın istenilen köşesine yerleştirilerek çalışma alanının kapatılması önlendi.",
+      "Mobil Profil ve Güvenlik Koruması: Mobil cihazlarda gereksiz yer kaplayan Profil & Güvenlik ayarlar alt sekmesi gizlendi.",
+      "Gelişmiş Gösterge Paneli Takvimi: Gösterge panelindeki takvim kutusu mobil ve masaüstü görünümlerde ay adını kısaltılmış yerine tam adıyla ve yıl bilgisiyle (örn. 21 Temmuz 2026) gösterecek şekilde güncellendi."
+    ]
+  },
+  {
+    version: "1.7.2",
+    date: "21.07.2026",
+    changes: [
+      "Tam Ekran Mobil Ana Menü (MobileMenuView): Giriş ekranından sonra mobil kullanıcıları karşılayan, görsellerden arındırılmış son derece sade ve kompakt 3 sütunlu modern ana menü paneli devreye alındı.",
+      "Kompakt Mobil Header ve Geri Dönüş Akışı: Diğer sekmelere giriş yapıldığında sol üst köşede beliren estetik 'Geri' butonu aracılığıyla kesintisiz bir şekilde ana menüye dönüş imkanı sağlandı. Büyük logo kaldırılarak üst bilgi alanı daraltıldı ve dikey ekran kazancı maksimize edildi.",
+      "Mobil Alt Gezinme Çubuğu İptali: Kullanıcı talebi doğrultusunda ekran alanını kısıtlayan alt navigasyon barı (MobileBottomNav) tamamen devre dışı bırakıldı."
+    ]
+  },
+  {
+    version: "1.7.1",
+    date: "21.07.2026",
+    changes: [
+      "Mobil Alt Navigasyon Çubuğu (MobileBottomNav): Mobil cihazlarda hızlı erişim sağlayan, pürüzsüz yaylı (spring) fizik tabanlı gösterge animasyonlu, akıllı kilit rozetli ve safe-area uyumlu alt gezinti barı uygulandı.",
+      "Mobil Header Entegrasyonu: Üst bar alanını daha kompakt ve sade hale getirerek dikey çalışma alanını artıran ve yeni alt gezinme barıyla kusursuz senkronize olan mobil yerleşim düzeni tamamlandı.",
+      "1.7.1 Sürüm Geçiş Altyapısı: Gelecek kararlı sürüm için gerekli tüm sürüm hazırlıkları ve taslak sürüm günlüğü (changelog) modülleri entegre edildi."
+    ]
+  },
   {
     version: "1.7.0",
     date: "21.07.2026",

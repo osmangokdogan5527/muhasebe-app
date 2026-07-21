@@ -640,8 +640,8 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
 
   return (
     <>
-<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs overflow-y-auto animate-fade-in">
-          <div className={`bg-white rounded-xl border border-slate-200 w-full shadow-2xl overflow-hidden flex flex-col max-h-[95vh] animate-scale-in transition-all duration-300 ${isInvoice ? 'max-w-5xl' : 'max-w-lg'}`}>
+<div className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4 bg-slate-900/40 backdrop-blur-xs overflow-y-auto animate-fade-in">
+          <div className={`bg-white rounded-xl border border-slate-200 w-full shadow-2xl overflow-hidden flex flex-col max-h-[95vh] max-h-[calc(100dvh-1rem)] md:max-h-[95vh] animate-scale-in transition-all duration-300 ${isInvoice ? 'max-w-5xl' : 'max-w-lg'}`}>
             {/* Modal Header */}
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white border-l-4" style={{ borderLeftColor: 'var(--accent-500)' }}>
               <div>
@@ -672,8 +672,9 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 bg-white space-y-6">
-              {formError && (
+            <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white">
+              <div className="p-5 md:p-6 overflow-y-auto flex-1 space-y-5 md:space-y-6 min-h-0">
+                {formError && (
                 <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg flex items-start gap-3 text-xs text-rose-600 font-medium animate-shake">
                   <AlertCircle size={16} className="shrink-0 mt-0.5" />
                   <div>
@@ -1148,13 +1149,15 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
                 />
               </div>
 
+              </div>
+
               {/* Form Action Controls */}
-              <div className="pt-4 border-t border-slate-100 flex gap-3 justify-end w-full bg-transparent">
+              <div className="p-4 px-6 border-t border-slate-100 flex gap-3 justify-end items-center w-full bg-white shrink-0">
                 <button 
                   id="btn-islem-cancel"
                   type="button"
                   onClick={() => onClose()}
-                  className="px-5 py-2.5 text-[10px] uppercase tracking-wider font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                  className="px-5 py-2.5 text-[10px] uppercase tracking-wider font-extrabold text-slate-500 hover:text-slate-700 hover:bg-slate-100/50 rounded-md transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   İptal
                 </button>
@@ -1162,10 +1165,10 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
                   id="btn-islem-save"
                   type="submit"
                   disabled={isSubmitting}
-                  className={`px-6 py-2.5 text-[10px] uppercase tracking-wider font-extrabold text-white rounded-lg transition shadow-md flex items-center gap-1.5 cursor-pointer ${
+                  className={`px-6 py-2.5 text-[10px] uppercase tracking-wider font-extrabold text-white rounded-md transition-all duration-150 shadow-md flex items-center gap-1.5 cursor-pointer active:scale-98 ${
                     isSubmitting 
                       ? 'bg-slate-400 text-slate-200 cursor-not-allowed' 
-                      : 'bg-teal-600 hover:bg-teal-700 active:scale-98'
+                      : 'bg-teal-600 hover:bg-teal-700 shadow-teal-600/10 hover:shadow-lg'
                   }`}
                 >
                   {isSubmitting ? (editingTransaction ? 'Güncelleniyor...' : 'Kaydediliyor...') : (

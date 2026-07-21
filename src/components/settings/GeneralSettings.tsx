@@ -94,7 +94,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
   return (
 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
             {/* Card 1: Vurgu Rengi / Tema Seçimi */}
-            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 shadow-sm flex flex-col justify-between">
+            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 shadow-sm hidden md:flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-8 h-8 rounded-lg bg-teal-500/10 text-teal-600 flex items-center justify-center">
@@ -209,7 +209,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
             </div>
 
             {/* Card: Görsel Tasarım Teması Seçici */}
-            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 shadow-sm flex flex-col justify-between md:col-span-2">
+            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 shadow-sm hidden md:flex flex-col justify-between md:col-span-2">
               <div>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
@@ -362,7 +362,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
             </div>
 
             {/* Card 3: Firma ve Görünüm Ayarları */}
-            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 shadow-sm flex flex-col justify-between md:col-span-2">
+            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 shadow-sm hidden md:flex flex-col justify-between md:col-span-2">
               <div>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-8 h-8 rounded-lg bg-orange-500/10 text-orange-600 flex items-center justify-center">

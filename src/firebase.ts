@@ -13,7 +13,8 @@ import {
   orderBy,
   runTransaction,
   getDocs,
-  setLogLevel
+  setLogLevel,
+  getDoc
 } from 'firebase/firestore';
 import { 
   getAuth,
@@ -277,70 +278,70 @@ export async function createTransaction(islemData: Omit<Transaction, 'id'>) {
       ...islemData
     });
 
-    await runTransaction(db, async (firestoreTx) => {
-      // 1. Cari reference & read (if cariId specified)
-      let cariRef = null;
-      let currentCariBalance = 0;
-      let cariExists = false;
-      if (islem.cariId && typeof islem.cariId === 'string' && islem.cariId.trim() !== '') {
-        cariRef = doc(db, getPath(CARILER_COLL), islem.cariId.trim());
-          const cariSnap = await firestoreTx.get(cariRef);
-          if (cariSnap.exists()) {
-            cariExists = true;
-            const data = cariSnap.data() as any;
-            currentCariBalance = data.balance || 0;
+    // 1. Cari reference & read (if cariId specified)
+    let cariRef = null;
+    let currentCariBalance = 0;
+    let cariExists = false;
+    if (islem.cariId && typeof islem.cariId === 'string' && islem.cariId.trim() !== '') {
+      cariRef = doc(db, getPath(CARILER_COLL), islem.cariId.trim());
+      const cariSnap = await getDoc(cariRef);
+      if (cariSnap.exists()) {
+        cariExists = true;
+        const data = cariSnap.data() as any;
+        currentCariBalance = data.balance || 0;
+      } else {
+        throw new Error(`Cari (ID: ${islem.cariId}) bulunamadı. Silinmiş olabilir.`);
+      }
+    }
+
+    // 2. Read stock levels if transaction has items (sale/purchase)
+    const stockUpdates: { ref: any, newQty: number }[] = [];
+    if (islem.items && Array.isArray(islem.items) && islem.items.length > 0) {
+      for (const item of islem.items) {
+        if (item && item.stockId && typeof item.stockId === 'string' && item.stockId.trim() !== '') {
+          const stockRef = doc(db, getPath(STOKLAR_COLL), item.stockId.trim());
+          const stockSnap = await getDoc(stockRef);
+          if (stockSnap.exists()) {
+            const data = stockSnap.data() as any;
+            const currentQty = data.quantity || 0;
+            let newQty = currentQty;
+            if (islem.type === 'sale' || islem.type === 'purchase_return') {
+              newQty = currentQty - (item.quantity || 0);
+            } else if (islem.type === 'purchase' || islem.type === 'sale_return') {
+              newQty = currentQty + (item.quantity || 0);
+            }
+            stockUpdates.push({ ref: stockRef, newQty });
           } else {
-            throw new Error(`Cari (ID: ${islem.cariId}) bulunamadı. Silinmiş olabilir.`);
-          }
-      }
-
-      // 2. Read stock levels if transaction has items (sale/purchase)
-      const stockUpdates: { ref: any, newQty: number }[] = [];
-      if (islem.items && Array.isArray(islem.items) && islem.items.length > 0) {
-        for (const item of islem.items) {
-          if (item && item.stockId && typeof item.stockId === 'string' && item.stockId.trim() !== '') {
-            const stockRef = doc(db, getPath(STOKLAR_COLL), item.stockId.trim());
-              const stockSnap = await firestoreTx.get(stockRef);
-              if (stockSnap.exists()) {
-                const data = stockSnap.data() as any;
-                const currentQty = data.quantity || 0;
-                let newQty = currentQty;
-                if (islem.type === 'sale' || islem.type === 'purchase_return') {
-                  newQty = currentQty - (item.quantity || 0);
-                } else if (islem.type === 'purchase' || islem.type === 'sale_return') {
-                  newQty = currentQty + (item.quantity || 0);
-                }
-                stockUpdates.push({ ref: stockRef, newQty });
-              } else {
-                throw new Error(`Stok (ID: ${item.stockId}) bulunamadı. Silinmiş olabilir.`);
-              }
+            throw new Error(`Stok (ID: ${item.stockId}) bulunamadı. Silinmiş olabilir.`);
           }
         }
       }
+    }
 
-      // 3. Calculate new Cari balance
-      let newCariBalance = currentCariBalance;
-      if (cariRef && cariExists) {
-        const effectAmount = islem.convertedAmount !== undefined && islem.convertedAmount !== 0 ? islem.convertedAmount : (islem.amount || 0);
-        if (islem.type === 'sale' || islem.type === 'payment' || islem.type === 'purchase_return') {
-          newCariBalance += effectAmount;
-        } else if (islem.type === 'purchase' || islem.type === 'collection' || islem.type === 'sale_return') {
-          newCariBalance -= effectAmount;
-        }
+    // 3. Calculate new Cari balance
+    let newCariBalance = currentCariBalance;
+    if (cariRef && cariExists) {
+      const effectAmount = islem.convertedAmount !== undefined && islem.convertedAmount !== 0 ? islem.convertedAmount : (islem.amount || 0);
+      if (islem.type === 'sale' || islem.type === 'payment' || islem.type === 'purchase_return') {
+        newCariBalance += effectAmount;
+      } else if (islem.type === 'purchase' || islem.type === 'collection' || islem.type === 'sale_return') {
+        newCariBalance -= effectAmount;
       }
+    }
 
-      // 4. Perform writes inside transaction
-      firestoreTx.set(islemRef, islem);
+    // 4. Perform writes inside a batch for offline safety and robustness
+    const batch = writeBatch(db);
+    batch.set(islemRef, islem);
 
-      if (cariRef && cariExists) {
-        firestoreTx.update(cariRef, { balance: newCariBalance });
-      }
+    if (cariRef && cariExists) {
+      batch.update(cariRef, { balance: newCariBalance });
+    }
 
-      for (const update of stockUpdates) {
-        firestoreTx.update(update.ref, { quantity: update.newQty });
-      }
-    });
+    for (const update of stockUpdates) {
+      batch.update(update.ref, { quantity: update.newQty });
+    }
 
+    await batch.commit();
     return islemId;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, getPath(ISLEMLER_COLL));
@@ -356,80 +357,81 @@ export async function removeTransaction(islem: Transaction) {
   try {
     const islemRef = doc(db, getPath(ISLEMLER_COLL), islem.id);
 
-    await runTransaction(db, async (firestoreTx) => {
-      // 1. Check if transaction exists
-      const islemSnap = await firestoreTx.get(islemRef);
-      if (!islemSnap.exists()) {
-        throw new Error("İşlem bulunamadı.");
-      }
+    // 1. Check if transaction exists
+    const islemSnap = await getDoc(islemRef);
+    if (!islemSnap.exists()) {
+      throw new Error("İşlem bulunamadı.");
+    }
 
-      // 2. Cari reference & read to reverse balance
-      let cariRef = null;
-      let currentCariBalance = 0;
-      let cariExists = false;
-      if (islem.cariId && typeof islem.cariId === 'string' && islem.cariId.trim() !== '') {
-        try {
-          cariRef = doc(db, getPath(CARILER_COLL), islem.cariId.trim());
-          const cariSnap = await firestoreTx.get(cariRef);
-          if (cariSnap.exists()) {
-            cariExists = true;
-            const data = cariSnap.data() as any;
-            currentCariBalance = data.balance || 0;
-          }
-        } catch (cariErr) {
-          console.warn("Cari bakiye geri alınırken hata oluştu (cari silinmiş olabilir):", cariErr);
+    // 2. Cari reference & read to reverse balance
+    let cariRef = null;
+    let currentCariBalance = 0;
+    let cariExists = false;
+    if (islem.cariId && typeof islem.cariId === 'string' && islem.cariId.trim() !== '') {
+      try {
+        cariRef = doc(db, getPath(CARILER_COLL), islem.cariId.trim());
+        const cariSnap = await getDoc(cariRef);
+        if (cariSnap.exists()) {
+          cariExists = true;
+          const data = cariSnap.data() as any;
+          currentCariBalance = data.balance || 0;
         }
+      } catch (cariErr) {
+        console.warn("Cari bakiye geri alınırken hata oluştu (cari silinmiş olabilir):", cariErr);
       }
+    }
 
-      // 3. Read stock levels to reverse quantities
-      const stockUpdates: { ref: any, newQty: number }[] = [];
-      if (islem.items && Array.isArray(islem.items) && islem.items.length > 0) {
-        for (const item of islem.items) {
-          if (item && item.stockId && typeof item.stockId === 'string' && item.stockId.trim() !== '') {
-            try {
-              const stockRef = doc(db, getPath(STOKLAR_COLL), item.stockId.trim());
-              const stockSnap = await firestoreTx.get(stockRef);
-              if (stockSnap.exists()) {
-                const data = stockSnap.data() as any;
-                const currentQty = data.quantity || 0;
-                let newQty = currentQty;
-                // Reverse: sale drops stock, so deleting sale increases stock
-                if (islem.type === 'sale' || islem.type === 'purchase_return') {
-                  newQty = currentQty + (item.quantity || 0);
-                } else if (islem.type === 'purchase' || islem.type === 'sale_return') {
-                  newQty = currentQty - (item.quantity || 0);
-                }
-                stockUpdates.push({ ref: stockRef, newQty });
+    // 3. Read stock levels to reverse quantities
+    const stockUpdates: { ref: any, newQty: number }[] = [];
+    if (islem.items && Array.isArray(islem.items) && islem.items.length > 0) {
+      for (const item of islem.items) {
+        if (item && item.stockId && typeof item.stockId === 'string' && item.stockId.trim() !== '') {
+          try {
+            const stockRef = doc(db, getPath(STOKLAR_COLL), item.stockId.trim());
+            const stockSnap = await getDoc(stockRef);
+            if (stockSnap.exists()) {
+              const data = stockSnap.data() as any;
+              const currentQty = data.quantity || 0;
+              let newQty = currentQty;
+              // Reverse: sale drops stock, so deleting sale increases stock
+              if (islem.type === 'sale' || islem.type === 'purchase_return') {
+                newQty = currentQty + (item.quantity || 0);
+              } else if (islem.type === 'purchase' || islem.type === 'sale_return') {
+                newQty = currentQty - (item.quantity || 0);
               }
-            } catch (stockErr) {
-              console.warn(`Stok miktarı geri alınırken hata oluştu (stok ${item.stockId} silinmiş olabilir):`, stockErr);
+              stockUpdates.push({ ref: stockRef, newQty });
             }
+          } catch (stockErr) {
+            console.warn(`Stok miktarı geri alınırken hata oluştu (stok ${item.stockId} silinmiş olabilir):`, stockErr);
           }
         }
       }
+    }
 
-      // 4. Calculate reversed Cari balance
-      let newCariBalance = currentCariBalance;
-      if (cariRef && cariExists) {
-        const effectAmount = islem.convertedAmount !== undefined && islem.convertedAmount !== 0 ? islem.convertedAmount : (islem.amount || 0);
-        if (islem.type === 'sale' || islem.type === 'payment' || islem.type === 'purchase_return') {
-          newCariBalance -= effectAmount;
-        } else if (islem.type === 'purchase' || islem.type === 'collection' || islem.type === 'sale_return') {
-          newCariBalance += effectAmount;
-        }
+    // 4. Calculate reversed Cari balance
+    let newCariBalance = currentCariBalance;
+    if (cariRef && cariExists) {
+      const effectAmount = islem.convertedAmount !== undefined && islem.convertedAmount !== 0 ? islem.convertedAmount : (islem.amount || 0);
+      if (islem.type === 'sale' || islem.type === 'payment' || islem.type === 'purchase_return') {
+        newCariBalance -= effectAmount;
+      } else if (islem.type === 'purchase' || islem.type === 'collection' || islem.type === 'sale_return') {
+        newCariBalance += effectAmount;
       }
+    }
 
-      // 5. Perform deletes and updates in transaction
-      firestoreTx.delete(islemRef);
+    // 5. Perform deletes and updates in a batch
+    const batch = writeBatch(db);
+    batch.delete(islemRef);
 
-      if (cariRef && cariExists) {
-        firestoreTx.update(cariRef, { balance: newCariBalance });
-      }
+    if (cariRef && cariExists) {
+      batch.update(cariRef, { balance: newCariBalance });
+    }
 
-      for (const update of stockUpdates) {
-        firestoreTx.update(update.ref, { quantity: update.newQty });
-      }
-    });
+    for (const update of stockUpdates) {
+      batch.update(update.ref, { quantity: update.newQty });
+    }
+
+    await batch.commit();
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getPath(ISLEMLER_COLL)}/${islem.id}`);
     throw error;

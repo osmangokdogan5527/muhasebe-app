@@ -327,7 +327,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                           };
                           localStorage.setItem('storm_muhasebe_active_user', JSON.stringify(userData));
                           setUserRole('employee');
-                          setActiveTab('cariler');
+                          const defaultTab = window.innerWidth < 768 ? 'menu' : 'cariler';
+                          setActiveTab(defaultTab);
                           setActiveUser(selectedPinAccount.id);
                           setUser(userData as any);
                         } else {

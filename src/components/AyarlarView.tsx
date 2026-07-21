@@ -409,7 +409,7 @@ export default function AyarlarView({
           </button>
           <button
             onClick={() => setSettingsSubTab('profile')}
-            className={`flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+            className={`hidden md:flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
               settingsSubTab === 'profile'
                 ? 'border-teal-600 text-teal-600 font-extrabold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -420,7 +420,7 @@ export default function AyarlarView({
           </button>
           <button
             onClick={() => setSettingsSubTab('template-designer')}
-            className={`flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+            className={`hidden md:flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
               settingsSubTab === 'template-designer'
                 ? 'border-teal-600 text-teal-600 font-extrabold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -455,7 +455,7 @@ export default function AyarlarView({
           )}
           <button
             onClick={() => setSettingsSubTab('shortcuts')}
-            className={`flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+            className={`hidden md:flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
               settingsSubTab === 'shortcuts'
                 ? 'border-teal-600 text-teal-600 font-extrabold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -532,7 +532,14 @@ export default function AyarlarView({
         )}
         {settingsSubTab === 'template-designer' && (
           <div className="animate-fade-in">
-            <TemplateDesignerView />
+            <div className="md:hidden p-8 text-center bg-slate-50 rounded-2xl border border-slate-200">
+              <Printer className="mx-auto mb-3 text-slate-400" size={32} />
+              <p className="text-sm font-bold text-slate-700">Baskı ve şablon tasarımcısı mobil cihazlarda desteklenmemektedir.</p>
+              <p className="text-xs text-slate-500 mt-1">Lütfen bilgisayar üzerinden tasarladığınız şablonları kullanın.</p>
+            </div>
+            <div className="hidden md:block">
+              <TemplateDesignerView />
+            </div>
           </div>
         )}
 
@@ -576,15 +583,23 @@ export default function AyarlarView({
           />
         )}
         {settingsSubTab === 'shortcuts' && (
-          <ShortcutsSettings
-            shortcuts={shortcuts}
-            setShortcuts={setShortcuts}
-            editingShortcutId={editingShortcutId}
-            setEditingShortcutId={setEditingShortcutId}
-            handleShortcutKeyDown={handleShortcutKeyDown}
-            handleClearShortcut={handleClearShortcut}
-            handleResetShortcuts={handleResetShortcuts}
-          />
+          <div className="animate-fade-in">
+            <div className="md:hidden p-8 text-center bg-slate-50 rounded-2xl border border-slate-200">
+              <Keyboard className="mx-auto mb-3 text-slate-400" size={32} />
+              <p className="text-sm font-bold text-slate-700">Klavye kısayolları mobil cihazlarda kullanılamaz.</p>
+            </div>
+            <div className="hidden md:block">
+              <ShortcutsSettings
+                shortcuts={shortcuts}
+                setShortcuts={setShortcuts}
+                editingShortcutId={editingShortcutId}
+                setEditingShortcutId={setEditingShortcutId}
+                handleShortcutKeyDown={handleShortcutKeyDown}
+                handleClearShortcut={handleClearShortcut}
+                handleResetShortcuts={handleResetShortcuts}
+              />
+            </div>
+          </div>
         )}
 
       </div>

@@ -46,6 +46,7 @@ import YetkisizErisimView from './components/YetkisizErisimView';
 import AyarlarView from './components/AyarlarView';
 import { DesktopSidebar } from "./components/DesktopSidebar";
 import { MobileHeader } from "./components/MobileHeader";
+import { MobileMenuView } from "./components/MobileMenuView";
 import { MobileBottomNav } from "./components/MobileBottomNav";
 import { AuthScreen } from "./components/AuthScreen";
 import { LoadingScreen } from "./components/LoadingScreen";
@@ -85,7 +86,9 @@ import { compressImage } from './utils/imageCompressor';
 import { StormLogo, APP_VERSION, CHANGELOG, PREDEFINED_USERS, COLOR_PRESETS, TAB_DEFS, SIDEBAR_PATTERNS, PIN_ACCOUNTS, changelogData, DEFAULT_SHORTCUTS } from "./constants";
 export default function App() {
   const [isBackupWizardOpen, setIsBackupWizardOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cariler' | 'stoklar' | 'islemler' | 'ceksenet' | 'masraflar' | 'calisanlar' | 'ayarlar' | 'kasa' | 'raporlar' | 'krediler'>('dashboard');
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    return window.innerWidth < 768 ? 'menu' : 'dashboard';
+  });
   const [userRole, setUserRole] = useState<'admin' | 'employee'>('employee');
   const [isAdminPinModalOpen, setIsAdminPinModalOpen] = useState(false);
   const [adminPinInput, setAdminPinInput] = useState('');
@@ -597,13 +600,13 @@ export default function App() {
     return rules;
   }, [currentThemeData]);
   const activePatternObj = SIDEBAR_PATTERNS.find(p => p.id === sidebarPattern) || SIDEBAR_PATTERNS[0];
-  const bodyPatternSvg = activePatternObj.svg
+  const bodyPatternSvg = (activePatternObj.svg && designStyle !== 'clean-light')
     ? activePatternObj.svg
         .replace(/PATTERNCOLOR/g, sidebarPatternColor === 'white' ? '%23ffffff' : '%23000000')
         .replace(/OPACITY/g, (sidebarPatternOpacity * 0.5).toString()) // Slightly lower opacity for body
     : '';
   const isLightSidebar = sidebarBg === '#ffffff';
-    const sidebarPatternStyle = sidebarPattern !== 'none' && sidebarPatternOpacity > 0 ? {
+    const sidebarPatternStyle = (sidebarPattern !== 'none' && sidebarPatternOpacity > 0 && designStyle !== 'clean-light') ? {
     backgroundImage: activePatternObj.svg
       ?.replace(/PATTERNCOLOR/g, sidebarPatternColor === 'white' ? '%23ffffff' : '%23000000')
       ?.replace(/OPACITY/g, sidebarPatternOpacity.toString()),
@@ -850,6 +853,28 @@ export default function App() {
       />
 {/* 3. MAIN WORKSPACE CONTENT */}
       <main className="relative z-10 flex-1 p-4 sm:p-6 overflow-y-auto max-w-7xl mx-auto w-full pb-20 md:pb-6">
+        <div className={activeTab === 'menu' ? 'block animate-fade-in md:hidden' : 'hidden'}>
+          <MobileMenuView
+            tabOrder={tabOrder}
+            hiddenTabs={hiddenTabs}
+            activeTab={activeTab}
+            handleNavigate={handleNavigate}
+            isIslemlerSubMenuOpen={isIslemlerSubMenuOpen}
+            setIsIslemlerSubMenuOpen={setIsIslemlerSubMenuOpen}
+            userRole={userRole}
+            sensitiveTabs={sensitiveTabs}
+            handleSignOut={handleSignOut}
+            setAdminPinError={setAdminPinError}
+            setAdminPinInput={setAdminPinInput}
+            setIsAdminPinModalOpen={setIsAdminPinModalOpen}
+            setUserRole={setUserRole}
+            user={user}
+            setPendingIslemModal={setPendingIslemModal}
+            showToast={showToast as any}
+            setActiveTab={setActiveTab}
+            isSecurityActive={isSecurityActive}
+          />
+        </div>
         <div className={activeTab === 'dashboard' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('dashboard', <DashboardView cariler={cariler} stoklar={stoklar} islemler={islemler} ceksenet={ceksenet} expenses={expenses} employeeTransactions={employeeTransactions} onNavigate={handleNavigate} />)}
         </div>

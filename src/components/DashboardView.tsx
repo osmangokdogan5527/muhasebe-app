@@ -686,7 +686,8 @@ export default function DashboardView({
               <span className="truncate">
                 {new Date().toLocaleDateString("tr-TR", {
                   day: "numeric",
-                  month: "short",
+                  month: "long",
+                  year: "numeric",
                 })}
               </span>
             </div>

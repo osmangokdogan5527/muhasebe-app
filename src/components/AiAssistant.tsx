@@ -43,6 +43,53 @@ export default function AiAssistant({
 }: AiAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
+
+  // Drag states for floating button on mobile / desktop
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const initialPos = useRef({ x: 0, y: 0 });
+  const hasMovedRef = useRef(false);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse') {
+      setIsDragging(false);
+      hasMovedRef.current = false;
+      return;
+    }
+    if (e.button !== 0) return;
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX, y: e.clientY };
+    initialPos.current = { ...position };
+    hasMovedRef.current = false;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStart.current.x;
+    const dy = e.clientY - dragStart.current.y;
+    if (Math.abs(dx) > 15 || Math.abs(dy) > 15) {
+      hasMovedRef.current = true;
+    }
+    setPosition({
+      x: initialPos.current.x + dx,
+      y: initialPos.current.y + dy
+    });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse') {
+      setIsOpen(true);
+      return;
+    }
+    if (!isDragging) return;
+    setIsDragging(false);
+    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    if (!hasMovedRef.current) {
+      setIsOpen(true);
+    }
+  };
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -1222,7 +1269,17 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
 
       {/* Floating Button */}
       {!isOpen && (
-        <div className="flex flex-col items-center gap-1 relative group mt-2">
+        <div 
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          className="flex flex-col items-center gap-1 relative group mt-2 select-none touch-none"
+          style={{
+            transform: `translate(${position.x}px, ${position.y}px)`,
+            cursor: isDragging ? 'grabbing' : 'grab',
+            transition: isDragging ? 'none' : 'transform 0.15s ease-out'
+          }}
+        >
           {/* Tooltip-like or subtext */}
           <div className="absolute -top-8 text-white text-[8px] px-2 py-1 rounded-md shadow-xl font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20" style={{ backgroundColor: 'var(--accent-600, #dc2626)' }}>
             SİZE NASIL YARDIMCI OLABİLİRİM?
@@ -1230,21 +1287,25 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
           
           <div className="relative">
             {/* Outer glowing rings */}
-            <div className="absolute inset-0 rounded-full animate-ping opacity-30" style={{ backgroundColor: 'var(--accent-500, #ef4444)', animationDuration: '2s' }}></div>
+            <div className="absolute inset-0 rounded-full animate-ping opacity-30 animate-duration-2000" style={{ backgroundColor: 'var(--accent-500, #ef4444)' }}></div>
             <div className="absolute -inset-0.5 rounded-full animate-pulse opacity-20" style={{ backgroundColor: 'var(--accent-400, #f87171)' }}></div>
             
             <button
-              onClick={() => setIsOpen(true)}
-              className="w-8.5 h-8.5 text-white rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 border-2 border-white/90 relative hover:brightness-125 z-10"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsOpen(true);
+              }}
+              className="w-10 h-10 md:w-12 md:h-12 text-white rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 border-2 border-white/90 relative hover:brightness-125 z-10"
               style={{ 
                 background: 'linear-gradient(135deg, var(--accent-400, #f87171), var(--accent-600, #dc2626), var(--accent-900, #7f1d1d))',
                 boxShadow: '0 0 10px color-mix(in srgb, var(--accent-500, #ef4444) 80%, transparent), inset 0 0 5px rgba(255,255,255,0.5)'
               }}
             >
-              <div className="relative flex items-center justify-center">
-                <Bot size={15} className="text-white drop-shadow-[0_0_5px_rgba(255,255,255,1)] transition-transform group-hover:rotate-12" />
-                <Sparkles size={6} className="absolute -top-1 -right-1 text-yellow-300 animate-bounce" style={{ animationDuration: '2.5s' }} />
-                <Sparkles size={5} className="absolute -bottom-0.5 -left-1 text-yellow-100 animate-pulse" />
+              <div className="relative flex items-center justify-center md:scale-120">
+                <Bot size={18} className="text-white drop-shadow-[0_0_5px_rgba(255,255,255,1)] transition-transform group-hover:rotate-12" />
+                <Sparkles size={8} className="absolute -top-1.5 -right-1.5 text-yellow-300 animate-bounce" style={{ animationDuration: '2.5s' }} />
+                <Sparkles size={7} className="absolute -bottom-1 -left-1.5 text-yellow-100 animate-pulse" />
               </div>
               <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-white animate-pulse shadow-[0_0_5px_#22c55e] z-20" style={{ backgroundColor: '#22c55e' }}></div>
             </button>

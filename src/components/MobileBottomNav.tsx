@@ -1,5 +1,4 @@
 import React from 'react';
-import { LayoutDashboard, Users, Package, Receipt, Briefcase, Wallet, Settings, Lock } from 'lucide-react';
 
 interface MobileBottomNavProps {
   handleNavigate: (tab: any) => void;
@@ -8,11 +7,7 @@ interface MobileBottomNavProps {
   sensitiveTabs: string[];
 }
 
-export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
-  handleNavigate,
-  activeTab,
-  userRole,
-  sensitiveTabs
-}) => {
+export const MobileBottomNav: React.FC<MobileBottomNavProps> = () => {
+  // Mobile bottom navigation bar disabled by user request
   return null;
 };
