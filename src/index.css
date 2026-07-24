@@ -115,7 +115,8 @@ html {
   HIGH-FIDELITY PRINTABLE INVOICE / LEDGER OVERRIDES
   =========================================
 */
-#printable-invoice-content {
+@media print {
+  #printable-invoice-content {
   background-color: #ffffff !important;
   color: #0f172a !important;
 }
@@ -168,4 +169,18 @@ html {
 
 
 
+}
 /* LIGHT THEME (Modern Klasik) */
+@theme {
+  --animate-slide-up: slide-up 0.3s ease-out;
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+}

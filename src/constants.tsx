@@ -441,21 +441,12 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.7.3';
+export const APP_VERSION = '1.7.4';
 
 export const CHANGELOG = {
-  version: '1.7.3',
+  version: '1.7.4',
   features: [
-    "Masaüstü Sol Menü (Sidebar) Genişletmesi: Bilgisayar sürümünde sol menü genişliği %10 oranında artırıldı (256px'ten 288px'e - w-72). Bu sayede 'KASA & BANKA DURUMU', 'FİNANSAL HAREKETLER', 'PERSONEL & MAAŞLAR' gibi uzun sekme metinlerinin tüm temalarda kesintisiz ve ferah bir şekilde sığması sağlandı.",
-    "Masaüstü AI Asistan Butonu & Sürükleme Hassasiyeti: Storm AI asistanının sürükleme mesafesi toleransı artırılarak tıklama/sürükleme çakışmaları tamamen giderildi; asistan butonu masaüstünde %20 oranında büyütülerek daha kolay erişilebilir ve estetik hale getirildi.",
-    "Mobil Menü Sekme Optimizasyonu: Mobil ana menü panelinde Çek ve Senet Takibi ile Kredi Takip Yönetimi sekmeleri gizlendi.",
-    "Mobil Ayarlar Görünüm Sadeleştirmesi: Ayarlar sekmesinde mobil görünümde gereksiz olan Arayüz Tasarım Stili, Arayüz Vurgu Rengi ve Firma/Görünüm Ayarları panelleri gizlenerek pürüzsüz ve dikey ekran kazancını maksimize eden sade bir yapıya geçildi.",
-    "Baskı & Şablon Tasarımcısı Mobil Koruması: Mobil cihazlarda şablon tasarımcısı sekmeleri gizlendi ve bilgisayardan tasarlanan şablonların kullanılması yönünde bilgilendirme kartı yerleştirildi.",
-    "Klavye Kısayolları Mobil Koruması: Mobil cihazlarda zaten kullanılamayan klavye kısayolları sekmesi gizlenerek dikey alan israfı engellendi.",
-    "Yapışkan Onay & Kaydet Barı (Sticky Footer): Satış Faturası, Alış Faturası, Tahsilat ve Ödeme makbuzu formlarında (IslemModal) 'İptal' ve 'Kaydet' butonları ekranın en altına yapışık (sticky footer) hale getirildi.",
-    "Sürüklenebilir Yapay Zeka Asistanı: Mobil ve masaüstü ekranlarda Storm AI asistan butonu serbestçe sürüklenebilir hale getirildi; ekranın istenilen köşesine yerleştirilerek çalışma alanının kapatılması önlendi.",
-    "Mobil Profil ve Güvenlik Koruması: Mobil cihazlarda gereksiz yer kaplayan Profil & Güvenlik ayarlar alt sekmesi gizlendi.",
-    "Gelişmiş Gösterge Paneli Takvimi: Gösterge panelindeki takvim kutusu mobil ve masaüstü görünümlerde ay adını kısaltılmış yerine tam adıyla ve yıl bilgisiyle (örn. 21 Temmuz 2026) gösterecek şekilde güncellendi."
+    "1.7.4 Taslak Sürüm: Gelecek güncellemeler için geliştirme altyapısı ve taslak hazırlıkları başlatıldı (Yayınlanmadı)."
   ],
   fixes: []
 };
@@ -711,6 +702,22 @@ export const PIN_ACCOUNTS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.7.5",
+    date: "24.07.2026",
+    changes: [
+      "1.7.5 Taslak Sürüm: Gelecek güncellemeler için geliştirme altyapısı ve taslak hazırlıkları başlatıldı (Yayınlanmadı)."
+    ]
+  },
+  {
+    version: "1.7.4",
+    date: "24.07.2026",
+    changes: [
+      "Akıllı Excel Aktarımı (AI Parser): Bakiye okuma iyileştirmeleri ve döviz cinsi tanıma (TL, USD, EUR) algoritmaları güçlendirildi.",
+      "Cari Aktarım Düzeltmesi: Excel aktarımında Açılış Bakiyesinin hesaplara iki kez yansımasına neden olan matematiksel hata giderildi.",
+      "Gösterge Paneli Sadeleştirmesi: Döviz kuru bilgi çubuğundan gereksiz 'Yedek' metni kaldırılarak daha temiz bir arayüz sağlandı."
+    ]
+  },
   {
     version: "1.7.3",
     date: "21.07.2026",

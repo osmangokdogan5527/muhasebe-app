@@ -28,8 +28,10 @@ import {
   updateProfile,
   User as FirebaseUser,
   setActiveUser,
-  saveBankAccount
+  saveBankAccount,
+  db
 } from './firebase';
+import { enableNetwork, disableNetwork } from 'firebase/firestore';
 import { BackupWizardModal } from './components/backup/BackupWizardModal';
 import DashboardView from './components/DashboardView';
 import CarilerView from './components/CarilerView';
@@ -106,11 +108,32 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = async () => {
+      setIsOnline(true);
+      try {
+        await enableNetwork(db);
+        console.log("Firestore network enabled.");
+      } catch (err) {
+        console.error("Failed to enable network", err);
+      }
+    };
+    const handleOffline = async () => {
+      setIsOnline(false);
+      try {
+        await disableNetwork(db);
+        console.log("Firestore network disabled explicitly.");
+      } catch (err) {
+        console.error("Failed to disable network", err);
+      }
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
+    // Initial check
+    if (!navigator.onLine) {
+      handleOffline();
+    }
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -880,7 +903,8 @@ export default function App() {
         </div>
         <div className={activeTab === 'cariler' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('cariler', <CarilerView 
-            cariler={cariler} 
+            cariler={cariler}
+            showToast={showToast as any} 
             islemler={islemler} 
             stoklar={stoklar}
             bankAccounts={bankAccounts}
@@ -1025,6 +1049,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         setAiPrefilledData={setAiPrefilledData}
         setFeedbackList={setFeedbackList}
+        financialData={{ cariler, stoklar, islemler, ceksenet, expenses, bankAccounts }}
         userRole={userRole}
         isSecurityActive={isSecurityActive}
         sensitiveTabs={sensitiveTabs}

@@ -34,9 +34,6 @@ export function ModernTemplate({ dynamicPrintVars, printSettings }: any) {
                                       <h1 className="text-xl font-black text-zinc-900 tracking-tight uppercase leading-none mb-1">
                                         {dynamicPrintVars?.title || transactionTypeTheme.title}
                                       </h1>
-                                      <div className="inline-block text-[8px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider mb-2 text-white" style={{ backgroundColor: transactionTypeTheme.primary }}>
-                                        YENİ NESİL BELGE
-                                      </div>
                                       <div className="text-[9px] text-zinc-400 font-mono leading-relaxed mt-1">
                                         Tarih: {transaction.date}
                                         <br />
@@ -49,11 +46,12 @@ export function ModernTemplate({ dynamicPrintVars, printSettings }: any) {
                                 {/* Customer Section */}
                                 <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-150 mb-6 flex justify-between items-start">
                                   <div>
-                                    <div className="text-[8px] font-bold uppercase tracking-widest mb-1" style={{ color: transactionTypeTheme.primary }}>ALICI DETAYLARI</div>
+                                    <div className="text-[8px] font-bold uppercase tracking-widest mb-1" style={{ color: transactionTypeTheme.primary }}>
+                                      {currentCariForPrint?.type === 'customer' ? 'MÜŞTERİ' : currentCariForPrint?.type === 'supplier' ? 'TEDARİKÇİ' : 'ALICI'} DETAYLARI
+                                    </div>
                                     <div className="text-sm font-extrabold text-zinc-900 uppercase tracking-wide">{transaction.cariName}</div>
                                     {currentCariForPrint && (
                                       <div className="text-[10px] text-zinc-500 mt-1 max-w-[340px]">
-                                        <p>{currentCariForPrint.address || 'Kayıtlı adres bulunmuyor.'}</p>
                                         {(currentCariForPrint.taxOffice || currentCariForPrint.taxNo) && (
                                           <p className="font-semibold text-zinc-600 mt-0.5">
                                             V.Dairesi: {currentCariForPrint.taxOffice || '-'} / Vergi No: {currentCariForPrint.taxNo || '-'}

@@ -1,5 +1,7 @@
+import * as XLSX from 'xlsx';
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Loader2, Sparkles, AlertCircle, Settings, Bot, Mic, HelpCircle, Sliders, BookOpen, ChevronRight, Check } from 'lucide-react';
+import { X, Send, Loader2, Paperclip, File, FileText, FileSpreadsheet, Sparkles, AlertCircle, Settings, Bot, Mic, HelpCircle, Sliders, BookOpen, ChevronRight, Check } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 interface AiAssistantProps {
   apiKey: string;
@@ -9,6 +11,7 @@ interface AiAssistantProps {
   actionPermissions?: any;
   onNavigateToSettings: () => void;
   onCommandParsed: (command: any) => void;
+  financialData?: any;
 }
 
 interface Message {
@@ -16,6 +19,10 @@ interface Message {
   role: 'user' | 'assistant';
   text: string;
   isError?: boolean;
+  chart?: {
+    tip: 'bar' | 'pie';
+    data: any[];
+  };
 }
 
 const AI_EXAMPLES = [
@@ -39,7 +46,8 @@ export default function AiAssistant({
   sensitiveTabs = [],
   actionPermissions = {},
   onNavigateToSettings, 
-  onCommandParsed 
+  onCommandParsed, 
+  financialData 
 }: AiAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -95,6 +103,7 @@ export default function AiAssistant({
   const [isListening, setIsListening] = useState(false);
   const [listeningError, setListeningError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<any>(null);
@@ -113,6 +122,57 @@ export default function AiAssistant({
   });
 
   const [showVoiceGuide, setShowVoiceGuide] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<{name: string, content: string, type: 'excel' | 'csv' | 'text' | 'json'} | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const extension = file.name.split('.').pop()?.toLowerCase();
+      let fileType: 'excel' | 'csv' | 'text' | 'json' = 'text';
+      let parsedContent = '';
+
+      if (extension === 'xlsx' || extension === 'xls') {
+        fileType = 'excel';
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data);
+        // Sadece ilk sayfayı alalım
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet);
+        parsedContent = JSON.stringify(json, null, 2);
+      } else if (extension === 'csv') {
+        fileType = 'csv';
+        parsedContent = await file.text();
+      } else if (extension === 'json') {
+        fileType = 'json';
+        parsedContent = await file.text();
+      } else {
+        fileType = 'text';
+        parsedContent = await file.text();
+      }
+
+      // Max 100kb character limit (roughly 100k chars) to avoid prompt limits
+      if (parsedContent.length > 100000) {
+        parsedContent = parsedContent.slice(0, 100000) + '... (Devamı kesildi)';
+      }
+
+      setAttachedFile({
+        name: file.name,
+        content: parsedContent,
+        type: fileType
+      });
+      
+    } catch (err) {
+      console.error("Dosya okunurken hata:", err);
+    }
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
   const [sensitivity, setSensitivity] = useState<number>(() => {
     return Number(localStorage.getItem('storm_mic_sensitivity')) || 3;
   });
@@ -446,7 +506,7 @@ export default function AiAssistant({
   const handleAudioInput = async (base64Audio: string, mimeType: string) => {
     if (!apiKey) return;
 
-    const tempUserMessageId = Date.now().toString();
+    const tempUserMessageId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setMessages(prev => [...prev, { 
       id: tempUserMessageId, 
       role: 'user', 
@@ -456,6 +516,22 @@ export default function AiAssistant({
 
     try {
       const today = new Date().toLocaleDateString('tr-TR');
+
+      
+      let dataContext = '';
+      if (financialData) {
+        try {
+          const safeData = JSON.stringify({
+            cariler: financialData.cariler?.slice(0, 100),
+            stoklar: financialData.stoklar?.slice(0, 100),
+            islemler: financialData.islemler?.slice(0, 100),
+            ceksenet: financialData.ceksenet?.slice(0, 100),
+            expenses: financialData.expenses?.slice(0, 100),
+            bankAccounts: financialData.bankAccounts?.slice(0, 100),
+          });
+          dataContext = "\n\nMevcut Finansal Veriler (JSON Formatında): \n" + safeData.slice(0, 100000) + "\n\nKullanıcı analiz, rapor veya finansal durumla ilgili soru sorarsa bu verilere bakarak cevapla. Eğer soru analiz veya finansal durumla ilgiliyse, 'tip': 'bilgi' yerine 'tip': 'analiz' kullanabilirsin. Eğer uygun bir grafik çizilebiliyorsa (örneğin gider dağılımı, gelir/gider kıyaslaması vb.) şu formatta dön: \n{ \"tip\": \"analiz\", \"mesaj\": \"Açıklayıcı metin\", \"grafik\": { \"tip\": \"bar\" veya \"pie\", \"data\": [{ \"name\": \"Kategori Adı\", \"value\": 1234 }] } }\nEğer grafik gerekmiyorsa sadece 'tip': 'bilgi' ve 'mesaj' dön.";
+        } catch(e) {}
+      }
 
       let securityGuideline = '';
       if (isSecurityActive && userRole === 'employee') {
@@ -488,7 +564,7 @@ KESİNLİKLE bu işlemi gerçekleştirmeyin ve SADECE şu JSON formatını dönd
         },
         body: JSON.stringify({
           system_instruction: {
-            parts: [{ text: `Sen Storm Muhasebe asistanısın. Kullanıcının ses kaydını analiz et. Bugünün tarihi: ${today}.${securityGuideline}
+            parts: [{ text: `Sen Storm Muhasebe asistanısın. Kullanıcının ses kaydını analiz et. Bugünün tarihi: ${today}.${securityGuideline}${dataContext}
 Mevcut Ses Tanıma Hassasiyeti Seviyesi: ${sensitivity}/5 (1: Düşük, 3: Dengeli, 5: Çok Hassas/Toleranslı)
 - Hassasiyet seviyesi 4 veya 5 ise: Arka plandaki çevre gürültülerini, mırıldanmaları, peltek veya eksik söylenen kelimeleri, nefes seslerini tolere et ve en olası muhasebe veya işlem terimiyle tamamlayarak deşifre et.
 - Hassasiyet seviyesi 3 ise: Standart ses çözümlemesi yap.
@@ -562,12 +638,28 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
           } : m));
         }
         
-        if (parsedCommand.tip === 'bilgi') {
-          setMessages(prev => [...prev, { 
-            id: Date.now().toString(), 
-            role: 'assistant', 
-            text: parsedCommand.mesaj 
-          }]);
+        if (parsedCommand.tip === 'bilgi' || parsedCommand.tip === 'analiz') {
+          setMessages(prev => {
+            const arr = [...prev];
+            // If replacing audio placeholder
+            if (typeof tempUserMessageId !== 'undefined' && arr.find(m => m.id === tempUserMessageId)) {
+               return arr.map(m => m.id === tempUserMessageId ? {
+                 ...m,
+                 text: m.text + "\n(Analiz/Bilgi cevabı geldi)"
+               } : m).concat([{
+                  id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
+                  role: 'assistant', 
+                  text: parsedCommand.mesaj,
+                  chart: parsedCommand.grafik
+               }]);
+            }
+            return [...arr, { 
+              id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
+              role: 'assistant', 
+              text: parsedCommand.mesaj,
+              chart: parsedCommand.grafik
+            }];
+          });
           setIsTyping(false);
           return;
         }
@@ -592,7 +684,7 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
 
         if (isSecurityActive && userRole === 'employee' && sensitiveTabs.includes(targetTab)) {
           setMessages(prev => [...prev, { 
-            id: Date.now().toString(), 
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
             role: 'assistant', 
             text: `Yetki Kısıtlaması: Giriş yaptığınız kullanıcı rolü (Personel) nedeniyle bu işlemi gerçekleştirmeye veya "${targetTab.toUpperCase()}" menüsüne erişmeye yetkiniz bulunmamaktadır. Lütfen yönetici girişi yapınız.`,
             isError: true
@@ -602,7 +694,7 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
         }
 
         setMessages(prev => [...prev, { 
-          id: Date.now().toString(), 
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
           role: 'assistant', 
           text: `İşlemi anladım. Yönlendiriyorum ve formu sizin için dolduruyorum...` 
         }]);
@@ -630,7 +722,7 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
       } : m));
 
       setMessages(prev => [...prev, { 
-        id: Date.now().toString(), 
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
         role: 'assistant', 
         text: errorMsg,
         isError: true
@@ -656,7 +748,14 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
     let timerId: ReturnType<typeof setTimeout>;
     if (isOpen) {
       timerId = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTo({
+            top: messagesContainerRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+
       }, 100);
     }
     return () => {
@@ -670,11 +769,35 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
 
     const userMessage = input.trim();
     setInput('');
-    setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', text: userMessage }]);
+    let finalUserMessage = userMessage;
+    if (attachedFile) {
+      finalUserMessage += "\n\n[KULLANICININ EKLENEN DOSYASI: " + attachedFile.name + "]\n" + attachedFile.content + "\n\nBu eklenen dosyayı yukarıdaki finansal soruyla ilişkilendirerek incele veya sorulan soruyu bu dosya verisine göre yanıtla.";
+    }
+
+    setMessages(prev => [...prev, { id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, role: 'user', text: userMessage }]);
     setIsTyping(true);
+    
+    // Clear the attached file after sending
+    setAttachedFile(null);
 
     try {
       const today = new Date().toLocaleDateString('tr-TR');
+
+      
+      let dataContext = '';
+      if (financialData) {
+        try {
+          const safeData = JSON.stringify({
+            cariler: financialData.cariler?.slice(0, 100),
+            stoklar: financialData.stoklar?.slice(0, 100),
+            islemler: financialData.islemler?.slice(0, 100),
+            ceksenet: financialData.ceksenet?.slice(0, 100),
+            expenses: financialData.expenses?.slice(0, 100),
+            bankAccounts: financialData.bankAccounts?.slice(0, 100),
+          });
+          dataContext = "\n\nMevcut Finansal Veriler (JSON Formatında): \n" + safeData.slice(0, 100000) + "\n\nKullanıcı analiz, rapor veya finansal durumla ilgili soru sorarsa bu verilere bakarak cevapla. Eğer soru analiz veya finansal durumla ilgiliyse, 'tip': 'bilgi' yerine 'tip': 'analiz' kullanabilirsin. Eğer uygun bir grafik çizilebiliyorsa (örneğin gider dağılımı, gelir/gider kıyaslaması vb.) şu formatta dön: \n{ \"tip\": \"analiz\", \"mesaj\": \"Açıklayıcı metin\", \"grafik\": { \"tip\": \"bar\" veya \"pie\", \"data\": [{ \"name\": \"Kategori Adı\", \"value\": 1234 }] } }\nEğer grafik gerekmiyorsa sadece 'tip': 'bilgi' ve 'mesaj' dön.";
+        } catch(e) {}
+      }
 
       let securityGuideline = '';
       if (isSecurityActive && userRole === 'employee') {
@@ -707,7 +830,7 @@ KESİNLİKLE bu işlemi gerçekleştirmeyin ve SADECE şu JSON formatını dönd
         },
         body: JSON.stringify({
           system_instruction: {
-            parts: [{ text: `Sen Storm Muhasebe asistanısın. Kullanıcının girdisini analiz et. Bugünün tarihi: ${today}.${securityGuideline}
+            parts: [{ text: `Sen Storm Muhasebe asistanısın. Kullanıcının girdisini analiz et. Bugünün tarihi: ${today}.${securityGuideline}${dataContext}
 Eğer girdi bir finansal işlem (satış, alış, tahsilat, ödeme, masraf, personel maaş/avans ödemesi) içeriyorsa, SADECE şu JSON formatını döndür: 
 { "tip": "islem", "islem": "satis|alis|tahsilat|odeme|masraf|personel", "cariAdi": "string", "urunAdi": "string", "miktar": number, "fiyat": number, "kdv": number, "tarih": "YYYY-MM-DD" }
 KDV belirtilmemişse her zaman 0 yap. Personel ödemelerinde "cariAdi" veya "urunAdi" alanına personelin adını yaz. Masraflarda (ör: su faturası, elektrik) faturanın cinsini "urunAdi" kısmına yaz. Eğer tarih belirtilmemişse veya 'bugün' denilmişse bugünün tarihini ver. Eğer belirsiz bir şey varsa mantıksal tahmin yürüt.
@@ -726,7 +849,7 @@ Eğer kullanıcı sadece bir soru soruyorsa, bilgi istiyorsa veya uygulamanın n
 
 Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kullanma.` }]
           },
-          contents: [{ parts: [{ text: userMessage }] }],
+          contents: [{ parts: [{ text: finalUserMessage }] }],
           generationConfig: {
             temperature: 0.1,
           }
@@ -752,12 +875,28 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
         
         const parsedCommand = JSON.parse(jsonStr);
         
-        if (parsedCommand.tip === 'bilgi') {
-          setMessages(prev => [...prev, { 
-            id: Date.now().toString(), 
-            role: 'assistant', 
-            text: parsedCommand.mesaj 
-          }]);
+        if (parsedCommand.tip === 'bilgi' || parsedCommand.tip === 'analiz') {
+          setMessages(prev => {
+            const arr = [...prev];
+            // If replacing audio placeholder
+            if (typeof tempUserMessageId !== 'undefined' && arr.find(m => m.id === tempUserMessageId)) {
+               return arr.map(m => m.id === tempUserMessageId ? {
+                 ...m,
+                 text: m.text + "\n(Analiz/Bilgi cevabı geldi)"
+               } : m).concat([{
+                  id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
+                  role: 'assistant', 
+                  text: parsedCommand.mesaj,
+                  chart: parsedCommand.grafik
+               }]);
+            }
+            return [...arr, { 
+              id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
+              role: 'assistant', 
+              text: parsedCommand.mesaj,
+              chart: parsedCommand.grafik
+            }];
+          });
           setIsTyping(false);
           return;
         }
@@ -782,7 +921,7 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
 
         if (isSecurityActive && userRole === 'employee' && sensitiveTabs.includes(targetTab)) {
           setMessages(prev => [...prev, { 
-            id: Date.now().toString(), 
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
             role: 'assistant', 
             text: `Yetki Kısıtlaması: Giriş yaptığınız kullanıcı rolü (Personel) nedeniyle bu işlemi gerçekleştirmeye veya "${targetTab.toUpperCase()}" menüsüne erişmeye yetkiniz bulunmamaktadır. Lütfen yönetici girişi yapınız.`,
             isError: true
@@ -792,7 +931,7 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
         }
 
         setMessages(prev => [...prev, { 
-          id: Date.now().toString(), 
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
           role: 'assistant', 
           text: `İşlemi anladım. Yönlendiriyorum ve formu sizin için dolduruyorum...` 
         }]);
@@ -804,7 +943,7 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
 
       } catch (parseError) {
         setMessages(prev => [...prev, { 
-          id: Date.now().toString(), 
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
           role: 'assistant', 
           text: `Anladığım kadarıyla işlem yapamadım. Lütfen daha net bir ifade kullanın. (${responseText})`,
           isError: true
@@ -817,7 +956,7 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
       if (error.status === 429) errorMsg = "API limitlerine ulaşıldı. Lütfen daha sonra tekrar deneyin veya kotalarınızı kontrol edin.";
       
       setMessages(prev => [...prev, { 
-        id: Date.now().toString(), 
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
         role: 'assistant', 
         text: errorMsg,
         isError: true
@@ -831,7 +970,7 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
     <div className="fixed bottom-20 right-1.5 sm:right-4 z-[100]">
       {/* Chat Window */}
       {isOpen && (
-        <div className="mb-4 w-[380px] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-slide-up origin-bottom-right">
+        <div className="mb-4 w-[calc(100vw-12px)] sm:w-[380px] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-slide-up origin-bottom-right">
           {/* Header */}
           <div className="p-4 flex items-center justify-between" style={{ background: 'linear-gradient(to right, var(--accent-800, #991b1b), var(--accent-950, #4c0519))' }}>
             <div className="flex items-center gap-3">
@@ -864,7 +1003,7 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
           </div>
 
           {!apiKey ? (
-            <div className="p-6 flex flex-col items-center justify-center text-center h-[300px] bg-slate-50">
+            <div className="p-6 flex flex-col items-center justify-center text-center h-[50vh] max-h-[300px] sm:h-[300px] sm:max-h-none bg-slate-50">
               <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-4">
                 <AlertCircle size={32} />
               </div>
@@ -882,7 +1021,7 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
               </button>
             </div>
           ) : showVoiceGuide ? (
-            <div className="flex-1 h-[440px] overflow-y-auto bg-slate-50 flex flex-col animate-fade-in">
+            <div className="flex-1 h-[60vh] max-h-[440px] sm:h-[440px] sm:max-h-none overflow-y-auto bg-slate-50 flex flex-col animate-fade-in">
               {/* Sensitivity Settings Section */}
               <div className="p-4 bg-white border-b border-slate-100 flex flex-col gap-3 shrink-0">
                 <div className="flex items-center gap-2 text-teal-700 font-bold text-xs uppercase tracking-wider">
@@ -1069,7 +1208,7 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
           ) : (
             <>
               {/* Messages Area */}
-              <div className="p-4 h-[350px] overflow-y-auto bg-slate-50 flex flex-col gap-3">
+              <div ref={messagesContainerRef} className="p-4 h-[55vh] max-h-[350px] sm:h-[350px] sm:max-h-none overflow-y-auto bg-slate-50 flex flex-col gap-3">
                 {messages.map((msg) => (
                   <div 
                     key={msg.id} 
@@ -1085,6 +1224,29 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
                       }`}
                     >
                       {msg.text}
+                      {msg.chart && msg.chart.data && msg.chart.data.length > 0 && (
+                        <div className="mt-3 w-full h-[180px] bg-slate-50/50 rounded-xl p-2 border border-slate-100">
+                          <ResponsiveContainer width="100%" height="100%">
+                            {msg.chart.tip === 'pie' ? (
+                              <PieChart>
+                                <Pie data={msg.chart.data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} fill="#0d9488" label={({name, percent}) => `${name} (${(percent * 100).toFixed(0)}%)`}>
+                                  {msg.chart.data.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={['#0d9488', '#0f766e', '#14b8a6', '#5eead4', '#ccfbf1'][index % 5]} />
+                                  ))}
+                                </Pie>
+                                <Tooltip formatter={(val) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(val as number)} />
+                              </PieChart>
+                            ) : (
+                              <BarChart data={msg.chart.data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                <XAxis dataKey="name" tick={{fontSize: 10}} interval={0} angle={-20} textAnchor="end" height={40} />
+                                <YAxis tick={{fontSize: 10}} width={45} tickFormatter={(val) => `${(val/1000).toFixed(0)}k`} />
+                                <Tooltip formatter={(val) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(val as number)} />
+                                <Bar dataKey="value" fill="#0d9488" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            )}
+                          </ResponsiveContainer>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1201,7 +1363,33 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
                   </div>
                 </div>
 
+                {attachedFile && (
+                  <div className="flex items-center justify-between bg-slate-50 p-2 mx-3 mt-3 rounded-lg border border-slate-200">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      {attachedFile.type === 'excel' ? <FileSpreadsheet size={16} className="text-emerald-600" /> : <FileText size={16} className="text-blue-600" />}
+                      <span className="text-xs font-medium text-slate-700 truncate max-w-[200px]">{attachedFile.name}</span>
+                    </div>
+                    <button type="button" onClick={() => setAttachedFile(null)} className="text-slate-400 hover:text-red-500 transition">
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
                 <form onSubmit={handleSubmit} className="p-3 flex gap-2 items-center">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    accept=".xlsx,.xls,.csv,.txt,.json"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-10 h-10 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl flex items-center justify-center transition shrink-0"
+                    title="Dosya Ekle (Excel, CSV, TXT)"
+                  >
+                    <Paperclip size={18} />
+                  </button>
                   <div className="relative flex-1 flex items-center min-w-0">
                     {isListening ? (
                       <div className="w-full h-10 bg-teal-50/50 border border-teal-200 rounded-xl flex items-center justify-between px-3 overflow-hidden animate-pulse">

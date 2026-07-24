@@ -47,13 +47,14 @@ export function DefaultTemplate({ dynamicPrintVars, printSettings, }: any) {
 
                               {/* Recipient Info */}
                               <div className="mb-8">
-                                <div className="text-xs text-zinc-800 font-semibold mb-0.5">Sayın,</div>
+                                <div className="text-xs text-zinc-800 font-semibold mb-0.5">
+                                  {currentCariForPrint?.type === 'customer' ? 'Sayın Müşteri,' : currentCariForPrint?.type === 'supplier' ? 'Sayın Tedarikçi,' : 'Sayın Alıcı,'}
+                                </div>
                                 <div className="font-extrabold text-[17px] text-zinc-950 tracking-wide uppercase" style={{ fontWeight: 800 }}>
                                   {transaction.cariName?.toLocaleUpperCase('tr-TR')}
                                 </div>
                                 {currentCariForPrint && (
                                   <div className="text-xs text-zinc-500 mt-1 whitespace-pre-line font-sans leading-normal">
-                                    {currentCariForPrint.address ? <p>{currentCariForPrint.address}</p> : <p className="text-zinc-400 italic text-[11px]">Kayıtlı adres bulunmuyor.</p>}
                                     {(currentCariForPrint.taxOffice || currentCariForPrint.taxNo) && (
                                       <p className="font-semibold text-zinc-600 mt-1">
                                         V.Dairesi: {currentCariForPrint.taxOffice || '-'} / Vergi No: {currentCariForPrint.taxNo || '-'}

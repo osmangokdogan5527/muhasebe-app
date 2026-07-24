@@ -40,10 +40,11 @@ export function ClassicTemplate({ dynamicPrintVars, printSettings }: any) {
                                   {/* Client / Cari Bilgileri */}
                                   <div className="border border-zinc-400 p-2.5 rounded bg-zinc-50/50 mb-4 grid grid-cols-2 gap-2">
                                     <div>
-                                      <div className="text-[8px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">SAYIN ALICI (CARİ HESAP):</div>
+                                      <div className="text-[8px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">
+                                        SAYIN {currentCariForPrint?.type === 'customer' ? 'MÜŞTERİ' : currentCariForPrint?.type === 'supplier' ? 'TEDARİKÇİ' : 'ALICI'} (CARİ HESAP):
+                                      </div>
                                       <div className="text-xs font-bold uppercase">{transaction.cariName}</div>
-                                      {currentCariForPrint && <div className="text-[8px] text-zinc-600 mt-1">{currentCariForPrint.address || 'Kayıtlı adres bulunmuyor.'}</div>}
-                                    </div>
+                                      </div>
                                     <div className="text-right flex flex-col justify-between">
                                       <div>
                                         {activeTemplate?.showValidityDate && (

@@ -63,7 +63,6 @@ export function TemplatePreviews({ activeTemplate, companyName, companyAddress, 
                         <div className="text-[7px] font-bold uppercase tracking-wider text-slate-400 mb-1 border-b border-slate-100 pb-0.5">ALICI / CARİ</div>
                         <div className="text-xs font-extrabold text-slate-900 uppercase mb-0.5">{mockCustomer.name}</div>
                         <div className="text-[9px] text-slate-500 leading-relaxed">
-                          <p>{mockCustomer.address}</p>
                           {activeTemplate.showValidityDate && (
                             <p className="text-slate-600 mt-1 font-semibold">
                               Geçerlilik: {new Date(Date.now() + 7 * 86400000).toLocaleDateString('tr-TR')}
@@ -208,9 +207,6 @@ export function TemplatePreviews({ activeTemplate, companyName, companyAddress, 
                           <h1 className="text-xl font-black text-slate-900 tracking-tight uppercase leading-none mb-1">
                             {activeTemplate.documentTitle || 'BELGE'}
                           </h1>
-                          <div className="inline-block bg-teal-50 border border-teal-100 text-teal-800 text-[8px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider mb-2">
-                            MODERN ŞABLON
-                          </div>
                           <div className="text-[9px] text-slate-400 font-mono leading-relaxed mt-1">
                             Tarih: {new Date().toLocaleDateString('tr-TR')}
                             <br />
@@ -223,10 +219,9 @@ export function TemplatePreviews({ activeTemplate, companyName, companyAddress, 
                     {/* Customer Section */}
                     <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 mb-6 flex justify-between items-start">
                       <div>
-                        <div className="text-[8px] font-bold uppercase tracking-widest text-teal-600 mb-1">ALICI DETAYLARI</div>
+                        <div className="text-[8px] font-bold uppercase tracking-widest text-teal-600 mb-1">MÜŞTERİ DETAYLARI</div>
                         <div className="text-sm font-extrabold text-slate-900 uppercase tracking-wide">{mockCustomer.name}</div>
-                        <div className="text-[10px] text-slate-500 mt-1 max-w-[280px]">{mockCustomer.address}</div>
-                      </div>
+                        </div>
                       
                       {activeTemplate.showValidityDate && (
                         <div className="text-right text-[10px] bg-white border border-slate-200/50 rounded-lg p-2 font-mono">
@@ -365,8 +360,7 @@ export function TemplatePreviews({ activeTemplate, companyName, companyAddress, 
                       <div className="max-w-[60%]">
                         <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest block mb-1">MÜŞTERİ / MUHATAP</span>
                         <div className="text-sm font-bold text-slate-900 uppercase font-serif tracking-wider">{mockCustomer.name}</div>
-                        <div className="text-[10px] text-slate-500 mt-1 italic">{mockCustomer.address}</div>
-                      </div>
+                        </div>
 
                       <div className="text-right text-[10px] text-slate-600 space-y-0.5">
                         <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest block mb-1">BELGE KÜNYESİ</span>
@@ -510,10 +504,9 @@ export function TemplatePreviews({ activeTemplate, companyName, companyAddress, 
                       {/* Client / Cari Bilgileri */}
                       <div className="border border-slate-400 p-2.5 rounded bg-slate-50/50 mb-4 grid grid-cols-2 gap-2">
                         <div>
-                          <div className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">SAYIN ALICI (CARİ HESAP):</div>
+                          <div className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">SAYIN MÜŞTERİ (CARİ HESAP):</div>
                           <div className="text-xs font-bold uppercase">{mockCustomer.name}</div>
-                          <div className="text-[8px] text-slate-600 mt-1">{mockCustomer.address}</div>
-                        </div>
+                          </div>
                         <div className="text-right flex flex-col justify-between">
                           <div>
                             {activeTemplate.showValidityDate && (
@@ -667,8 +660,7 @@ export function TemplatePreviews({ activeTemplate, companyName, companyAddress, 
                       <div className="font-extrabold text-base md:text-lg text-slate-900 tracking-wide uppercase">
                         {mockCustomer.name.toLocaleUpperCase('tr-TR')}
                       </div>
-                      <div className="text-xs text-slate-500 mt-1">{mockCustomer.address}</div>
-                    </div>
+                      </div>
                     <div className="text-right text-xs">
                       {activeTemplate.showValidityDate && (
                         <div className="text-slate-600 mb-1">

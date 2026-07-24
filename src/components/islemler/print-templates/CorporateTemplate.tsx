@@ -63,11 +63,12 @@ export function CorporateTemplate({ dynamicPrintVars, printSettings }: any) {
                                   </div>
                                   
                                   <div className="border border-zinc-200 rounded-lg p-4 bg-slate-50/10">
-                                    <div className="text-[8px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5 border-b border-zinc-100 pb-1">ALICI / CARİ HESAP</div>
+                                    <div className="text-[8px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5 border-b border-zinc-100 pb-1">
+                                      {currentCariForPrint?.type === 'customer' ? 'MÜŞTERİ' : currentCariForPrint?.type === 'supplier' ? 'TEDARİKÇİ' : 'ALICI'} / CARİ HESAP
+                                    </div>
                                     <div className="text-xs font-extrabold text-zinc-900 uppercase mb-1">{transaction.cariName}</div>
                                     {currentCariForPrint && (
                                       <div className="text-[10px] text-zinc-600 space-y-0.5 font-sans">
-                                        {currentCariForPrint.address ? <p>{currentCariForPrint.address}</p> : <p className="text-zinc-400 italic text-[9px]">Kayıtlı adres bulunmuyor.</p>}
                                         {(currentCariForPrint.taxOffice || currentCariForPrint.taxNo) && (
                                           <p className="font-semibold text-zinc-700 mt-1">
                                             V.Dairesi: {currentCariForPrint.taxOffice || '-'} / Vergi No: {currentCariForPrint.taxNo || '-'}

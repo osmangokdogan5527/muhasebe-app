@@ -56,6 +56,7 @@ interface AppModalsProps {
   setActiveTab: (tab: any) => void;
   setAiPrefilledData,
   setFeedbackList: (data: any) => void;
+  financialData?: any;
   userRole: 'admin' | 'employee';
   isSecurityActive: boolean;
   sensitiveTabs: string[];
@@ -116,6 +117,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
   setActiveTab,
   setAiPrefilledData,
   setFeedbackList,
+  financialData,
   userRole,
   isSecurityActive,
   sensitiveTabs,
@@ -573,6 +575,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
           onNavigateToSettings={() => {
             handleNavigate('ayarlar');
           }}
+          financialData={financialData}
           onCommandParsed={(commandData) => {
             let targetTab = 'islemler';
             if (commandData.islem === 'expense') {

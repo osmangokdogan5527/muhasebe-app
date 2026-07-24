@@ -1,9 +1,11 @@
 import { initializeApp } from 'firebase/app';
 import {
-  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  CACHE_SIZE_UNLIMITED,
   writeBatch,
   limit,
-  enableMultiTabIndexedDbPersistence,
   collection,
   doc,
   setDoc,
@@ -48,11 +50,13 @@ const app = initializeApp(firebaseConfig);
 // Suppress Firestore offline connection warnings in console
 setLogLevel('silent');
 
-// Using custom database ID provisioned for AI Studio
-export const db = getFirestore(app, "ai-studio-59bd0d02-f537-4d2e-bf76-4d16ab336635");
-enableMultiTabIndexedDbPersistence(db).catch((err) => {
-  console.warn("Offline persistence hatası:", err);
-});
+// Using custom database ID provisioned for AI Studio with deep offline persistence
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager(),
+    cacheSizeBytes: CACHE_SIZE_UNLIMITED
+  })
+}, "ai-studio-59bd0d02-f537-4d2e-bf76-4d16ab336635");
 export const auth = getAuth();
 
 export {

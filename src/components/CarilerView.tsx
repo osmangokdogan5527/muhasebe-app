@@ -1,12 +1,15 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { VirtualTableBody } from './VirtualTableBody';
 import { CariModal } from './cariler/CariModal';
+import { ExcelImportModal } from './cariler/ExcelImportModal';
 import { LedgerDrawer } from './cariler/LedgerDrawer';
 import { Cari, Transaction, Stock } from "../types";
 import { saveCari, deleteCari, createTransaction } from "../firebase";
 import { compressImage } from "../utils/imageCompressor";
 import {
   Plus,
+  FileSpreadsheet,
+  Sparkles,
   Search,
   Phone,
   Mail,
@@ -24,6 +27,7 @@ import {
 } from "lucide-react";
 
 interface CarilerViewProps {
+  showToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
   cariler: Cari[];
   islemler: Transaction[];
   stoklar?: Stock[];
@@ -52,6 +56,7 @@ function CarilerView({
   onCariAdded,
   selectedCariIdForDetails,
   onSelectCariForDetails,
+  showToast,
 }: CarilerViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<
@@ -90,6 +95,7 @@ function CarilerView({
 
   const [ekstreType, setEkstreType] = useState<"summary" | "detailed">("summary");
   const [deleteConfirmCari, setDeleteConfirmCari] = useState<Cari | null>(null);
+  const [isExcelImportModalOpen, setIsExcelImportModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -471,14 +477,23 @@ function CarilerView({
             ekstrelerini yönetin.
           </p>
         </div>
-        <button
-          id="btn-add-cari"
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsExcelImportModalOpen(true)}
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold uppercase tracking-wider px-4 py-3 rounded-lg transition duration-150 border border-white/10"
+          >
+            <Sparkles size={16} className="text-teal-400" />
+            <span className="hidden sm:inline">Akıllı Excel Aktarım</span>
+          </button>
+          <button
+            id="btn-add-cari"
           onClick={handleOpenCreateModal}
           className="flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-black text-xs font-semibold uppercase tracking-wider px-4 py-3 rounded-lg transition duration-150 shadow-[0_0_12px_rgba(45,212,191,0.2)] cursor-pointer"
         >
           <Plus size={16} />
           <span>Yeni Cari Hesap Ekle</span>
         </button>
+        </div>
       </div>
 
       {/* Filters and Search Bar */}
@@ -801,6 +816,14 @@ function CarilerView({
           </div>
         )}
       </div>
+
+      {/* Excel Import Modal */}
+      <ExcelImportModal
+        isOpen={isExcelImportModalOpen}
+        onClose={() => setIsExcelImportModalOpen(false)}
+        onSuccess={() => setIsExcelImportModalOpen(false)}
+        showToast={showToast || (() => {})}
+      />
 
       {/* Add / Edit Cari Modal */}
       <CariModal

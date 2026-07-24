@@ -649,9 +649,6 @@ export default function DashboardView({
                 </div>
                 <div className="w-px h-6 bg-white/20 mx-1 sm:mx-1.5 shrink-0"></div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[8px] px-1.5 py-0.5 bg-teal-500/10 text-teal-400 rounded border border-teal-500/20 font-bold font-sans self-center whitespace-nowrap uppercase tracking-wider">
-                    {rates.source === 'ExchangeRateAPI' ? 'Yedek' : rates.source === 'Fallback' ? 'Önbellek' : rates.source}
-                  </span>
                   <button
                     onClick={() => fetchRates(true)}
                     disabled={ratesLoading}

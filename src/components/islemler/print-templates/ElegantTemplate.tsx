@@ -33,11 +33,12 @@ export function ElegantTemplate({ dynamicPrintVars, printSettings }: any) {
                                 {/* Parties Area */}
                                 <div className="flex justify-between items-start mb-8 font-sans">
                                   <div className="max-w-[60%]">
-                                    <span className="text-[8px] text-zinc-400 font-bold uppercase tracking-widest block mb-1">MÜŞTERİ / MUHATAP</span>
+                                    <span className="text-[8px] text-zinc-400 font-bold uppercase tracking-widest block mb-1">
+                                      {currentCariForPrint?.type === 'customer' ? 'MÜŞTERİ' : currentCariForPrint?.type === 'supplier' ? 'TEDARİKÇİ' : 'ALICI'} / MUHATAP
+                                    </span>
                                     <div className="text-sm font-bold text-zinc-900 uppercase font-serif tracking-wider">{transaction.cariName}</div>
                                     {currentCariForPrint && (
                                       <div className="text-[10px] text-zinc-500 mt-1 italic leading-normal font-serif">
-                                        <p>{currentCariForPrint.address || 'Kayıtlı adres bulunmuyor.'}</p>
                                         {(currentCariForPrint.taxOffice || currentCariForPrint.taxNo) && (
                                           <p className="text-zinc-600">V.Dairesi: {currentCariForPrint.taxOffice || '-'} / Vergi No: {currentCariForPrint.taxNo || '-'}</p>
                                         )}
