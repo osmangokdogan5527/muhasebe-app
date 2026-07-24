@@ -97,7 +97,15 @@ function IslemlerView({
     }
   }, [isSecurityActive, userRole, actionPermissions]);
 
-  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
+  // Varsayılan olarak son 1 ayı gösterecek şekilde ayarlandı
+  const defaultEndDate = new Date();
+  const defaultStartDate = new Date();
+  defaultStartDate.setMonth(defaultStartDate.getMonth() - 1);
+  
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ 
+    start: defaultStartDate.toISOString().split('T')[0], 
+    end: defaultEndDate.toISOString().split('T')[0] 
+  });
   
   // Print PDF Receipt states
   const [selectedPrintTransaction, setSelectedPrintTransaction] = useState<Transaction | null>(null);

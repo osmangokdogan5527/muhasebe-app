@@ -1484,13 +1484,13 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
                 e.stopPropagation();
                 setIsOpen(true);
               }}
-              className="w-10 h-10 md:w-12 md:h-12 text-white rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 border-2 border-white/90 relative hover:brightness-125 z-10"
+              className="w-10 h-10 md:w-[58px] md:h-[58px] text-white rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 border-2 border-white/90 relative hover:brightness-125 z-10"
               style={{ 
                 background: 'linear-gradient(135deg, var(--accent-400, #f87171), var(--accent-600, #dc2626), var(--accent-900, #7f1d1d))',
                 boxShadow: '0 0 10px color-mix(in srgb, var(--accent-500, #ef4444) 80%, transparent), inset 0 0 5px rgba(255,255,255,0.5)'
               }}
             >
-              <div className="relative flex items-center justify-center md:scale-120">
+              <div className="relative flex items-center justify-center md:scale-[1.45]">
                 <Bot size={18} className="text-white drop-shadow-[0_0_5px_rgba(255,255,255,1)] transition-transform group-hover:rotate-12" />
                 <Sparkles size={8} className="absolute -top-1.5 -right-1.5 text-yellow-300 animate-bounce" style={{ animationDuration: '2.5s' }} />
                 <Sparkles size={7} className="absolute -bottom-1 -left-1.5 text-yellow-100 animate-pulse" />

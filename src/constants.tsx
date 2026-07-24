@@ -706,7 +706,9 @@ export const changelogData = [
     version: "1.7.5",
     date: "24.07.2026",
     changes: [
-      "1.7.5 Taslak Sürüm: Gelecek güncellemeler için geliştirme altyapısı ve taslak hazırlıkları başlatıldı (Yayınlanmadı)."
+      "Finansal Hareketler Tarih Filtresi: İşlemler sekmesinde varsayılan olarak son 1 aylık işlemlerin gösterilmesi sağlandı.",
+      "Yapay Zeka İyileştirmeleri: Storm AI asistanının etkileşim hızı ve kararlılığı artırıldı.",
+      "Arayüz İyileştirmeleri: Finansal hareketler ekranında ve genel arayüzde performans optimizasyonları yapıldı."
     ]
   },
   {

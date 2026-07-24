@@ -1,0 +1,29 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Sadece v1.7.5 gibi sürüm numarasıyla etiketlendiğinde çalışır
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Kodu İndir
+        uses: actions/checkout@v4
+
+      - name: Node.js Kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Bağımlılıkları Yükle
+        run: npm install
+
+      - name: Uygulamayı Derle ve GitHub'a Yükle
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run electron:build -- -p always
