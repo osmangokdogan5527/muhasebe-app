@@ -250,7 +250,7 @@ export function CekSenetModals({ isModalOpen, setIsModalOpen, formError, type, s
                               className="text-[9px] text-teal-400 hover:text-teal-300 font-semibold font-sans flex items-center gap-1 transition cursor-pointer"
                             >
                               <RefreshCw size={8} className={tcmbLoading ? 'animate-spin' : ''} />
-                              TCMB'den Çek
+                              Canlı Kur Çek
                             </button>
                           )}
                         </div>

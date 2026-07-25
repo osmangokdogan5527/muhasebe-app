@@ -1107,7 +1107,7 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
                             className="text-[9px] text-teal-600 hover:text-teal-800 font-bold font-sans flex items-center gap-1 transition cursor-pointer"
                           >
                             <RefreshCw size={8} className={tcmbLoading ? 'animate-spin' : ''} />
-                            TCMB'den Çek
+                            Canlı Kur Çek
                           </button>
                         </div>
                         <input

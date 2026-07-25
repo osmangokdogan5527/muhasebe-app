@@ -441,12 +441,14 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.7.6';
+export const APP_VERSION = '1.7.7';
 
 export const CHANGELOG = {
-  version: '1.7.6',
+  version: '1.7.7',
   features: [
-    "Performans optimizasyonu yapıldı. (Deneme Sürümü)"
+    "Döviz Kurları: Canlı Döviz.com kurları entegre edildi.",
+    "Uygulama genelinde altyapı güçlendirmeleri ve hız optimizasyonları yapıldı.",
+    "Uygulama masaüstü ikonu yüksek çözünürlüklü yeni versiyonuyla güncellendi."
   ],
   fixes: []
 };
@@ -702,6 +704,22 @@ export const PIN_ACCOUNTS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.7.7",
+    date: "25.07.2026",
+    changes: [
+      "Döviz.com Kurları: İşletmelerin daha çok tercih ettiği Döviz.com canlı kurları (USD, EUR) sisteme entegre edildi. Gösterge paneli ve işlemlerde otomatik olarak kullanılır.",
+      "Performans ve Kararlılık: Uygulama genelinde altyapı güçlendirmeleri ve hız optimizasyonları yapıldı.",
+      "Masaüstü İkonu: Uygulama masaüstü ikonu yüksek çözünürlüklü yeni versiyonuyla güncellendi."
+    ]
+  },
+  {
+    version: "1.7.6",
+    date: "25.07.2026",
+    changes: [
+      "Arayüz İyileştirmeleri: Performans optimizasyonu yapıldı ve genel kararlılık artırıldı."
+    ]
+  },
   {
     version: "1.7.5",
     date: "24.07.2026",

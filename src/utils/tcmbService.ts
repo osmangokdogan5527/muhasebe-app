@@ -9,7 +9,7 @@ export interface TCMBRatesResult {
   USD: TCMBRate;
   EUR: TCMBRate;
   lastUpdated: string;
-  source: 'TCMB' | 'ExchangeRateAPI' | 'Fallback';
+  source: 'Döviz.com' | 'Serbest Piyasa' | 'TCMB' | 'ExchangeRateAPI' | 'Fallback';
 }
 
 const FALLBACK_RATES: TCMBRatesResult = {
@@ -73,7 +73,37 @@ export async function fetchTCMBRates(forceRefresh: boolean = false): Promise<TCM
     }
   }
 
-  // Attempt 1: Fetch TCMB directly through a secure CORS proxy
+  // Attempt 1: Fetch Doviz.com rates via Truncgil API
+  try {
+    const response = await fetch('https://finans.truncgil.com/today.json');
+    if (response.ok) {
+      const data = await response.json();
+      if (data && data.USD && data.EUR) {
+        // Truncgil API provides string values with commas like "33,50"
+        const parseRate = (val: string) => parseFloat(val.replace(',', '.'));
+        
+        const usdBuying = parseRate(data.USD.Alış);
+        const usdSelling = parseRate(data.USD.Satış);
+        const eurBuying = parseRate(data.EUR.Alış);
+        const eurSelling = parseRate(data.EUR.Satış);
+        
+        if (usdBuying > 0 && eurBuying > 0) {
+          const result: TCMBRatesResult = {
+            USD: { buying: usdBuying, selling: usdSelling, code: 'USD', name: 'ABD DOLARI (Döviz.com)' },
+            EUR: { buying: eurBuying, selling: eurSelling, code: 'EUR', name: 'EURO (Döviz.com)' },
+            lastUpdated: new Date().toISOString(),
+            source: 'Döviz.com'
+          };
+          localStorage.setItem('storm_tcmb_rates_cache', JSON.stringify(result));
+          return result;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Döviz.com fetch failed, falling back to TCMB:', error);
+  }
+
+  // Attempt 2: Fetch TCMB directly through a secure CORS proxy
   try {
     const tcmbUrl = 'https://www.tcmb.gov.tr/kurlar/today.xml';
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(tcmbUrl)}`;
@@ -97,7 +127,7 @@ export async function fetchTCMBRates(forceRefresh: boolean = false): Promise<TCM
     console.warn('TCMB Direct Proxy fetch failed, trying alternate API:', error);
   }
 
-  // Attempt 2: Fetch ExchangeRateAPI as a reliable alternative
+  // Attempt 3: Fetch ExchangeRateAPI as a reliable alternative
   try {
     const response = await fetch('https://open.er-api.com/v6/latest/TRY');
     if (response.ok) {
@@ -123,7 +153,7 @@ export async function fetchTCMBRates(forceRefresh: boolean = false): Promise<TCM
     console.error('Alternate ExchangeRateAPI fetch failed:', error);
   }
 
-  // Attempt 3: Fetch static daily-updated rates or fallback to previous cache
+  // Attempt 4: Fetch static daily-updated rates or fallback to previous cache
   const cached = localStorage.getItem('storm_tcmb_rates_cache');
   if (cached) {
     try {

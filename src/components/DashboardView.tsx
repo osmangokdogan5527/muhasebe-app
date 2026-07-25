@@ -648,6 +648,10 @@ export default function DashboardView({
                   </div>
                 </div>
                 <div className="w-px h-6 bg-white/20 mx-1 sm:mx-1.5 shrink-0"></div>
+                <div className="flex flex-col justify-center items-end shrink-0 text-[8px] text-white/30 tracking-widest uppercase">
+                  <span>Kaynak</span>
+                  <span className="text-white/50">{rates.source === 'Serbest Piyasa' ? 'Döviz.com' : rates.source}</span>
+                </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => fetchRates(true)}
