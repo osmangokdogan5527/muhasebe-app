@@ -1,4 +1,5 @@
-name: Build and Release
+const fs = require('fs');
+const yml = `name: Build and Release
 on:
   push:
     branches:
@@ -13,19 +14,15 @@ jobs:
     steps:
       - name: Kodu İndir
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
         
       - name: Eski release'i sil (varsa)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
+          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
         run: gh release delete v1.7.5 -y || true
         
       - name: Eski tag'i sil (varsa)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
+          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
         run: git push --delete origin v1.7.5 || true
 
       - name: Node.js Kur
@@ -38,6 +35,7 @@ jobs:
 
       - name: Uygulamayı Derle ve GitHub'a Yükle
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
+          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
         run: npm run electron:build -- -p always
+`
+fs.writeFileSync('.github/workflows/release.yml', yml);
