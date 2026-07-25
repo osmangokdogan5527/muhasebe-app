@@ -2,8 +2,9 @@ name: Build and Release
 
 on:
   push:
-    tags:
-      - 'v*' # Sadece v1.7.5 gibi sürüm numarasıyla etiketlendiğinde çalışır
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   build:

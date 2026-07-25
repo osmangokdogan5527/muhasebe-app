@@ -441,12 +441,14 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.7.4';
+export const APP_VERSION = '1.7.5';
 
 export const CHANGELOG = {
-  version: '1.7.4',
+  version: '1.7.5',
   features: [
-    "1.7.4 Taslak Sürüm: Gelecek güncellemeler için geliştirme altyapısı ve taslak hazırlıkları başlatıldı (Yayınlanmadı)."
+    "Finansal Hareketler Tarih Filtresi eklendi.",
+    "Yapay Zeka asistanı iyileştirildi.",
+    "Arayüz performans optimizasyonları yapıldı."
   ],
   fixes: []
 };
