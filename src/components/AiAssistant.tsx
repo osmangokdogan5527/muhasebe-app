@@ -878,18 +878,6 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
         if (parsedCommand.tip === 'bilgi' || parsedCommand.tip === 'analiz') {
           setMessages(prev => {
             const arr = [...prev];
-            // If replacing audio placeholder
-            if (typeof tempUserMessageId !== 'undefined' && arr.find(m => m.id === tempUserMessageId)) {
-               return arr.map(m => m.id === tempUserMessageId ? {
-                 ...m,
-                 text: m.text + "\n(Analiz/Bilgi cevabı geldi)"
-               } : m).concat([{
-                  id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
-                  role: 'assistant', 
-                  text: parsedCommand.mesaj,
-                  chart: parsedCommand.grafik
-               }]);
-            }
             return [...arr, { 
               id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
               role: 'assistant', 

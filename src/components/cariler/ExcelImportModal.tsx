@@ -88,7 +88,6 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
         if (item.openingBalance !== 0) {
           const transId = `trans_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           await createTransaction({
-            id: transId,
             type: item.openingBalance > 0 ? "sale" : "purchase", // representation of opening balance
             cariId: newCari.id,
             cariName: newCari.name,
