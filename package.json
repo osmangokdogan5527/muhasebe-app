@@ -23,7 +23,7 @@
     "npmRebuild": true,
     "buildDependenciesFromSource": true,
     "win": {
-      "icon": "public/icon.png",
+      "icon": "public/icon.ico",
       "artifactName": "Storm.On.Muhasebe.Setup.${version}.${ext}",
       "target": [
         {
@@ -84,8 +84,7 @@
     ]
   },
   "dependencies": {
-    "electron-updater": "^6.8.9",
-    "jimp": "^0.22.10"
+    "electron-updater": "^6.8.9"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.14",
