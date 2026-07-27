@@ -35,10 +35,8 @@
         }
       ]
     },
-    "mac": {
-    },
-    "linux": {
-    },
+    "mac": {},
+    "linux": {},
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
@@ -102,6 +100,7 @@
     "jspdf": "^4.2.1",
     "lucide-react": "^0.546.0",
     "motion": "^12.42.2",
+    "png-to-ico": "^3.0.2",
     "qrcode": "^1.5.4",
     "react": "^19.0.1",
     "react-barcode": "^1.6.1",
