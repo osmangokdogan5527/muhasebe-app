@@ -1,0 +1,1 @@
+icon.ico,icon.png,icon_174.ico,icon_new.ico
