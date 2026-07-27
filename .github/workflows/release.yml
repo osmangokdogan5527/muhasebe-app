@@ -1,4 +1,5 @@
 name: Build and Release
+
 on:
   push:
     branches:
@@ -20,7 +21,9 @@ jobs:
           node-version: 20
 
       - name: Bağımlılıkları Yükle
-        run: npm install
+        run: |
+          rm -f package-lock.json
+          npm install
 
       - name: Uygulamayı Derle ve GitHub'a Yükle
         env:
