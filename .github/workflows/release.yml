@@ -21,6 +21,7 @@ jobs:
           node-version: 20
 
       - name: Bağımlılıkları Yükle
+        shell: bash
         run: |
           rm -f package-lock.json
           npm install
