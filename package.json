@@ -23,7 +23,7 @@
     "npmRebuild": true,
     "buildDependenciesFromSource": true,
     "win": {
-      "icon": "public/icon.png",
+      "icon": "public/icon.ico",
       "artifactName": "Storm.On.Muhasebe.Setup.${version}.${ext}",
       "target": [
         {
