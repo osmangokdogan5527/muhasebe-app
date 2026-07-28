@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Outer Border Gradient -->
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff2e93" />
+      <stop offset="40%" stop-color="#9d4edd" />
+      <stop offset="70%" stop-color="#00b4d8" />
+      <stop offset="100%" stop-color="#00f5d4" />
+    </linearGradient>
+
+    <!-- Dark Background Gradient -->
+    <linearGradient id="bgGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#2a2238" />
+      <stop offset="50%" stop-color="#120e1e" />
+      <stop offset="100%" stop-color="#08060d" />
+    </linearGradient>
+
+    <!-- Lightning Bolt Gradient -->
+    <linearGradient id="boltGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38ef7d" />
+      <stop offset="20%" stop-color="#00f5d4" />
+      <stop offset="100%" stop-color="#00b4d8" />
+    </linearGradient>
+
+    <!-- Lightning Glow Filter -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Outer Border Container -->
+  <rect x="16" y="16" width="480" height="480" rx="110" fill="url(#borderGrad)" />
+  
+  <!-- Inner Main Card -->
+  <rect x="28" y="28" width="456" height="456" rx="98" fill="url(#bgGrad)" />
+
+  <!-- Glossy Reflection Arc -->
+  <path d="M 28 126 C 120 190, 392 190, 484 126 L 484 126 A 98 98 0 0 0 386 28 L 126 28 A 98 98 0 0 0 28 126 Z" fill="#ffffff" opacity="0.08" />
+
+  <!-- Lightning Bolt -->
+  <path d="M 272 40 L 190 225 L 260 225 L 210 380 L 330 185 L 255 185 Z" fill="url(#boltGrad)" filter="url(#glow)" />
+
+  <!-- STORM Text -->
+  <text x="256" y="355" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="82" fill="#ffffff" text-anchor="middle" letter-spacing="6">STORM</text>
+
+  <!-- MUHASEBE Text -->
+  <text x="256" y="428" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="44" fill="#ffffff" text-anchor="middle" letter-spacing="11">MUHASEBE</text>
+</svg>
