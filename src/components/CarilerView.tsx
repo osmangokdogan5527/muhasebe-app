@@ -482,8 +482,8 @@ function CarilerView({
             onClick={() => setIsExcelImportModalOpen(true)}
             className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold uppercase tracking-wider px-4 py-3 rounded-lg transition duration-150 border border-white/10"
           >
-            <Sparkles size={16} className="text-teal-400" />
-            <span className="hidden sm:inline">Akıllı Excel Aktarım</span>
+            <Sparkles size={16} className="text-teal-400 shrink-0" />
+            <span className="inline-block">Akıllı Excel Aktarım</span>
           </button>
           <button
             id="btn-add-cari"

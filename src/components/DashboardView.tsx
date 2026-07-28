@@ -811,11 +811,12 @@ export default function DashboardView({
       )}
 
       {/* Currency Selection Tab Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-[#111111] p-3 rounded-lg border border-white/5 shadow-md">
-        <span className="text-[10px] text-white/40 uppercase tracking-widest font-mono font-bold ml-2">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 dashboard-widget-header p-3 rounded-xl">
+        <span className="text-[11px] font-extrabold uppercase tracking-widest font-sans ml-2 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-[var(--accent-500)] animate-pulse shadow-[0_0_8px_var(--accent-500)]"></span>
           FİNANSAL GÖSTERGE PARA BİRİMİ SEÇİMİ
         </span>
-        <div className="flex bg-white/5 p-1 rounded-lg border border-white/5 gap-1 w-full sm:w-auto">
+        <div className="flex bg-slate-100 dark:bg-black/20 p-1 rounded-lg border border-slate-200 dark:border-white/10 gap-1 w-full sm:w-auto">
           {(["TRY", "USD", "EUR"] as const).map((cur) => (
             <button
               key={cur}
@@ -823,8 +824,8 @@ export default function DashboardView({
               onClick={() => setDashboardCurrency(cur)}
               className={`flex-1 sm:flex-none px-5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-md transition cursor-pointer ${
                 dashboardCurrency === cur
-                  ? "bg-teal-500 text-black shadow-[0_0_8px_rgba(45,212,191,0.2)]"
-                  : "text-white/60 hover:text-white hover:bg-white/5"
+                  ? "bg-[var(--accent-500)] text-white shadow-md font-extrabold"
+                  : "text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10"
               }`}
             >
               {cur === "TRY" ? "₺ TL" : cur === "USD" ? "$ USD" : "€ EUR"}

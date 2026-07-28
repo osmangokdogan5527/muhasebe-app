@@ -22,9 +22,9 @@ export const StatsGridWidget = React.memo<StatsGridWidgetProps>(({
                     
                     className={`h-full flex flex-col gap-2.5 group transition-all duration-300`}
                   >
-                    <div className="flex justify-between items-center bg-[#111111]/80 px-4 py-2 rounded-lg border border-white/5 shadow-sm">
-                      <span className="text-[10px] text-teal-400 font-bold uppercase tracking-widest font-mono flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
+                    <div className="flex justify-between items-center dashboard-widget-header px-4 py-2.5 rounded-xl">
+                      <span className="text-[11px] font-extrabold uppercase tracking-widest flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[var(--accent-500)] animate-pulse shadow-[0_0_8px_var(--accent-500)]"></span>
                         ÖZET FİNANSAL GÖSTERGELER
                       </span>
                       {renderWidgetControls()}

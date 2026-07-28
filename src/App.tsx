@@ -623,13 +623,13 @@ export default function App() {
     return rules;
   }, [currentThemeData]);
   const activePatternObj = SIDEBAR_PATTERNS.find(p => p.id === sidebarPattern) || SIDEBAR_PATTERNS[0];
-  const bodyPatternSvg = (activePatternObj.svg && designStyle !== 'clean-light')
+  const bodyPatternSvg = (activePatternObj.svg && designStyle !== 'clean-light' && designStyle !== 'pro-solid')
     ? activePatternObj.svg
         .replace(/PATTERNCOLOR/g, sidebarPatternColor === 'white' ? '%23ffffff' : '%23000000')
         .replace(/OPACITY/g, (sidebarPatternOpacity * 0.5).toString()) // Slightly lower opacity for body
     : '';
   const isLightSidebar = sidebarBg === '#ffffff';
-    const sidebarPatternStyle = (sidebarPattern !== 'none' && sidebarPatternOpacity > 0 && designStyle !== 'clean-light') ? {
+    const sidebarPatternStyle = (sidebarPattern !== 'none' && sidebarPatternOpacity > 0 && designStyle !== 'clean-light' && designStyle !== 'pro-solid') ? {
     backgroundImage: activePatternObj.svg
       ?.replace(/PATTERNCOLOR/g, sidebarPatternColor === 'white' ? '%23ffffff' : '%23000000')
       ?.replace(/OPACITY/g, sidebarPatternOpacity.toString()),

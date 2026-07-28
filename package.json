@@ -3,7 +3,7 @@
   "author": "Osman Gökdoğan",
   "description": "Ön Muhasebe ve Stok Takip Programı",
   "private": true,
-  "version": "1.7.7",
+  "version": "1.7.8",
   "type": "module",
   "main": "electron-main.cjs",
   "scripts": {
@@ -50,27 +50,7 @@
       "dist/**/*",
       "electron-main.cjs",
       "preload.js",
-      "package.json",
-      "!src/**/*",
-      "!public/**/*",
-      "!.git/**/*",
-      "!.github/**/*",
-      "!.aistudio/**/*",
-      "!assets/**/*",
-      "!README.md",
-      "!AGENTS.md",
-      "!.env*",
-      "!tsconfig*.json",
-      "!vite.config.ts",
-      "!firestore.rules",
-      "!firebase-blueprint.json",
-      "!firebase-applet-config.json",
-      "!metadata.json",
-      "!.gitignore",
-      "!package-lock.json",
-      "!node_modules/.cache/**/*",
-      "!node_modules/**/*.map",
-      "!node_modules/**/*.md"
+      "package.json"
     ],
     "directories": {
       "output": "dist-electron"

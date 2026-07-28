@@ -115,6 +115,8 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                         onClick={() => {
                           setActiveTheme(preset.id);
                           localStorage.setItem('kolay_hesap_accent_theme', preset.id);
+                          
+                          
                         }}
                         className={`flex items-center gap-3 p-3 rounded-xl border text-left transition cursor-pointer ${
                           isSelected 
@@ -301,6 +303,24 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                           </div>
                         </div>
                       )
+                    },
+                    {
+                      id: 'pro-solid',
+                      name: 'MuhasebePro (Solid)',
+                      desc: 'Koyu gri menü, keskin düz renkler, yuvarlatılmış köşeler ve güçlü kontrast.',
+                      badge: 'Pro Stil',
+                      preview: (
+                        <div className="h-20 w-full rounded-lg bg-gray-100 p-2 flex overflow-hidden relative border border-gray-200">
+                          <div className="w-1/4 h-full bg-[#2b2d35] rounded mr-2 flex flex-col gap-1 p-1">
+                            <div className="w-full h-2 bg-red-600 rounded"></div>
+                            <div className="w-full h-2 bg-white/10 rounded"></div>
+                          </div>
+                          <div className="flex-1 flex flex-col gap-1 mt-1">
+                            <div className="w-full h-4 bg-white border border-gray-200 rounded shadow-xs"></div>
+                            <div className="w-2/3 h-3 bg-white border border-gray-200 rounded shadow-xs"></div>
+                          </div>
+                        </div>
+                      )
                     }
                   ].map((styleOpt) => {
                     const isSelected = designStyle === styleOpt.id;
@@ -354,9 +374,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                 <span className="font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">
                   {designStyle === 'fluid-mesh' 
                     ? 'Sıvı Mesh Gradient (Aurora)' 
-                    : designStyle === 'clean-light' 
-                      ? 'Temiz Işık & Yüksek Performans' 
-                      : 'Cam Arayüz (Glassmorphism)'}
+                    : designStyle === 'clean-light' ? 'Temiz Işık & Yüksek Performans' : designStyle === 'pro-solid' ? 'MuhasebePro (Solid)' : 'Cam Arayüz (Glassmorphism)'}
                 </span>
               </div>
             </div>
@@ -538,14 +556,17 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                       localStorage.setItem('storm_muhasebe_hidden_tabs', JSON.stringify([]));
                       
                       // Also reset visual settings to user requested defaults
-                      setActiveTheme('sky');
-                      localStorage.setItem('kolay_hesap_accent_theme', 'sky');
+                      setActiveTheme('pro-red');
+                      localStorage.setItem('kolay_hesap_accent_theme', 'pro-red');
+                      
+                      setDesignStyle('pro-solid');
+                      localStorage.setItem('storm_muhasebe_design_style', 'pro-solid');
                       
                       setActiveLogoTheme('theme');
                       localStorage.setItem('storm_muhasebe_logo_theme', 'theme');
                       
-                      setSidebarBg('#1e293b');
-                      localStorage.setItem('storm_muhasebe_sidebar_bg', '#1e293b');
+                      setSidebarBg('#2b2d35');
+                      localStorage.setItem('storm_muhasebe_sidebar_bg', '#2b2d35');
                       
                       setSidebarPattern('crystal');
                       localStorage.setItem('storm_muhasebe_sidebar_pattern', 'crystal');

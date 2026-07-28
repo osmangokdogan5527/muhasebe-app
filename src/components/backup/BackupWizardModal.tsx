@@ -162,7 +162,7 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
       });
 
       const payload: BackupDataPayload = {
-        version: '1.7.7-draft',
+        version: '1.7.8',
         timestamp: new Date().toISOString(),
         collections: {
           cariler,
@@ -775,7 +775,7 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
 
         {/* Footer */}
         <div className="p-4 bg-zinc-950/60 border-t border-zinc-800 flex justify-between items-center text-[10px] text-zinc-500">
-          <span>Storm Muhasebe Güvenli Veri Motoru v1.7.7-draft</span>
+          <span>Storm Muhasebe Güvenli Veri Motoru v1.7.8</span>
           <span>Bütün Hakları Saklıdır © 2026</span>
         </div>
 

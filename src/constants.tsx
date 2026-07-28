@@ -54,6 +54,7 @@ export const StormLogo = ({
 
   // Get active sidebar pattern details
   let currentPattern = sidebarPattern || localStorage.getItem('storm_muhasebe_sidebar_pattern') || 'crystal';
+  if (designStyle === 'pro-solid') currentPattern = 'none';
   if (currentPattern === 'circles') currentPattern = 'flame';
   if (currentPattern === 'waves') currentPattern = 'chain';
   const savedOpacity = sidebarPatternOpacity !== undefined ? sidebarPatternOpacity : parseFloat(localStorage.getItem('storm_muhasebe_sidebar_pattern_opacity') || '0.75');
@@ -143,19 +144,7 @@ export const StormLogo = ({
   let patternContent = null;
 
   if (currentPattern === 'none') {
-    // Geometrik
-    patternWidth = 60;
-    patternHeight = 104;
-    patternViewBox = "0 0 60 104";
-    patternContent = (
-      <path 
-        d="M0 17.32 L30 0 L60 17.32 L60 51.96 L30 69.28 L0 51.96 Z M30 69.28 L30 34.64 L0 17.32 M30 34.64 L60 17.32 M0 69.28 L30 86.6 L60 69.28 M30 86.6 L30 104 M0 69.28 L30 104 M60 69.28 L30 104 M0 51.96 L0 69.28 M60 51.96 L60 69.28 M0 0 L0 17.32 M60 0 L60 17.32 M0 69.28 L0 104 M60 69.28 L60 104" 
-        fill="none" 
-        stroke="#ffffff" 
-        strokeWidth="1.2" 
-        strokeOpacity={opacity}
-      />
-    );
+    patternContent = null;
   } else if (currentPattern === 'flame') {
     // Halftone Baklava Deseni
     patternWidth = 120;
@@ -384,7 +373,7 @@ export const StormLogo = ({
         )}
 
         {/* Textured overlay pattern inside the logo background */}
-        {patternContent && !isGlass && !isFluidMesh && currentDesignStyle !== 'clean-light' && (
+        {patternContent && !isGlass && !isFluidMesh && currentDesignStyle !== 'clean-light' && currentDesignStyle !== 'pro-solid' && (
           <rect width="200" height="200" rx="48" fill={`url(#${patternId})`} />
         )}
 
@@ -441,14 +430,14 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.7.7';
+export const APP_VERSION = '1.7.8';
 
 export const CHANGELOG = {
-  version: '1.7.7',
+  version: '1.7.8',
   features: [
-    "Döviz Kurları: Canlı Döviz.com kurları entegre edildi.",
-    "Uygulama genelinde altyapı güçlendirmeleri ve hız optimizasyonları yapıldı.",
-    "Uygulama masaüstü ikonu yüksek çözünürlüklü yeni versiyonuyla güncellendi."
+    "Gösterge Paneli Başlık Tasarımı: Özet finansal göstergeler ve kart başlıkları sol navigasyon paneli ve aktif renk temasıyla birebir uyumlu hale getirildi.",
+    "Sol Menü Kaydırma Çubuğu (Scrollbar): Sol navigasyon menüsüne özel sol tarafa hizalı, yüksek kontrastlı ve akıcı özel scrollbar entegre edildi.",
+    "Arayüz & Tema Kararlılığı: Gösterge paneli kart başlıklarında metin okunabilirliği ve tasarım stili senkronizasyonu tüm renk temalarında tam uyumlu kılındı."
   ],
   fixes: []
 };
@@ -532,6 +521,24 @@ export const COLOR_PRESETS = [
       '--accent-800': '#92400e',
       '--accent-900': '#78350f',
       '--accent-950': '#451a03',
+    }
+  },
+  {
+    id: 'pro-red',
+    name: 'MuhasebePro Kırmızı',
+    preview: '#E63946',
+    colors: {
+      '--accent-50': '#fef2f2',
+      '--accent-100': '#fee2e2',
+      '--accent-200': '#fecaca',
+      '--accent-300': '#fca5a5',
+      '--accent-400': '#f87171',
+      '--accent-500': '#E63946', // MuhasebePro red
+      '--accent-600': '#DC2626',
+      '--accent-700': '#B91C1C', 
+      '--accent-800': '#991B1B',
+      '--accent-900': '#7F1D1D',
+      '--accent-950': '#450A0A',
     }
   },
   {
@@ -644,13 +651,14 @@ export const COLOR_PRESETS = [
   }
 ];
 
-export const StormIconWrapper = ({ iconElement, isActive }: { iconElement: React.ReactNode, isActive?: boolean }) => {
+export const StormIconWrapper = ({ iconElement, isActive, designStyle }: { iconElement: React.ReactNode, isActive?: boolean, designStyle?: string }) => {
+  const isProSolid = designStyle === 'pro-solid';
   return (
     <div 
-      className={`storm-icon-wrapper ${isActive ? 'active-icon' : ''} relative flex items-center justify-center shrink-0 rounded-lg overflow-hidden transition-all duration-200 w-8 h-8 text-white group-hover:scale-110`}
+      className={`storm-icon-wrapper ${isActive ? 'active-icon' : ''} relative flex items-center justify-center shrink-0 rounded-lg transition-all duration-200 w-8 h-8 ${isProSolid && isActive ? 'text-white' : 'text-white'} group-hover:scale-110`}
       style={{
-        backgroundColor: isActive ? 'var(--accent-600)' : 'color-mix(in srgb, var(--accent-900) 40%, transparent)',
-        boxShadow: isActive ? '0 0 10px color-mix(in srgb, var(--accent-500) 40%, transparent)' : 'none'
+        backgroundColor: isProSolid ? 'transparent' : (isActive ? 'var(--accent-600)' : 'color-mix(in srgb, var(--accent-900) 40%, transparent)'),
+        boxShadow: (isActive && !isProSolid) ? '0 0 10px color-mix(in srgb, var(--accent-500) 40%, transparent)' : 'none'
       }}
     >
       {/* Actual Icon */}
@@ -677,6 +685,7 @@ export const TAB_DEFS: Record<string, { label: string; icon: React.ReactNode }> 
 
 export const SIDEBAR_BG_PRESETS = [
   { id: 'pure-white', name: 'Kar Beyaz (Beyaz)', value: '#ffffff', border: 'rgba(0,0,0,0.1)' },
+  { id: 'pro-dark', name: 'Pro Koyu Gri', value: '#2b2d35', border: 'rgba(255,255,255,0.05)' },
   { id: 'slate-gray', name: 'Mika Grisi', value: '#1e293b', border: 'rgba(255,255,255,0.12)' },
   { id: 'royal-navy', name: 'Safir Mavisi (Lacivert)', value: '#1e3a8a', border: 'rgba(255,255,255,0.15)' },
   { id: 'sampi10-blue', name: 'Sadece Mavi', value: '#22315b', border: 'rgba(255,255,255,0.15)' },
@@ -704,6 +713,15 @@ export const PIN_ACCOUNTS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.7.8",
+    date: "28.07.2026",
+    changes: [
+      "Gösterge Paneli Başlık Tasarımı: Özet finansal göstergeler ve widget başlık kartları sol navigasyon paneli ve aktif renk temasıyla birebir uyumlu premium görünümle yenilendi.",
+      "Sol Menü Kaydırma Çubuğu (Scrollbar): Sol navigasyon menüsüne özel sol tarafa hizalı, yüksek kontrastlı ve akıcı özel scrollbar entegre edildi.",
+      "Arayüz & Tema Kararlılığı: Gösterge paneli kart başlıklarında metin okunabilirliği ve tasarım stili senkronizasyonu tüm renk temalarında tam uyumlu hale getirildi."
+    ]
+  },
   {
     version: "1.7.7",
     date: "25.07.2026",

@@ -119,8 +119,8 @@ function performSchemaMigration() {
 function createWindow() {
   const isDev = !app.isPackaged;
   const iconPath = isDev 
-    ? path.join(__dirname, 'public', 'icon.png') 
-    : path.join(__dirname, 'dist', 'icon.png');
+    ? path.join(__dirname, 'public', 'icon.ico') 
+    : path.join(__dirname, 'dist', 'icon.ico');
 
   mainWindow = new BrowserWindow({
     width: 1280,

@@ -45,14 +45,14 @@ export const globalStylesPart2 = `
         [data-design-style="navy-perf"] .bg-white\\/5,
         [data-design-style="navy-perf"] .bg-white\\/10,
         [data-design-style="navy-perf"] .bg-\\[\\#1a1f36\\],
-        [data-design-style="navy-perf"] .bg-black\\/10,
-        [data-design-style="navy-perf"] .bg-black\\/20,
-        [data-design-style="navy-perf"] .bg-black\\/30,
-        [data-design-style="navy-perf"] .bg-black\\/40,
+        [data-design-style="navy-perf"] .bg-black\\\\/,
+        [data-design-style="navy-perf"] .bg-black\\\\/,
+        [data-design-style="navy-perf"] .bg-black\\\\/,
+        [data-design-style="navy-perf"] .bg-black\\\\/,
         [data-design-style="navy-perf"] .bg-slate-900,
         [data-design-style="navy-perf"] .bg-zinc-900,
         [data-design-style="navy-perf"] .bg-zinc-950,
-        [data-design-style="navy-perf"] .bg-black\\/50,
+        [data-design-style="navy-perf"] .bg-black\\\\/,
         [data-design-style="navy-perf"] .bg-white,
         [data-design-style="navy-perf"] .bg-\\[\\#ffffff\\],
         [data-design-style="navy-perf"] [class*="bg-[#ffffff]"] {
@@ -390,7 +390,7 @@ export const globalStylesPart2 = `
           border-color: #00007f !important;
         }
 
-        [data-design-style="navy-perf"] aside .bg-black\\/15,
+        [data-design-style="navy-perf"] aside .bg-black\\\\/,
         [data-design-style="navy-perf"] aside .bg-white\\/5 {
           background-color: #000028 !important;
           border: 1px solid #00007f !important;
@@ -449,9 +449,12 @@ export const globalStylesPart2 = `
         }
 
         [data-design-style="clean-light"] body,
+        [data-design-style="pro-solid"] body,
         [data-design-style="clean-light"].bg-\\[\\#050505\\],
         body:has([data-design-style="clean-light"]),
-        [data-design-style="clean-light"] .min-h-screen {
+        body:has([data-design-style="pro-solid"]),
+        [data-design-style="clean-light"] .min-h-screen,
+        [data-design-style="pro-solid"] .min-h-screen {
           background-color: color-mix(in srgb, var(--accent-50) 15%, #f1f5f9) !important;
           background: 
             linear-gradient(135deg, color-mix(in srgb, var(--accent-100) 12%, #f1f5f9) 0%, color-mix(in srgb, var(--accent-50) 8%, #f8fafc) 100%) !important;
@@ -463,6 +466,7 @@ export const globalStylesPart2 = `
 
         /* Override ALL dark panel, card, list and widget containers to clean white cards with gorgeous soft tint */
         [data-design-style="clean-light"] [class*="bg-[#111111]"],
+        [data-design-style="pro-solid"] [class*="bg-[#111111]"],
         [data-design-style="clean-light"] [class*="bg-[#151515]"],
         [data-design-style="clean-light"] [class*="bg-[#0a0a0a]"],
         [data-design-style="clean-light"] [class*="bg-[#0c0c0c]"],
@@ -473,6 +477,7 @@ export const globalStylesPart2 = `
         [data-design-style="clean-light"] [class*="bg-[#0b0c0e]"],
         [data-design-style="clean-light"] [class*="bg-[#121316]"],
         [data-design-style="clean-light"] [class*="bg-zinc-900"],
+        [data-design-style="pro-solid"] [class*="bg-zinc-900"],
         [data-design-style="clean-light"] [class*="bg-zinc-950"],
         [data-design-style="clean-light"] [class*="bg-slate-900"],
         [data-design-style="clean-light"] [class*="bg-black"],
@@ -492,14 +497,14 @@ export const globalStylesPart2 = `
         [data-design-style="clean-light"] .bg-white\\/5,
         [data-design-style="clean-light"] .bg-white\\/10,
         [data-design-style="clean-light"] .bg-\\[\\#1a1f36\\],
-        [data-design-style="clean-light"] .bg-black\\/10,
-        [data-design-style="clean-light"] .bg-black\\/20,
-        [data-design-style="clean-light"] .bg-black\\/30,
-        [data-design-style="clean-light"] .bg-black\\/40,
+        [data-design-style="clean-light"] .bg-black\\\\/,
+        [data-design-style="clean-light"] .bg-black\\\\/,
+        [data-design-style="clean-light"] .bg-black\\\\/,
+        [data-design-style="clean-light"] .bg-black\\\\/,
         [data-design-style="clean-light"] .bg-slate-900,
         [data-design-style="clean-light"] .bg-zinc-900,
         [data-design-style="clean-light"] .bg-zinc-950,
-        [data-design-style="clean-light"] .bg-black\\/50 {
+        [data-design-style="clean-light"] .bg-black\\\\/ {
           background-color: #ffffff !important;
           background: #ffffff !important;
           border: 1px solid color-mix(in srgb, var(--accent-300) 18%, #e2e8f0) !important;
@@ -693,7 +698,7 @@ export const globalStylesPart2 = `
           border-color: color-mix(in srgb, var(--accent-200) 20%, #e2e8f0) !important;
         }
 
-        [data-design-style="clean-light"] aside .bg-black\\/15,
+        [data-design-style="clean-light"] aside .bg-black\\\\/,
         [data-design-style="clean-light"] aside .bg-white\\/5 {
           background-color: color-mix(in srgb, var(--accent-100) 25%, #f1f5f9) !important;
         }
@@ -791,7 +796,7 @@ export const globalStylesPart2 = `
         aside.sidebar-light .border-white\\/5 {
           border-color: rgba(0, 0, 0, 0.1) !important;
         }
-        aside.sidebar-light .bg-black\\/15,
+        aside.sidebar-light .bg-black\\\\/,
         aside.sidebar-light .bg-white\\/5 {
           background-color: rgba(0, 0, 0, 0.05) !important;
         }
@@ -804,12 +809,12 @@ export const globalStylesPart2 = `
         }
 
         /* Mobile menu fixes */
-        .fixed.inset-0.z-30.bg-black\\/80 aside:not(.sidebar-light).text-white,
-        .fixed.inset-0.z-30.bg-black\\/80 aside:not(.sidebar-light) span,
-        .fixed.inset-0.z-30.bg-black\\/80 aside:not(.sidebar-light) button {
+        .fixed.inset-0.z-30.bg-black\\\\/ aside:not(.sidebar-light).text-white,
+        .fixed.inset-0.z-30.bg-black\\\\/ aside:not(.sidebar-light) span,
+        .fixed.inset-0.z-30.bg-black\\\\/ aside:not(.sidebar-light) button {
           color: #ffffff !important;
         }
-        .fixed.inset-0.z-30.bg-black\\/80 aside:not(.sidebar-light) .text-zinc-400 {
+        .fixed.inset-0.z-30.bg-black\\\\/ aside:not(.sidebar-light) .text-zinc-400 {
           color: #a1a1aa !important;
         }
 
@@ -1075,5 +1080,11 @@ export const globalStylesPart2 = `
           -webkit-backdrop-filter: none !important;
           border: 1px solid rgba(0, 0, 0, 0.15) !important;
           box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35) !important;
+        } 
+
+        } 
+
+        } 
+
         }
 `;
