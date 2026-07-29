@@ -430,16 +430,18 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.7.8';
+export const APP_VERSION = '1.7.9';
 
 export const CHANGELOG = {
-  version: '1.7.8',
+  version: '1.7.9',
   features: [
-    "Gösterge Paneli Başlık Tasarımı: Özet finansal göstergeler ve kart başlıkları sol navigasyon paneli ve aktif renk temasıyla birebir uyumlu hale getirildi.",
-    "Sol Menü Kaydırma Çubuğu (Scrollbar): Sol navigasyon menüsüne özel sol tarafa hizalı, yüksek kontrastlı ve akıcı özel scrollbar entegre edildi.",
-    "Arayüz & Tema Kararlılığı: Gösterge paneli kart başlıklarında metin okunabilirliği ve tasarım stili senkronizasyonu tüm renk temalarında tam uyumlu kılındı."
+    "Varsayılan Tema ve Renk Güncellemesi: Varsayılan arayüz stili 'Sıvı Mesh Gradient (Aurora Mesh)' ve varsayılan vurgu rengi 'Mavi (Sky)' olarak belirlendi.",
+    "Kompakt Tasarım Düzeni: Genel Ayarlar menüsündeki 'Arayüz Tasarım Stili' ile 'Uygulama Yazı Boyutu' kartları az yer kaplayan pratik ve şık tek bir kart bünyesinde birleştirildi.",
+    "Arayüz ve Vurgu Rengi Düzenlemeleri: 'Storm AI' rozet görselleri ve vurgu renklerindeki uyumsuzluklar giderildi, renk paleti sadeleştirildi."
   ],
-  fixes: []
+  fixes: [
+    "Varsayılana Sıfırla İşlevi: Varsayılan ayarlara dönüldüğünde Sıvı Mesh teması ve mavi renk tonunun doğru şekilde aktif olması sağlandı."
+  ]
 };
 
 export const PREDEFINED_USERS = [
@@ -525,7 +527,7 @@ export const COLOR_PRESETS = [
   },
   {
     id: 'pro-red',
-    name: 'MuhasebePro Kırmızı',
+    name: 'Açık Kırmızı',
     preview: '#E63946',
     colors: {
       '--accent-50': '#fef2f2',
@@ -630,24 +632,6 @@ export const COLOR_PRESETS = [
       '--accent-900': '#713f12',
       '--accent-950': '#422006',
     }
-  },
-  {
-    id: 'white',
-    name: 'Beyaz',
-    preview: '#ffffff',
-    colors: {
-      '--accent-50': '#ffffff',
-      '--accent-100': '#fafafa',
-      '--accent-200': '#f4f4f5',
-      '--accent-300': '#e4e4e7',
-      '--accent-400': '#d4d4d8',
-      '--accent-500': '#a1a1aa',
-      '--accent-600': '#71717a',
-      '--accent-700': '#52525b',
-      '--accent-800': '#3f3f46',
-      '--accent-900': '#27272a',
-      '--accent-950': '#18181b',
-    }
   }
 ];
 
@@ -713,6 +697,16 @@ export const PIN_ACCOUNTS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.7.9",
+    date: "29.07.2026",
+    changes: [
+      "Varsayılan Tema ve Renk Güncellemesi: Varsayılan arayüz stili 'Sıvı Mesh Gradient (Aurora Mesh)' ve varsayılan vurgu rengi 'Mavi (Sky)' olarak güncellendi.",
+      "Kompakt Tasarım Düzeni: Genel Ayarlar menüsündeki 'Arayüz Tasarım Stili' ile 'Uygulama Yazı Boyutu' kartları az yer kaplayan pratik ve şık tek bir kart bünyesinde birleştirildi.",
+      "Arayüz ve Vurgu Rengi Düzenlemeleri: 'Storm AI' rozet görselleri ve vurgu renklerindeki uyumsuzluklar giderildi, renk paleti sadeleştirildi.",
+      "Varsayılana Sıfırla Düzeltmesi: Varsayılan ayarlara dönüldüğünde Sıvı Mesh teması ve Mavi vurgu rengine pürüzsüz geçiş sağlandı."
+    ]
+  },
   {
     version: "1.7.8",
     date: "28.07.2026",

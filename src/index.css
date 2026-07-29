@@ -63,10 +63,13 @@ html {
 }
 
 /* Dashboard Widget Header Strip - Matching Left Sidebar Theme & Accent */
-.dashboard-widget-header {
+.dashboard-widget-header,
+[data-design-style="pro-solid"] .dashboard-widget-header,
+[data-design-style] .dashboard-widget-header {
   background-color: #2b2d35 !important;
+  background: #2b2d35 !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-left: 4px solid var(--accent-500, #E63946) !important;
+  border-left: 4px solid var(--accent-500, #0ea5e9) !important;
   color: #ffffff !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
 }
@@ -78,7 +81,12 @@ html {
 .dashboard-widget-header h2,
 .dashboard-widget-header h3,
 .dashboard-widget-header h4,
-.dashboard-widget-header div {
+.dashboard-widget-header div,
+[data-design-style="pro-solid"] .dashboard-widget-header *,
+[data-design-style="pro-solid"] .dashboard-widget-header span,
+[data-design-style="pro-solid"] .dashboard-widget-header p,
+[data-design-style] .dashboard-widget-header *,
+[data-design-style] .dashboard-widget-header span {
   color: #ffffff !important;
 }
 
@@ -549,3 +557,27 @@ body:has([data-design-style="pro-solid"]),
 [data-design-style="pro-solid"] .recharts-tooltip-item {
   color: #1e293b !important;
 }
+
+/* Explicit Currency Dark Capsule Overrides */
+[data-design-style="pro-solid"] .currency-dark-capsule,
+.currency-dark-capsule {
+  background-color: #181a22 !important;
+  background: #181a22 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+[data-design-style="pro-solid"] .currency-dark-capsule button,
+.currency-dark-capsule button {
+  color: #ffffff !important;
+}
+
+/* Storm AI Badge Override - Fluid Mesh Theme Only */
+[data-design-style="fluid-mesh"] .storm-ai-badge {
+  background-color: #0f172a !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6), 0 0 10px rgba(14, 165, 233, 0.35) !important;
+  backdrop-filter: blur(12px) !important;
+}
+

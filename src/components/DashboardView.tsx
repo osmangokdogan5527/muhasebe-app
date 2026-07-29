@@ -812,25 +812,34 @@ export default function DashboardView({
 
       {/* Currency Selection Tab Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 dashboard-widget-header p-3 rounded-xl">
-        <span className="text-[11px] font-extrabold uppercase tracking-widest font-sans ml-2 flex items-center gap-2">
+        <span className="text-[11px] font-extrabold uppercase tracking-widest font-sans ml-2 flex items-center gap-2 text-white" style={{ color: "#ffffff" }}>
           <span className="w-2 h-2 rounded-full bg-[var(--accent-500)] animate-pulse shadow-[0_0_8px_var(--accent-500)]"></span>
           FİNANSAL GÖSTERGE PARA BİRİMİ SEÇİMİ
         </span>
-        <div className="flex bg-slate-100 dark:bg-black/20 p-1 rounded-lg border border-slate-200 dark:border-white/10 gap-1 w-full sm:w-auto">
-          {(["TRY", "USD", "EUR"] as const).map((cur) => (
-            <button
-              key={cur}
-              id={`tab-dashboard-cur-${cur}`}
-              onClick={() => setDashboardCurrency(cur)}
-              className={`flex-1 sm:flex-none px-5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-md transition cursor-pointer ${
-                dashboardCurrency === cur
-                  ? "bg-[var(--accent-500)] text-white shadow-md font-extrabold"
-                  : "text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10"
-              }`}
-            >
-              {cur === "TRY" ? "₺ TL" : cur === "USD" ? "$ USD" : "€ EUR"}
-            </button>
-          ))}
+        <div
+          className="currency-dark-capsule flex p-1.5 rounded-xl border border-white/10 gap-1 w-full sm:w-auto"
+          style={{ backgroundColor: "#181a22", borderColor: "rgba(255, 255, 255, 0.12)" }}
+        >
+          {(["TRY", "USD", "EUR"] as const).map((cur) => {
+            const isActive = dashboardCurrency === cur;
+            return (
+              <button
+                key={cur}
+                id={`tab-dashboard-cur-${cur}`}
+                onClick={() => setDashboardCurrency(cur)}
+                className={`flex-1 sm:flex-none px-5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition cursor-pointer ${
+                  isActive ? "bg-[var(--accent-500,#0ea5e9)] shadow-md font-extrabold" : "hover:bg-white/10"
+                }`}
+                style={
+                  isActive
+                    ? { backgroundColor: "var(--accent-500, #0ea5e9)", color: "#ffffff" }
+                    : { backgroundColor: "transparent", color: "#ffffff" }
+                }
+              >
+                {cur === "TRY" ? "₺ TL" : cur === "USD" ? "$ USD" : "€ EUR"}
+              </button>
+            );
+          })}
         </div>
       </div>
 

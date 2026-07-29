@@ -59,6 +59,21 @@ export function StockModal({
           category: editingStock.category || '',
           brand: editingStock.brand || ''
         });
+      } else if (aiPrefilledData) {
+        setFormData({
+          name: aiPrefilledData.urunAdi || '',
+          code: aiPrefilledData.code || `STK-${String(stoklar.length + 1).padStart(4, '0')}`,
+          barcode: aiPrefilledData.barcode || '',
+          imageUrl: '',
+          unit: aiPrefilledData.unit || 'Adet',
+          purchasePrice: aiPrefilledData.purchasePrice || 0,
+          salesPrice: aiPrefilledData.salesPrice || 0,
+          taxRate: aiPrefilledData.kdv !== undefined ? aiPrefilledData.kdv : 0,
+          quantity: aiPrefilledData.miktar || 0,
+          minQuantity: aiPrefilledData.minQuantity || 5,
+          category: '',
+          brand: ''
+        });
       } else {
         setFormData({
           name: '',
@@ -77,7 +92,7 @@ export function StockModal({
       }
       setFormError('');
     }
-  }, [isOpen, editingStock, stoklar.length]);
+  }, [isOpen, editingStock, stoklar.length, aiPrefilledData]);
 
   // Handle form submission
   const categories = Array.from(new Set(stoklar.map(s => s.category).filter(Boolean))) as string[];

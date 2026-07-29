@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
 
 export function useAppSettings() {
+  const isMobileInitial = typeof window !== 'undefined' && window.innerWidth < 768;
+
   const [activeTheme, setActiveTheme] = useState<string>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'sky';
+    }
     // Migration check to ensure previous users get the new default 'sky' with 'fluid-mesh'
-    const isInitializedV2 = localStorage.getItem('storm_default_setup_v2');
-    if (!isInitializedV2) {
-      localStorage.setItem('storm_default_setup_v2', 'true');
+    const isInitializedV4 = localStorage.getItem('storm_default_setup_v4');
+    if (!isInitializedV4) {
+      localStorage.setItem('storm_default_setup_v4', 'true');
       localStorage.setItem('kolay_hesap_accent_theme', 'sky');
       localStorage.setItem('storm_muhasebe_design_style', 'fluid-mesh');
       localStorage.setItem('storm_muhasebe_logo_theme', 'theme');
@@ -18,12 +23,27 @@ export function useAppSettings() {
   });
 
   const [designStyle, setDesignStyle] = useState<string>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'fluid-mesh';
+    }
     return localStorage.getItem('storm_muhasebe_design_style') || 'fluid-mesh';
   });
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-design-style', designStyle);
-    localStorage.setItem('storm_muhasebe_design_style', designStyle);
+    const applyMobileTheme = () => {
+      if (window.innerWidth < 768) {
+        setDesignStyle('fluid-mesh');
+        setActiveTheme('sky');
+        document.documentElement.setAttribute('data-design-style', 'fluid-mesh');
+      } else {
+        document.documentElement.setAttribute('data-design-style', designStyle);
+        localStorage.setItem('storm_muhasebe_design_style', designStyle);
+      }
+    };
+
+    applyMobileTheme();
+    window.addEventListener('resize', applyMobileTheme);
+    return () => window.removeEventListener('resize', applyMobileTheme);
   }, [designStyle]);
 
   const [activeLogoTheme, setActiveLogoTheme] = useState<string>(() => {

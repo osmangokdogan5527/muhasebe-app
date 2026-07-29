@@ -115,20 +115,18 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                         onClick={() => {
                           setActiveTheme(preset.id);
                           localStorage.setItem('kolay_hesap_accent_theme', preset.id);
-                          
-                          
                         }}
                         className={`flex items-center gap-3 p-3 rounded-xl border text-left transition cursor-pointer ${
                           isSelected 
-                            ? 'border-teal-500 bg-teal-500/5 shadow-[0_2px_8px_rgba(45,212,191,0.1)]' 
-                            : 'border-white/10 hover:border-white/20 bg-white'
+                            ? 'border-teal-500 bg-teal-500/15 text-white font-bold shadow-[0_2px_8px_rgba(45,212,191,0.2)]' 
+                            : 'border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white/80'
                         }`}
                       >
                         <span 
-                          className="w-5 h-5 rounded-full block border border-black/5 shrink-0" 
+                          className="w-5 h-5 rounded-full block border border-black/10 shrink-0 shadow-xs" 
                           style={{ backgroundColor: preset.preview }}
                         />
-                        <span className={`text-xs font-semibold ${isSelected ? 'text-white' : 'text-slate-600'}`}>
+                        <span className={`text-xs font-semibold ${isSelected ? 'text-white' : 'text-white/80'}`}>
                           {preset.name}
                         </span>
                       </button>
@@ -164,218 +162,97 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
               </div>
             </div>
 
-            {/* Card 2: Yazı Boyutu */}
+            {/* Combined Compact Card: Arayüz Tasarım Stili & Uygulama Yazı Boyutu */}
             <div className="bg-white/5 p-6 rounded-2xl border border-white/10 shadow-sm flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-teal-500/10 text-teal-600 flex items-center justify-center">
-                    <span className="font-serif font-bold text-lg">A</span>
+              <div className="flex flex-col gap-6">
+                {/* Section A: Arayüz Tasarım Stili */}
+                <div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                      <Sparkles size={18} />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">Arayüz Tasarım Stili</h3>
+                      <p className="text-[11px] text-white/50 mt-0.5">Uygulama atmosferi ve tema stilini seçin</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">Uygulama Yazı Boyutu</h3>
-                    <p className="text-xs text-white/50 mt-0.5">Uygulama genelindeki metinlerin büyüklüğünü ayarlayın</p>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-3 gap-3 mt-6">
-                  {[
-                    { id: 'small', name: 'Küçük', desc: '14px' },
-                    { id: 'medium', name: 'Normal', desc: '16px' },
-                    { id: 'large', name: 'Büyük', desc: '18px' },
-                  ].map((preset) => {
-                    const isSelected = appFontSize === preset.id;
-                    return (
-                      <button
-                        key={preset.id}
-                        onClick={() => {
-                          setAppFontSize(preset.id as 'small' | 'medium' | 'large');
-                          localStorage.setItem('storm_muhasebe_font_size', preset.id);
-                        }}
-                        className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl border transition cursor-pointer ${
-                          isSelected 
-                            ? 'border-teal-500 bg-teal-500/5 shadow-[0_2px_8px_rgba(45,212,191,0.1)]' 
-                            : 'border-white/10 hover:border-white/20 bg-white'
-                        }`}
-                      >
-                        <span className={`font-semibold ${isSelected ? 'text-white' : 'text-slate-600'}`}>
-                          {preset.name}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          {preset.desc}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Card: Görsel Tasarım Teması Seçici */}
-            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 shadow-sm hidden md:flex flex-col justify-between md:col-span-2">
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
-                    <Sparkles size={18} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">Arayüz Tasarım Stili</h3>
-                    <p className="text-xs text-white/50 mt-0.5">Uygulamanın genel görsel dilini, derinliğini ve atmosferini değiştirin</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      { id: 'fluid-mesh', name: 'Sıvı Mesh Gradient', badge: 'Seçkin & Canlı', dot: 'bg-gradient-to-r from-teal-400 to-indigo-500' },
+                      { id: 'glass', name: 'Cam Arayüz (Glass)', badge: 'Sanat Eseri', dot: 'bg-purple-400' },
+                      { id: 'navy-perf', name: 'Lacivert Performans', badge: 'Navy Hız', dot: 'bg-blue-500' },
+                      { id: 'clean-light', name: 'Temiz Işık (Pure)', badge: 'Mikro Hız', dot: 'bg-emerald-400' },
+                      { id: 'pro-solid', name: 'MuhasebePro (Solid)', badge: 'Pro Stil', dot: 'bg-rose-500' },
+                    ].map((styleOpt) => {
+                      const isSelected = designStyle === styleOpt.id;
+                      return (
+                        <button
+                          key={styleOpt.id}
+                          onClick={() => {
+                            setDesignStyle(styleOpt.id);
+                            localStorage.setItem('storm_muhasebe_design_style', styleOpt.id);
+                            showToast(`${styleOpt.name} stili uygulandı!`, 'success');
+                          }}
+                          className={`flex items-center justify-between p-2.5 px-3 rounded-xl border text-left transition cursor-pointer relative ${
+                            isSelected
+                              ? 'border-indigo-500 bg-indigo-500/15 text-white shadow-[0_2px_10px_rgba(99,102,241,0.2)] font-bold'
+                              : 'border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${styleOpt.dot}`} />
+                            <div className="flex flex-col truncate">
+                              <span className="text-xs font-semibold truncate">{styleOpt.name}</span>
+                              <span className="text-[9px] text-white/40">{styleOpt.badge}</span>
+                            </div>
+                          </div>
+                          {isSelected && <Check size={14} className="text-indigo-400 shrink-0 ml-1 stroke-[3px]" />}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                  {[
-                    {
-                      id: 'glass',
-                      name: 'Cam Arayüz (Glassmorphism)',
-                      desc: 'Buzlu cam dokusu, derinlik veren blurlar ve modern neon parıltıları.',
-                      badge: 'Sanat Eseri',
-                      preview: (
-                        <div className="h-20 w-full rounded-lg bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 p-2 flex flex-col justify-between overflow-hidden relative">
-                          <span className="absolute -right-2 -top-2 w-10 h-10 rounded-full bg-pink-500/20 blur-sm animate-pulse" />
-                          <span className="absolute -left-2 -bottom-2 w-10 h-10 rounded-full bg-teal-500/20 blur-sm" />
-                          <div className="flex items-center gap-1 relative z-10">
-                            <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
-                            <span className="w-8 h-1 bg-white/20 rounded" />
-                          </div>
-                          <div className="space-y-1 relative z-10">
-                            <div className="w-full h-2 bg-white/5 border border-white/10 backdrop-blur-xs rounded" />
-                            <div className="w-2/3 h-2 bg-white/5 border border-white/10 backdrop-blur-xs rounded" />
-                          </div>
-                        </div>
-                      )
-                    },
-                    {
-                      id: 'fluid-mesh',
-                      name: 'Sıvı Mesh Gradient (Aurora Mesh)',
-                      desc: 'Renklerin akıcı bir şekilde süzüldüğü, göz alıcı neon geçişler ve parıldayan ultra şeffaf cam paneller.',
-                      badge: 'Seçkin & Canlı',
-                      preview: (
-                        <div className="h-20 w-full rounded-lg bg-[#06040e] p-2 flex flex-col justify-between overflow-hidden relative border border-white/10">
-                          <div className="absolute top-0 left-0 w-full h-full opacity-60 bg-gradient-to-tr from-violet-600/30 via-pink-600/20 to-teal-500/20 blur-md" />
-                          <div className="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-orange-500/20 blur-md" />
-                          <div className="absolute -bottom-6 -left-6 w-16 h-16 rounded-full bg-teal-500/20 blur-md" />
-                          <div className="flex items-center gap-1 relative z-10">
-                            <span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-bounce" />
-                            <span className="w-8 h-1 bg-white/40 rounded" />
-                          </div>
-                          <div className="space-y-1 relative z-10">
-                            <div className="w-full h-2 bg-white/10 border border-white/20 backdrop-blur-md rounded shadow-sm" />
-                            <div className="w-2/3 h-2 bg-white/10 border border-white/20 backdrop-blur-md rounded shadow-sm" />
-                          </div>
-                        </div>
-                      )
-                    },
-                    {
-                      id: 'navy-perf',
-                      name: 'Lacivert & Yüksek Performans (Navy Performance)',
-                      desc: 'Lacivert (#00007f) tabanlı, sıfır CPU yüküyle çalışan, göz yormayan, dinamik ve yüksek performanslı karanlık arayüz.',
-                      badge: 'Navy Hız',
-                      preview: (
-                        <div className="h-20 w-full rounded-lg bg-[#000022] p-2 flex flex-col justify-between overflow-hidden relative border border-[#00007f]">
-                          <div className="absolute top-0 left-0 w-full h-full bg-[#000018]" />
-                          <div className="flex items-center gap-1 relative z-10">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                            <span className="w-8 h-1 bg-blue-300 rounded" />
-                          </div>
-                          <div className="space-y-1 relative z-10">
-                            <div className="w-full h-2 bg-[#00003c] border border-[#00007f] rounded shadow-xs" />
-                            <div className="w-2/3 h-2 bg-[#00003c] border border-[#00007f] rounded shadow-xs" />
-                          </div>
-                        </div>
-                      )
-                    },
-                    {
-                      id: 'clean-light',
-                      name: 'Temiz Işık & Yüksek Performans (Pure Light)',
-                      desc: 'Sıfır CPU yüküyle çalışan, her cihazda akıcı, pürüzsüz saf beyaz zemin üzerine modern ve minimalist arayüz.',
-                      badge: 'Mikro Hız',
-                      preview: (
-                        <div className="h-20 w-full rounded-lg bg-slate-100 p-2 flex flex-col justify-between overflow-hidden relative border border-slate-200">
-                          <div className="absolute top-0 left-0 w-full h-full bg-white opacity-40" />
-                          <div className="flex items-center gap-1 relative z-10">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                            <span className="w-8 h-1 bg-slate-300 rounded" />
-                          </div>
-                          <div className="space-y-1 relative z-10">
-                            <div className="w-full h-2 bg-white border border-slate-200 rounded shadow-xs" />
-                            <div className="w-2/3 h-2 bg-white border border-slate-200 rounded shadow-xs" />
-                          </div>
-                        </div>
-                      )
-                    },
-                    {
-                      id: 'pro-solid',
-                      name: 'MuhasebePro (Solid)',
-                      desc: 'Koyu gri menü, keskin düz renkler, yuvarlatılmış köşeler ve güçlü kontrast.',
-                      badge: 'Pro Stil',
-                      preview: (
-                        <div className="h-20 w-full rounded-lg bg-gray-100 p-2 flex overflow-hidden relative border border-gray-200">
-                          <div className="w-1/4 h-full bg-[#2b2d35] rounded mr-2 flex flex-col gap-1 p-1">
-                            <div className="w-full h-2 bg-red-600 rounded"></div>
-                            <div className="w-full h-2 bg-white/10 rounded"></div>
-                          </div>
-                          <div className="flex-1 flex flex-col gap-1 mt-1">
-                            <div className="w-full h-4 bg-white border border-gray-200 rounded shadow-xs"></div>
-                            <div className="w-2/3 h-3 bg-white border border-gray-200 rounded shadow-xs"></div>
-                          </div>
-                        </div>
-                      )
-                    }
-                  ].map((styleOpt) => {
-                    const isSelected = designStyle === styleOpt.id;
-                    return (
-                      <button
-                        key={styleOpt.id}
-                        onClick={() => {
-                          setDesignStyle(styleOpt.id);
-                          localStorage.setItem('storm_muhasebe_design_style', styleOpt.id);
-                          showToast(`${styleOpt.name} stili uygulandı!`, 'success');
-                        }}
-                        className={`group flex flex-col text-left rounded-xl border p-4 transition-all cursor-pointer relative overflow-hidden ${
-                          isSelected 
-                            ? 'border-indigo-500 bg-indigo-500/5 ring-2 ring-indigo-500/10 shadow-[0_4px_16px_rgba(99,102,241,0.15)]' 
-                            : 'border-white/10 hover:border-white/20 hover:bg-white/5/50 bg-slate-900 shadow-xs'
-                        }`}
-                      >
-                        {styleOpt.preview}
-                        
-                        <div className="mt-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-white/90">
-                              {styleOpt.name}
-                            </span>
-                            {styleOpt.badge && (
-                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                                isSelected ? 'bg-indigo-600 text-white' : 'bg-white/10 text-white/50'
-                              }`}>
-                                {styleOpt.badge}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[10px] text-white/50 mt-1 leading-relaxed">
-                            {styleOpt.desc}
-                          </p>
-                        </div>
+                {/* Section B: Uygulama Yazı Boyutu */}
+                <div className="pt-4 border-t border-white/10">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-teal-500/10 text-teal-400 flex items-center justify-center">
+                      <span className="font-serif font-bold text-base">A</span>
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">Uygulama Yazı Boyutu</h3>
+                      <p className="text-[11px] text-white/50 mt-0.5">Uygulama genelindeki metinlerin büyüklüğü</p>
+                    </div>
+                  </div>
 
-                        {isSelected && (
-                          <div className="absolute top-1.5 right-1.5 bg-indigo-600 text-white rounded-full p-0.5 shadow-sm">
-                            <Check size={10} className="stroke-[3px]" />
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'small', name: 'Küçük', desc: '14px' },
+                      { id: 'medium', name: 'Normal', desc: '16px' },
+                      { id: 'large', name: 'Büyük', desc: '18px' },
+                    ].map((preset) => {
+                      const isSelected = appFontSize === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          onClick={() => {
+                            setAppFontSize(preset.id as 'small' | 'medium' | 'large');
+                            localStorage.setItem('storm_muhasebe_font_size', preset.id);
+                          }}
+                          className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-xl border transition cursor-pointer ${
+                            isSelected 
+                              ? 'border-teal-500 bg-teal-500/15 text-white shadow-[0_2px_10px_rgba(45,212,191,0.2)] font-bold' 
+                              : 'border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white'
+                          }`}
+                        >
+                          <span className="text-xs font-semibold">{preset.name}</span>
+                          <span className="text-[10px] text-white/40 font-mono mt-0.5">{preset.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-white/5 text-[10px] text-slate-400 font-mono uppercase tracking-wider flex justify-between items-center">
-                <span>Aktif Tasarım Dili:</span>
-                <span className="font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">
-                  {designStyle === 'fluid-mesh' 
-                    ? 'Sıvı Mesh Gradient (Aurora)' 
-                    : designStyle === 'clean-light' ? 'Temiz Işık & Yüksek Performans' : designStyle === 'pro-solid' ? 'MuhasebePro (Solid)' : 'Cam Arayüz (Glassmorphism)'}
-                </span>
               </div>
             </div>
 
@@ -556,17 +433,17 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                       localStorage.setItem('storm_muhasebe_hidden_tabs', JSON.stringify([]));
                       
                       // Also reset visual settings to user requested defaults
-                      setActiveTheme('pro-red');
-                      localStorage.setItem('kolay_hesap_accent_theme', 'pro-red');
+                      setActiveTheme('sky');
+                      localStorage.setItem('kolay_hesap_accent_theme', 'sky');
                       
-                      setDesignStyle('pro-solid');
-                      localStorage.setItem('storm_muhasebe_design_style', 'pro-solid');
+                      setDesignStyle('fluid-mesh');
+                      localStorage.setItem('storm_muhasebe_design_style', 'fluid-mesh');
                       
                       setActiveLogoTheme('theme');
                       localStorage.setItem('storm_muhasebe_logo_theme', 'theme');
                       
-                      setSidebarBg('#2b2d35');
-                      localStorage.setItem('storm_muhasebe_sidebar_bg', '#2b2d35');
+                      setSidebarBg('#050505');
+                      localStorage.setItem('storm_muhasebe_sidebar_bg', '#050505');
                       
                       setSidebarPattern('crystal');
                       localStorage.setItem('storm_muhasebe_sidebar_pattern', 'crystal');

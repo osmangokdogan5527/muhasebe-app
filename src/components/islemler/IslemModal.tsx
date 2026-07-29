@@ -152,7 +152,7 @@ const theme = useMemo(() => {
 
   // Dynamic Invoice Line items
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([
-    { stockId: '', stockName: '', quantity: 1, unit: 'Adet', price: 0, taxRate: 20, total: 0 }
+    { stockId: '', stockName: '', quantity: 1, unit: 'Adet', price: 0, taxRate: 0, total: 0 }
   ]);
 
   const isInvoice = useMemo(() => ['sale', 'purchase', 'sale_return', 'purchase_return'].includes(modalType), [modalType]);
@@ -405,7 +405,7 @@ const activeCariCurrency = useMemo(() => {
         if (editingTransaction.items && editingTransaction.items.length > 0) {
           setInvoiceItems(editingTransaction.items);
         } else {
-          setInvoiceItems([{ stockId: '', stockName: '', quantity: 1, unit: 'Adet', price: 0, taxRate: 20, total: 0 }]);
+          setInvoiceItems([{ stockId: '', stockName: '', quantity: 1, unit: 'Adet', price: 0, taxRate: 0, total: 0 }]);
         }
       } else {
         setReceiptAmount(editingTransaction.amount);
@@ -433,7 +433,7 @@ const activeCariCurrency = useMemo(() => {
       } else {
         setInvoiceNo('');
       }
-      setInvoiceItems([{ stockId: '', stockName: '', quantity: 1, unit: 'Adet', price: 0, taxRate: 20, total: 0 }]);
+      setInvoiceItems([{ stockId: '', stockName: '', quantity: 1, unit: 'Adet', price: 0, taxRate: 0, total: 0 }]);
     }
   }, [isOpen, editingTransaction, aiPrefilledData, modalType, preselectedCariId]);
 
@@ -455,7 +455,7 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
         item.stockName = '';
         item.unit = 'Adet';
         item.price = 0;
-        item.taxRate = 20;
+        item.taxRate = 0;
       }
     } else {
       (item as any)[field] = value;
@@ -474,7 +474,7 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
   const addInvoiceItemRow = () => {
     setInvoiceItems([
       ...invoiceItems,
-      { stockId: '', stockName: '', quantity: 1, unit: 'Adet', price: 0, taxRate: 20, total: 0 }
+      { stockId: '', stockName: '', quantity: 1, unit: 'Adet', price: 0, taxRate: 0, total: 0 }
     ]);
   };
 
