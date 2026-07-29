@@ -33,6 +33,7 @@ interface BackupWizardModalProps {
   credits: any[];
   bankAccounts: any[];
   accountTransactions: any[];
+  recurringTransactions?: any[];
   // Import handler (should clear and batch setDoc in firestore, then reload)
   onImportData: (payload: any) => Promise<void>;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
@@ -51,6 +52,7 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
   credits,
   bankAccounts,
   accountTransactions,
+  recurringTransactions = [],
   onImportData,
   showToast
 }) => {
@@ -162,7 +164,7 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
       });
 
       const payload: BackupDataPayload = {
-        version: '1.7.9',
+        version: '1.8.0',
         timestamp: new Date().toISOString(),
         collections: {
           cariler,
@@ -174,7 +176,8 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
           calisanIslemler: employeeTransactions,
           krediler: credits,
           hesaplar: bankAccounts,
-          hesapIslemleri: accountTransactions
+          hesapIslemleri: accountTransactions,
+          tekrarlayanIslemler: recurringTransactions
         },
         localStorage: settingsToBackup
       };
@@ -775,7 +778,7 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
 
         {/* Footer */}
         <div className="p-4 bg-zinc-950/60 border-t border-zinc-800 flex justify-between items-center text-[10px] text-zinc-500">
-          <span>Storm Muhasebe Güvenli Veri Motoru v1.7.9</span>
+          <span>Storm Muhasebe Güvenli Veri Motoru v1.8.0</span>
           <span>Bütün Hakları Saklıdır © 2026</span>
         </div>
 

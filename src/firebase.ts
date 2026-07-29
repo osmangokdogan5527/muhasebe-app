@@ -33,7 +33,7 @@ import {
   reauthenticateWithPopup,
   signInAnonymously
 } from 'firebase/auth';
-import { Cari, Stock, Transaction, CekSenet, Expense, Employee, EmployeeTransaction, Credit } from './types';
+import { Cari, Stock, Transaction, CekSenet, Expense, Employee, EmployeeTransaction, Credit, RecurringTransaction } from './types';
 
 // Read config from the provisioned project
 const firebaseConfig = {
@@ -94,6 +94,7 @@ const CALISAN_ISLEMLER_COLL = 'calisanIslemler';
 const KREDILER_COLL = 'krediler';
 const HESAPLAR_COLL = 'hesaplar';
 const HESAP_ISLEMLER_COLL = 'hesapIslemleri';
+const TEKRARLAYAN_COLL = 'tekrarlayanIslemler';
 
 let currentUserId: string | null = null;
 export function setActiveUser(userId: string | null) {
@@ -520,6 +521,45 @@ export async function deleteExpense(id: string) {
   }
 }
 
+// RECURRING TRANSACTIONS (TEKRARLAYAN İŞLEMLER) OPERATIONS
+export function subscribeRecurringTransactions(callback: (items: RecurringTransaction[]) => void) {
+  const q = query(collection(db, getPath(TEKRARLAYAN_COLL)), orderBy('nextDueDate', 'asc'), limit(500));
+  return onSnapshot(q, (snapshot) => {
+    const list: RecurringTransaction[] = [];
+    snapshot.forEach((docSnap) => {
+      list.push({ id: docSnap.id, ...docSnap.data() } as RecurringTransaction);
+    });
+    callback(list);
+  }, (error) => {
+    handleFirestoreError(error, OperationType.GET, getPath(TEKRARLAYAN_COLL));
+  });
+}
+
+export async function saveRecurringTransaction(item: Omit<RecurringTransaction, 'id'>, id?: string) {
+  try {
+    const docRef = id ? doc(db, getPath(TEKRARLAYAN_COLL), id) : doc(collection(db, getPath(TEKRARLAYAN_COLL)));
+    const newId = id || docRef.id;
+    const finalItem: RecurringTransaction = cleanUndefined({
+      id: newId,
+      ...item
+    });
+    await setDoc(docRef, finalItem);
+    return newId;
+  } catch (error) {
+    handleFirestoreError(error, id ? OperationType.UPDATE : OperationType.CREATE, `${getPath(TEKRARLAYAN_COLL)}/${id || 'new'}`);
+    throw error;
+  }
+}
+
+export async function deleteRecurringTransaction(id: string) {
+  try {
+    await deleteDoc(doc(db, getPath(TEKRARLAYAN_COLL), id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `${getPath(TEKRARLAYAN_COLL)}/${id}`);
+    throw error;
+  }
+}
+
 // EMPLOYEE OPERATIONS
 export function subscribeEmployees(callback: (employees: Employee[]) => void) {
   const q = query(collection(db, getPath(CALISANLAR_COLL)), orderBy('name', 'asc'), limit(500));
@@ -722,7 +762,7 @@ export async function saveAccountTransaction(transaction: any, id?: string) {
 
 export async function clearAllDatabaseData() {
   try {
-    const collections = [CARILER_COLL, STOKLAR_COLL, ISLEMLER_COLL, CEKSENET_COLL, GIDERLER_COLL, CALISANLAR_COLL, CALISAN_ISLEMLER_COLL, KREDILER_COLL, HESAPLAR_COLL, HESAP_ISLEMLER_COLL];
+    const collections = [CARILER_COLL, STOKLAR_COLL, ISLEMLER_COLL, CEKSENET_COLL, GIDERLER_COLL, CALISANLAR_COLL, CALISAN_ISLEMLER_COLL, KREDILER_COLL, HESAPLAR_COLL, HESAP_ISLEMLER_COLL, TEKRARLAYAN_COLL];
     for (const colName of collections) {
       const q = collection(db, getPath(colName));
       const snapshot = await getDocs(q);
@@ -766,6 +806,7 @@ export async function importAllDatabaseData(backupJson: any) {
       [KREDILER_COLL]: backupJson.krediler || [],
       [HESAPLAR_COLL]: backupJson.hesaplar || [],
       [HESAP_ISLEMLER_COLL]: backupJson.hesapIslemleri || [],
+      [TEKRARLAYAN_COLL]: backupJson.tekrarlayanIslemler || [],
     };
 
     for (const [colName, items] of Object.entries(collectionsMap)) {

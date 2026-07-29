@@ -83,14 +83,14 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
     <>
       {/* Invisible flex placeholder to keep main content stable when sidebar expands on hover */}
       {isProSolid && (
-        <div className={`hidden md:block shrink-0 transition-all duration-300 ${isPinned ? 'w-72' : 'w-[72px]'}`} />
+        <div className={`hidden md:block shrink-0 transition-all duration-500 ease-in-out ${isPinned ? 'w-72' : 'w-[72px]'}`} />
       )}
 
       {/* 1. DESKTOP SIDEBAR */}
       <aside 
         onMouseEnter={() => isProSolid && setIsHovered(true)}
         onMouseLeave={() => isProSolid && setIsHovered(false)}
-        className={`hidden md:flex flex-col text-white shrink-0 transition-all duration-300 z-40 border shadow-[0_12px_40px_-6px_rgba(0,0,0,0.5)] ${
+        className={`hidden md:flex flex-col text-white shrink-0 transition-all duration-500 ease-in-out z-40 border shadow-[0_12px_40px_-6px_rgba(0,0,0,0.5)] ${
           isProSolid 
             ? 'fixed left-0 top-0 bottom-0 h-screen my-0 ml-0 border-l-0 rounded-none rounded-r-2xl border-y-0' 
             : 'relative my-4 ml-4 rounded-3xl'
@@ -102,7 +102,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         }}
       >
         {/* Sidebar Brand Logo Header */}
-        <div className={`pt-5 pb-4 transition-all duration-300 flex items-center justify-between relative z-10 ${isExpanded ? 'px-6' : 'px-2'}`}>
+        <div className={`pt-5 pb-4 transition-all duration-500 ease-in-out flex items-center justify-between relative z-10 ${isExpanded ? 'px-6' : 'px-2'}`}>
           <div className="flex items-center justify-center min-w-0 flex-1">
             {isExpanded ? (
               <StormLogo className="w-36 h-auto mx-auto" logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern={sidebarPattern} sidebarPatternOpacity={sidebarPatternOpacity} designStyle={designStyle} sidebarBg={sidebarBg} />
@@ -124,7 +124,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         </div>
 
         {/* Navigation Items */}
-        <nav className={`flex-1 py-2 overflow-y-auto sidebar-nav-left-scroll custom-scrollbar overflow-x-hidden transition-all duration-300 ${isExpanded ? 'px-4' : 'px-2'}`}>
+        <nav className={`flex-1 py-2 overflow-y-auto sidebar-nav-left-scroll custom-scrollbar overflow-x-hidden transition-all duration-500 ease-in-out ${isExpanded ? 'px-4' : 'px-2'}`}>
           <div className="space-y-1 w-full" style={{ direction: 'ltr' }}>
             {tabOrder
               .filter((tabId) => !hiddenTabs.includes(tabId))
@@ -248,8 +248,8 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         </nav>
 
         {/* Sidebar User & Cloud Sync Info Footer */}
-        <div className={`p-3 mt-auto space-y-2 transition-all duration-300 ${isExpanded ? 'px-3' : 'px-1.5'}`}>
-          <div className={`rounded-2xl border border-white/5 bg-black/20 shadow-lg relative z-10 transition-all duration-300 ${isExpanded ? 'p-3 space-y-2.5' : 'p-2 flex flex-col items-center gap-2'}`}>
+        <div className={`p-3 mt-auto space-y-2 transition-all duration-500 ease-in-out ${isExpanded ? 'px-3' : 'px-1.5'}`}>
+          <div className={`rounded-2xl border border-white/5 bg-black/20 shadow-lg relative z-10 transition-all duration-500 ease-in-out ${isExpanded ? 'p-3 space-y-2.5' : 'p-2 flex flex-col items-center gap-2'}`}>
             {isExpanded ? (
               <>
                 <div className="flex items-center justify-between text-[8px] font-mono tracking-widest uppercase px-1">

@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Expense } from '../types';
+import { Expense, RecurringTransaction, BankAccount, Cari } from '../types';
 import { saveExpense, deleteExpense } from '../firebase';
+import { getPendingRecurringItems, getTodayISO } from '../utils/recurringUtils';
+import TekrarlayanManager from './tekrarlayan/TekrarlayanManager';
 import { 
   Plus, 
   Search, 
@@ -18,11 +20,17 @@ import {
   Utensils, 
   Car, 
   HelpCircle,
-  Phone
+  Phone,
+  Clock,
+  AlertCircle,
+  Receipt
 } from 'lucide-react';
 
 interface MasraflarViewProps {
   expenses: Expense[];
+  recurringTransactions?: RecurringTransaction[];
+  bankAccounts?: BankAccount[];
+  cariler?: Cari[];
   aiPrefilledData?: {
     islem: 'expense' | 'sale' | 'purchase' | 'collection' | 'payment' | 'employee_payment';
     cariAdi?: string;
@@ -64,10 +72,23 @@ const CATEGORY_COLORS: Record<Expense['category'], string> = {
   'Diğer': 'bg-slate-50 text-slate-600 border-slate-200/50'
 };
 
-export default function MasraflarView({ expenses, aiPrefilledData, onClearAiPrefilledData }: MasraflarViewProps) {
+export default function MasraflarView({ 
+  expenses, 
+  recurringTransactions = [],
+  bankAccounts = [],
+  cariler = [],
+  aiPrefilledData, 
+  onClearAiPrefilledData 
+}: MasraflarViewProps) {
+  const [activeSubTab, setActiveSubTab] = useState<'expenses' | 'recurring'>('expenses');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [selectedCurrency, setSelectedCurrency] = useState<'TRY' | 'USD' | 'EUR'>('TRY');
+  const [categoryPeriod, setCategoryPeriod] = useState<'all' | 'month' | 'year'>('all');
+
+  const pendingRecurringCount = useMemo(() => {
+    return getPendingRecurringItems(recurringTransactions, getTodayISO()).length;
+  }, [recurringTransactions]);
   
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -140,12 +161,25 @@ export default function MasraflarView({ expenses, aiPrefilledData, onClearAiPref
     const totalsByCurrency = { TRY: 0, USD: 0, EUR: 0 };
     const categoryTotals = {} as Record<Expense['category'], number>;
 
+    const now = new Date();
+    const currentYear = now.getFullYear().toString();
+    const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
     expenses.forEach(exp => {
       totalsByCurrency[exp.currency] = (totalsByCurrency[exp.currency] || 0) + exp.amount;
       
-      // Calculate active currency category breakdown
+      // Calculate active currency category breakdown filtered by period
       if (exp.currency === selectedCurrency) {
-        categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
+        let matchPeriod = true;
+        if (categoryPeriod === 'month') {
+          matchPeriod = exp.date ? exp.date.startsWith(currentMonthStr) : false;
+        } else if (categoryPeriod === 'year') {
+          matchPeriod = exp.date ? exp.date.startsWith(currentYear) : false;
+        }
+
+        if (matchPeriod) {
+          categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
+        }
       }
     });
 
@@ -154,7 +188,7 @@ export default function MasraflarView({ expenses, aiPrefilledData, onClearAiPref
       categoryTotals,
       totalCount: expenses.length
     };
-  }, [expenses, selectedCurrency]);
+  }, [expenses, selectedCurrency, categoryPeriod]);
 
   const handleOpenCreateModal = () => {
     setEditingExpense(null);
@@ -240,20 +274,94 @@ export default function MasraflarView({ expenses, aiPrefilledData, onClearAiPref
       {/* Header and Title */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 id="masraflar-heading" className="text-xl font-extrabold uppercase tracking-wider text-slate-900">Gider ve Masraf Takibi</h1>
-          <p className="text-xs text-slate-500 font-mono mt-1 uppercase tracking-widest">
-            İŞLETME GİDERLERİ • FATURALAR • DÜZENLİ ÖDEMELER
+          <h1 id="masraflar-heading" className="text-xl font-extrabold uppercase tracking-wider text-slate-900 dark:text-white">Gider ve Masraf Takibi</h1>
+          <p className="text-xs text-slate-500 dark:text-zinc-400 font-mono mt-1 uppercase tracking-widest">
+            İŞLETME GİDERLERİ • FATURALAR • DÜZENLİ ÖDEMELER & ABONELİKLER
           </p>
         </div>
-        <button
-          id="add-expense-btn"
-          onClick={handleOpenCreateModal}
-          className="flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-lg transition cursor-pointer active:scale-98"
-        >
-          <Plus size={16} />
-          <span>Yeni Masraf Ekle</span>
-        </button>
+
+        {/* Sub-Tab Navigation Bar */}
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-zinc-800 p-1 rounded-2xl border border-slate-200 dark:border-zinc-700">
+          <button
+            onClick={() => setActiveSubTab('expenses')}
+            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all flex items-center gap-2 ${
+              activeSubTab === 'expenses'
+                ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-sm'
+                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Receipt className="w-4 h-4" />
+            <span>Gider Kayıtları</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('recurring')}
+            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all flex items-center gap-2 relative ${
+              activeSubTab === 'recurring'
+                ? 'bg-[var(--accent-600)] text-white shadow-sm'
+                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            <span>Tekrarlayan İşlemler</span>
+            {pendingRecurringCount > 0 && (
+              <span className={`px-2 py-0.5 text-[10px] font-black rounded-full ${
+                activeSubTab === 'recurring'
+                  ? 'bg-white text-[var(--accent-700)]'
+                  : 'bg-[var(--accent-600)] text-white animate-pulse'
+              }`}>
+                {pendingRecurringCount} ONAY BEKLEYEN
+              </span>
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Conditional Subtab Views */}
+      {activeSubTab === 'recurring' ? (
+        <TekrarlayanManager
+          recurringTransactions={recurringTransactions}
+          bankAccounts={bankAccounts}
+          cariler={cariler}
+        />
+      ) : (
+        <>
+          {/* Pending Recurring Items Banner if any */}
+          {pendingRecurringCount > 0 && (
+            <div className="p-4 bg-gradient-to-r from-[var(--accent-500)]/15 via-[var(--accent-500)]/10 to-[var(--accent-500)]/5 border border-[var(--accent-500)]/30 rounded-2xl flex items-center justify-between gap-4 animate-fade-in shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-[var(--accent-600)] text-white rounded-xl shadow-sm animate-bounce">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                    {pendingRecurringCount} Adet Tekrarlayan Gider / Abonellik Onay Bekliyor
+                  </h4>
+                  <p className="text-xs text-slate-600 dark:text-zinc-400 mt-0.5">
+                    Günü gelen kira, fatura veya maaş ödemelerini inceleyip tutar düzeltmesi ile gidere işleyebilirsiniz.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveSubTab('recurring')}
+                className="px-4 py-2 text-xs font-bold text-white bg-[var(--accent-600)] hover:bg-[var(--accent-700)] active:scale-[0.98] rounded-xl shadow-sm transition-all shrink-0 flex items-center gap-1.5"
+              >
+                Onay Ekranına Git →
+              </button>
+            </div>
+          )}
+
+          {/* Action and Summary Header for Expense Table */}
+          <div className="flex justify-end">
+            <button
+              id="add-expense-btn"
+              onClick={handleOpenCreateModal}
+              className="flex items-center gap-2 bg-[var(--accent-600)] hover:bg-[var(--accent-700)] text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-lg transition cursor-pointer active:scale-98"
+            >
+              <Plus size={16} />
+              <span>Yeni Masraf Ekle</span>
+            </button>
+          </div>
 
       {/* Summary Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -455,8 +563,45 @@ export default function MasraflarView({ expenses, aiPrefilledData, onClearAiPref
               </div>
             </div>
 
-            <p className="text-[10px] text-slate-500 font-semibold mt-4 mb-5 uppercase tracking-wider">
-              {selectedCurrency} Para birimi bazında kategori dağılımı:
+            {/* Time Period Filter Options */}
+            <div className="flex items-center justify-between mt-3 bg-slate-100 p-1 rounded-xl border border-slate-200/60">
+              <button
+                type="button"
+                onClick={() => setCategoryPeriod('all')}
+                className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition text-center cursor-pointer ${
+                  categoryPeriod === 'all'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Tümü
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategoryPeriod('month')}
+                className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition text-center cursor-pointer ${
+                  categoryPeriod === 'month'
+                    ? 'bg-[var(--accent-600)] text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Bu Ay
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategoryPeriod('year')}
+                className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition text-center cursor-pointer ${
+                  categoryPeriod === 'year'
+                    ? 'bg-[var(--accent-600)] text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Bu Yıl
+              </button>
+            </div>
+
+            <p className="text-[10px] text-slate-500 font-semibold mt-3 mb-4 uppercase tracking-wider">
+              {selectedCurrency} ({categoryPeriod === 'month' ? 'BU AY' : categoryPeriod === 'year' ? 'BU YIL' : 'TÜM ZAMANLAR'}) BAZINDA KATEGORİ DAĞILIMI:
             </p>
 
             <div className="space-y-4">
@@ -520,7 +665,7 @@ export default function MasraflarView({ expenses, aiPrefilledData, onClearAiPref
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-[var(--accent-500)]/10 text-[var(--accent-600)] flex items-center justify-center">
                   <TrendingDown size={16} />
                 </div>
                 <div>
@@ -544,7 +689,7 @@ export default function MasraflarView({ expenses, aiPrefilledData, onClearAiPref
             {/* Form */}
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1">
               {formError && (
-                <div className="p-3 bg-rose-50 text-rose-600 rounded-lg border border-rose-100 text-xs font-bold">
+                <div className="p-3 bg-red-50 text-red-600 rounded-lg border border-red-100 text-xs font-bold">
                   {formError}
                 </div>
               )}
@@ -561,7 +706,7 @@ export default function MasraflarView({ expenses, aiPrefilledData, onClearAiPref
                     placeholder="Örn: Haziran Elektrik Faturası, Temmuz Ofis Kirası"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full border border-slate-200 focus:border-rose-500 focus:ring-rose-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50"
+                    className="w-full border border-slate-200 focus:border-[var(--accent-500)] focus:ring-[var(--accent-500)] rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 outline-none"
                   />
                 </div>
 
@@ -573,7 +718,7 @@ export default function MasraflarView({ expenses, aiPrefilledData, onClearAiPref
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as Expense['category'] })}
-                    className="w-full border border-slate-200 focus:border-rose-500 focus:ring-rose-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 cursor-pointer"
+                    className="w-full border border-slate-200 focus:border-[var(--accent-500)] focus:ring-[var(--accent-500)] rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 cursor-pointer outline-none"
                   >
                     <option value="Elektrik">Elektrik</option>
                     <option value="Su">Su</option>
@@ -597,7 +742,7 @@ export default function MasraflarView({ expenses, aiPrefilledData, onClearAiPref
                     required
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full border border-slate-200 focus:border-rose-500 focus:ring-rose-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 font-mono"
+                    className="w-full border border-slate-200 focus:border-[var(--accent-500)] focus:ring-[var(--accent-500)] rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 font-mono outline-none"
                   />
                 </div>
 
@@ -614,7 +759,7 @@ export default function MasraflarView({ expenses, aiPrefilledData, onClearAiPref
                     placeholder="0.00"
                     value={formData.amount || ''}
                     onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-                    className="w-full border border-slate-200 focus:border-rose-500 focus:ring-rose-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 font-mono"
+                    className="w-full border border-slate-200 focus:border-[var(--accent-500)] focus:ring-[var(--accent-500)] rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 font-mono outline-none"
                   />
                 </div>
 
@@ -626,7 +771,7 @@ export default function MasraflarView({ expenses, aiPrefilledData, onClearAiPref
                   <select
                     value={formData.currency}
                     onChange={(e) => setFormData({ ...formData, currency: e.target.value as 'TRY' | 'USD' | 'EUR' })}
-                    className="w-full border border-slate-200 focus:border-rose-500 focus:ring-rose-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 cursor-pointer"
+                    className="w-full border border-slate-200 focus:border-[var(--accent-500)] focus:ring-[var(--accent-500)] rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 cursor-pointer outline-none"
                   >
                     <option value="TRY">₺ TRY</option>
                     <option value="USD">$ USD</option>
@@ -642,7 +787,7 @@ export default function MasraflarView({ expenses, aiPrefilledData, onClearAiPref
                   <select
                     value={formData.account}
                     onChange={(e) => setFormData({ ...formData, account: e.target.value as 'cash' | 'bank' | 'pos' })}
-                    className="w-full border border-slate-200 focus:border-rose-500 focus:ring-rose-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 cursor-pointer"
+                    className="w-full border border-slate-200 focus:border-[var(--accent-500)] focus:ring-[var(--accent-500)] rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 cursor-pointer outline-none"
                   >
                     <option value="cash">Kasa (Nakit)</option>
                     <option value="bank">Banka (Havale/EFT)</option>
@@ -660,7 +805,7 @@ export default function MasraflarView({ expenses, aiPrefilledData, onClearAiPref
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
-                    className="w-full border border-slate-200 focus:border-rose-500 focus:ring-rose-500 rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50"
+                    className="w-full border border-slate-200 focus:border-[var(--accent-500)] focus:ring-[var(--accent-500)] rounded-lg p-2.5 text-xs text-slate-900 bg-slate-50 outline-none"
                   />
                 </div>
               </div>
@@ -678,7 +823,7 @@ export default function MasraflarView({ expenses, aiPrefilledData, onClearAiPref
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 text-xs font-bold text-white uppercase tracking-wider bg-rose-600 hover:bg-rose-700 rounded-lg shadow-md hover:shadow-lg transition cursor-pointer flex items-center gap-2"
+                  className="px-5 py-2 text-xs font-bold text-white uppercase tracking-wider bg-[var(--accent-600)] hover:bg-[var(--accent-700)] rounded-lg shadow-md hover:shadow-lg transition cursor-pointer flex items-center gap-2"
                 >
                   {isSubmitting ? 'Kaydediliyor...' : editingExpense ? 'Değişiklikleri Kaydet' : 'Masrafı Kaydet'}
                 </button>
@@ -686,6 +831,8 @@ export default function MasraflarView({ expenses, aiPrefilledData, onClearAiPref
             </form>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

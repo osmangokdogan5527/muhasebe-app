@@ -33,7 +33,10 @@ export function LedgerDrawer({
   const [endDate, setEndDate] = useState("");
   const [ekstreType, setEkstreType] = useState<"summary" | "detailed">("summary");
 
-  const [quickTxType, setQuickTxType] = useState<"collection" | "payment" | "sale_return" | "purchase_return">("collection");
+  const [quickTxType, setQuickTxType] = useState<"collection" | "payment" | "adjustment" | "sale_return" | "purchase_return">("collection");
+  const [adjustmentDirection, setAdjustmentDirection] = useState<"discount" | "debit_note">("discount");
+  const [amountInputMode, setAmountInputMode] = useState<"direct" | "target_balance">("direct");
+  const [targetBalanceInput, setTargetBalanceInput] = useState("");
   const [quickTxAmount, setQuickTxAmount] = useState("");
   const [quickTxInvoiceNo, setQuickTxInvoiceNo] = useState("");
   const [quickTxDate, setQuickTxDate] = useState(new Date().toISOString().substring(0, 10));
@@ -88,18 +91,24 @@ export function LedgerDrawer({
     }
   }, [currentCari?.id]);
 
-  // Populate automatic Description when quickTxType changes
+  // Populate automatic Description when quickTxType or adjustmentDirection changes
   useEffect(() => {
     if (quickTxType === "collection") {
       setQuickTxDescription("Hızlı Tahsilat Girişi");
     } else if (quickTxType === "payment") {
       setQuickTxDescription("Hızlı Ödeme Girişi");
+    } else if (quickTxType === "adjustment") {
+      if (adjustmentDirection === "discount") {
+        setQuickTxDescription("Sezon Sonu İskontosu / Fatura İndirimi");
+      } else {
+        setQuickTxDescription("Borç Dekontu / Masraf Yansıtma");
+      }
     } else if (quickTxType === "sale_return") {
       setQuickTxDescription("Hızlı Satıştan İade Girişi");
     } else {
       setQuickTxDescription("Hızlı Alıştan İade Girişi");
     }
-  }, [quickTxType]);
+  }, [quickTxType, adjustmentDirection]);
 
   // Filter accounts based on selected account type
   const filteredAccountsForQuick = useMemo(() => {
@@ -141,10 +150,74 @@ export function LedgerDrawer({
   const handleSaveQuickTx = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentCari) return;
-    const finalAmount = parseFloat(quickTxAmount);
-    if (isNaN(finalAmount) || finalAmount <= 0) {
-      setQuickTxError("Lütfen geçerli bir tutar girin.");
-      return;
+
+    let finalAmount = 0;
+    let finalType: "collection" | "payment" | "sale_return" | "purchase_return" = "collection";
+    let finalAccount: "cash" | "bank" | "pos" | "" = quickTxAccount;
+    let finalDescription = quickTxDescription;
+
+    if (amountInputMode === "target_balance") {
+      const targetVal = parseFloat(targetBalanceInput);
+      if (isNaN(targetVal)) {
+        setQuickTxError("Lütfen geçerli bir hedef kalan bakiye tutarı girin.");
+        return;
+      }
+      const diff = currentNetBalance - targetVal;
+      if (Math.abs(diff) < 0.001) {
+        setQuickTxError("Mevcut bakiye zaten hedef bakiyeye eşittir. İşlem gerekmez.");
+        return;
+      }
+      finalAmount = Math.abs(diff);
+
+      if (quickTxType === "adjustment") {
+        finalAccount = ""; // Düzeltme işlemi
+        if (diff > 0) {
+          // Müşteri borcu düşecek -> Alacaklandır (collection)
+          finalType = "collection";
+          if (!finalDescription.trim()) {
+            finalDescription = `Kalan Bakiye Düzeltmesi (Hedef: ${targetVal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺)`;
+          }
+        } else {
+          // Müşteri borcu artacak -> Borçlandır (payment)
+          finalType = "payment";
+          if (!finalDescription.trim()) {
+            finalDescription = `Kalan Bakiye Düzeltmesi (Hedef: ${targetVal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺)`;
+          }
+        }
+      } else if (quickTxType === "collection") {
+        finalType = "collection";
+        if (!finalDescription.trim()) {
+          finalDescription = `Tahsilat (Bakiye ${targetVal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺ yapıldı)`;
+        }
+      } else if (quickTxType === "payment") {
+        finalType = "payment";
+        if (!finalDescription.trim()) {
+          finalDescription = `Ödeme (Bakiye ${targetVal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺ yapıldı)`;
+        }
+      }
+    } else {
+      finalAmount = parseFloat(quickTxAmount);
+      if (isNaN(finalAmount) || finalAmount <= 0) {
+        setQuickTxError("Lütfen geçerli bir tutar girin.");
+        return;
+      }
+
+      if (quickTxType === "adjustment") {
+        finalAccount = ""; // No physical cash/bank movement for discount/adjustment
+        if (adjustmentDirection === "discount") {
+          finalType = "collection"; // reduces cari debt (Alacaklandır)
+          if (!finalDescription.trim()) {
+            finalDescription = "İskonto / Bakiye Düzeltme";
+          }
+        } else {
+          finalType = "payment"; // increases cari debt (Borçlandır)
+          if (!finalDescription.trim()) {
+            finalDescription = "Borç Dekontu / Masraf Yansıtma";
+          }
+        }
+      } else {
+        finalType = quickTxType as "collection" | "payment" | "sale_return" | "purchase_return";
+      }
     }
 
     // Validate product if it is a return transaction
@@ -185,16 +258,15 @@ export function LedgerDrawer({
 
     try {
       await createTransaction({
-        type: quickTxType,
+        type: finalType,
         cariId: currentCari.id,
         cariName: currentCari.name,
         date: quickTxDate,
         amount: finalAmount,
         invoiceNo: quickTxInvoiceNo || "",
-        // If it is a return, there is no payment/kasa involved (it is open-account). "ödeme ne alaka" -> correct!
-        account: isReturn ? "" : quickTxAccount,
-        bankAccountId: isReturn ? "" : (quickTxBankAccountId || ""),
-        description: quickTxDescription || `${quickTxType === "collection" ? "Tahsilat" : quickTxType === "payment" ? "Ödeme" : quickTxType === "sale_return" ? "Satıştan İade" : "Alıştan İade"}`,
+        account: isReturn || quickTxType === "adjustment" ? "" : finalAccount,
+        bankAccountId: isReturn || quickTxType === "adjustment" ? "" : (quickTxBankAccountId || ""),
+        description: finalDescription || (quickTxType === "collection" ? "Tahsilat" : quickTxType === "payment" ? "Ödeme" : "Bakiye Düzeltme"),
         currency: currentCari.currency || "TRY",
         exchangeRate: 1,
         convertedAmount: finalAmount,
@@ -205,6 +277,7 @@ export function LedgerDrawer({
       // Clear inputs upon success
       setQuickTxAmount("");
       setQuickTxInvoiceNo("");
+      setQuickTxDescription("");
       if (isReturn) {
         setQuickTxStockId("");
         setQuickTxQuantity("1");
@@ -304,9 +377,9 @@ export function LedgerDrawer({
               : t.type === "purchase"
                 ? "Alış Faturası"
                 : t.type === "collection"
-                  ? "Tahsilat"
+                  ? (t.account === "" || t.description?.toLowerCase().includes("iskonto") || t.description?.toLowerCase().includes("düzeltme") || t.description?.toLowerCase().includes("indirim") ? "İskonto / Alacak Dekontu" : "Tahsilat")
                   : t.type === "payment"
-                    ? "Ödeme"
+                    ? (t.account === "" || t.description?.toLowerCase().includes("dekont") || t.description?.toLowerCase().includes("düzeltme") || t.description?.toLowerCase().includes("masraf") ? "Borç Dekontu / Düzeltme" : "Ödeme")
                     : t.type === "sale_return"
                       ? "Satıştan İade"
                       : t.type === "purchase_return"
@@ -325,6 +398,12 @@ export function LedgerDrawer({
       }),
     ];
   }, [currentCari, islemler]);
+
+  // Current calculated net balance for this cari
+  const currentNetBalance = useMemo(() => {
+    if (cariLedger.length === 0) return currentCari?.openingBalance || 0;
+    return cariLedger[cariLedger.length - 1].balance;
+  }, [cariLedger, currentCari?.openingBalance]);
 
   // Filter ledger details by date range
   const filteredCariLedger = useMemo(() => {
@@ -592,115 +671,428 @@ export function LedgerDrawer({
           </div>
           
           {/* Right Column (Sidebar: Notes & Quick Transaction) */}
-          <div className="hidden-print w-full lg:w-96 bg-[#0c0c0c] border-t lg:border-t-0 lg:border-l border-white/5 p-6 flex flex-col gap-6 overflow-y-auto shrink-0">
-            <div className="flex justify-between items-center pb-3 border-b border-white/10">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-teal-500 font-sans">İşlem & Not Paneli</h4>
-              <button onClick={() => onClose()} className="p-1.5 text-white/40 hover:text-white bg-white/5 hover:bg-white/10 rounded transition">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          <div className="hidden-print w-full lg:w-96 bg-[#0f172a] text-slate-100 border-t lg:border-t-0 lg:border-l border-slate-800 p-5 flex flex-col gap-5 overflow-y-auto shrink-0 shadow-2xl">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-pulse"></span>
+                <h4 className="text-xs font-black uppercase tracking-widest text-teal-400 font-sans">
+                  İşlem & Not Paneli
+                </h4>
+              </div>
+              <button
+                onClick={() => onClose()}
+                className="p-1.5 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition cursor-pointer"
+                title="Paneli Kapat"
+              >
+                <X size={16} />
               </button>
             </div>
-            
+
             {/* Notes Section */}
-            <div className="bg-[#111] p-4 rounded-lg border border-white/5 shadow-sm space-y-3">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-white/50">Cari Notları</label>
+            <div className="bg-[#1e293b] p-4 rounded-xl border border-slate-700/80 shadow-md space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                  Cari Notları
+                </label>
+                <span className="text-[9px] text-slate-400 font-mono">Özel Notlar</span>
+              </div>
               <textarea
                 value={notesText}
                 onChange={(e) => setNotesText(e.target.value)}
-                placeholder="Bu cari ile ilgili notlarınızı buraya yazabilirsiniz..."
-                className="w-full bg-black/50 border border-white/10 rounded p-3 text-xs text-white/90 min-h-[100px] resize-y focus:outline-none focus:border-teal-500/50"
+                placeholder="Bu cariye özel notlarınızı yazabilirsiniz..."
+                className="w-full bg-[#090d16] text-white placeholder-slate-500 border border-slate-700 rounded-lg p-3 text-xs min-h-[90px] resize-y focus:outline-none focus:border-teal-500 font-medium leading-relaxed"
               />
               <button
+                type="button"
                 onClick={handleSaveNotes}
                 disabled={isSavingNotes}
-                className="w-full py-2 bg-white/10 hover:bg-white/20 text-white rounded text-[10px] font-bold uppercase tracking-widest transition"
+                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-teal-300 hover:text-teal-200 border border-slate-700 rounded-lg text-[10px] font-extrabold uppercase tracking-widest transition cursor-pointer active:scale-98 flex items-center justify-center gap-1.5 shadow-sm"
               >
                 {isSavingNotes ? "Kaydediliyor..." : "Notları Kaydet"}
               </button>
             </div>
 
-            {/* Quick Transaction Section */}
-            <div className="bg-[#111] p-4 rounded-lg border border-white/5 shadow-sm space-y-4">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-white/50 border-b border-white/10 pb-2">Hızlı İşlem Ekle</div>
-              
-              <div className="grid grid-cols-2 gap-2">
+            {/* Quick Transaction & Adjustment Section */}
+            <div className="bg-[#1e293b] p-4 rounded-xl border border-slate-700/80 shadow-md space-y-4">
+              <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-200 border-b border-slate-800 pb-2.5 flex items-center justify-between">
+                <span>Hızlı İşlem / Bakiye Düzelt</span>
+                <span className="text-[9px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400 font-extrabold border border-teal-500/20">
+                  HAREKET
+                </span>
+              </div>
+
+              {/* Type Switcher Tabs */}
+              <div className="grid grid-cols-3 gap-1 bg-[#090d16] p-1 rounded-lg border border-slate-800">
                 <button
                   type="button"
                   onClick={() => setQuickTxType("collection")}
-                  className={`py-2 text-[9px] uppercase tracking-widest font-bold rounded transition ${quickTxType === "collection" ? "bg-blue-600 text-white" : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"}`}
-                >Tahsilat</button>
+                  className={`py-2 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition cursor-pointer ${
+                    quickTxType === "collection"
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                  }`}
+                >
+                  Tahsilat
+                </button>
                 <button
                   type="button"
                   onClick={() => setQuickTxType("payment")}
-                  className={`py-2 text-[9px] uppercase tracking-widest font-bold rounded transition ${quickTxType === "payment" ? "bg-red-600 text-white" : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"}`}
-                >Ödeme</button>
+                  className={`py-2 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition cursor-pointer ${
+                    quickTxType === "payment"
+                      ? "bg-rose-600 text-white shadow-md"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                  }`}
+                >
+                  Ödeme
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQuickTxType("adjustment")}
+                  className={`py-2 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition cursor-pointer ${
+                    quickTxType === "adjustment"
+                      ? "bg-amber-600 text-white shadow-md"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                  }`}
+                >
+                  İskonto
+                </button>
               </div>
 
-              <form onSubmit={handleSaveQuickTx} className="space-y-4">
-                <div>
-                  <label className="block text-[9px] font-bold uppercase tracking-widest text-white/50 mb-1">Tutar ({currentCari.currency || "TRY"})</label>
-                  <input
-                    type="number" step="0.01" min="0.01" required
-                    value={quickTxAmount} onChange={(e) => setQuickTxAmount(e.target.value)}
-                    className="w-full bg-black/50 border border-white/10 rounded p-2.5 text-xs text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-bold uppercase tracking-widest text-white/50 mb-1">Tarih</label>
-                  <input
-                    type="date" required
-                    value={quickTxDate} onChange={(e) => setQuickTxDate(e.target.value)}
-                    className="w-full bg-black/50 border border-white/10 rounded p-2.5 text-xs text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-bold uppercase tracking-widest text-white/50 mb-1">Evrak / Fiş No</label>
-                  <input
-                    type="text"
-                    value={quickTxInvoiceNo} onChange={(e) => setQuickTxInvoiceNo(e.target.value)}
-                    className="w-full bg-black/50 border border-white/10 rounded p-2.5 text-xs text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-bold uppercase tracking-widest text-white/50 mb-1">Hesap / Kasa</label>
-                  <select
-                    value={quickTxAccount} onChange={(e) => setQuickTxAccount(e.target.value as any)}
-                    className="w-full bg-black/50 border border-white/10 rounded p-2.5 text-xs text-white"
-                  >
-                    <option value="cash">Nakit (Kasa)</option>
-                    <option value="bank">Banka Transferi</option>
-                    <option value="pos">Kredi Kartı (POS)</option>
-                  </select>
-                </div>
-                {quickTxAccount !== "" && filteredAccountsForQuick.length > 0 && (
-                  <div>
-                    <label className="block text-[9px] font-bold uppercase tracking-widest text-white/50 mb-1">Alt Hesap Seçimi</label>
-                    <select
-                      value={quickTxBankAccountId} onChange={(e) => setQuickTxBankAccountId(e.target.value)}
-                      className="w-full bg-black/50 border border-white/10 rounded p-2.5 text-xs text-white"
+              {/* Special options for Adjustment / Discount */}
+              {quickTxType === "adjustment" && (
+                <div className="p-3 bg-[#090d16] rounded-xl border border-amber-500/30 space-y-3">
+                  <div className="text-[10px] font-extrabold text-amber-400 uppercase tracking-wider">
+                    Düzeltme Yönü / İşlem Tipi
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAdjustmentDirection("discount")}
+                      className={`p-2 rounded-lg text-[10px] font-bold border text-left transition cursor-pointer ${
+                        adjustmentDirection === "discount"
+                          ? "bg-amber-500/20 border-amber-500 text-amber-300"
+                          : "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700"
+                      }`}
                     >
-                      {filteredAccountsForQuick.map(acc => (
-                        <option key={acc.id} value={acc.id}>{acc.name} ({acc.currency})</option>
-                      ))}
-                    </select>
+                      <div className="font-extrabold text-amber-400">İskonto / Borç Düş</div>
+                      <div className="text-[8px] text-slate-400 leading-tight mt-0.5">Müşteri alacaklanır (borcu azalır)</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAdjustmentDirection("debit_note")}
+                      className={`p-2 rounded-lg text-[10px] font-bold border text-left transition cursor-pointer ${
+                        adjustmentDirection === "debit_note"
+                          ? "bg-amber-500/20 border-amber-500 text-amber-300"
+                          : "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700"
+                      }`}
+                    >
+                      <div className="font-extrabold text-amber-400">Borç Ekle / Dekont</div>
+                      <div className="text-[8px] text-slate-400 leading-tight mt-0.5">Müşteri borçlanır (borcu artar)</div>
+                    </button>
+                  </div>
+
+                  {/* Preset description chips */}
+                  <div className="space-y-1 pt-1">
+                    <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                      Hızlı Sebep Seçimi
+                    </label>
+                    <div className="flex flex-wrap gap-1">
+                      {adjustmentDirection === "discount" ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setQuickTxDescription("Sezon Sonu İskontosu")}
+                            className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-semibold rounded border border-slate-700 cursor-pointer"
+                          >
+                            Sezon İskontosu
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQuickTxDescription("Kuruş Bakiye Düzeltmesi")}
+                            className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-semibold rounded border border-slate-700 cursor-pointer"
+                          >
+                            Kuruş Düzeltme
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQuickTxDescription("Fatura Altı Özel İskonto")}
+                            className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-semibold rounded border border-slate-700 cursor-pointer"
+                          >
+                            Fatura İskontosu
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQuickTxDescription("Bakiye Sıfırlama Yuvarlama")}
+                            className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-semibold rounded border border-slate-700 cursor-pointer"
+                          >
+                            Yuvarlama
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setQuickTxDescription("Vade Farkı Yansıtma")}
+                            className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-semibold rounded border border-slate-700 cursor-pointer"
+                          >
+                            Vade Farkı
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQuickTxDescription("Nakliye / Kargo Masrafı")}
+                            className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-semibold rounded border border-slate-700 cursor-pointer"
+                          >
+                            Kargo Yansıtma
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQuickTxDescription("Gecikme / Hizmet Bedeli")}
+                            className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-semibold rounded border border-slate-700 cursor-pointer"
+                          >
+                            Hizmet Bedeli
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQuickTxDescription("Manuel Borç Düzeltmesi")}
+                            className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-semibold rounded border border-slate-700 cursor-pointer"
+                          >
+                            Borç Düzeltme
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Transaction Form */}
+              <form onSubmit={handleSaveQuickTx} className="space-y-3.5">
+                {quickTxError && (
+                  <div className="p-2.5 bg-rose-500/20 border border-rose-500/40 text-rose-300 rounded-lg text-xs font-bold">
+                    {quickTxError}
                   </div>
                 )}
+
                 <div>
-                  <label className="block text-[9px] font-bold uppercase tracking-widest text-white/50 mb-1">Açıklama</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-200">
+                      {amountInputMode === "direct"
+                        ? `İşlem Tutarı (${currentCari.currency || "TRY"})`
+                        : `Hedef Kalan Bakiye (${currentCari.currency || "TRY"})`}
+                    </label>
+                    <div className="flex bg-[#090d16] p-0.5 rounded-md border border-slate-700/80 text-[9px] font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setAmountInputMode("direct")}
+                        className={`px-2 py-0.5 rounded cursor-pointer transition ${
+                          amountInputMode === "direct"
+                            ? "bg-slate-700 text-teal-300 font-extrabold"
+                            : "text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        Tutar Gir
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAmountInputMode("target_balance");
+                          if (targetBalanceInput === "") setTargetBalanceInput("0");
+                        }}
+                        className={`px-2 py-0.5 rounded cursor-pointer transition ${
+                          amountInputMode === "target_balance"
+                            ? "bg-amber-600 text-white font-extrabold"
+                            : "text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        Hedef Bakiye Gir
+                      </button>
+                    </div>
+                  </div>
+
+                  {amountInputMode === "direct" ? (
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      required
+                      placeholder="0.00"
+                      value={quickTxAmount}
+                      onChange={(e) => setQuickTxAmount(e.target.value)}
+                      className="w-full bg-[#090d16] text-white placeholder-slate-500 border border-slate-700 focus:border-teal-500 rounded-lg p-2.5 text-sm font-mono font-bold outline-none"
+                    />
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="0.01"
+                          required
+                          placeholder="Örn: 0 veya 10000"
+                          value={targetBalanceInput}
+                          onChange={(e) => setTargetBalanceInput(e.target.value)}
+                          className="w-full bg-[#090d16] text-amber-300 placeholder-slate-500 border border-amber-500/50 focus:border-amber-400 rounded-lg p-2.5 text-sm font-mono font-bold outline-none pr-28"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTargetBalanceInput("0");
+                            setQuickTxDescription("Bakiye Sıfırlama Düzeltmesi");
+                          }}
+                          className="absolute right-1.5 top-1.5 bottom-1.5 px-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[9px] font-extrabold uppercase rounded border border-amber-500/40 cursor-pointer transition active:scale-95"
+                        >
+                          ⚡ 0 ₺ (Sıfırla)
+                        </button>
+                      </div>
+
+                      {/* Dynamic calculation preview card */}
+                      {(() => {
+                        const targetVal = parseFloat(targetBalanceInput);
+                        if (isNaN(targetVal)) return null;
+
+                        const diff = currentNetBalance - targetVal;
+                        const computedAmt = Math.abs(diff);
+
+                        return (
+                          <div className="p-2.5 bg-[#090d16] rounded-xl border border-slate-700/80 text-[10px] space-y-1.5 font-sans shadow-inner">
+                            <div className="flex justify-between text-slate-400 font-mono">
+                              <span>Mevcut Bakiye:</span>
+                              <span className={currentNetBalance > 0 ? "text-rose-400 font-bold" : currentNetBalance < 0 ? "text-teal-400 font-bold" : "text-slate-300"}>
+                                {currentNetBalance.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺ {currentNetBalance > 0 ? "(Borçlu)" : currentNetBalance < 0 ? "(Alacaklı)" : ""}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-slate-400 font-mono">
+                              <span>Hedef Kalan Bakiye:</span>
+                              <span className="text-amber-300 font-extrabold">
+                                {targetVal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                              </span>
+                            </div>
+                            <div className="flex justify-between pt-1.5 border-t border-slate-800 font-mono text-xs">
+                              <span className="text-slate-200 font-bold">Hesaplanan Düzeltme Tutarı:</span>
+                              <span className="text-teal-300 font-black">
+                                {computedAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                              </span>
+                            </div>
+                            <div className="text-[9px] font-semibold pt-0.5 leading-relaxed">
+                              {diff > 0 ? (
+                                <span className="text-teal-400">
+                                  ⬇️ {computedAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺ alacak işlenerek borç {targetVal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺ seviyesine düşürülecektir.
+                                </span>
+                              ) : diff < 0 ? (
+                                <span className="text-amber-400">
+                                  ⬆️ {computedAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺ borç dekontu işlenerek bakiye {targetVal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺ seviyesine çıkarılacaktır.
+                                </span>
+                              ) : (
+                                <span className="text-emerald-400">
+                                  ✅ Mevcut bakiye zaten hedef tutarla aynı. Düzeltme yapılmasına gerek yoktur.
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-200 mb-1">
+                    Tarih
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={quickTxDate}
+                    onChange={(e) => setQuickTxDate(e.target.value)}
+                    className="w-full bg-[#090d16] text-white border border-slate-700 focus:border-teal-500 rounded-lg p-2.5 text-xs font-medium outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-200 mb-1">
+                    Evrak / Dekont / Fiş No
+                  </label>
                   <input
                     type="text"
-                    value={quickTxDescription} onChange={(e) => setQuickTxDescription(e.target.value)}
-                    className="w-full bg-black/50 border border-white/10 rounded p-2.5 text-xs text-white"
+                    placeholder="Opsiyonel (Örn: DKN-2026-001)"
+                    value={quickTxInvoiceNo}
+                    onChange={(e) => setQuickTxInvoiceNo(e.target.value)}
+                    className="w-full bg-[#090d16] text-white placeholder-slate-500 border border-slate-700 focus:border-teal-500 rounded-lg p-2.5 text-xs font-medium outline-none"
+                  />
+                </div>
+
+                {quickTxType !== "adjustment" && (
+                  <>
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-200 mb-1">
+                        Hesap / Kasa
+                      </label>
+                      <select
+                        value={quickTxAccount}
+                        onChange={(e) => setQuickTxAccount(e.target.value as any)}
+                        className="w-full bg-[#090d16] text-white border border-slate-700 focus:border-teal-500 rounded-lg p-2.5 text-xs font-medium outline-none cursor-pointer"
+                      >
+                        <option value="cash" className="bg-slate-900 text-white">Nakit (Kasa)</option>
+                        <option value="bank" className="bg-slate-900 text-white">Banka Transferi / EFT</option>
+                        <option value="pos" className="bg-slate-900 text-white">Kredi Kartı (POS)</option>
+                      </select>
+                    </div>
+
+                    {quickTxAccount !== "" && filteredAccountsForQuick.length > 0 && (
+                      <div>
+                        <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-200 mb-1">
+                          Alt Hesap Seçimi
+                        </label>
+                        <select
+                          value={quickTxBankAccountId}
+                          onChange={(e) => setQuickTxBankAccountId(e.target.value)}
+                          className="w-full bg-[#090d16] text-white border border-slate-700 focus:border-teal-500 rounded-lg p-2.5 text-xs font-medium outline-none cursor-pointer"
+                        >
+                          {filteredAccountsForQuick.map((acc) => (
+                            <option key={acc.id} value={acc.id} className="bg-slate-900 text-white">
+                              {acc.name} ({acc.currency})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-200 mb-1">
+                    Açıklama
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="İşlem açıklaması..."
+                    value={quickTxDescription}
+                    onChange={(e) => setQuickTxDescription(e.target.value)}
+                    className="w-full bg-[#090d16] text-white placeholder-slate-500 border border-slate-700 focus:border-teal-500 rounded-lg p-2.5 text-xs font-medium outline-none"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isSavingQuickTx}
-                  className={`w-full py-3 mt-4 rounded text-[10px] uppercase tracking-widest font-bold transition flex items-center justify-center ${
-                    quickTxType === "collection" ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"
+                  className={`w-full py-3 mt-4 rounded-lg text-xs font-extrabold uppercase tracking-widest transition cursor-pointer shadow-lg active:scale-98 flex items-center justify-center gap-2 ${
+                    quickTxType === "collection"
+                      ? "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/30"
+                      : quickTxType === "payment"
+                        ? "bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30"
+                        : "bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/30"
                   }`}
                 >
-                  {isSavingQuickTx ? "Kaydediliyor..." : "İşlemi Kaydet"}
+                  {isSavingQuickTx
+                    ? "Kaydediliyor..."
+                    : amountInputMode === "target_balance"
+                      ? "Bakiyeyi Düzelt ve Kaydet"
+                      : quickTxType === "adjustment"
+                        ? (adjustmentDirection === "discount" ? "İskontoyu Kaydet" : "Borç Dekontunu Kaydet")
+                        : quickTxType === "collection"
+                          ? "Tahsilatı Kaydet"
+                          : "Ödemeyi Kaydet"}
                 </button>
               </form>
             </div>

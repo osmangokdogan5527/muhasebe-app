@@ -54,7 +54,7 @@ export const StormLogo = ({
 
   // Get active sidebar pattern details
   let currentPattern = sidebarPattern || localStorage.getItem('storm_muhasebe_sidebar_pattern') || 'crystal';
-  if (designStyle === 'pro-solid') currentPattern = 'none';
+  if (designStyle === 'pro-solid' || designStyle === 'navy-perf' || currentDesignStyle === 'navy-perf') currentPattern = 'none';
   if (currentPattern === 'circles') currentPattern = 'flame';
   if (currentPattern === 'waves') currentPattern = 'chain';
   const savedOpacity = sidebarPatternOpacity !== undefined ? sidebarPatternOpacity : parseFloat(localStorage.getItem('storm_muhasebe_sidebar_pattern_opacity') || '0.75');
@@ -373,7 +373,7 @@ export const StormLogo = ({
         )}
 
         {/* Textured overlay pattern inside the logo background */}
-        {patternContent && !isGlass && !isFluidMesh && currentDesignStyle !== 'clean-light' && currentDesignStyle !== 'pro-solid' && (
+        {patternContent && !isGlass && !isFluidMesh && currentDesignStyle !== 'clean-light' && currentDesignStyle !== 'pro-solid' && currentDesignStyle !== 'navy-perf' && (
           <rect width="200" height="200" rx="48" fill={`url(#${patternId})`} />
         )}
 
@@ -430,17 +430,19 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.7.9';
+export const APP_VERSION = '1.8.0';
 
 export const CHANGELOG = {
-  version: '1.7.9',
+  version: '1.8.0',
   features: [
-    "Varsayılan Tema ve Renk Güncellemesi: Varsayılan arayüz stili 'Sıvı Mesh Gradient (Aurora Mesh)' ve varsayılan vurgu rengi 'Mavi (Sky)' olarak belirlendi.",
-    "Kompakt Tasarım Düzeni: Genel Ayarlar menüsündeki 'Arayüz Tasarım Stili' ile 'Uygulama Yazı Boyutu' kartları az yer kaplayan pratik ve şık tek bir kart bünyesinde birleştirildi.",
-    "Arayüz ve Vurgu Rengi Düzenlemeleri: 'Storm AI' rozet görselleri ve vurgu renklerindeki uyumsuzluklar giderildi, renk paleti sadeleştirildi."
+    "1.8.0 Kararlı Sürüm Yayınlandı: Storm Ön Muhasebe v1.8.0 sürümü başarıyla canlıya alındı.",
+    "%5 Akıcı Tipografi Ölçeklendirmesi: Tüm arayüz temalarında yazı tipi boyutları %5 oranında göz yormayan, net ve ekran çözünürlüğüne mükemmel uyumlu bir tipografi ölçeğine yükseltildi.",
+    "Temiz Işık (Clean Light) Arayüz Yenilemesi: Temiz Işık temasında tüm gösterge paneli widget başlıkları, özet finansal kartlar ve tablolar ferah beyaz kart görünümüne kavuşturuldu.",
+    "Baskı & PDF Sayfa İzolasyonu: Cari ekstre detayları ve yazdırma önizlemelerinde orijinal beyaz kağıt arka planı ve yüksek metin okunabilirliği garanti altına alındı."
   ],
   fixes: [
-    "Varsayılana Sıfırla İşlevi: Varsayılan ayarlara dönüldüğünde Sıvı Mesh teması ve mavi renk tonunun doğru şekilde aktif olması sağlandı."
+    "Performans ve Tipografi Senkronizasyonu: Sistem genelinde font ve tema ayarlarının anlık senkronizasyon hızı ve render stili optimize edildi.",
+    "Yüksek Kontrast Kararlılığı: Koyu ve açık tema geçişlerinde metinlerin netliği ve renk uyumu korundu."
   ]
 };
 
@@ -698,13 +700,24 @@ export const PIN_ACCOUNTS = [
 
 export const changelogData = [
   {
+    version: "1.8.0",
+    date: "29.07.2026",
+    changes: [
+      "1.8.0 Kararlı Sürüm Yayınlandı: Storm Ön Muhasebe v1.8.0 sürümü başarıyla yayınlandı ve canlıya alındı.",
+      "%5 Akıcı Tipografi Ölçeklendirmesi: Tüm arayüz temalarında yazı tipi boyutları %5 oranında göz yormayan, net ve ekran çözünürlüğüne mükemmel uyumlu bir tipografi ölçeğine yükseltildi.",
+      "Temiz Işık (Clean Light) Arayüz Yenilemesi: Temiz Işık temasında tüm gösterge paneli widget başlıkları, özet finansal kartlar ve tablolar ferah beyaz kart görünümüne kavuşturuldu.",
+      "Baskı & PDF Sayfa İzolasyonu: Cari ekstre detayları ve yazdırma önizlemelerinde orijinal beyaz kağıt arka planı ve yüksek metin okunabilirliği garanti altına alındı."
+    ]
+  },
+  {
     version: "1.7.9",
     date: "29.07.2026",
     changes: [
       "Varsayılan Tema ve Renk Güncellemesi: Varsayılan arayüz stili 'Sıvı Mesh Gradient (Aurora Mesh)' ve varsayılan vurgu rengi 'Mavi (Sky)' olarak güncellendi.",
       "Kompakt Tasarım Düzeni: Genel Ayarlar menüsündeki 'Arayüz Tasarım Stili' ile 'Uygulama Yazı Boyutu' kartları az yer kaplayan pratik ve şık tek bir kart bünyesinde birleştirildi.",
       "Arayüz ve Vurgu Rengi Düzenlemeleri: 'Storm AI' rozet görselleri ve vurgu renklerindeki uyumsuzluklar giderildi, renk paleti sadeleştirildi.",
-      "Varsayılana Sıfırla Düzeltmesi: Varsayılan ayarlara dönüldüğünde Sıvı Mesh teması ve Mavi vurgu rengine pürüzsüz geçiş sağlandı."
+      "Varsayılana Sıfırla Düzeltmesi: Varsayılan ayarlara dönüldüğünde Sıvı Mesh teması ve Mavi vurgu rengine pürüzsüz geçiş sağlandı.",
+      "Lacivert Hız Teması Logo Düzenlemesi: Lacivert Hız (Navy Performance) teması seçildiğinde logo üzerindeki desen kaplaması kaldırıldı."
     ]
   },
   {

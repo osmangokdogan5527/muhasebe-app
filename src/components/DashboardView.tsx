@@ -13,9 +13,11 @@ import {
   DashboardStats,
   Expense,
   EmployeeTransaction,
-  CekSenet
+  CekSenet,
+  RecurringTransaction
 } from "../types";
-import {
+import { getPendingRecurringItems, getTodayISO } from "../utils/recurringUtils";
+import { 
   ResponsiveContainer,
   AreaChart,
   Area,
@@ -24,7 +26,7 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
-import { Calendar, ChevronDown, ChevronUp, Eye, EyeOff, RotateCcw, Settings } from "lucide-react";
+import { Calendar, ChevronDown, ChevronUp, Eye, EyeOff, RotateCcw, Settings, Clock, CheckCircle } from "lucide-react";
 
 interface DashboardViewProps {
   cariler: Cari[];
@@ -33,6 +35,7 @@ interface DashboardViewProps {
   ceksenet?: CekSenet[];
   expenses?: Expense[];
   employeeTransactions?: EmployeeTransaction[];
+  recurringTransactions?: RecurringTransaction[];
   onNavigate: (view: any) => void;
 }
 
@@ -104,11 +107,16 @@ export default function DashboardView({
   ceksenet = [],
   expenses = [],
   employeeTransactions = [],
+  recurringTransactions = [],
   onNavigate,
 }: DashboardViewProps) {
   const [dashboardCurrency, setDashboardCurrency] = useState<
     "TRY" | "USD" | "EUR"
   >("TRY");
+
+  const pendingRecurringItems = useMemo(() => {
+    return getPendingRecurringItems(recurringTransactions, getTodayISO());
+  }, [recurringTransactions]);
 
   // Custom Dashboard Widgets State
   const [widgetsOrder, setWidgetsOrder] = useState<string[]>(() => {
@@ -695,6 +703,37 @@ export default function DashboardView({
           </div>
         </div>
       </div>
+
+      {/* Pending Recurring Items Banner */}
+      {pendingRecurringItems.length > 0 && (
+        <div className="p-4 bg-gradient-to-r from-[var(--accent-500)]/15 via-[var(--accent-500)]/10 to-[var(--accent-500)]/5 border border-[var(--accent-500)]/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-[var(--accent-600)] text-white rounded-xl shadow-md animate-bounce shrink-0">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 text-[10px] font-black bg-[var(--accent-600)] text-white rounded-full">
+                  {pendingRecurringItems.length} VADESİ GELDİ
+                </span>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Onay Bekleyen Otomatik Gider / Abonelikler Var
+                </h4>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-zinc-300 mt-1">
+                Kira, fatura veya maaş gibi düzenli işlemlerinizin vadesi geldi. İnceleyip tutar ve tarih düzeltmesi yaparak gidere işleyebilirsiniz.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigate('masraflar')}
+            className="w-full sm:w-auto px-4 py-2.5 text-xs font-bold text-white bg-[var(--accent-600)] hover:bg-[var(--accent-700)] active:scale-[0.98] rounded-xl shadow-md transition-all shrink-0 flex items-center justify-center gap-2"
+          >
+            <CheckCircle className="w-4 h-4" />
+            Onay Ekranına Git
+          </button>
+        </div>
+      )}
 
       {/* Expanded Bileşen Yönetim Paneli */}
       {showManager && (

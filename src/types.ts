@@ -213,3 +213,26 @@ export interface KeyboardShortcut {
   shiftKey: boolean;
 }
 
+export interface RecurringTransaction {
+  id: string;
+  title: string; // e.g., "Ofis Kirası", "Mali Müşavir Ücreti", "Türk Telekom Fiber"
+  type: "expense" | "income"; // Gider / Gelir
+  category: Expense['category'];
+  amount: number;
+  currency: "TRY" | "USD" | "EUR";
+  account: "cash" | "bank" | "pos";
+  bankAccountId?: string;
+  cariId?: string;
+  cariName?: string;
+  frequency: "monthly" | "weekly" | "yearly"; // Periyot
+  dayOfMonth: number; // 1-31
+  startDate: string; // YYYY-MM-DD
+  endDate?: string; // YYYY-MM-DD
+  lastProcessedDate?: string; // YYYY-MM-DD
+  nextDueDate: string; // YYYY-MM-DD
+  autoApprove?: boolean; // false = onay bekler, true = otomatik onay
+  status: "active" | "paused"; // Aktif / Durduruldu
+  description?: string;
+  createdAt: string;
+}
+

@@ -63,6 +63,7 @@ export interface BackupDataPayload {
     krediler?: any[];
     hesaplar?: any[];
     hesapIslemleri?: any[];
+    tekrarlayanIslemler?: any[];
   };
   localStorage: { [key: string]: string | null };
 }

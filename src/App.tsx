@@ -565,6 +565,7 @@ export default function App() {
     credits, setCredits,
     bankAccounts, setBankAccounts,
     accountTransactions, setAccountTransactions,
+    recurringTransactions, setRecurringTransactions,
     loading, setLoading
   } = useAppData(user);
 
@@ -899,7 +900,7 @@ export default function App() {
           />
         </div>
         <div className={activeTab === 'dashboard' ? 'block animate-fade-in' : 'hidden'}>
-          {renderWorkspaceView('dashboard', <DashboardView cariler={cariler} stoklar={stoklar} islemler={islemler} ceksenet={ceksenet} expenses={expenses} employeeTransactions={employeeTransactions} onNavigate={handleNavigate} />)}
+          {renderWorkspaceView('dashboard', <DashboardView cariler={cariler} stoklar={stoklar} islemler={islemler} ceksenet={ceksenet} expenses={expenses} employeeTransactions={employeeTransactions} recurringTransactions={recurringTransactions} onNavigate={handleNavigate} />)}
         </div>
         <div className={activeTab === 'cariler' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('cariler', <CarilerView 
@@ -964,7 +965,7 @@ export default function App() {
           {renderWorkspaceView('ceksenet', <CekSenetView ceksenet={ceksenet} cariler={cariler} islemler={islemler} />)}
         </div>
         <div className={activeTab === 'masraflar' ? 'block animate-fade-in' : 'hidden'}>
-          {renderWorkspaceView('masraflar', <MasraflarView expenses={expenses} aiPrefilledData={aiPrefilledData} onClearAiPrefilledData={() => setAiPrefilledData(null)} />)}
+          {renderWorkspaceView('masraflar', <MasraflarView expenses={expenses} recurringTransactions={recurringTransactions} bankAccounts={bankAccounts} cariler={cariler} aiPrefilledData={aiPrefilledData} onClearAiPrefilledData={() => setAiPrefilledData(null)} />)}
         </div>
         <div className={activeTab === 'calisanlar' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('calisanlar', <CalisanlarView employees={employees} transactions={employeeTransactions} ceksenet={ceksenet} aiPrefilledData={aiPrefilledData} onClearAiPrefilledData={() => setAiPrefilledData(null)} />)}
@@ -1069,6 +1070,7 @@ export default function App() {
         credits={credits}
         bankAccounts={bankAccounts}
         accountTransactions={accountTransactions}
+        recurringTransactions={recurringTransactions}
         onImportData={importAllDatabaseData}
         showToast={showToast}
       />

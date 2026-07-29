@@ -10,10 +10,11 @@ import {
   subscribeCredits,
   subscribeBankAccounts,
   subscribeAccountTransactions,
+  subscribeRecurringTransactions,
   saveBankAccount,
   User as FirebaseUser
 } from '../firebase';
-import { Cari, Stock, Transaction, CekSenet, Expense, Employee, EmployeeTransaction, Credit, BankAccount, AccountTransaction } from '../types';
+import { Cari, Stock, Transaction, CekSenet, Expense, Employee, EmployeeTransaction, Credit, BankAccount, AccountTransaction, RecurringTransaction } from '../types';
 
 export function useAppData(user: FirebaseUser | null) {
   // App data state
@@ -27,6 +28,7 @@ export function useAppData(user: FirebaseUser | null) {
   const [credits, setCredits] = useState<Credit[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [accountTransactions, setAccountTransactions] = useState<AccountTransaction[]>([]);
+  const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
   
   // Loading & connection state
   const [loading, setLoading] = useState(true);
@@ -49,6 +51,7 @@ export function useAppData(user: FirebaseUser | null) {
     let creditsLoaded = false;
     let bankAccountsLoaded = false;
     let accountTransactionsLoaded = false;
+    let recurringLoaded = false;
 
     const checkLoadingFinished = () => {
       if (
@@ -61,7 +64,8 @@ export function useAppData(user: FirebaseUser | null) {
         employeeTransactionsLoaded &&
         creditsLoaded &&
         bankAccountsLoaded &&
-        accountTransactionsLoaded
+        accountTransactionsLoaded &&
+        recurringLoaded
       ) {
         setLoading(false);
       }
@@ -149,6 +153,12 @@ export function useAppData(user: FirebaseUser | null) {
       checkLoadingFinished();
     });
 
+    const unsubscribeRecurring = subscribeRecurringTransactions((data) => {
+      setRecurringTransactions(data);
+      recurringLoaded = true;
+      checkLoadingFinished();
+    });
+
     return () => {
       unsubscribeCari();
       unsubscribeStok();
@@ -160,6 +170,7 @@ export function useAppData(user: FirebaseUser | null) {
       unsubscribeCredits();
       unsubscribeBankAccounts();
       unsubscribeAccountTxs();
+      unsubscribeRecurring();
     };
   }, [user]);
 
@@ -174,6 +185,7 @@ export function useAppData(user: FirebaseUser | null) {
     credits, setCredits,
     bankAccounts, setBankAccounts,
     accountTransactions, setAccountTransactions,
+    recurringTransactions, setRecurringTransactions,
     loading, setLoading
   };
 }

@@ -466,7 +466,6 @@ export const globalStylesPart2 = `
 
         /* Override ALL dark panel, card, list and widget containers to clean white cards with gorgeous soft tint */
         [data-design-style="clean-light"] [class*="bg-[#111111]"],
-        [data-design-style="pro-solid"] [class*="bg-[#111111]"],
         [data-design-style="clean-light"] [class*="bg-[#151515]"],
         [data-design-style="clean-light"] [class*="bg-[#0a0a0a]"],
         [data-design-style="clean-light"] [class*="bg-[#0c0c0c]"],
@@ -476,35 +475,20 @@ export const globalStylesPart2 = `
         [data-design-style="clean-light"] [class*="bg-[#080808]"],
         [data-design-style="clean-light"] [class*="bg-[#0b0c0e]"],
         [data-design-style="clean-light"] [class*="bg-[#121316]"],
+        [data-design-style="clean-light"] [class*="bg-[#18181b]"],
+        [data-design-style="clean-light"] [class*="bg-[#18181c]"],
+        [data-design-style="clean-light"] [class*="bg-[#0f0f12]"],
+        [data-design-style="clean-light"] [class*="bg-[#1a1f36]"],
         [data-design-style="clean-light"] [class*="bg-zinc-900"],
-        [data-design-style="pro-solid"] [class*="bg-zinc-900"],
         [data-design-style="clean-light"] [class*="bg-zinc-950"],
+        [data-design-style="clean-light"] [class*="bg-zinc-800"],
         [data-design-style="clean-light"] [class*="bg-slate-900"],
         [data-design-style="clean-light"] [class*="bg-black"],
         [data-design-style="clean-light"] [class*="bg-white/5"],
         [data-design-style="clean-light"] [class*="bg-white/10"],
         [data-design-style="clean-light"] [class*="bg-white/20"],
-        [data-design-style="clean-light"] .bg-\\[\\#0a0a0a\\],
-        [data-design-style="clean-light"] .bg-\\[\\#0d0d0d\\],
-        [data-design-style="clean-light"] .bg-\\[\\#0f0f0f\\],
-        [data-design-style="clean-light"] .bg-\\[\\#111111\\],
-        [data-design-style="clean-light"] .bg-\\[\\#121212\\],
-        [data-design-style="clean-light"] .bg-\\[\\#151515\\],
-        [data-design-style="clean-light"] .bg-\\[\\#080808\\],
-        [data-design-style="clean-light"] .bg-\\[\\#0b0c0e\\],
-        [data-design-style="clean-light"] .bg-\\[\\#0c0c0c\\],
-        [data-design-style="clean-light"] .bg-\\[\\#121316\\],
-        [data-design-style="clean-light"] .bg-white\\/5,
-        [data-design-style="clean-light"] .bg-white\\/10,
-        [data-design-style="clean-light"] .bg-\\[\\#1a1f36\\],
-        [data-design-style="clean-light"] .bg-black\\\\/,
-        [data-design-style="clean-light"] .bg-black\\\\/,
-        [data-design-style="clean-light"] .bg-black\\\\/,
-        [data-design-style="clean-light"] .bg-black\\\\/,
-        [data-design-style="clean-light"] .bg-slate-900,
-        [data-design-style="clean-light"] .bg-zinc-900,
-        [data-design-style="clean-light"] .bg-zinc-950,
-        [data-design-style="clean-light"] .bg-black\\\\/ {
+        [data-design-style="clean-light"] [class*="bg-black/"],
+        [data-design-style="clean-light"] .dashboard-widget-header {
           background-color: #ffffff !important;
           background: #ffffff !important;
           border: 1px solid color-mix(in srgb, var(--accent-300) 18%, #e2e8f0) !important;
@@ -516,11 +500,7 @@ export const globalStylesPart2 = `
         [data-design-style="clean-light"] [class*="bg-white/5"]:hover,
         [data-design-style="clean-light"] [class*="bg-white/10"]:hover,
         [data-design-style="clean-light"] [class*="hover:bg-white/5"]:hover,
-        [data-design-style="clean-light"] [class*="hover:bg-white/10"]:hover,
-        [data-design-style="clean-light"] .bg-white\\/5:hover,
-        [data-design-style="clean-light"] .hover\\:bg-white\\/5:hover,
-        [data-design-style="clean-light"] .hover\\:bg-white\\/10:hover,
-        [data-design-style="clean-light"] .bg-white\\/10:hover {
+        [data-design-style="clean-light"] [class*="hover:bg-white/10"]:hover {
           background-color: color-mix(in srgb, var(--accent-50) 35%, #f8fafc) !important;
           background: color-mix(in srgb, var(--accent-50) 35%, #f8fafc) !important;
           border-color: color-mix(in srgb, var(--accent-300) 35%, #cbd5e1) !important;
@@ -542,10 +522,7 @@ export const globalStylesPart2 = `
         [data-design-style="clean-light"] option,
         [data-design-style="clean-light"] [class*="bg-[#0c0c0c]"],
         [data-design-style="clean-light"] [class*="bg-[#121316]"],
-        [data-design-style="clean-light"] [class*="bg-white/5"],
-        [data-design-style="clean-light"] .bg-\\[\\#0c0c0c\\],
-        [data-design-style="clean-light"] .bg-\\[\\#121316\\],
-        [data-design-style="clean-light"] .bg-white\\/5 {
+        [data-design-style="clean-light"] [class*="bg-white/5"] {
           background-color: #ffffff !important;
           background: #ffffff !important;
           color: color-mix(in srgb, var(--accent-950) 85%, #0f172a) !important;
@@ -826,8 +803,7 @@ export const globalStylesPart2 = `
 
         /* PRINT PREVIEW PAPER ISOLATION AND HIGH-FIDELITY WHITE RESET */
         /* Forces any print previews, designer sheet, and invoice content to be authentic white paper sheets */
-        .print-paper-sheet,
-        #printable-invoice-content {
+        .print-paper-sheet {
           background-color: #ffffff !important;
           background-image: none !important;
           background: #ffffff !important;
@@ -841,8 +817,7 @@ export const globalStylesPart2 = `
         }
 
         /* Disable glass/shimmer/backdrop effects on elements inside the paper */
-        .print-paper-sheet *,
-        #printable-invoice-content * {
+        .print-paper-sheet * {
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
           text-shadow: none !important;
@@ -854,8 +829,7 @@ export const globalStylesPart2 = `
         }
 
         /* Restore exact background classes inside the paper sheets */
-        .print-paper-sheet .bg-white,
-        #printable-invoice-content .bg-white {
+        .print-paper-sheet .bg-white {
           background-color: #ffffff !important;
           background: #ffffff !important;
         }
@@ -864,12 +838,7 @@ export const globalStylesPart2 = `
         .print-paper-sheet .bg-zinc-50,
         .print-paper-sheet .bg-gray-50,
         .print-paper-sheet [class*="bg-slate-50"],
-        .print-paper-sheet [class*="bg-zinc-50"],
-        #printable-invoice-content .bg-slate-50,
-        #printable-invoice-content .bg-zinc-50,
-        #printable-invoice-content .bg-gray-50,
-        #printable-invoice-content [class*="bg-slate-50"],
-        #printable-invoice-content [class*="bg-zinc-50"] {
+        .print-paper-sheet [class*="bg-zinc-50"] {
           background-color: #f8fafc !important;
           background: #f8fafc !important;
         }
@@ -878,12 +847,7 @@ export const globalStylesPart2 = `
         .print-paper-sheet .bg-zinc-100,
         .print-paper-sheet .bg-gray-100,
         .print-paper-sheet [class*="bg-slate-100"],
-        .print-paper-sheet [class*="bg-zinc-100"],
-        #printable-invoice-content .bg-slate-100,
-        #printable-invoice-content .bg-zinc-100,
-        #printable-invoice-content .bg-gray-100,
-        #printable-invoice-content [class*="bg-slate-100"],
-        #printable-invoice-content [class*="bg-zinc-100"] {
+        .print-paper-sheet [class*="bg-zinc-100"] {
           background-color: #f1f5f9 !important;
           background: #f1f5f9 !important;
         }
@@ -891,11 +855,7 @@ export const globalStylesPart2 = `
         .print-paper-sheet .bg-slate-800,
         .print-paper-sheet .bg-zinc-800,
         .print-paper-sheet [class*="bg-slate-800"],
-        .print-paper-sheet [class*="bg-zinc-800"],
-        #printable-invoice-content .bg-slate-800,
-        #printable-invoice-content .bg-zinc-800,
-        #printable-invoice-content [class*="bg-slate-800"],
-        #printable-invoice-content [class*="bg-zinc-800"] {
+        .print-paper-sheet [class*="bg-zinc-800"] {
           background-color: #1e293b !important;
           background: #1e293b !important;
           color: #ffffff !important;
@@ -904,20 +864,14 @@ export const globalStylesPart2 = `
         .print-paper-sheet .bg-slate-900,
         .print-paper-sheet .bg-zinc-900,
         .print-paper-sheet [class*="bg-slate-900"],
-        .print-paper-sheet [class*="bg-zinc-900"],
-        #printable-invoice-content .bg-slate-900,
-        #printable-invoice-content .bg-zinc-900,
-        #printable-invoice-content [class*="bg-slate-900"],
-        #printable-invoice-content [class*="bg-zinc-900"] {
+        .print-paper-sheet [class*="bg-zinc-900"] {
           background-color: #0f172a !important;
           background: #0f172a !important;
           color: #ffffff !important;
         }
 
         .print-paper-sheet .bg-teal-50,
-        .print-paper-sheet [class*="bg-teal-50"],
-        #printable-invoice-content .bg-teal-50,
-        #printable-invoice-content [class*="bg-teal-50"] {
+        .print-paper-sheet [class*="bg-teal-50"] {
           background-color: #f0fdfa !important;
           background: #f0fdfa !important;
         }
@@ -936,21 +890,7 @@ export const globalStylesPart2 = `
         .print-paper-sheet h5,
         .print-paper-sheet h6,
         .print-paper-sheet strong,
-        .print-paper-sheet b,
-        #printable-invoice-content text,
-        #printable-invoice-content p,
-        #printable-invoice-content span,
-        #printable-invoice-content div,
-        #printable-invoice-content td,
-        #printable-invoice-content th,
-        #printable-invoice-content h1,
-        #printable-invoice-content h2,
-        #printable-invoice-content h3,
-        #printable-invoice-content h4,
-        #printable-invoice-content h5,
-        #printable-invoice-content h6,
-        #printable-invoice-content strong,
-        #printable-invoice-content b {
+        .print-paper-sheet b {
           color: #0f172a !important;
         }
 
@@ -960,46 +900,28 @@ export const globalStylesPart2 = `
         .print-paper-sheet .text-zinc-950,
         .print-paper-sheet [class*="text-slate-900"],
         .print-paper-sheet [class*="text-zinc-900"],
-        .print-paper-sheet [class*="text-zinc-955"],
-        #printable-invoice-content .text-slate-900,
-        #printable-invoice-content .text-zinc-900,
-        #printable-invoice-content .text-zinc-955,
-        #printable-invoice-content [class*="text-slate-900"],
-        #printable-invoice-content [class*="text-zinc-900"],
-        #printable-invoice-content [class*="text-zinc-955"] {
+        .print-paper-sheet [class*="text-zinc-955"] {
           color: #0f172a !important;
         }
 
         .print-paper-sheet .text-slate-800,
         .print-paper-sheet .text-zinc-800,
         .print-paper-sheet [class*="text-slate-800"],
-        .print-paper-sheet [class*="text-zinc-800"],
-        #printable-invoice-content .text-slate-800,
-        #printable-invoice-content .text-zinc-800,
-        #printable-invoice-content [class*="text-slate-800"],
-        #printable-invoice-content [class*="text-zinc-800"] {
+        .print-paper-sheet [class*="text-zinc-800"] {
           color: #1e293b !important;
         }
 
         .print-paper-sheet .text-slate-700,
         .print-paper-sheet .text-zinc-700,
         .print-paper-sheet [class*="text-slate-700"],
-        .print-paper-sheet [class*="text-zinc-700"],
-        #printable-invoice-content .text-slate-700,
-        #printable-invoice-content .text-zinc-700,
-        #printable-invoice-content [class*="text-slate-700"],
-        #printable-invoice-content [class*="text-zinc-700"] {
+        .print-paper-sheet [class*="text-zinc-700"] {
           color: #334155 !important;
         }
 
         .print-paper-sheet .text-slate-600,
         .print-paper-sheet .text-zinc-600,
         .print-paper-sheet [class*="text-slate-600"],
-        .print-paper-sheet [class*="text-zinc-600"],
-        #printable-invoice-content .text-slate-600,
-        #printable-invoice-content .text-zinc-600,
-        #printable-invoice-content [class*="text-slate-600"],
-        #printable-invoice-content [class*="text-zinc-600"] {
+        .print-paper-sheet [class*="text-zinc-600"] {
           color: #475569 !important;
         }
 
@@ -1007,45 +929,31 @@ export const globalStylesPart2 = `
         .print-paper-sheet .text-slate-500,
         .print-paper-sheet .text-zinc-500,
         .print-paper-sheet [class*="text-slate-500"],
-        .print-paper-sheet [class*="text-zinc-500"],
-        #printable-invoice-content .text-slate-500,
-        #printable-invoice-content .text-zinc-500,
-        #printable-invoice-content [class*="text-slate-500"],
-        #printable-invoice-content [class*="text-zinc-500"] {
+        .print-paper-sheet [class*="text-zinc-500"] {
           color: #64748b !important;
         }
 
         .print-paper-sheet .text-slate-400,
         .print-paper-sheet .text-zinc-400,
         .print-paper-sheet [class*="text-slate-400"],
-        .print-paper-sheet [class*="text-zinc-400"],
-        #printable-invoice-content .text-slate-400,
-        #printable-invoice-content .text-zinc-400,
-        #printable-invoice-content [class*="text-slate-400"],
-        #printable-invoice-content [class*="text-zinc-400"] {
+        .print-paper-sheet [class*="text-zinc-400"] {
           color: #94a3b8 !important;
         }
 
         /* Teal accent colors */
         .print-paper-sheet .text-teal-600,
-        .print-paper-sheet [class*="text-teal-600"],
-        #printable-invoice-content .text-teal-600,
-        #printable-invoice-content [class*="text-teal-600"] {
+        .print-paper-sheet [class*="text-teal-600"] {
           color: #0d9488 !important;
         }
 
         .print-paper-sheet .text-teal-700,
-        .print-paper-sheet [class*="text-teal-700"],
-        #printable-invoice-content .text-teal-700,
-        #printable-invoice-content [class*="text-teal-700"] {
+        .print-paper-sheet [class*="text-teal-700"] {
           color: #0f766e !important;
         }
 
         /* White text for dark table headers */
         .print-paper-sheet thead th,
-        .print-paper-sheet .text-white,
-        #printable-invoice-content thead th,
-        #printable-invoice-content .text-white {
+        .print-paper-sheet .text-white {
           color: #ffffff !important;
         }
 
@@ -1055,25 +963,17 @@ export const globalStylesPart2 = `
         .print-paper-sheet .border-b,
         .print-paper-sheet .border-l,
         .print-paper-sheet .border-r,
-        .print-paper-sheet [class*="border-"],
-        #printable-invoice-content .border,
-        #printable-invoice-content .border-t,
-        #printable-invoice-content .border-b,
-        #printable-invoice-content .border-l,
-        #printable-invoice-content .border-r,
-        #printable-invoice-content [class*="border-"] {
+        .print-paper-sheet [class*="border-"] {
           border-color: #e2e8f0 !important;
         }
 
-        .print-paper-sheet .border-dashed,
-        #printable-invoice-content .border-dashed {
+        .print-paper-sheet .border-dashed {
           border-style: dashed !important;
           border-color: #cbd5e1 !important;
         }
 
         /* The wrapper container that frames the physical page sheet */
-        div:has(> .print-paper-sheet),
-        div:has(> #printable-invoice-content) {
+        div:has(> .print-paper-sheet) {
           background-color: #ffffff !important;
           background: #ffffff !important;
           backdrop-filter: none !important;
