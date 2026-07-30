@@ -600,3 +600,213 @@ body:has([data-design-style="pro-solid"]),
   backdrop-filter: blur(12px) !important;
 }
 
+/* 
+  =========================================
+  POS TERMINAL UNIFIED HIGH-LEGIBILITY STYLES
+  =========================================
+*/
+.pos-terminal-wrapper,
+[data-design-style="pro-solid"] .pos-terminal-wrapper,
+[data-design-style="clean-light"] .pos-terminal-wrapper,
+[data-design-style="fluid-mesh"] .pos-terminal-wrapper {
+  background-color: #020617 !important;
+  color: #ffffff !important;
+}
+
+/* Force dark container background for all POS elements */
+.pos-terminal-wrapper div.bg-slate-900,
+[data-design-style="pro-solid"] .pos-terminal-wrapper div.bg-slate-900,
+[data-design-style="clean-light"] .pos-terminal-wrapper div.bg-slate-900 {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  border-color: #334155 !important;
+}
+
+.pos-terminal-wrapper div.bg-slate-950,
+[data-design-style="pro-solid"] .pos-terminal-wrapper div.bg-slate-950,
+[data-design-style="clean-light"] .pos-terminal-wrapper div.bg-slate-950 {
+  background-color: #020617 !important;
+  color: #ffffff !important;
+  border-color: #334155 !important;
+}
+
+.pos-terminal-wrapper div.bg-slate-800,
+[data-design-style="pro-solid"] .pos-terminal-wrapper div.bg-slate-800,
+[data-design-style="clean-light"] .pos-terminal-wrapper div.bg-slate-800 {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+  border-color: #334155 !important;
+}
+
+/* Force dark button backgrounds */
+.pos-terminal-wrapper button.bg-slate-800,
+.pos-terminal-wrapper button.bg-slate-800\/90,
+[data-design-style="pro-solid"] .pos-terminal-wrapper button.bg-slate-800,
+[data-design-style="clean-light"] .pos-terminal-wrapper button.bg-slate-800 {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+  border-color: #334155 !important;
+}
+
+.pos-terminal-wrapper button.bg-slate-900,
+[data-design-style="pro-solid"] .pos-terminal-wrapper button.bg-slate-900,
+[data-design-style="clean-light"] .pos-terminal-wrapper button.bg-slate-900 {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+}
+
+/* High-contrast badges inside POS */
+.pos-terminal-wrapper .bg-teal-500\/20,
+[data-design-style="pro-solid"] .pos-terminal-wrapper .bg-teal-500\/20,
+[data-design-style="clean-light"] .pos-terminal-wrapper .bg-teal-500\/20 {
+  background-color: rgba(20, 184, 166, 0.25) !important;
+  color: #2dd4bf !important;
+  border: 1px solid rgba(45, 212, 191, 0.6) !important;
+}
+
+.pos-terminal-wrapper .bg-amber-500\/20,
+[data-design-style="pro-solid"] .pos-terminal-wrapper .bg-amber-500\/20,
+[data-design-style="clean-light"] .pos-terminal-wrapper .bg-amber-500\/20 {
+  background-color: rgba(245, 158, 11, 0.25) !important;
+  color: #f59e0b !important;
+  border: 1px solid rgba(251, 191, 36, 0.6) !important;
+}
+
+.pos-terminal-wrapper .bg-red-500\/20,
+[data-design-style="pro-solid"] .pos-terminal-wrapper .bg-red-500\/20,
+[data-design-style="clean-light"] .pos-terminal-wrapper .bg-red-500\/20 {
+  background-color: rgba(239, 68, 68, 0.25) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(248, 113, 113, 0.6) !important;
+}
+
+/* High contrast inputs inside POS */
+.pos-terminal-wrapper input,
+.pos-terminal-wrapper select,
+[data-design-style="pro-solid"] .pos-terminal-wrapper input,
+[data-design-style="pro-solid"] .pos-terminal-wrapper select,
+[data-design-style="clean-light"] .pos-terminal-wrapper input {
+  background-color: #020617 !important;
+  color: #ffffff !important;
+  border-color: #475569 !important;
+}
+
+.pos-terminal-wrapper input::placeholder,
+[data-design-style="pro-solid"] .pos-terminal-wrapper input::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+/* All headings, labels, spans, paragraphs, strong and inputs inside POS Terminal MUST be bright high contrast regardless of active theme */
+.pos-terminal-wrapper,
+.pos-terminal-wrapper label,
+.pos-terminal-wrapper span,
+.pos-terminal-wrapper p,
+.pos-terminal-wrapper div,
+.pos-terminal-wrapper strong,
+.pos-terminal-wrapper b,
+.pos-terminal-wrapper h1,
+.pos-terminal-wrapper h2,
+.pos-terminal-wrapper h3,
+.pos-terminal-wrapper h4,
+.pos-terminal-wrapper h5,
+.pos-terminal-wrapper h6,
+[data-design-style="clean-light"] .pos-terminal-wrapper,
+[data-design-style="clean-light"] .pos-terminal-wrapper label,
+[data-design-style="clean-light"] .pos-terminal-wrapper span,
+[data-design-style="clean-light"] .pos-terminal-wrapper p,
+[data-design-style="clean-light"] .pos-terminal-wrapper strong,
+[data-design-style="clean-light"] .pos-terminal-wrapper b,
+[data-design-style="clean-light"] .pos-terminal-wrapper h1,
+[data-design-style="clean-light"] .pos-terminal-wrapper h2,
+[data-design-style="clean-light"] .pos-terminal-wrapper h3,
+[data-design-style="clean-light"] .pos-terminal-wrapper h4,
+[data-design-style="clean-light"] .pos-terminal-wrapper h5,
+[data-design-style="clean-light"] .pos-terminal-wrapper h6,
+[data-design-style="pro-solid"] .pos-terminal-wrapper,
+[data-design-style="pro-solid"] .pos-terminal-wrapper label,
+[data-design-style="pro-solid"] .pos-terminal-wrapper span,
+[data-design-style="pro-solid"] .pos-terminal-wrapper p,
+[data-design-style="pro-solid"] .pos-terminal-wrapper strong,
+[data-design-style="pro-solid"] .pos-terminal-wrapper b,
+[data-design-style="pro-solid"] .pos-terminal-wrapper h1,
+[data-design-style="pro-solid"] .pos-terminal-wrapper h2,
+[data-design-style="pro-solid"] .pos-terminal-wrapper h3,
+[data-design-style="pro-solid"] .pos-terminal-wrapper h4,
+[data-design-style="pro-solid"] .pos-terminal-wrapper h5,
+[data-design-style="pro-solid"] .pos-terminal-wrapper h6 {
+  color: #ffffff !important;
+}
+
+/* Explicit color exceptions for accent texts */
+.pos-terminal-wrapper .text-teal-400,
+[data-design-style="clean-light"] .pos-terminal-wrapper .text-teal-400 {
+  color: #2dd4bf !important;
+}
+.pos-terminal-wrapper .text-teal-300,
+[data-design-style="clean-light"] .pos-terminal-wrapper .text-teal-300 {
+  color: #5eead4 !important;
+}
+.pos-terminal-wrapper .text-amber-300,
+[data-design-style="clean-light"] .pos-terminal-wrapper .text-amber-300 {
+  color: #fcd34d !important;
+}
+.pos-terminal-wrapper .text-amber-400,
+[data-design-style="clean-light"] .pos-terminal-wrapper .text-amber-400 {
+  color: #fbbf24 !important;
+}
+.pos-terminal-wrapper .text-red-400,
+[data-design-style="clean-light"] .pos-terminal-wrapper .text-red-400 {
+  color: #f87171 !important;
+}
+.pos-terminal-wrapper .text-slate-300,
+[data-design-style="clean-light"] .pos-terminal-wrapper .text-slate-300 {
+  color: #cbd5e1 !important;
+}
+.pos-terminal-wrapper .text-slate-400,
+[data-design-style="clean-light"] .pos-terminal-wrapper .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+/* Inputs & Placeholders inside POS Terminal */
+.pos-terminal-wrapper input,
+.pos-terminal-wrapper select,
+[data-design-style="pro-solid"] .pos-terminal-wrapper input,
+[data-design-style="clean-light"] .pos-terminal-wrapper input {
+  background-color: #020617 !important;
+  color: #ffffff !important;
+  border-color: #475569 !important;
+}
+
+.pos-terminal-wrapper input::placeholder,
+[data-design-style="clean-light"] .pos-terminal-wrapper input::placeholder,
+[data-design-style="pro-solid"] .pos-terminal-wrapper input::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+.pos-number-input,
+[data-design-style="pro-solid"] .pos-number-input,
+[data-design-style="clean-light"] .pos-number-input {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  color: #ffffff !important;
+}
+
+/* Chrome/Safari/Edge hide number spinner arrows for clean POS UI */
+.pos-number-input::-webkit-outer-spin-button,
+.pos-number-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.pos-number-input[type=number] {
+  -moz-appearance: textfield;
+}
+
+
+

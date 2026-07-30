@@ -95,19 +95,29 @@ export function useAppSettings() {
   };
 
   const [tabOrder, setTabOrder] = useState<string[]>(() => {
+    const defaultOrder = ['dashboard', 'pos', 'cariler', 'kasa', 'islemler', 'stoklar', 'masraflar', 'calisanlar', 'ceksenet', 'krediler', 'raporlar', 'ayarlar'];
     const saved = localStorage.getItem('storm_muhasebe_tab_order');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const required = ['dashboard', 'cariler', 'kasa', 'islemler', 'stoklar', 'masraflar', 'calisanlar', 'ceksenet', 'krediler', 'raporlar', 'ayarlar'];
-          const filtered = parsed.filter((t: string) => required.includes(t));
-          const missing = required.filter((t: string) => !filtered.includes(t));
-          return [...filtered, ...missing];
+          const filtered = parsed.filter((t: string) => defaultOrder.includes(t));
+          const missing = defaultOrder.filter((t: string) => !filtered.includes(t));
+          let order = [...filtered, ...missing];
+
+          // Reorder 'pos' so it is positioned right under 'dashboard' and above 'cariler'
+          if (order.includes('pos') && order.includes('cariler')) {
+            order = order.filter((t) => t !== 'pos');
+            const carilerIdx = order.indexOf('cariler');
+            order.splice(carilerIdx >= 0 ? carilerIdx : 1, 0, 'pos');
+          }
+          localStorage.setItem('storm_muhasebe_tab_order', JSON.stringify(order));
+          return order;
         }
       } catch (e) {}
     }
-    return ['dashboard', 'cariler', 'kasa', 'islemler', 'stoklar', 'masraflar', 'calisanlar', 'ceksenet', 'krediler', 'raporlar', 'ayarlar'];
+    localStorage.setItem('storm_muhasebe_tab_order', JSON.stringify(defaultOrder));
+    return defaultOrder;
   });
 
   const moveTab = (index: number, direction: 'up' | 'down') => {

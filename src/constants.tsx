@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, Users, Package, Receipt, Briefcase, Wallet, DollarSign, Landmark, BarChart3, Settings } from "lucide-react";
+import { LayoutDashboard, Users, Package, Receipt, Briefcase, Wallet, DollarSign, Landmark, BarChart3, Settings, ShoppingCart } from "lucide-react";
 import { KeyboardShortcut } from "./types";
 export const StormLogo = ({ 
   className = "", 
@@ -430,19 +430,20 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.8.0';
+export const APP_VERSION = '1.8.1';
 
 export const CHANGELOG = {
-  version: '1.8.0',
+  version: '1.8.1',
   features: [
-    "1.8.0 Kararlı Sürüm Yayınlandı: Storm Ön Muhasebe v1.8.0 sürümü başarıyla canlıya alındı.",
-    "%5 Akıcı Tipografi Ölçeklendirmesi: Tüm arayüz temalarında yazı tipi boyutları %5 oranında göz yormayan, net ve ekran çözünürlüğüne mükemmel uyumlu bir tipografi ölçeğine yükseltildi.",
-    "Temiz Işık (Clean Light) Arayüz Yenilemesi: Temiz Işık temasında tüm gösterge paneli widget başlıkları, özet finansal kartlar ve tablolar ferah beyaz kart görünümüne kavuşturuldu.",
-    "Baskı & PDF Sayfa İzolasyonu: Cari ekstre detayları ve yazdırma önizlemelerinde orijinal beyaz kağıt arka planı ve yüksek metin okunabilirliği garanti altına alındı."
+    "1.8.1 Kararlı Sürüm Yayınlandı: Storm Ön Muhasebe v1.8.1 sürümü başarıyla yayınlandı ve canlıya alındı.",
+    "Sol Menü Hiyerarşisi Güncellemesi: 'Hızlı Satış' sekmesi sol navigasyon panelinde Gösterge Paneli'nin hemen altına taşındı ve ismi 'Hızlı Satış' olarak sadeleştirildi.",
+    "Hızlı Satış Alt Panel Yeniliği: Kasa göstergesi, KDV/iskonto ayarları ve ödeme alanı sol panelin altına taşınarak sağ taraf tamamen geniş ve ergonomik sepet alanına ayrıldı.",
+    "Belirgin İskonto Kontrolleri: İskonto seçim butonları (% Yüzde, ₺ İskonto, 🎯 Net Tutar) büyütülerek dokunmatik ve hızlı kasa kullanımına uygun hale getirildi.",
+    "Sağa Yanaştırılmış Para Birimi Seçimi: Ödenecek para birimi paneli sağ tarafa yanaştırılarak iskonto alanına daha fazla genişlik sağlandı."
   ],
   fixes: [
-    "Performans ve Tipografi Senkronizasyonu: Sistem genelinde font ve tema ayarlarının anlık senkronizasyon hızı ve render stili optimize edildi.",
-    "Yüksek Kontrast Kararlılığı: Koyu ve açık tema geçişlerinde metinlerin netliği ve renk uyumu korundu."
+    "Hızlı Ödeme Buton Düzeni: Nakit, POS, Parçalı ve Askıya Al ödeme butonları tek satırda 4'lü dengeli ve şık bir yapıya kavuşturuldu.",
+    "Sekme Sıralaması Senkronizasyonu: Uygulama ilk yüklendiğinde Hızlı Satış modülünün her zaman Gösterge Paneli'nin hemen altında yer alması sağlandı."
   ]
 };
 
@@ -657,6 +658,7 @@ export const StormIconWrapper = ({ iconElement, isActive, designStyle }: { iconE
 
 export const TAB_DEFS: Record<string, { label: string; icon: React.ReactNode }> = {
   dashboard: { label: 'Gösterge Paneli', icon: <LayoutDashboard size={18} strokeWidth={2.4} /> },
+  pos: { label: 'Hızlı Satış', icon: <ShoppingCart size={18} strokeWidth={2.4} /> },
   cariler: { label: 'Cari Hesaplar', icon: <Users size={18} strokeWidth={2.4} /> },
   stoklar: { label: 'Stok Durumu', icon: <Package size={18} strokeWidth={2.4} /> },
   islemler: { label: 'Finansal Hareketler', icon: <Receipt size={18} strokeWidth={2.4} /> },
@@ -699,6 +701,18 @@ export const PIN_ACCOUNTS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.8.1",
+    date: "30.07.2026",
+    changes: [
+      "1.8.1 Kararlı Sürüm Yayınlandı: Storm Ön Muhasebe v1.8.1 sürümü başarıyla yayınlandı ve canlıya alındı.",
+      "Sol Menü Hiyerarşisi Güncellemesi: 'Hızlı Satış' sekmesi sol navigasyon panelinde Gösterge Paneli'nin hemen altına taşındı ve ismi 'Hızlı Satış' olarak sadeleştirildi.",
+      "Hızlı Satış Alt Panel Yeniliği: Kasa göstergesi, KDV/iskonto ayarları ve ödeme alanı sol panelin altına taşınarak sağ taraf tamamen geniş ve ergonomik sepet alanına ayrıldı.",
+      "Belirgin İskonto Kontrolleri: İskonto seçim butonları (% Yüzde, ₺ İskonto, 🎯 Net Tutar) büyütülerek dokunmatik ve hızlı kasa kullanımına uygun hale getirildi.",
+      "Sağa Yanaştırılmış Para Birimi Seçimi: Ödenecek para birimi paneli sağ tarafa yanaştırılarak iskonto alanına daha fazla genişlik sağlandı.",
+      "Hızlı Ödeme Buton Düzeni: Nakit, POS, Parçalı ve Askıya Al ödeme butonları tek satırda 4'lü dengeli ve şık bir yapıya kavuşturuldu."
+    ]
+  },
   {
     version: "1.8.0",
     date: "29.07.2026",

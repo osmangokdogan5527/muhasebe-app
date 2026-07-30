@@ -29,8 +29,12 @@ import {
   User as FirebaseUser,
   setActiveUser,
   saveBankAccount,
+  createTransaction,
   db
 } from './firebase';
+import { reportErrorToTelegram } from './utils/telegramLogger';
+import { PosCartItem, PosPaymentSplit } from './types/pos';
+import { PosView } from './components/pos/PosView';
 import { enableNetwork, disableNetwork } from 'firebase/firestore';
 import { BackupWizardModal } from './components/backup/BackupWizardModal';
 import DashboardView from './components/DashboardView';
@@ -795,6 +799,61 @@ export default function App() {
       />
     );
   }
+
+  // POS Hızlı Satış Tamamlama Entegrasyonu
+  const handleCompletePosSale = async (saleData: {
+    receiptNo: string;
+    cariId?: string;
+    cariName: string;
+    items: PosCartItem[];
+    paymentSplit: PosPaymentSplit;
+    grandTotal: number;
+    subtotal: number;
+    totalTax: number;
+    totalDiscount: number;
+    date: string;
+  }) => {
+    try {
+      const items = saleData.items.map((item) => ({
+        stockId: item.stockId,
+        stockName: item.stockName,
+        quantity: item.quantity,
+        unit: item.unit,
+        price: item.unitPrice,
+        taxRate: item.taxRate,
+        total: item.totalLine,
+      }));
+
+      // 1. Ana Satış Faturası / İşlemi
+      const mainTransaction: Omit<Transaction, 'id'> = {
+        invoiceNo: saleData.receiptNo,
+        type: 'sale',
+        cariId: saleData.cariId || 'perakende_musteri',
+        cariName: saleData.cariName || 'Perakende Müşteri',
+        date: saleData.date,
+        amount: saleData.grandTotal,
+        account: saleData.paymentSplit.cashAmount > 0
+          ? 'cash'
+          : saleData.paymentSplit.posAmount > 0
+          ? 'pos'
+          : '',
+        bankAccountId: saleData.paymentSplit.posAccountId,
+        description: `POS Hızlı Satış Fişi No: ${saleData.receiptNo}`,
+        items,
+        createdAt: new Date().toISOString(),
+        currency: 'TRY',
+      };
+
+      await createTransaction(mainTransaction);
+      showToast('Hızlı perakende satış başarıyla tamamlandı ve stoklar düşüldü.', 'success');
+      return true;
+    } catch (err: any) {
+      reportErrorToTelegram(err, 'App:handleCompletePosSale');
+      showToast('Satış kaydı oluşturulurken hata: ' + (err.message || err), 'error');
+      return false;
+    }
+  };
+
   return (
     <div data-design-style={designStyle} className={`min-h-screen relative ${(currentThemeData as any).bgClass || 'bg-[#050505]'} text-[#e0e0e0] flex flex-col md:flex-row font-sans overflow-x-hidden`}>
       <GlobalStyles themeCssRules={themeCssRules} bodyPatternSvg={bodyPatternSvg} activePattern={activePatternObj} />
@@ -901,6 +960,14 @@ export default function App() {
         </div>
         <div className={activeTab === 'dashboard' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('dashboard', <DashboardView cariler={cariler} stoklar={stoklar} islemler={islemler} ceksenet={ceksenet} expenses={expenses} employeeTransactions={employeeTransactions} recurringTransactions={recurringTransactions} onNavigate={handleNavigate} />)}
+        </div>
+        <div className={activeTab === 'pos' ? 'block animate-fade-in' : 'hidden'}>
+          {renderWorkspaceView('pos', <PosView
+            stocks={stoklar}
+            cariler={cariler}
+            bankAccounts={bankAccounts}
+            onCompletePosSale={handleCompletePosSale}
+          />)}
         </div>
         <div className={activeTab === 'cariler' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('cariler', <CarilerView 
