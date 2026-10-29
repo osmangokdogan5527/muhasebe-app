@@ -31,7 +31,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import TemplateDesignerView from './TemplateDesignerView';
-import { reportErrorToTelegram } from '../utils/telegramLogger';
+import { logError } from '../utils/errorLogger';
 import { KeyboardShortcut } from '../types';
 import { 
   COLOR_PRESETS, 
@@ -296,7 +296,7 @@ export default function AyarlarView({
         showToast('Yönetici yetki ve güvenlik sistemi devre dışı bırakıldı.', 'info');
       }
     } catch (err: any) {
-      reportErrorToTelegram(err, 'DeactivateSecurity');
+      logError(err, 'DeactivateSecurity');
       showToast('Güvenlik sistemi kapatılırken hata oluştu!', 'error');
     }
   };
@@ -342,7 +342,7 @@ export default function AyarlarView({
       setAdminPinChangeSuccess('Yönetici şifresi başarıyla güncellendi!');
       showToast('Yönetici PIN kodu başarıyla değiştirildi.', 'success');
     } catch (err: any) {
-      reportErrorToTelegram(err, 'AdminPinChange');
+      logError(err, 'AdminPinChange');
       setAdminPinChangeError('PIN şifresi güncellenirken bir hata oluştu.');
     }
   };
@@ -353,7 +353,7 @@ export default function AyarlarView({
       setActionPermissions(tempActionPermissions);
       showToast('Personel hassas eylem yetkileri başarıyla güncellendi.', 'success');
     } catch (err: any) {
-      reportErrorToTelegram(err, 'SaveActionPermissions');
+      logError(err, 'SaveActionPermissions');
       showToast('Eylem yetkileri kaydedilirken hata oluştu!', 'error');
     }
   };
@@ -379,7 +379,7 @@ export default function AyarlarView({
       setSetupError(null);
       showToast('Yönetici yetki ve güvenlik sistemi başarıyla aktifleştirildi!', 'success');
     } catch (err: any) {
-      reportErrorToTelegram(err, 'ActivateSecurity');
+      logError(err, 'ActivateSecurity');
       setSetupError('Sistem aktifleştirilirken hata oluştu.');
     }
   };

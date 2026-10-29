@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { RecurringTransaction, BankAccount, Cari } from '../../types';
 import { deleteRecurringTransaction, saveRecurringTransaction } from '../../firebase';
-import { reportErrorToTelegram } from '../../utils/telegramLogger';
+import { logError } from '../../utils/errorLogger';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { getPendingRecurringItems, getTodayISO } from '../../utils/recurringUtils';
 import TekrarlayanModal from './TekrarlayanModal';
@@ -120,7 +120,7 @@ export default function TekrarlayanManager({
       };
       await saveRecurringTransaction(updated, item.id);
     } catch (err: any) {
-      reportErrorToTelegram(err, 'TekrarlayanManager.handleToggleStatus');
+      logError(err, 'TekrarlayanManager.handleToggleStatus');
       alert(`Durum değiştirilirken hata oluştu: ${err.message || ''}`);
     }
   };
@@ -133,7 +133,7 @@ export default function TekrarlayanManager({
     try {
       await deleteRecurringTransaction(item.id);
     } catch (err: any) {
-      reportErrorToTelegram(err, 'TekrarlayanManager.handleDelete');
+      logError(err, 'TekrarlayanManager.handleDelete');
       alert(`Silinirken hata oluştu: ${err.message || ''}`);
     }
   };

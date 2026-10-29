@@ -32,7 +32,7 @@ import {
   createTransaction,
   db
 } from './firebase';
-import { reportErrorToTelegram } from './utils/telegramLogger';
+import { logError } from './utils/errorLogger';
 import { PosCartItem, PosPaymentSplit } from './types/pos';
 import { PosView } from './components/pos/PosView';
 import { enableNetwork, disableNetwork } from 'firebase/firestore';
@@ -848,7 +848,7 @@ export default function App() {
       showToast('Hızlı perakende satış başarıyla tamamlandı ve stoklar düşüldü.', 'success');
       return true;
     } catch (err: any) {
-      reportErrorToTelegram(err, 'App:handleCompletePosSale');
+      logError(err, 'App:handleCompletePosSale');
       showToast('Satış kaydı oluşturulurken hata: ' + (err.message || err), 'error');
       return false;
     }

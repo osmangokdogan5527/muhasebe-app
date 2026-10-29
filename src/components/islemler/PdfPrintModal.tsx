@@ -570,12 +570,12 @@ export function PdfPrintModal({ transaction, cariler, stoklar, onClose }: PdfPri
                           printContent.style.transform = originalTransform;
                           console.error('PDF İndirme Hatası:', err);
 
-                          // Hata Savunması (try-catch, and Telegram logging)
+                          // Hata Savunması (try-catch ve yerel hata günlüğü)
                           try {
-                            const { reportErrorToTelegram } = await import('../../utils/telegramLogger');
-                            reportErrorToTelegram(err instanceof Error ? err : new Error(String(err)), 'IslemlerView_DownloadPDF');
+                            const { logError } = await import('../../utils/errorLogger');
+                            logError(err instanceof Error ? err : new Error(String(err)), 'IslemlerView_DownloadPDF');
                           } catch (logErr) {
-                            console.error('Telegram loglama hatası:', logErr);
+                            console.error('Hata günlüğü yazılamadı:', logErr);
                           }
 
                           alert('PDF oluşturulurken bir hata meydana geldi.');

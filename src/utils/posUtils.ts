@@ -1,6 +1,6 @@
 import { Stock } from '../types';
 import { PosCartItem, PosPaymentSplit } from '../types/pos';
-import { reportErrorToTelegram } from './telegramLogger';
+import { logError } from './errorLogger';
 
 /**
  * Barkod veya Arama Terimine göre stok bulur
@@ -24,7 +24,7 @@ export function findStockByBarcodeOrSearch(stocks: Stock[], searchTerm: string):
 
     return null;
   } catch (err: any) {
-    reportErrorToTelegram(err, 'posUtils:findStockByBarcodeOrSearch');
+    logError(err, 'posUtils:findStockByBarcodeOrSearch');
     return null;
   }
 }
@@ -114,7 +114,7 @@ export function calculateCartSummary(
       grandTotal: Number(grandTotal.toFixed(2)),
     };
   } catch (err: any) {
-    reportErrorToTelegram(err, 'posUtils:calculateCartSummary');
+    logError(err, 'posUtils:calculateCartSummary');
     return {
       rawTotal: 0,
       totalLineDiscount: 0,

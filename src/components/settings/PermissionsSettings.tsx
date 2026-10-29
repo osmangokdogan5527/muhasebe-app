@@ -1,6 +1,6 @@
 import React from 'react';
 import { ShieldCheck, Lock, Unlock, Eye, EyeOff, Save, Check, ShieldAlert } from 'lucide-react';
-import { reportErrorToTelegram } from '../../utils/telegramLogger';
+import { logError } from '../../utils/errorLogger';
 import { TAB_DEFS } from '../../constants';
 
 export interface PermissionsSettingsProps {
@@ -317,7 +317,7 @@ export const PermissionsSettings: React.FC<PermissionsSettingsProps> = ({
                         setSensitiveTabs(finalRestricted);
                         showToast('Personel yetki sınırlandırmaları başarıyla güncellendi.', 'success');
                       } catch (err: any) {
-                        reportErrorToTelegram(err, 'SaveSensitiveTabs');
+                        logError(err, 'SaveSensitiveTabs');
                         showToast('Yetkiler kaydedilirken hata oluştu!', 'error');
                       }
                     }}

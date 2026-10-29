@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RecurringTransaction, Expense, BankAccount, Cari } from '../../types';
 import { saveExpense, saveRecurringTransaction } from '../../firebase';
-import { reportErrorToTelegram } from '../../utils/telegramLogger';
+import { logError } from '../../utils/errorLogger';
 import { calculateNextDueDate, getTodayISO } from '../../utils/recurringUtils';
 import { X, CheckCircle, SkipForward, Edit3, Calendar, DollarSign, AlertCircle, Building, Wallet, Tag } from 'lucide-react';
 
@@ -123,7 +123,7 @@ export default function OnayBekleyenModal({
       if (onApprovedOrSkipped) onApprovedOrSkipped();
       onClose();
     } catch (err: any) {
-      reportErrorToTelegram(err, 'OnayBekleyenModal.handleApproveAndProcess');
+      logError(err, 'OnayBekleyenModal.handleApproveAndProcess');
       setErrorMsg(`İşlem onaylanırken hata oluştu: ${err.message || 'Bilinmeyen hata'}`);
     } finally {
       setIsProcessing(false);
@@ -156,7 +156,7 @@ export default function OnayBekleyenModal({
       if (onApprovedOrSkipped) onApprovedOrSkipped();
       onClose();
     } catch (err: any) {
-      reportErrorToTelegram(err, 'OnayBekleyenModal.handleSkipPeriod');
+      logError(err, 'OnayBekleyenModal.handleSkipPeriod');
       setErrorMsg(`Dönem pas geçilirken hata oluştu: ${err.message || 'Bilinmeyen hata'}`);
     } finally {
       setIsProcessing(false);

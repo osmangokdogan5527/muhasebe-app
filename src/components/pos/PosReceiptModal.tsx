@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { PosSaleSummary } from '../../types/pos';
 import { Printer, X, Check, ShieldCheck } from 'lucide-react';
-import { reportErrorToTelegram } from '../../utils/telegramLogger';
+import { logError } from '../../utils/errorLogger';
 
 interface PosReceiptModalProps {
   isOpen: boolean;
@@ -69,7 +69,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
       `);
       printWindow.document.close();
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosReceiptModal:handlePrint');
+      logError(err, 'PosReceiptModal:handlePrint');
       window.print();
     }
   };

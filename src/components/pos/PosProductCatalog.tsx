@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Stock } from '../../types';
 import { Search, Package, Check, Tag, Filter, Zap, Barcode, Plus, FolderPlus, Layers, LayoutGrid, ListFilter, X, Edit2 } from 'lucide-react';
-import { reportErrorToTelegram } from '../../utils/telegramLogger';
+import { logError } from '../../utils/errorLogger';
 
 interface PosProductCatalogProps {
   stocks: Stock[];
@@ -102,7 +102,7 @@ export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
       });
       return counts;
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosProductCatalog:categoryCounts');
+      logError(err, 'PosProductCatalog:categoryCounts');
       return {};
     }
   }, [stocksWithCategory]);
@@ -134,7 +134,7 @@ export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
         return nameMatch || codeMatch || barcodeMatch;
       });
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosProductCatalog:filteredStocks');
+      logError(err, 'PosProductCatalog:filteredStocks');
       return stocksWithCategory;
     }
   }, [stocksWithCategory, selectedCategory, searchTerm]);

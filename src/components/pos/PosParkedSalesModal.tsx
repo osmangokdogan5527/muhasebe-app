@@ -1,7 +1,7 @@
 import React from 'react';
 import { PosParkedSale } from '../../types/pos';
 import { Clock, Play, Trash2, X, ShoppingBag } from 'lucide-react';
-import { reportErrorToTelegram } from '../../utils/telegramLogger';
+import { logError } from '../../utils/errorLogger';
 
 interface PosParkedSalesModalProps {
   isOpen: boolean;

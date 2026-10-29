@@ -8,7 +8,7 @@ import { PosReceiptModal } from './PosReceiptModal';
 import { PosParkedSalesModal } from './PosParkedSalesModal';
 import { findStockByBarcodeOrSearch, calculateLineTotal, calculateCartSummary, generateReceiptNo } from '../../utils/posUtils';
 import { ShoppingCart, Zap, DollarSign, CreditCard, User, Clock, CheckCircle2, RotateCcw, Search, Plus, Sparkles, HelpCircle, Percent } from 'lucide-react';
-import { reportErrorToTelegram } from '../../utils/telegramLogger';
+import { logError } from '../../utils/errorLogger';
 
 interface PosViewProps {
   stocks: Stock[];
@@ -79,7 +79,7 @@ export const PosView: React.FC<PosViewProps> = ({
     try {
       localStorage.setItem('storm_pos_parked_sales', JSON.stringify(parkedSales));
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:saveParkedSales');
+      logError(err, 'PosView:saveParkedSales');
     }
   }, [parkedSales]);
 
@@ -151,7 +151,7 @@ export const PosView: React.FC<PosViewProps> = ({
       });
       setProductSearchTerm('');
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:handleAddToCart');
+      logError(err, 'PosView:handleAddToCart');
     }
   }, []);
 
@@ -205,7 +205,7 @@ export const PosView: React.FC<PosViewProps> = ({
           setProductSearchTerm('');
         }
       } catch (err: any) {
-        reportErrorToTelegram(err, 'PosView:handleKeyDown');
+        logError(err, 'PosView:handleKeyDown');
       }
     };
 
@@ -245,7 +245,7 @@ export const PosView: React.FC<PosViewProps> = ({
           .filter((item) => item.quantity > 0)
       );
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:handleUpdateQuantity');
+      logError(err, 'PosView:handleUpdateQuantity');
     }
   };
 
@@ -265,7 +265,7 @@ export const PosView: React.FC<PosViewProps> = ({
         })
       );
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:handleSetQuantity');
+      logError(err, 'PosView:handleSetQuantity');
     }
   };
 
@@ -287,7 +287,7 @@ export const PosView: React.FC<PosViewProps> = ({
         })
       );
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:handleUpdateUnitPrice');
+      logError(err, 'PosView:handleUpdateUnitPrice');
     }
   };
 
@@ -309,7 +309,7 @@ export const PosView: React.FC<PosViewProps> = ({
         })
       );
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:handleUpdateDiscount');
+      logError(err, 'PosView:handleUpdateDiscount');
     }
   };
 
@@ -382,7 +382,7 @@ export const PosView: React.FC<PosViewProps> = ({
       setSelectedCari(null);
       alert('Satış başarıyla askıya alındı.');
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:handleParkSale');
+      logError(err, 'PosView:handleParkSale');
     }
   };
 
@@ -399,7 +399,7 @@ export const PosView: React.FC<PosViewProps> = ({
       setParkedSales((prev) => prev.filter((p) => p.id !== parked.id));
       setIsParkedModalOpen(false);
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:handleRestoreParkedSale');
+      logError(err, 'PosView:handleRestoreParkedSale');
     }
   };
 
@@ -453,7 +453,7 @@ export const PosView: React.FC<PosViewProps> = ({
         setIsSplitModalOpen(false);
       }
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:executeSale');
+      logError(err, 'PosView:executeSale');
       alert('Satış kaydı sırasında bir hata oluştu: ' + (err.message || err));
     } finally {
       setIsProcessing(false);
