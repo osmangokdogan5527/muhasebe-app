@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, ChevronDown, Shield, X, CloudLightning, RotateCcw, Download, Trash2, AlertTriangle, Check, ChevronUp, MessageSquare } from 'lucide-react';
 import { StormLogo, APP_VERSION } from '../constants';
+import { signInTenant } from '../utils/tenantAuth';
 
 interface AuthScreenProps {
   currentThemeData: any;
@@ -77,6 +78,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 }) => {
 
   const [adminTab, setAdminTab] = React.useState<'errors' | 'feedback'>('errors');
+  const [isSigningIn, setIsSigningIn] = React.useState(false);
   const [expandedLogId, setExpandedLogId] = React.useState<string | null>(null);
 
   const isFluidMesh = designStyle === 'fluid-mesh';
@@ -314,23 +316,34 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                     maxLength={6}
                     value={enteredPin}
                     onChange={(e) => {
+                      if (isSigningIn) return;
                       const val = e.target.value.replace(/[^0-9]/g, '');
                       setEnteredPin(val);
                       if (authError) setAuthError(null);
                       
                       if (val.length === 6) {
                         if (val === selectedPinAccount.pin) {
-                          const userData = {
-                            uid: selectedPinAccount.id,
-                            displayName: selectedPinAccount.name,
-                            email: `${selectedPinAccount.id}@storm.com`
-                          };
-                          localStorage.setItem('storm_muhasebe_active_user', JSON.stringify(userData));
-                          setUserRole('employee');
-                          const defaultTab = window.innerWidth < 768 ? 'menu' : 'cariler';
-                          setActiveTab(defaultTab);
-                          setActiveUser(selectedPinAccount.id);
-                          setUser(userData as any);
+                          const account = selectedPinAccount;
+                          setIsSigningIn(true);
+                          // Firestore güvenlik kuralları için aynı firmanın Firebase hesabıyla oturum aç
+                          signInTenant(account.id)
+                            .then((result) => {
+                              if (result.status === 'failed') {
+                                alert(`Uyarı: ${result.message}\n\nUygulama açılacak ancak veriler sunucuyla eşitlenemeyebilir. Lütfen yöneticinize bildirin.`);
+                              }
+                              const userData = {
+                                uid: account.id,
+                                displayName: account.name,
+                                email: `${account.id}@storm.com`
+                              };
+                              localStorage.setItem('storm_muhasebe_active_user', JSON.stringify(userData));
+                              setUserRole('employee');
+                              const defaultTab = window.innerWidth < 768 ? 'menu' : 'cariler';
+                              setActiveTab(defaultTab);
+                              setActiveUser(account.id);
+                              setUser(userData as any);
+                            })
+                            .finally(() => setIsSigningIn(false));
                         } else {
                           setAuthError('Hatalı şifre girdiniz.');
                           setEnteredPin('');
