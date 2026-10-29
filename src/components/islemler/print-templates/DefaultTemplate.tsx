@@ -105,7 +105,7 @@ export function DefaultTemplate({ dynamicPrintVars, printSettings, }: any) {
                                         )}
                                         {activeTemplate?.showVatRate && (
                                           <td className="py-2.5 px-3 text-zinc-500 text-center font-mono">
-                                            %{item.taxRate || 20}
+                                            %{item.taxRate ?? 0}
                                           </td>
                                         )}
                                         <td className="py-2.5 px-3 font-bold text-zinc-900 text-right font-mono">

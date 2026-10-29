@@ -316,7 +316,7 @@ export function PdfPrintModal({ transaction, cariler, stoklar, onClose }: PdfPri
           const groups: Record<number, { rate: number; total: number; matrah: number; kdv: number }> = {};
           
           transaction.items.forEach(item => {
-            const rate = item.taxRate || 20; // default 20%
+            const rate = item.taxRate ?? 0;
             const total = item.total || 0;
             const matrah = total / (1 + rate / 100);
             const kdv = total - matrah;

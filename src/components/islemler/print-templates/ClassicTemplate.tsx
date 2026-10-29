@@ -97,7 +97,7 @@ export function ClassicTemplate({ dynamicPrintVars, printSettings }: any) {
                                               <td className="py-1.5 px-2 border-r border-zinc-400 text-right">{formatPrintCurrency(item.price, transaction.currency || 'TRY')}</td>
                                             )}
                                             {activeTemplate?.showDiscountRate && <td className="py-1.5 px-2 border-r border-zinc-400 text-center">%0</td>}
-                                            {activeTemplate?.showVatRate && <td className="py-1.5 px-2 border-r border-zinc-400 text-center">%{item.taxRate || 20}</td>}
+                                            {activeTemplate?.showVatRate && <td className="py-1.5 px-2 border-r border-zinc-400 text-center">%{item.taxRate ?? 0}</td>}
                                             <td className="py-1.5 px-2 text-right">{formatPrintCurrency(item.total, transaction.currency || 'TRY')}</td>
                                           </tr>
                                         ))

@@ -4,6 +4,7 @@ import { X, Printer, Download, Plus, ArrowRight, ArrowLeft, RotateCcw, AlertTria
 
 
 import { createTransaction, saveCari } from '../../firebase';
+import { calculateInvoiceLine } from '../../utils/invoiceMath';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -59,7 +60,7 @@ export function LedgerDrawer({
         const price = quickTxType === "sale_return" ? selectedStock.salesPrice : selectedStock.purchasePrice;
         setQuickTxUnitPrice(price.toString());
         const qty = parseFloat(quickTxQuantity) || 1;
-        setQuickTxAmount((qty * price).toFixed(2));
+        setQuickTxAmount(calculateInvoiceLine(qty, price, selectedStock.taxRate).total.toFixed(2));
       } else {
         setQuickTxUnitPrice("");
         setQuickTxAmount("");
@@ -72,11 +73,13 @@ export function LedgerDrawer({
     if (quickTxType === "sale_return" || quickTxType === "purchase_return") {
       const qty = parseFloat(quickTxQuantity) || 0;
       const price = parseFloat(quickTxUnitPrice) || 0;
+      const selectedStock = stoklar.find(s => s.id === quickTxStockId);
       if (qty > 0 && price > 0) {
-        setQuickTxAmount((qty * price).toFixed(2));
+        // İade tutarı KDV dahil olmalı; aksi halde satışın KDV kısmı cari borcunda kalır
+        setQuickTxAmount(calculateInvoiceLine(qty, price, selectedStock?.taxRate || 0).total.toFixed(2));
       }
     }
-  }, [quickTxQuantity, quickTxUnitPrice, quickTxType]);
+  }, [quickTxQuantity, quickTxUnitPrice, quickTxType, quickTxStockId, stoklar]);
 
   // Populate Notes when currentCari changes
   useEffect(() => {
@@ -240,7 +243,7 @@ export function LedgerDrawer({
       }
       const price = parseFloat(quickTxUnitPrice) || 0;
       const taxRateValue = selectedStock.taxRate || 0;
-      const itemTotal = qty * price * (1 + taxRateValue / 100);
+      const itemTotal = calculateInvoiceLine(qty, price, taxRateValue).total;
 
       items = [{
         stockId: selectedStock.id,

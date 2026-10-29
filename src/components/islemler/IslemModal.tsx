@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Transaction, Cari, Stock, BankAccount, InvoiceItem, LinkedReceiptInput } from '../../types';
+import { calculateInvoiceLine, calculateInvoiceTotals } from '../../utils/invoiceMath';
 import { createTransaction, removeTransaction } from '../../firebase';
 import { Plus, Trash2, X, Search, FileText, CreditCard, Wallet, AlertCircle, Check, ScanBarcode, ArrowRightLeft, DollarSign, FileCheck, Scan, PlusCircle, MinusCircle, RefreshCw } from 'lucide-react';
 import BarcodeScannerModal from '../BarcodeScannerModal';
@@ -226,7 +227,7 @@ const activeCariCurrency = useMemo(() => {
             updatedItems[existingItemIndex] = {
               ...item,
               quantity: newQty,
-              total: newQty * item.price * (1 + item.taxRate / 100)
+              total: calculateInvoiceLine(newQty, item.price, item.taxRate).total
             };
             setInvoiceItems(updatedItems);
           } else {
@@ -241,7 +242,7 @@ const activeCariCurrency = useMemo(() => {
               unit: scannedStock.unit,
               price: price,
               taxRate: scannedStock.taxRate,
-              total: price * (1 + scannedStock.taxRate / 100)
+              total: calculateInvoiceLine(1, price, scannedStock.taxRate).total
             };
             if (emptyRowIndex >= 0) {
               const updatedItems = [...invoiceItems];
@@ -280,21 +281,7 @@ const activeCariCurrency = useMemo(() => {
   }, [isOpen, modalType, invoiceItems, stoklar]);
 
   // Calculate default converted amount based on rate & currencies
-  const invoiceTotals = useMemo(() => {
-    let subtotal = 0;
-    let totalTax = 0;
-    let grandTotal = 0;
-
-    invoiceItems.forEach(item => {
-      const itemSubtotal = (item.quantity || 0) * (item.price || 0);
-      const itemTax = itemSubtotal * ((item.taxRate || 0) / 100);
-      subtotal += itemSubtotal;
-      totalTax += itemTax;
-      grandTotal += item.total || 0;
-    });
-
-    return { subtotal, totalTax, grandTotal };
-  }, [invoiceItems]);
+  const invoiceTotals = useMemo(() => calculateInvoiceTotals(invoiceItems), [invoiceItems]);
 
   const autoConvertedAmount = useMemo(() => {
     const amt = (modalType === 'sale' || modalType === 'purchase') ? invoiceTotals.grandTotal : receiptAmount;
@@ -376,7 +363,7 @@ const activeCariCurrency = useMemo(() => {
         const price = aiPrefilledData.fiyat || matchedPrice || 1;
         const taxRate = aiPrefilledData.kdv !== undefined ? aiPrefilledData.kdv : 0;
         
-        setInvoiceItems([{ stockId, stockName: matchedStockName, quantity: qty, unit: matchedUnit, price, taxRate, total: qty * price }]);
+        setInvoiceItems([{ stockId, stockName: matchedStockName, quantity: qty, unit: matchedUnit, price, taxRate, total: calculateInvoiceLine(qty, price, taxRate).total }]);
       }
       
       if (onClearAiData) onClearAiData();
@@ -448,7 +435,7 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
         item.stockName = selectedStock.name;
         item.unit = selectedStock.unit;
         // set default price: sale invoice uses salesPrice, purchase invoice uses purchasePrice
-        item.price = modalType === 'sale' ? selectedStock.salesPrice : selectedStock.purchasePrice;
+        item.price = ['sale', 'sale_return'].includes(modalType) ? selectedStock.salesPrice : selectedStock.purchasePrice;
         item.taxRate = selectedStock.taxRate;
       } else {
         item.stockId = '';
@@ -462,10 +449,7 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
     }
 
     // Recalculate total for this row
-    const qty = item.quantity || 0;
-    const price = item.price || 0;
-    const tax = item.taxRate || 0;
-    item.total = qty * price * (1 + tax / 100);
+    item.total = calculateInvoiceLine(item.quantity, item.price, item.taxRate).total;
 
     setInvoiceItems(updated);
   };
@@ -498,12 +482,12 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
         updatedItems[existingItemIndex] = {
           ...item,
           quantity: newQty,
-          total: newQty * item.price * (1 + item.taxRate / 100)
+          total: calculateInvoiceLine(newQty, item.price, item.taxRate).total
         };
         setInvoiceItems(updatedItems);
       } else {
         // Add new line item
-        const price = modalType === 'sale' ? scannedStock.salesPrice : scannedStock.purchasePrice;
+        const price = ['sale', 'sale_return'].includes(modalType) ? scannedStock.salesPrice : scannedStock.purchasePrice;
         
         // Check if there is an empty row we can fill
         const emptyRowIndex = invoiceItems.findIndex(item => !item.stockId);
@@ -515,7 +499,7 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
           unit: scannedStock.unit,
           price: price,
           taxRate: scannedStock.taxRate,
-          total: price * (1 + scannedStock.taxRate / 100)
+          total: calculateInvoiceLine(1, price, scannedStock.taxRate).total
         };
 
         if (emptyRowIndex >= 0) {
@@ -1205,11 +1189,11 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
               updatedItems[existingItemIndex] = {
                 ...item,
                 quantity: newQty,
-                total: newQty * item.price * (1 + item.taxRate / 100)
+                total: calculateInvoiceLine(newQty, item.price, item.taxRate).total
               };
               setInvoiceItems(updatedItems);
             } else {
-              const price = modalType === 'sale' ? scannedStock.salesPrice : scannedStock.purchasePrice;
+              const price = ['sale', 'sale_return'].includes(modalType) ? scannedStock.salesPrice : scannedStock.purchasePrice;
               const emptyRowIndex = invoiceItems.findIndex(item => !item.stockId);
               const newItem = {
                 stockId: scannedStock.id,
@@ -1218,7 +1202,7 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
                 unit: scannedStock.unit,
                 price: price,
                 taxRate: scannedStock.taxRate,
-                total: price * (1 + scannedStock.taxRate / 100)
+                total: calculateInvoiceLine(1, price, scannedStock.taxRate).total
               };
               if (emptyRowIndex >= 0) {
                 const updatedItems = [...invoiceItems];
