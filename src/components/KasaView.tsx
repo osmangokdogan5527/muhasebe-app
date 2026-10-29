@@ -4,6 +4,7 @@ import { KasaModals } from './kasa/KasaModals';
 import React, { useState, useMemo } from 'react';
 import { Transaction, Expense, EmployeeTransaction, BankAccount, AccountTransaction } from '../types';
 import { saveBankAccount, saveAccountTransaction, deleteBankAccount } from '../firebase';
+import { getSyncedEmployeeExpenseIds } from '../utils/expenseUtils';
 import { 
   Wallet, 
   CreditCard, 
@@ -210,8 +211,10 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
         }
       }
     });
-    // 3. Expenses
+    // 3. Expenses (maaş/avans ödemesinden otomatik oluşan masraflar 4. adımda sayılıyor)
+    const syncedExpenseIds = getSyncedEmployeeExpenseIds(employeeTransactions);
     expenses.forEach(exp => {
+      if (syncedExpenseIds.has(exp.id)) return;
       const targetId = exp.bankAccountId || (exp.account === 'cash' ? 'merkez_kasa' : exp.account === 'bank' ? 'merkez_banka' : exp.account === 'pos' ? 'merkez_pos' : '');
       if (map[targetId] !== undefined) {
         map[targetId] -= exp.amount;
@@ -283,8 +286,10 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
         rawType: islem.type
       });
     });
-    // 2. Add expenses
+    // 2. Add expenses (maaş/avans ödemesinden otomatik oluşan masraflar 3. adımda listeleniyor)
+    const syncedExpenseIds = getSyncedEmployeeExpenseIds(employeeTransactions);
     expenses.forEach(exp => {
+      if (syncedExpenseIds.has(exp.id)) return;
       const acc = exp.account;
       if (acc !== 'cash' && acc !== 'bank' && acc !== 'pos') return;
       const accountId = getAccountId(exp.bankAccountId, acc);

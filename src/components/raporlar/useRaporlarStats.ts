@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Transaction as Islem, Expense, EmployeeTransaction, Cari, Stock } from '../../types';
+import { getSyncedEmployeeExpenseIds } from '../../utils/expenseUtils';
 
 export const useRaporlarStats = (deps: any) => {
   const { islemler, expenses, employeeTransactions, cariler, stoklar, resolvedDates, selectedCariId, selectedCurrency, stockValuationType, stockSearch, cariSearch, cariTypeFilter } = deps;
@@ -292,8 +293,11 @@ export const useRaporlarStats = (deps: any) => {
         }
       });
   
-      // Process general expenses
+      // Process general expenses (maaş maliyeti aşağıda hak edişten sayıldığı için
+      // maaş/avans ödemesinden otomatik oluşan masraflar atlanır)
+      const syncedExpenseIds = getSyncedEmployeeExpenseIds(employeeTransactions);
       filteredExpenses.forEach(exp => {
+        if (syncedExpenseIds.has(exp.id)) return;
         totalExpenses += convertAmount(exp.amount, exp.currency);
       });
   
@@ -318,7 +322,7 @@ export const useRaporlarStats = (deps: any) => {
         employeeSalaries,
         netProfit
       };
-    }, [filteredIslemler, stoklar, filteredExpenses, filteredEmployeeTransactions, selectedCurrency]);
+    }, [filteredIslemler, stoklar, filteredExpenses, filteredEmployeeTransactions, employeeTransactions, selectedCurrency]);
   
     // 3. COMPUTATIONS - STOK ANALYSIS
     const stockStats = useMemo(() => {
