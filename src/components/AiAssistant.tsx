@@ -2,6 +2,10 @@ import * as XLSX from 'xlsx';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Loader2, Paperclip, File, FileText, FileSpreadsheet, Sparkles, AlertCircle, Settings, Bot, Mic, HelpCircle, Sliders, BookOpen, ChevronRight, Check } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { runAgent, resumeAgent, AgentResult, AgentSuspension, GeminiContent, GeminiApiError } from '../ai/geminiAgent';
+import { AiToolContext } from '../ai/aiTools';
+import { useFxRates } from '../hooks/useFxRates';
+import { logError } from '../utils/errorLogger';
 
 interface AiAssistantProps {
   apiKey: string;
@@ -23,20 +27,27 @@ interface Message {
     tip: 'bar' | 'pie';
     data: any[];
   };
+  // Onay bekleyen kayıt işlemleri (her öğe bir işlemin özet satırları)
+  pending?: {
+    items: string[][];
+    status: 'waiting' | 'approved' | 'cancelled';
+  };
 }
 
 const AI_EXAMPLES = [
-  '"Ahmet Yılmaz\'a 10 adet Monitör sat, birim fiyat 5000 TL"',
-  '"Elektrik faturası için 1500 TL masraf gir"',
-  '"Ali Kaya\'dan 10000 TL tahsilat yap"',
-  '"Tedarikçi AŞ\'ye 25000 TL ödeme yap"',
-  '"Ayşe Demir\'e 5000 TL avans ödemesi gir"',
-  '"XYZ Lojistik\'ten 50 adet Klavye alışı yap, birim fiyatı 200 TL"',
-  '"350 TL Su faturası masrafı ekle"',
-  '"Yeni müşteri ekle: Mehmet Demir, Telefon: 0555 123 4567"',
-  '"Yeni tedarikçi ekle: ABC Toptan Ticaret, bakiye: -5000 TL"',
-  '"Yeni ürün ekle: Kablosuz Mouse, Alış: 150 TL, Satış: 250 TL, Stok: 100 adet"',
-  '"Geçen ayki satış analizimi nasıl görebilirim?"'
+  '"Ahmet Yılmaz\'a 10 adet monitör sat, birim fiyat 5000 TL, nakit ödendi"',
+  '"Ali Kaya\'dan bankaya 10000 TL tahsilat gir"',
+  '"Elektrik faturası için kasadan 1500 TL masraf gir"',
+  '"Ayşe Demir\'e kasadan 5000 TL avans ver"',
+  '"Bu ayki kâr-zarar durumum ne?"',
+  '"Kasada ve bankada ne kadar param var?"',
+  '"En çok borcu olan 5 müşteriyi göster"',
+  '"Kritik seviyedeki ürünleri listele"',
+  '"Önümüzdeki 7 günde vadesi dolan çekler hangileri?"',
+  '"Mehmet Demir\'in ekstresini çıkar"',
+  '"Masraflarımı kategoriye göre grafikle göster"',
+  '"Yeni ürün ekle: Kablosuz Mouse, alış 150, satış 250, stok 100"',
+  '"POS hesabındaki 20000 TL\'yi bankaya aktar"'
 ];
 
 export default function AiAssistant({ 
@@ -99,6 +110,14 @@ export default function AiAssistant({
     }
   };
   const [messages, setMessages] = useState<Message[]>([]);
+  // Gemini sohbet geçmişi ve onay bekleyen işlemler (render dışı tutulur)
+  const agentHistoryRef = useRef<GeminiContent[]>([]);
+  const suspensionRef = useRef<AgentSuspension | null>(null);
+  const financialDataRef = useRef<any>(financialData);
+  financialDataRef.current = financialData;
+  const fxRates = useFxRates();
+  const fxRatesRef = useRef(fxRates);
+  fxRatesRef.current = fxRates;
   const [isTyping, setIsTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [listeningError, setListeningError] = useState<string | null>(null);
@@ -505,228 +524,112 @@ export default function AiAssistant({
 
   const handleAudioInput = async (base64Audio: string, mimeType: string) => {
     if (!apiKey) return;
+    if (suspensionRef.current) {
+      addAssistantMessage('Önce bekleyen işlemi onaylayın veya iptal edin.', true);
+      return;
+    }
 
-    const tempUserMessageId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    setMessages(prev => [...prev, { 
-      id: tempUserMessageId, 
-      role: 'user', 
-      text: '🎤 [Sesli komut çözümleniyor...]' 
-    }]);
+    setMessages(prev => [...prev, { id: newMessageId(), role: 'user', text: '🎤 Sesli komut gönderildi' }]);
     setIsTyping(true);
 
+    const sensitivityGuide = sensitivity >= 4
+      ? 'Arka plan gürültüsünü, eksik veya peltek söylenen kelimeleri tolere et; en olası muhasebe terimiyle tamamla.'
+      : sensitivity <= 2
+        ? 'Sadece net duyulan kelimeleri esas al; şüpheli kısımlarda tahmin yürütme, kullanıcıya sor.'
+        : 'Standart ses çözümlemesi yap.';
+
     try {
-      const today = new Date().toLocaleDateString('tr-TR');
-
-      
-      let dataContext = '';
-      if (financialData) {
-        try {
-          const safeData = JSON.stringify({
-            cariler: financialData.cariler?.slice(0, 100),
-            stoklar: financialData.stoklar?.slice(0, 100),
-            islemler: financialData.islemler?.slice(0, 100),
-            ceksenet: financialData.ceksenet?.slice(0, 100),
-            expenses: financialData.expenses?.slice(0, 100),
-            bankAccounts: financialData.bankAccounts?.slice(0, 100),
-          });
-          dataContext = "\n\nMevcut Finansal Veriler (JSON Formatında): \n" + safeData.slice(0, 100000) + "\n\nKullanıcı analiz, rapor veya finansal durumla ilgili soru sorarsa bu verilere bakarak cevapla. Eğer soru analiz veya finansal durumla ilgiliyse, 'tip': 'bilgi' yerine 'tip': 'analiz' kullanabilirsin. Eğer uygun bir grafik çizilebiliyorsa (örneğin gider dağılımı, gelir/gider kıyaslaması vb.) şu formatta dön: \n{ \"tip\": \"analiz\", \"mesaj\": \"Açıklayıcı metin\", \"grafik\": { \"tip\": \"bar\" veya \"pie\", \"data\": [{ \"name\": \"Kategori Adı\", \"value\": 1234 }] } }\nEğer grafik gerekmiyorsa sadece 'tip': 'bilgi' ve 'mesaj' dön.";
-        } catch(e) {}
-      }
-
-      let securityGuideline = '';
-      if (isSecurityActive && userRole === 'employee') {
-        const restrictedTabsList = sensitiveTabs.map(t => {
-          if (t === 'dashboard') return 'Yönetim Paneli (dashboard)';
-          if (t === 'kasa') return 'Kasa ve Banka Hesapları (kasa)';
-          if (t === 'ceksenet') return 'Çek/Senet Yönetimi (ceksenet)';
-          if (t === 'masraflar') return 'Gider Girişi ve Masraflar (masraflar)';
-          if (t === 'calisanlar') return 'Personel Yönetimi ve Maaş Ödemeleri (calisanlar)';
-          if (t === 'krediler') return 'Krediler Takibi (krediler)';
-          if (t === 'raporlar') return 'Detaylı Raporlama ve Analiz (raporlar)';
-          if (t === 'ayarlar') return 'Uygulama ve Sistem Ayarları (ayarlar)';
-          return t;
-        }).join(', ');
-
-        securityGuideline = `
-[KRİTİK GÜVENLİK KISITLAMASI]
-Aktif kullanıcı rolünüz "Personel" (Sınırlı Yetki) ve güvenlik PIN koruma modu aktiftir.
-Erişiminiz dışındaki menüler: [${restrictedTabsList}].
-Kullanıcı bu yasaklı alanlardan birine ait bir işlem yapmaya çalışırsa (örneğin: masraf girişi 'masraf', personel ödemesi 'personel', kasa raporu sorma vb.) veya bu menülere gitmek isterse:
-KESİNLİKLE bu işlemi gerçekleştirmeyin ve SADECE şu JSON formatını döndürün:
-{ "tip": "bilgi", "mesaj": "Yetki Kısıtlaması: Giriş yaptığınız kullanıcı rolü (Personel) nedeniyle bu işlemi gerçekleştirmeye veya bu menüye erişmeye yetkiniz bulunmamaktadır. Lütfen yönetici girişi yapınız.", "transcription": "ses kaydının metin hali" }
-`;
-      }
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          system_instruction: {
-            parts: [{ text: `Sen Storm Muhasebe asistanısın. Kullanıcının ses kaydını analiz et. Bugünün tarihi: ${today}.${securityGuideline}${dataContext}
-Mevcut Ses Tanıma Hassasiyeti Seviyesi: ${sensitivity}/5 (1: Düşük, 3: Dengeli, 5: Çok Hassas/Toleranslı)
-- Hassasiyet seviyesi 4 veya 5 ise: Arka plandaki çevre gürültülerini, mırıldanmaları, peltek veya eksik söylenen kelimeleri, nefes seslerini tolere et ve en olası muhasebe veya işlem terimiyle tamamlayarak deşifre et.
-- Hassasiyet seviyesi 3 ise: Standart ses çözümlemesi yap.
-- Hassasiyet seviyesi 1 veya 2 ise: Sadece çok net ve bariz duyulan kelimeleri birebir yazıya dök, şüpheli durumlarda tahmin yürütme.
-
-Öncelikle ses kaydındaki konuşmayı bu hassasiyet kurallarına göre Türkçe olarak yazıya dök (transcribe et) ve JSON sonucundaki "transcription" alanına yaz.
-
-Eğer girdi bir finansal işlem (satış, alış, tahsilat, ödeme, masraf, personel maaş/avans ödemesi) içeriyorsa, SADECE şu JSON formatını döndür: 
-{ "tip": "islem", "islem": "satis|alis|tahsilat|odeme|masraf|personel", "cariAdi": "string", "urunAdi": "string", "miktar": number, "fiyat": number, "kdv": number, "tarih": "YYYY-MM-DD", "transcription": "ses kaydının metin hali" }
-KDV belirtilmemişse her zaman 0 yap. Otomatik KDV ekleme. Personel ödemelerinde "cariAdi" veya "urunAdi" alanına personelin adını yaz. Masraflarda (ör: su faturası, elektrik) faturanın cinsini "urunAdi" kısmına yaz. Eğer tarih belirtilmemişse veya 'bugün' denilmişse bugünün tarihini ver. Eğer belirsiz bir şey varsa mantıksal tahmin yürüt.
-
-Eğer girdi bir MÜŞTERİ EKLEME/TANIMLAMA isteği ise (ör: "Mehmet Demir adında müşteri ekle, tel: 0555...", "Yeni müşteri tanımla: Can A.Ş.", vb.), SADECE şu JSON formatını döndür:
-{ "tip": "islem", "islem": "add_customer", "cariAdi": "Müşteri Adı/Ünvanı", "phone": "Telefon", "email": "E-posta", "address": "Adres", "bakiye": bakiye_varsa_sayi_değilse_0, "currency": "TRY|USD|EUR", "transcription": "ses kaydının metin hali" }
-
-Eğer girdi bir TEDARİKÇİ EKLEME/TANIMLAMA isteği ise (ör: "XYZ Toptan adında tedarikçi ekle", "Yeni tedarikçi tanımla: ABC Gıda, borç bakiye: -3000 TL", vb.), SADECE şu JSON formatını döndür:
-{ "tip": "islem", "islem": "add_supplier", "cariAdi": "Tedarikçi Adı/Ünvanı", "phone": "Telefon", "email": "E-posta", "address": "Adres", "bakiye": bakiye_varsa_sayi_değilse_0, "currency": "TRY|USD|EUR", "transcription": "ses kaydının metin hali" }
-
-Eğer girdi bir ÜRÜN / STOK KARTI EKLEME/TANIMLAMA isteği ise (ör: "Kablosuz Mouse ekle, alış 150 TL, satış 250 TL, stok 100 adet, KDV 20%", "Yeni ürün tanımla: Klavye", vb.), SADECE şu JSON formatını döndür:
-{ "tip": "islem", "islem": "add_product", "urunAdi": "Ürün Adı", "code": "Stok Kodu (ör: STK-001 gibi, belirtilmemişse boş bırak)", "barcode": "Barkod (varsa)", "unit": "Adet|KG|Litre|Metre|Kutu|Hizmet (belirtilmemişse Adet)", "purchasePrice": number, "salesPrice": number, "kdv": number (belirtilmemişse KESİNLİKLE 0, otomatik KDV ekleme), "miktar": miktar_sayi_değilse_0, "minQuantity": number (kritik limit, belirtilmemişse 5), "transcription": "ses kaydının metin hali" }
-
-Eğer kullanıcı sadece bir soru soruyorsa, bilgi istiyorsa veya uygulamanın nasıl kullanılacağı hakkında (örneğin: sistem verileri nasıl sıfırlanır, fatura nasıl kesilir, vb.) bir şey diyorsa, SADECE şu JSON formatını döndür:
-{ "tip": "bilgi", "mesaj": "Kullanıcıya verilecek açıklayıcı, profesyonel, yönlendirici veya bilgilendirici cevap metni.", "transcription": "ses kaydının metin hali" }
-
-Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kullanma.` }]
-          },
-          contents: [{
-            parts: [
-              {
-                inlineData: {
-                  mimeType: mimeType,
-                  data: base64Audio
-                }
-              },
-              {
-                text: "Bu ses kaydını dinle, deşifre et ve analiz et."
-              }
-            ]
-          }],
-          generationConfig: {
-            temperature: 0.1,
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('API isteği başarısız oldu.');
-      }
-
-      const data = await response.json();
-      const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-      try {
-        let jsonStr = responseText.trim();
-        if (jsonStr.startsWith('```json')) jsonStr = jsonStr.replace(/^```json/, '');
-        if (jsonStr.startsWith('```')) jsonStr = jsonStr.replace(/^```/, '');
-        if (jsonStr.endsWith('```')) jsonStr = jsonStr.replace(/```$/, '');
-        jsonStr = jsonStr.trim();
-        
-        const parsedCommand = JSON.parse(jsonStr);
-
-        // Update the user message to show the real transcription
-        if (parsedCommand.transcription) {
-          setMessages(prev => prev.map(m => m.id === tempUserMessageId ? { 
-            ...m, 
-            text: `🎤 Söylediğiniz: "${parsedCommand.transcription}"` 
-          } : m));
-        } else {
-          setMessages(prev => prev.map(m => m.id === tempUserMessageId ? { 
-            ...m, 
-            text: `🎤 [Ses çözümlendi]` 
-          } : m));
-        }
-        
-        if (parsedCommand.tip === 'bilgi' || parsedCommand.tip === 'analiz') {
-          setMessages(prev => {
-            const arr = [...prev];
-            // If replacing audio placeholder
-            if (typeof tempUserMessageId !== 'undefined' && arr.find(m => m.id === tempUserMessageId)) {
-               return arr.map(m => m.id === tempUserMessageId ? {
-                 ...m,
-                 text: m.text + "\n(Analiz/Bilgi cevabı geldi)"
-               } : m).concat([{
-                  id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
-                  role: 'assistant', 
-                  text: parsedCommand.mesaj,
-                  chart: parsedCommand.grafik
-               }]);
-            }
-            return [...arr, { 
-              id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
-              role: 'assistant', 
-              text: parsedCommand.mesaj,
-              chart: parsedCommand.grafik
-            }];
-          });
-          setIsTyping(false);
-          return;
-        }
-
-        // Map Turkish operation names to our internal ones if necessary
-        if (parsedCommand.islem === 'satis') parsedCommand.islem = 'sale';
-        else if (parsedCommand.islem === 'alis') parsedCommand.islem = 'purchase';
-        else if (parsedCommand.islem === 'tahsilat') parsedCommand.islem = 'collection';
-        else if (parsedCommand.islem === 'odeme') parsedCommand.islem = 'payment';
-        else if (parsedCommand.islem === 'masraf') parsedCommand.islem = 'expense';
-        else if (parsedCommand.islem === 'personel') parsedCommand.islem = 'employee_payment';
-        else if (parsedCommand.islem === 'musteri_ekle') parsedCommand.islem = 'add_customer';
-        else if (parsedCommand.islem === 'tedarikci_ekle') parsedCommand.islem = 'add_supplier';
-        else if (parsedCommand.islem === 'urun_ekle') parsedCommand.islem = 'add_product';
-
-        // Code enforcement guard for sensitive operations
-        let targetTab = 'islemler';
-        if (parsedCommand.islem === 'expense') targetTab = 'masraflar';
-        else if (parsedCommand.islem === 'employee_payment') targetTab = 'calisanlar';
-        else if (parsedCommand.islem === 'add_customer' || parsedCommand.islem === 'add_supplier') targetTab = 'cariler';
-        else if (parsedCommand.islem === 'add_product') targetTab = 'stoklar';
-
-        if (isSecurityActive && userRole === 'employee' && sensitiveTabs.includes(targetTab)) {
-          setMessages(prev => [...prev, { 
-            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
-            role: 'assistant', 
-            text: `Yetki Kısıtlaması: Giriş yaptığınız kullanıcı rolü (Personel) nedeniyle bu işlemi gerçekleştirmeye veya "${targetTab.toUpperCase()}" menüsüne erişmeye yetkiniz bulunmamaktadır. Lütfen yönetici girişi yapınız.`,
-            isError: true
-          }]);
-          setIsTyping(false);
-          return;
-        }
-
-        setMessages(prev => [...prev, { 
-          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
-          role: 'assistant', 
-          text: `İşlemi anladım. Yönlendiriyorum ve formu sizin için dolduruyorum...` 
-        }]);
-
-        setTimeout(() => {
-          onCommandParsed(parsedCommand);
-          setIsOpen(false);
-        }, 1500);
-
-      } catch (parseError) {
-        setMessages(prev => prev.map(m => m.id === tempUserMessageId ? { 
-          ...m, 
-          text: `🎤 Ses kaydı alındı ancak anlaşılamadı. Lütfen tekrar daha net konuşun.` 
-        } : m));
-      }
-
+      const result = await runAgent(apiKey, agentHistoryRef.current, [
+        { inlineData: { mimeType, data: base64Audio } },
+        { text: `Bu bir sesli komuttur. ${sensitivityGuide} Cevabının ilk satırına "🎤 Söylediğiniz: ..." diye anladığın cümleyi yaz, sonra isteği araçlarla yerine getir.` }
+      ], buildAgentContext());
+      applyAgentResult(result);
     } catch (error: any) {
-      console.error("Audio AI Error:", error);
-      let errorMsg = "Sistemle iletişim kurulurken bir hata oluştu. Lütfen internet bağlantınızı ve API anahtarınızı kontrol edin.";
-      if (error.status === 429) errorMsg = "API limitlerine ulaşıldı. Lütfen daha sonra tekrar deneyin.";
-      
-      setMessages(prev => prev.map(m => m.id === tempUserMessageId ? { 
-        ...m, 
-        text: `🎤 [Ses analiz hatası]` 
-      } : m));
+      handleAgentError(error, 'AiAssistant.handleAudioInput');
+    } finally {
+      setIsTyping(false);
+    }
+  };
 
-      setMessages(prev => [...prev, { 
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
-        role: 'assistant', 
-        text: errorMsg,
-        isError: true
+  // ---------------------------------------------------------------------------
+  // AI sohbet motoru (Gemini function calling) yardımcıları
+  // ---------------------------------------------------------------------------
+
+  const newMessageId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  const addAssistantMessage = (text: string, isError = false, chart?: Message['chart']) => {
+    setMessages(prev => [...prev, { id: newMessageId(), role: 'assistant', text, isError, chart }]);
+  };
+
+  const buildAgentContext = (): AiToolContext => {
+    const data = financialDataRef.current || {};
+    return {
+      data: {
+        cariler: data.cariler || [],
+        stoklar: data.stoklar || [],
+        islemler: data.islemler || [],
+        ceksenet: data.ceksenet || [],
+        expenses: data.expenses || [],
+        bankAccounts: data.bankAccounts || [],
+        employees: data.employees || [],
+        employeeTransactions: data.employeeTransactions || [],
+        accountTransactions: data.accountTransactions || [],
+        fxRates: fxRatesRef.current,
+      },
+      permissions: {
+        isRestricted: isSecurityActive && userRole === 'employee',
+        sensitiveTabs: sensitiveTabs || [],
+        actionPermissions: actionPermissions || {},
+      },
+    };
+  };
+
+  const applyAgentResult = (result: AgentResult) => {
+    agentHistoryRef.current = result.history;
+    const text = result.texts.join('\n\n');
+    if (text || result.charts.length > 0) {
+      const [firstChart, ...otherCharts] = result.charts;
+      addAssistantMessage(text || 'Grafik hazırlandı:', false, firstChart);
+      otherCharts.forEach(chart => addAssistantMessage('', false, chart));
+    }
+    if (result.suspension) {
+      suspensionRef.current = result.suspension;
+      setMessages(prev => [...prev, {
+        id: newMessageId(),
+        role: 'assistant',
+        text: result.suspension!.pending.length > 1 ? 'Aşağıdaki işlemler için onayınız gerekiyor:' : 'Aşağıdaki işlem için onayınız gerekiyor:',
+        pending: { items: result.suspension!.pending.map(p => p.summary), status: 'waiting' },
       }]);
+    } else if (!text && result.charts.length === 0) {
+      addAssistantMessage('İşlem tamamlandı.');
+    }
+  };
+
+  const handleAgentError = (error: any, context: string) => {
+    logError(error instanceof Error ? error : new Error(String(error)), context);
+    const message = error instanceof GeminiApiError
+      ? error.message
+      : 'Yapay zeka ile iletişim kurulurken bir hata oluştu. İnternet bağlantınızı ve API anahtarınızı kontrol edin.';
+    addAssistantMessage(message, true);
+  };
+
+  const handlePendingDecision = async (messageId: string, approved: boolean) => {
+    const suspension = suspensionRef.current;
+    if (!suspension || isTyping) return;
+    suspensionRef.current = null;
+    setMessages(prev => prev.map(m => m.id === messageId && m.pending ? { ...m, pending: { ...m.pending, status: approved ? 'approved' : 'cancelled' } } : m));
+    setIsTyping(true);
+    try {
+      const result = await resumeAgent(apiKey, agentHistoryRef.current, suspension, approved, buildAgentContext());
+      if (result.executionResults.length > 0) {
+        addAssistantMessage(
+          result.executionResults.map(r => `${r.ok ? '✅' : '❌'} ${r.message}`).join('\n'),
+          result.executionResults.some(r => !r.ok)
+        );
+      }
+      applyAgentResult(result);
+    } catch (error: any) {
+      handleAgentError(error, 'AiAssistant.handlePendingDecision');
     } finally {
       setIsTyping(false);
     }
@@ -739,7 +642,7 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
       {
         id: '1',
         role: 'assistant',
-        text: `Merhaba! Ben Storm AI. Size nasıl yardımcı olabilirim?\nÖrneğin: ${randomExample}`
+        text: `Merhaba! Ben Storm AI. Fatura kesmekten rapor almaya kadar uygulamadaki her işi sizin için yapabilirim; kayıt yapmadan önce onayınızı alırım.\nÖrneğin: ${randomExample}`
       }
     ]);
   }, []);
@@ -765,190 +668,28 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !apiKey) return;
+    if (!input.trim() || !apiKey || isTyping) return;
+    if (suspensionRef.current) {
+      addAssistantMessage('Önce bekleyen işlemi onaylayın veya iptal edin.', true);
+      return;
+    }
 
     const userMessage = input.trim();
     setInput('');
     let finalUserMessage = userMessage;
     if (attachedFile) {
-      finalUserMessage += "\n\n[KULLANICININ EKLENEN DOSYASI: " + attachedFile.name + "]\n" + attachedFile.content + "\n\nBu eklenen dosyayı yukarıdaki finansal soruyla ilişkilendirerek incele veya sorulan soruyu bu dosya verisine göre yanıtla.";
+      finalUserMessage += "\n\n[KULLANICININ EKLENEN DOSYASI: " + attachedFile.name + "]\n" + attachedFile.content + "\n\nBu eklenen dosyayı yukarıdaki istekle ilişkilendirerek incele veya isteği bu dosya verisine göre yerine getir.";
     }
 
-    setMessages(prev => [...prev, { id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, role: 'user', text: userMessage }]);
+    setMessages(prev => [...prev, { id: newMessageId(), role: 'user', text: userMessage }]);
     setIsTyping(true);
-    
-    // Clear the attached file after sending
     setAttachedFile(null);
 
     try {
-      const today = new Date().toLocaleDateString('tr-TR');
-
-      
-      let dataContext = '';
-      if (financialData) {
-        try {
-          const safeData = JSON.stringify({
-            cariler: financialData.cariler?.slice(0, 100),
-            stoklar: financialData.stoklar?.slice(0, 100),
-            islemler: financialData.islemler?.slice(0, 100),
-            ceksenet: financialData.ceksenet?.slice(0, 100),
-            expenses: financialData.expenses?.slice(0, 100),
-            bankAccounts: financialData.bankAccounts?.slice(0, 100),
-          });
-          dataContext = "\n\nMevcut Finansal Veriler (JSON Formatında): \n" + safeData.slice(0, 100000) + "\n\nKullanıcı analiz, rapor veya finansal durumla ilgili soru sorarsa bu verilere bakarak cevapla. Eğer soru analiz veya finansal durumla ilgiliyse, 'tip': 'bilgi' yerine 'tip': 'analiz' kullanabilirsin. Eğer uygun bir grafik çizilebiliyorsa (örneğin gider dağılımı, gelir/gider kıyaslaması vb.) şu formatta dön: \n{ \"tip\": \"analiz\", \"mesaj\": \"Açıklayıcı metin\", \"grafik\": { \"tip\": \"bar\" veya \"pie\", \"data\": [{ \"name\": \"Kategori Adı\", \"value\": 1234 }] } }\nEğer grafik gerekmiyorsa sadece 'tip': 'bilgi' ve 'mesaj' dön.";
-        } catch(e) {}
-      }
-
-      let securityGuideline = '';
-      if (isSecurityActive && userRole === 'employee') {
-        const restrictedTabsList = sensitiveTabs.map(t => {
-          if (t === 'dashboard') return 'Yönetim Paneli (dashboard)';
-          if (t === 'kasa') return 'Kasa ve Banka Hesapları (kasa)';
-          if (t === 'ceksenet') return 'Çek/Senet Yönetimi (ceksenet)';
-          if (t === 'masraflar') return 'Gider Girişi ve Masraflar (masraflar)';
-          if (t === 'calisanlar') return 'Personel Yönetimi ve Maaş Ödemeleri (calisanlar)';
-          if (t === 'krediler') return 'Krediler Takibi (krediler)';
-          if (t === 'raporlar') return 'Detaylı Raporlama ve Analiz (raporlar)';
-          if (t === 'ayarlar') return 'Uygulama ve Sistem Ayarları (ayarlar)';
-          return t;
-        }).join(', ');
-
-        securityGuideline = `
-[KRİTİK GÜVENLİK KISITLAMASI]
-Aktif kullanıcı rolünüz "Personel" (Sınırlı Yetki) ve güvenlik PIN koruma modu aktiftir.
-Erişiminiz dışındaki menüler: [${restrictedTabsList}].
-Kullanıcı bu yasaklı alanlardan birine ait bir işlem yapmaya çalışırsa (örneğin: masraf girişi 'masraf', personel ödemesi 'personel', kasa raporu sorma vb.) veya bu menülere gitmek isterse:
-KESİNLİKLE bu işlemi gerçekleştirmeyin ve SADECE şu JSON formatını döndürün:
-{ "tip": "bilgi", "mesaj": "Yetki Kısıtlaması: Giriş yaptığınız kullanıcı rolü (Personel) nedeniyle bu işlemi gerçekleştirmeye veya bu menüye erişmeye yetkiniz bulunmamaktadır. Lütfen yönetici girişi yapınız." }
-`;
-      }
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          system_instruction: {
-            parts: [{ text: `Sen Storm Muhasebe asistanısın. Kullanıcının girdisini analiz et. Bugünün tarihi: ${today}.${securityGuideline}${dataContext}
-Eğer girdi bir finansal işlem (satış, alış, tahsilat, ödeme, masraf, personel maaş/avans ödemesi) içeriyorsa, SADECE şu JSON formatını döndür: 
-{ "tip": "islem", "islem": "satis|alis|tahsilat|odeme|masraf|personel", "cariAdi": "string", "urunAdi": "string", "miktar": number, "fiyat": number, "kdv": number, "tarih": "YYYY-MM-DD" }
-KDV belirtilmemişse her zaman 0 yap. Otomatik KDV ekleme. Personel ödemelerinde "cariAdi" veya "urunAdi" alanına personelin adını yaz. Masraflarda (ör: su faturası, elektrik) faturanın cinsini "urunAdi" kısmına yaz. Eğer tarih belirtilmemişse veya 'bugün' denilmişse bugünün tarihini ver. Eğer belirsiz bir şey varsa mantıksal tahmin yürüt.
-
-Eğer girdi bir MÜŞTERİ EKLEME/TANIMLAMA isteği ise (ör: "Mehmet Demir adında müşteri ekle, tel: 0555...", "Yeni müşteri tanımla: Can A.Ş.", vb.), SADECE şu JSON formatını döndür:
-{ "tip": "islem", "islem": "add_customer", "cariAdi": "Müşteri Adı/Ünvanı", "phone": "Telefon", "email": "E-posta", "address": "Adres", "bakiye": bakiye_varsa_sayi_değilse_0, "currency": "TRY|USD|EUR" }
-
-Eğer girdi bir TEDARİKÇİ EKLEME/TANIMLAMA isteği ise (ör: "XYZ Toptan adında tedarikçi ekle", "Yeni tedarikçi tanımla: ABC Gıda, borç bakiye: -3000 TL", vb.), SADECE şu JSON formatını döndür:
-{ "tip": "islem", "islem": "add_supplier", "cariAdi": "Tedarikçi Adı/Ünvanı", "phone": "Telefon", "email": "E-posta", "address": "Adres", "bakiye": bakiye_varsa_sayi_değilse_0, "currency": "TRY|USD|EUR" }
-
-Eğer girdi bir ÜRÜN / STOK KARTI EKLEME/TANIMLAMA isteği ise (ör: "Kablosuz Mouse ekle, alış 150 TL, satış 250 TL, stok 100 adet, KDV 20%", "Yeni ürün tanımla: Klavye", vb.), SADECE şu JSON formatını döndür:
-{ "tip": "islem", "islem": "add_product", "urunAdi": "Ürün Adı", "code": "Stok Kodu (ör: STK-001 gibi, belirtilmemişse boş bırak)", "barcode": "Barkod (varsa)", "unit": "Adet|KG|Litre|Metre|Kutu|Hizmet (belirtilmemişse Adet)", "purchasePrice": number, "salesPrice": number, "kdv": number (belirtilmemişse KESİNLİKLE 0, otomatik KDV ekleme), "miktar": miktar_sayi_değilse_0, "minQuantity": number (kritik limit, belirtilmemişse 5) }
-
-Eğer kullanıcı sadece bir soru soruyorsa, bilgi istiyorsa veya uygulamanın nasıl kullanılacağı hakkında (örneğin: sistem verileri nasıl sıfırlanır, fatura nasıl kesilir, vb.) bir şey diyorsa, SADECE şu JSON formatını döndür:
-{ "tip": "bilgi", "mesaj": "Kullanıcıya verilecek açıklayıcı, profesyonel, yönlendirici veya bilgilendirici cevap metni." }
-
-Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kullanma.` }]
-          },
-          contents: [{ parts: [{ text: finalUserMessage }] }],
-          generationConfig: {
-            temperature: 0.1,
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('API isteği başarısız oldu.');
-      }
-
-      const data = await response.json();
-      const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-      
-      // Try to parse JSON from the response
-      try {
-        let jsonStr = responseText.trim();
-        // Remove markdown formatting if the model still includes it
-        if (jsonStr.startsWith('```json')) jsonStr = jsonStr.replace(/^```json/, '');
-        if (jsonStr.startsWith('```')) jsonStr = jsonStr.replace(/^```/, '');
-        if (jsonStr.endsWith('```')) jsonStr = jsonStr.replace(/```$/, '');
-        jsonStr = jsonStr.trim();
-        
-        const parsedCommand = JSON.parse(jsonStr);
-        
-        if (parsedCommand.tip === 'bilgi' || parsedCommand.tip === 'analiz') {
-          setMessages(prev => {
-            const arr = [...prev];
-            return [...arr, { 
-              id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
-              role: 'assistant', 
-              text: parsedCommand.mesaj,
-              chart: parsedCommand.grafik
-            }];
-          });
-          setIsTyping(false);
-          return;
-        }
-
-        // Map Turkish operation names to our internal ones if necessary
-        if (parsedCommand.islem === 'satis') parsedCommand.islem = 'sale';
-        else if (parsedCommand.islem === 'alis') parsedCommand.islem = 'purchase';
-        else if (parsedCommand.islem === 'tahsilat') parsedCommand.islem = 'collection';
-        else if (parsedCommand.islem === 'odeme') parsedCommand.islem = 'payment';
-        else if (parsedCommand.islem === 'masraf') parsedCommand.islem = 'expense';
-        else if (parsedCommand.islem === 'personel') parsedCommand.islem = 'employee_payment';
-        else if (parsedCommand.islem === 'musteri_ekle') parsedCommand.islem = 'add_customer';
-        else if (parsedCommand.islem === 'tedarikci_ekle') parsedCommand.islem = 'add_supplier';
-        else if (parsedCommand.islem === 'urun_ekle') parsedCommand.islem = 'add_product';
-
-        // Code enforcement guard for sensitive operations
-        let targetTab = 'islemler';
-        if (parsedCommand.islem === 'expense') targetTab = 'masraflar';
-        else if (parsedCommand.islem === 'employee_payment') targetTab = 'calisanlar';
-        else if (parsedCommand.islem === 'add_customer' || parsedCommand.islem === 'add_supplier') targetTab = 'cariler';
-        else if (parsedCommand.islem === 'add_product') targetTab = 'stoklar';
-
-        if (isSecurityActive && userRole === 'employee' && sensitiveTabs.includes(targetTab)) {
-          setMessages(prev => [...prev, { 
-            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
-            role: 'assistant', 
-            text: `Yetki Kısıtlaması: Giriş yaptığınız kullanıcı rolü (Personel) nedeniyle bu işlemi gerçekleştirmeye veya "${targetTab.toUpperCase()}" menüsüne erişmeye yetkiniz bulunmamaktadır. Lütfen yönetici girişi yapınız.`,
-            isError: true
-          }]);
-          setIsTyping(false);
-          return;
-        }
-
-        setMessages(prev => [...prev, { 
-          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
-          role: 'assistant', 
-          text: `İşlemi anladım. Yönlendiriyorum ve formu sizin için dolduruyorum...` 
-        }]);
-
-        setTimeout(() => {
-          onCommandParsed(parsedCommand);
-          setIsOpen(false);
-        }, 1500);
-
-      } catch (parseError) {
-        setMessages(prev => [...prev, { 
-          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
-          role: 'assistant', 
-          text: `Anladığım kadarıyla işlem yapamadım. Lütfen daha net bir ifade kullanın. (${responseText})`,
-          isError: true
-        }]);
-      }
-
+      const result = await runAgent(apiKey, agentHistoryRef.current, [{ text: finalUserMessage }], buildAgentContext());
+      applyAgentResult(result);
     } catch (error: any) {
-      console.error("AI Error:", error);
-      let errorMsg = "Sistemle iletişim kurulurken bir hata oluştu. Lütfen internet bağlantınızı ve API anahtarınızı kontrol edin.";
-      if (error.status === 429) errorMsg = "API limitlerine ulaşıldı. Lütfen daha sonra tekrar deneyin veya kotalarınızı kontrol edin.";
-      
-      setMessages(prev => [...prev, { 
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
-        role: 'assistant', 
-        text: errorMsg,
-        isError: true
-      }]);
+      handleAgentError(error, 'AiAssistant.handleSubmit');
     } finally {
       setIsTyping(false);
     }
@@ -1233,6 +974,41 @@ Yalnızca geçerli bir JSON döndür, etrafında markdown (\`\`\`json vb.) kulla
                               </BarChart>
                             )}
                           </ResponsiveContainer>
+                        </div>
+                      )}
+                      {msg.pending && (
+                        <div className="mt-3 space-y-2">
+                          {msg.pending.items.map((lines, idx) => (
+                            <div key={idx} className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-slate-700 space-y-0.5">
+                              {lines.map((line, lineIdx) => (
+                                <div key={lineIdx} className={lineIdx === 0 ? 'font-bold text-slate-900 text-[13px] mb-1' : ''}>{line}</div>
+                              ))}
+                            </div>
+                          ))}
+                          {msg.pending.status === 'waiting' ? (
+                            <div className="flex gap-2 pt-1">
+                              <button
+                                type="button"
+                                disabled={isTyping}
+                                onClick={() => handlePendingDecision(msg.id, true)}
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+                              >
+                                <Check size={14} /> Onayla
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isTyping}
+                                onClick={() => handlePendingDecision(msg.id, false)}
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+                              >
+                                <X size={14} /> İptal
+                              </button>
+                            </div>
+                          ) : (
+                            <div className={`text-[11px] font-bold ${msg.pending.status === 'approved' ? 'text-teal-600' : 'text-slate-400'}`}>
+                              {msg.pending.status === 'approved' ? 'Onaylandı' : 'İptal edildi'}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

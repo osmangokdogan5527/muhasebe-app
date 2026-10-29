@@ -6,7 +6,11 @@ import { splitInvoiceVat, isOpeningBalanceTransaction } from '../../utils/invoic
 import { convertWithRates, convertTransactionAmount } from '../../utils/currencyUtils';
 import { getCachedOrFallbackRates } from '../../utils/tcmbService';
 
-export const useRaporlarStats = (deps: any) => {
+type Memo = <T>(factory: () => T, deps: any[]) => T;
+
+// Rapor hesapları tek yerde: ekran useMemo ile, AI asistan gibi React dışı kullanımlar
+// computeRaporlarStats ile aynı kodu çalıştırır (ekrandaki ve AI'daki rakamlar birebir aynı olur).
+const buildRaporlarStats = (deps: any, memo: Memo) => {
   const { islemler, expenses, employeeTransactions, cariler, stoklar, resolvedDates, selectedCariId, selectedCurrency, stockValuationType, stockSearch, cariSearch, cariTypeFilter } = deps;
   const fxRates = deps.fxRates || getCachedOrFallbackRates();
 
@@ -28,21 +32,21 @@ export const useRaporlarStats = (deps: any) => {
     };
   
     // 1. FILTERED DATASETS
-    const filteredIslemler = useMemo(() => {
+    const filteredIslemler = memo(() => {
       return islemler.filter(item => {
         const isWithinDate = item.date >= resolvedDates.start && item.date <= resolvedDates.end;
         return isWithinDate;
       });
     }, [islemler, resolvedDates]);
   
-    const filteredExpenses = useMemo(() => {
+    const filteredExpenses = memo(() => {
       return expenses.filter(item => {
         const isWithinDate = item.date >= resolvedDates.start && item.date <= resolvedDates.end;
         return isWithinDate;
       });
     }, [expenses, resolvedDates]);
   
-    const filteredEmployeeTransactions = useMemo(() => {
+    const filteredEmployeeTransactions = memo(() => {
       return employeeTransactions.filter(item => {
         const isWithinDate = item.date >= resolvedDates.start && item.date <= resolvedDates.end;
         return isWithinDate;
@@ -50,12 +54,12 @@ export const useRaporlarStats = (deps: any) => {
     }, [employeeTransactions, resolvedDates]);
   
     // Selected Cari info
-    const selectedCari = useMemo(() => {
+    const selectedCari = memo(() => {
       return cariler.find(c => c.id === selectedCariId);
     }, [cariler, selectedCariId]);
   
     // KDV Calculations
-    const kdvStats = useMemo(() => {
+    const kdvStats = memo(() => {
       let salesKdvTotal = 0;
       let purchaseKdvTotal = 0;
       
@@ -161,7 +165,7 @@ export const useRaporlarStats = (deps: any) => {
     }, [filteredIslemler, cariler, selectedCurrency, fxRates]);
   
     // Cari Ekstre Calculations
-    const cariEkstreStats = useMemo(() => {
+    const cariEkstreStats = memo(() => {
       if (!selectedCariId || !selectedCari) {
         return { priorBalance: 0, periodTransactions: [], finalBalance: 0, allTransactions: [] };
       }
@@ -237,7 +241,7 @@ export const useRaporlarStats = (deps: any) => {
     }, [selectedCariId, selectedCari, islemler, resolvedDates]);
   
     // 2. COMPUTATIONS - SUMMARY & P&L
-    const summaryStats = useMemo(() => {
+    const summaryStats = memo(() => {
       let sales = 0;
       let costOfSales = 0;
       let purchases = 0;
@@ -329,7 +333,7 @@ export const useRaporlarStats = (deps: any) => {
     }, [filteredIslemler, stoklar, filteredExpenses, filteredEmployeeTransactions, employeeTransactions, cariler, selectedCurrency, fxRates]);
   
     // 3. COMPUTATIONS - STOK ANALYSIS
-    const stockStats = useMemo(() => {
+    const stockStats = memo(() => {
       let totalItems = stoklar.length;
       let totalStockCount = 0;
       let totalValuation = 0;
@@ -369,7 +373,7 @@ export const useRaporlarStats = (deps: any) => {
     }, [stoklar, stockValuationType, stockSearch, selectedCurrency, fxRates]);
   
     // 4. COMPUTATIONS - CARI ANALYSIS
-    const cariStats = useMemo(() => {
+    const cariStats = memo(() => {
       let totalCari = cariler.length;
       let totalReceivables = 0; // Alacaklar (Positive balances)
       let totalPayables = 0; // Borclar (Negative balances)
@@ -409,7 +413,7 @@ export const useRaporlarStats = (deps: any) => {
     }, [cariler, cariSearch, cariTypeFilter, selectedCurrency, fxRates]);
   
     // 5. COMPUTATIONS - INCOME-EXPENSE & GRAPH DATA
-    const incomeExpenseStats = useMemo(() => {
+    const incomeExpenseStats = memo(() => {
       const expensesByCategory: Record<string, number> = {};
       let totalExp = 0;
   
@@ -469,3 +473,7 @@ export const useRaporlarStats = (deps: any) => {
   
   return { convertAmount, formatMoney, filteredIslemler, filteredExpenses, filteredEmployeeTransactions, selectedCari, kdvStats, cariEkstreStats, summaryStats, stockStats, cariStats, incomeExpenseStats };
 }
+
+export const useRaporlarStats = (deps: any) => buildRaporlarStats(deps, useMemo as Memo);
+
+export const computeRaporlarStats = (deps: any) => buildRaporlarStats(deps, (factory) => factory());

@@ -435,6 +435,7 @@ export const APP_VERSION = '1.8.2';
 export const CHANGELOG = {
   version: '1.8.2',
   features: [
+    "Storm AI Her İşi Yapar: Ücretsiz Gemini ile sohbet ederek fatura kesme, tahsilat/ödeme, masraf, personel, cari/ürün kartı, çek/senet, kasa hareketi/transfer, kayıt silme, ekstre ve kâr-zarar raporu yapılabilir; kayıt işlemleri onay kartıyla onaylandıktan sonra yapılır.",
     "Yeni Firma Girişi: Uygulamada hazır hesap yoktur; ilk açılışta 'Yeni Firma Oluştur' ile firma kodu ve şifre belirlenir, diğer cihazlardan 'Mevcut Firmaya Bağlan' ile girilir. İnternet yokken de giriş yapılabilir.",
     "Güvenli Firma Oturumu: Her firma kendi hesabıyla sunucuya bağlanır; veritabanı kurallarıyla her firma yalnızca kendi verisine erişebilir. Firma şifresi Ayarlar > Profil bölümünden değiştirilebilir.",
     "Peşin Satış ve Alış: Kasa/Banka/POS seçilerek kesilen faturalarda cariyi kapatan bağlı tahsilat/ödeme otomatik oluşturulur; cari ekstresinde 'Peşin Tahsilat' olarak görünür.",
@@ -700,6 +701,7 @@ export const changelogData = [
     version: "1.8.2",
     date: "30.10.2026",
     changes: [
+      "Storm AI Her İşi Yapar: Ücretsiz Gemini ile sohbet ederek fatura kesme, tahsilat/ödeme, masraf, personel, cari/ürün kartı, çek/senet, kasa hareketi/transfer, kayıt silme, ekstre ve kâr-zarar raporu yapılabilir; kayıt işlemleri onay kartıyla onaylandıktan sonra yapılır.",
       "Yeni Firma Girişi: Uygulamada hazır hesap yoktur; ilk açılışta 'Yeni Firma Oluştur' ile firma kodu ve şifre belirlenir, diğer cihazlardan 'Mevcut Firmaya Bağlan' ile girilir. İnternet yokken de giriş yapılabilir.",
       "Güvenli Firma Oturumu: Her firma kendi hesabıyla sunucuya bağlanır; veritabanı kurallarıyla her firma yalnızca kendi verisine erişebilir. Firma şifresi Ayarlar > Profil bölümünden değiştirilebilir.",
       "Peşin Satış ve Alış: Kasa/Banka/POS seçilerek kesilen faturalarda cariyi kapatan bağlı tahsilat/ödeme otomatik oluşturulur; cari ekstresinde 'Peşin Tahsilat' olarak görünür.",

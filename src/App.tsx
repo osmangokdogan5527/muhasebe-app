@@ -1104,7 +1104,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         setAiPrefilledData={setAiPrefilledData}
         setFeedbackList={setFeedbackList}
-        financialData={{ cariler, stoklar, islemler, ceksenet, expenses, bankAccounts }}
+        financialData={{ cariler, stoklar, islemler, ceksenet, expenses, bankAccounts, employees, employeeTransactions, accountTransactions }}
         userRole={userRole}
         isSecurityActive={isSecurityActive}
         sensitiveTabs={sensitiveTabs}
