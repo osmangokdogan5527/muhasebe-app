@@ -20,6 +20,7 @@ import {
 import { encryptBackup, decryptBackup, BackupDataPayload } from '../../utils/backupCrypto';
 import { getTodayISO } from '../../utils/dateUtils';
 import { exportAllDatabaseData } from '../../firebase';
+import { APP_VERSION } from '../../constants';
 
 // Yedeğe alınan ve geri yüklemede kabul edilen ayar anahtarları (başka anahtar geri yüklenmez)
 const BACKUP_SETTINGS_KEYS = [
@@ -172,7 +173,7 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
       });
 
       const payload: BackupDataPayload = {
-        version: '1.8.1',
+        version: APP_VERSION,
         timestamp: new Date().toISOString(),
         collections: {
           cariler: dbData.cariler || [],
@@ -787,7 +788,7 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
 
         {/* Footer */}
         <div className="p-4 bg-zinc-950/60 border-t border-zinc-800 flex justify-between items-center text-[10px] text-zinc-500">
-          <span>Storm Muhasebe Güvenli Veri Motoru v1.8.1</span>
+          <span>Storm Muhasebe Güvenli Veri Motoru v{APP_VERSION}</span>
           <span>Bütün Hakları Saklıdır © 2026</span>
         </div>
 

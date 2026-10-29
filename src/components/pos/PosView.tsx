@@ -10,6 +10,7 @@ import { findStockByBarcodeOrSearch, calculateLineTotal, calculateCartSummary, g
 import { ShoppingCart, Zap, DollarSign, CreditCard, User, Clock, CheckCircle2, RotateCcw, Search, Plus, Sparkles, HelpCircle, Percent } from 'lucide-react';
 import { logError } from '../../utils/errorLogger';
 import { formatDateISO } from '../../utils/dateUtils';
+import { APP_VERSION } from '../../constants';
 
 interface PosViewProps {
   stocks: Stock[];
@@ -484,7 +485,7 @@ export const PosView: React.FC<PosViewProps> = ({
             <h2 className="text-sm font-black text-white flex items-center gap-2">
               <span>HIZLI SATIŞ TERMİNALİ</span>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-teal-600 text-white border border-teal-400 font-black shadow-sm">
-                v1.8.1 POS Engine
+                v{APP_VERSION} POS Engine
               </span>
             </h2>
             <p className="text-[11px] text-slate-300 font-medium">
