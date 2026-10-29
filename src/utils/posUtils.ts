@@ -1,6 +1,7 @@
 import { Stock } from '../types';
 import { PosCartItem, PosPaymentSplit } from '../types/pos';
 import { logError } from './errorLogger';
+import { formatDateISO } from './dateUtils';
 
 /**
  * Barkod veya Arama Terimine göre stok bulur
@@ -47,7 +48,7 @@ export function calculateLineTotal(unitPrice: number, quantity: number, discount
  */
 export function generateReceiptNo(): string {
   const now = new Date();
-  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const dateStr = formatDateISO(now).replace(/-/g, '');
   const randomSuffix = Math.floor(1000 + Math.random() * 9000);
   return `POS-${dateStr}-${randomSuffix}`;
 }

@@ -47,6 +47,7 @@ import {
 } from 'recharts';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
+import { formatDateISO } from '../utils/dateUtils';
 
 interface RaporlarViewProps {
   cariler: Cari[];
@@ -79,7 +80,7 @@ export default function RaporlarView({
   });
   const [endDate, setEndDate] = useState(() => {
     const d = new Date();
-    return d.toISOString().split('T')[0];
+    return formatDateISO(d);
   });
 
   // Search/Filter states for subgroups
@@ -92,7 +93,7 @@ export default function RaporlarView({
   // Helpers to resolve date ranges based on preset
   const resolvedDates = useMemo(() => {
     const today = new Date();
-    const formatYMD = (d: Date) => d.toISOString().split('T')[0];
+    const formatYMD = formatDateISO;
 
     switch (datePreset) {
       case 'today':

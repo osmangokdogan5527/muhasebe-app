@@ -28,6 +28,7 @@ import {
 import { IslemModal } from './islemler/IslemModal';
 import { PdfPrintModal } from './islemler/PdfPrintModal';
 import { parseScannedQrCode } from '../utils/formatters';
+import { formatDateISO } from '../utils/dateUtils';
 
 interface IslemlerViewProps {
   islemler: Transaction[];
@@ -103,8 +104,8 @@ function IslemlerView({
   defaultStartDate.setMonth(defaultStartDate.getMonth() - 1);
   
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ 
-    start: defaultStartDate.toISOString().split('T')[0], 
-    end: defaultEndDate.toISOString().split('T')[0] 
+    start: formatDateISO(defaultStartDate), 
+    end: formatDateISO(defaultEndDate) 
   });
   
   // Print PDF Receipt states

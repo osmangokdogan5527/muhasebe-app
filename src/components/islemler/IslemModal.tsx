@@ -6,6 +6,7 @@ import { Plus, Trash2, X, Search, FileText, CreditCard, Wallet, AlertCircle, Che
 import BarcodeScannerModal from '../BarcodeScannerModal';
 import { parseScannedQrCode } from '../../utils/formatters';
 import { fetchTCMBRates, calculateExchangeRate } from '../../utils/tcmbService';
+import { getTodayISO } from '../../utils/dateUtils';
 
 export interface IslemModalProps {
   isOpen: boolean;
@@ -138,7 +139,7 @@ const theme = useMemo(() => {
   // Form states
   const [invoiceNo, setInvoiceNo] = useState('');
   const [selectedCariId, setSelectedCariId] = useState('');
-  const [transactionDate, setTransactionDate] = useState(new Date().toISOString().substring(0, 10));
+  const [transactionDate, setTransactionDate] = useState(getTodayISO());
   const [account, setAccount] = useState<'cash' | 'bank' | ''>('cash');
   const [selectedBankAccountId, setSelectedBankAccountId] = useState('');
   const [description, setDescription] = useState('');
@@ -316,7 +317,7 @@ const activeCariCurrency = useMemo(() => {
       setIsConvertedAmountEdited(false);
       setTransactionCurrency('TRY');
       setInvoiceNo(`INV-${Date.now().toString().slice(-6)}`);
-      setTransactionDate(new Date().toISOString().substring(0, 10));
+      setTransactionDate(getTodayISO());
       setAccount('cash');
       setDescription('Storm AI tarafından otomatik dolduruldu.');
 
@@ -401,7 +402,7 @@ const activeCariCurrency = useMemo(() => {
       setFormError('');
       // No editingTransaction means it's a "New" action
       setSelectedCariId(preselectedCariId || '');
-      setTransactionDate(new Date().toISOString().substring(0, 10));
+      setTransactionDate(getTodayISO());
       setAccount(['sale', 'purchase', 'sale_return', 'purchase_return'].includes(modalType) ? '' : 'cash');
       setDescription('');
       setReceiptAmount(0);

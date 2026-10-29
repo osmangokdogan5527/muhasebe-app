@@ -100,7 +100,7 @@ export default function MasraflarView({
     category: 'Elektrik' as Expense['category'],
     amount: 0,
     currency: 'TRY' as 'TRY' | 'USD' | 'EUR',
-    date: new Date().toISOString().split('T')[0],
+    date: getTodayISO(),
     account: 'cash' as 'cash' | 'bank' | 'pos',
     description: ''
   });
@@ -130,7 +130,7 @@ export default function MasraflarView({
         category: cat,
         amount: aiPrefilledData.fiyat || 0,
         currency: 'TRY',
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayISO(),
         account: 'cash',
         description: 'Storm AI tarafından dolduruldu.'
       });
@@ -197,7 +197,7 @@ export default function MasraflarView({
       category: 'Elektrik',
       amount: 0,
       currency: 'TRY',
-      date: new Date().toISOString().split('T')[0],
+      date: getTodayISO(),
       account: 'cash',
       description: ''
     });

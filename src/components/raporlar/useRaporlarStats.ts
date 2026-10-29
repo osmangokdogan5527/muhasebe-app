@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Transaction as Islem, Expense, EmployeeTransaction, Cari, Stock } from '../../types';
 import { getSyncedEmployeeExpenseIds } from '../../utils/expenseUtils';
+import { formatDateISO, parseDateISO } from '../../utils/dateUtils';
 
 export const useRaporlarStats = (deps: any) => {
   const { islemler, expenses, employeeTransactions, cariler, stoklar, resolvedDates, selectedCariId, selectedCurrency, stockValuationType, stockSearch, cariSearch, cariTypeFilter } = deps;
@@ -425,10 +426,10 @@ export const useRaporlarStats = (deps: any) => {
       const dateTrendMap: Record<string, { date: string; sales: number; expenses: number; collections: number }> = {};
       
       // Fill with empty days in the date range so we don't have gaps
-      const startObj = new Date(resolvedDates.start);
-      const endObj = new Date(resolvedDates.end);
+      const startObj = parseDateISO(resolvedDates.start);
+      const endObj = parseDateISO(resolvedDates.end);
       for (let d = new Date(startObj); d <= endObj; d.setDate(d.getDate() + 1)) {
-        const dateStr = d.toISOString().split('T')[0];
+        const dateStr = formatDateISO(d);
         // Format to DD.MM for chart X-Axis
         const axisLabel = dateStr.split('-').reverse().slice(0, 2).join('/');
         dateTrendMap[dateStr] = { date: axisLabel, sales: 0, expenses: 0, collections: 0 };

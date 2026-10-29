@@ -9,6 +9,7 @@ import { PosParkedSalesModal } from './PosParkedSalesModal';
 import { findStockByBarcodeOrSearch, calculateLineTotal, calculateCartSummary, generateReceiptNo } from '../../utils/posUtils';
 import { ShoppingCart, Zap, DollarSign, CreditCard, User, Clock, CheckCircle2, RotateCcw, Search, Plus, Sparkles, HelpCircle, Percent } from 'lucide-react';
 import { logError } from '../../utils/errorLogger';
+import { formatDateISO } from '../../utils/dateUtils';
 
 interface PosViewProps {
   stocks: Stock[];
@@ -409,7 +410,7 @@ export const PosView: React.FC<PosViewProps> = ({
       setIsProcessing(true);
       const receiptNo = generateReceiptNo();
       const now = new Date();
-      const date = now.toISOString().slice(0, 10);
+      const date = formatDateISO(now);
       const time = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
       const cariName = selectedCari ? selectedCari.name : 'Perakende Müşteri';

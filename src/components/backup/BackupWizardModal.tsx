@@ -18,6 +18,7 @@ import {
   Key
 } from 'lucide-react';
 import { encryptBackup, decryptBackup, BackupDataPayload } from '../../utils/backupCrypto';
+import { getTodayISO } from '../../utils/dateUtils';
 
 interface BackupWizardModalProps {
   isOpen: boolean;
@@ -190,7 +191,7 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `storm_yedek_${new Date().toISOString().split('T')[0]}_${pass ? 'sifreli' : 'standart'}.storm`;
+      a.download = `storm_yedek_${getTodayISO()}_${pass ? 'sifreli' : 'standart'}.storm`;
       a.click();
       URL.revokeObjectURL(url);
 

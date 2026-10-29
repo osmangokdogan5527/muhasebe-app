@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
+import { getTodayISO } from '../../utils/dateUtils';
 
 export const getExportFunctions = (deps: any) => {
   const { activeTab, summaryStats, selectedCurrency, stockStats, cariStats, filteredExpenses, kdvStats, selectedCari, resolvedDates, cariEkstreStats, formatMoney, turkishToPdf, cariler, incomeExpenseStats, stoklar, islemler, expenses } = deps;
@@ -464,7 +465,7 @@ export const getExportFunctions = (deps: any) => {
       const wsMasraflar = XLSX.utils.json_to_sheet(masraflarData);
       XLSX.utils.book_append_sheet(workbook, wsMasraflar, 'Masraflar ve Giderler');
   
-      XLSX.writeFile(workbook, `Storm_On_Muhasebe_Yedek_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+      XLSX.writeFile(workbook, `Storm_On_Muhasebe_Yedek_Export_${getTodayISO()}.xlsx`);
     };
   
     const downloadCariEkstrePDF = () => {

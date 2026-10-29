@@ -7,6 +7,7 @@ import { createTransaction, saveCari } from '../../firebase';
 import { calculateInvoiceLine } from '../../utils/invoiceMath';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { getTodayISO } from '../../utils/dateUtils';
 
 export interface LedgerDrawerProps {
   isOpen: boolean;
@@ -40,7 +41,7 @@ export function LedgerDrawer({
   const [targetBalanceInput, setTargetBalanceInput] = useState("");
   const [quickTxAmount, setQuickTxAmount] = useState("");
   const [quickTxInvoiceNo, setQuickTxInvoiceNo] = useState("");
-  const [quickTxDate, setQuickTxDate] = useState(new Date().toISOString().substring(0, 10));
+  const [quickTxDate, setQuickTxDate] = useState(getTodayISO());
   const [quickTxAccount, setQuickTxAccount] = useState<"cash" | "bank" | "pos" | "">("cash");
   const [quickTxBankAccountId, setQuickTxBankAccountId] = useState("");
   const [quickTxDescription, setQuickTxDescription] = useState("");
