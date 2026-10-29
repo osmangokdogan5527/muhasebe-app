@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Transaction, Cari, Stock, BankAccount, InvoiceItem } from '../../types';
+import { Transaction, Cari, Stock, BankAccount, InvoiceItem, LinkedReceiptInput } from '../../types';
 import { createTransaction, removeTransaction } from '../../firebase';
 import { Plus, Trash2, X, Search, FileText, CreditCard, Wallet, AlertCircle, Check, ScanBarcode, ArrowRightLeft, DollarSign, FileCheck, Scan, PlusCircle, MinusCircle, RefreshCw } from 'lucide-react';
 import BarcodeScannerModal from '../BarcodeScannerModal';
@@ -582,10 +582,17 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
           convertedAmount: isMultiCurrency ? customConvertedAmount : undefined
         };
 
+        // Kasa/Banka/POS seçildiyse fatura peşin ödenmiştir: cariyi kapatan bağlı tahsilat/ödeme oluşturulur.
+        // Para girişi kasaya faturanın kendisinden yansıdığı için bağlı kaydın hesabı boş bırakılır.
+        const isPaidNow = account === 'cash' || account === 'bank' || account === 'pos';
+        const linkedReceipts: LinkedReceiptInput[] = isPaidNow
+          ? [{ amount: islemData.amount, account: '' }]
+          : [];
+
         if (editingTransaction) {
           await removeTransaction(editingTransaction);
         }
-        await createTransaction(islemData);
+        await createTransaction(islemData, linkedReceipts);
       } else {
         // Receipt (collection or payment)
         if (receiptAmount <= 0) {

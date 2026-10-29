@@ -33,7 +33,7 @@ import {
   reauthenticateWithPopup,
   signInAnonymously
 } from 'firebase/auth';
-import { Cari, Stock, Transaction, CekSenet, Expense, Employee, EmployeeTransaction, Credit, RecurringTransaction } from './types';
+import { Cari, Stock, Transaction, CekSenet, Expense, Employee, EmployeeTransaction, Credit, RecurringTransaction, LinkedReceiptInput } from './types';
 
 // Read config from the provisioned project
 const firebaseConfig = {
@@ -273,8 +273,63 @@ export async function deleteStock(id: string) {
   }
 }
 
+// Cari bakiyesine etki (pozitif = cari bize borçlanır)
+function getCariBalanceEffect(t: Pick<Transaction, 'type' | 'amount' | 'convertedAmount'>): number {
+  const effectAmount = t.convertedAmount !== undefined && t.convertedAmount !== 0 ? t.convertedAmount : (t.amount || 0);
+  if (t.type === 'sale' || t.type === 'payment' || t.type === 'purchase_return') {
+    return effectAmount;
+  }
+  if (t.type === 'purchase' || t.type === 'collection' || t.type === 'sale_return') {
+    return -effectAmount;
+  }
+  return 0;
+}
+
+function roundMoney(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+const INVOICE_TYPES: Transaction['type'][] = ['sale', 'purchase', 'sale_return', 'purchase_return'];
+
+// Satış ve alıştan iade için para bize girer (tahsilat); alış ve satıştan iade için para çıkar (ödeme)
+function getLinkedReceiptType(invoiceType: Transaction['type']): 'collection' | 'payment' {
+  return invoiceType === 'sale' || invoiceType === 'purchase_return' ? 'collection' : 'payment';
+}
+
+export const RETAIL_CARI_ID = 'perakende_musteri';
+
+// POS'ta müşteri seçilmeden yapılan satışlar için sabit "Perakende Müşteri" carisini oluşturur
+export async function ensureRetailCari(): Promise<string> {
+  try {
+    const cariRef = doc(db, getPath(CARILER_COLL), RETAIL_CARI_ID);
+    const cariSnap = await getDoc(cariRef);
+    if (!cariSnap.exists()) {
+      const retailCari: Cari = {
+        id: RETAIL_CARI_ID,
+        name: 'Perakende Müşteri',
+        code: 'PERAKENDE',
+        type: 'customer',
+        phone: '',
+        email: '',
+        address: '',
+        balance: 0,
+        openingBalance: 0,
+        createdAt: new Date().toISOString(),
+        isActive: true,
+        currency: 'TRY'
+      };
+      await setDoc(cariRef, retailCari);
+    }
+    return RETAIL_CARI_ID;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, `${getPath(CARILER_COLL)}/${RETAIL_CARI_ID}`);
+    throw error;
+  }
+}
+
 // ATOMIC TRANSACTION LOGIC: Save Transaction, Update Stock levels, and Update Cari balances
-export async function createTransaction(islemData: Omit<Transaction, 'id'>) {
+// linkedReceipts: faturayla aynı anda oluşturulacak tahsilat/ödemeler (peşin satış, POS)
+export async function createTransaction(islemData: Omit<Transaction, 'id'>, linkedReceipts: LinkedReceiptInput[] = []) {
   try {
     const islemRef = doc(collection(db, getPath(ISLEMLER_COLL)));
     const islemId = islemRef.id;
@@ -282,6 +337,11 @@ export async function createTransaction(islemData: Omit<Transaction, 'id'>) {
       id: islemId,
       ...islemData
     });
+
+    const receiptInputs = linkedReceipts.filter(r => r && roundMoney(r.amount || 0) > 0);
+    if (receiptInputs.length > 0 && !INVOICE_TYPES.includes(islem.type)) {
+      throw new Error('Bağlı tahsilat/ödeme yalnızca faturalar için oluşturulabilir.');
+    }
 
     // 1. Cari reference & read (if cariId specified)
     let cariRef = null;
@@ -297,6 +357,10 @@ export async function createTransaction(islemData: Omit<Transaction, 'id'>) {
       } else {
         throw new Error(`Cari (ID: ${islem.cariId}) bulunamadı. Silinmiş olabilir.`);
       }
+    }
+
+    if (receiptInputs.length > 0 && !cariExists) {
+      throw new Error('Peşin tahsilat/ödeme kaydı için bir cari seçilmelidir.');
     }
 
     // 2. Read stock levels if transaction has items (sale/purchase)
@@ -323,20 +387,52 @@ export async function createTransaction(islemData: Omit<Transaction, 'id'>) {
       }
     }
 
-    // 3. Calculate new Cari balance
+    // 3. Build linked receipts (same currency/rate as the invoice)
+    const receipts: { ref: any, data: Transaction }[] = receiptInputs.map((input) => {
+      const receiptRef = doc(collection(db, getPath(ISLEMLER_COLL)));
+      const amount = roundMoney(input.amount);
+      const convertedAmount = islem.convertedAmount !== undefined && islem.convertedAmount !== 0 && islem.amount
+        ? roundMoney(islem.convertedAmount * amount / islem.amount)
+        : undefined;
+      const receiptType = getLinkedReceiptType(islem.type);
+      const data: Transaction = cleanUndefined({
+        id: receiptRef.id,
+        type: receiptType,
+        cariId: islem.cariId,
+        cariName: islem.cariName,
+        date: islem.date,
+        amount,
+        account: input.account,
+        bankAccountId: input.bankAccountId,
+        description: input.description || `${islem.invoiceNo ? islem.invoiceNo + ' nolu ' : ''}faturanın peşin ${receiptType === 'collection' ? 'tahsilatı' : 'ödemesi'}`,
+        createdAt: islem.createdAt || new Date().toISOString(),
+        currency: islem.currency,
+        exchangeRate: islem.exchangeRate,
+        convertedAmount,
+        linkedInvoiceId: islemId
+      });
+      return { ref: receiptRef, data };
+    });
+    if (receipts.length > 0) {
+      islem.linkedReceiptIds = receipts.map(r => r.data.id);
+    }
+
+    // 4. Calculate new Cari balance
     let newCariBalance = currentCariBalance;
     if (cariRef && cariExists) {
-      const effectAmount = islem.convertedAmount !== undefined && islem.convertedAmount !== 0 ? islem.convertedAmount : (islem.amount || 0);
-      if (islem.type === 'sale' || islem.type === 'payment' || islem.type === 'purchase_return') {
-        newCariBalance += effectAmount;
-      } else if (islem.type === 'purchase' || islem.type === 'collection' || islem.type === 'sale_return') {
-        newCariBalance -= effectAmount;
+      newCariBalance += getCariBalanceEffect(islem);
+      for (const receipt of receipts) {
+        newCariBalance += getCariBalanceEffect(receipt.data);
       }
     }
 
-    // 4. Perform writes inside a batch for offline safety and robustness
+    // 5. Perform writes inside a batch for offline safety and robustness
     const batch = writeBatch(db);
     batch.set(islemRef, islem);
+
+    for (const receipt of receipts) {
+      batch.set(receipt.ref, receipt.data);
+    }
 
     if (cariRef && cariExists) {
       batch.update(cariRef, { balance: newCariBalance });
@@ -367,8 +463,27 @@ export async function removeTransaction(islem: Transaction) {
     if (!islemSnap.exists()) {
       throw new Error("İşlem bulunamadı.");
     }
+    const storedIslem = islemSnap.data() as Transaction;
 
-    // 2. Cari reference & read to reverse balance
+    // Faturaya bağlı otomatik tahsilat/ödeme tek başına silinemez; fatura ile birlikte yönetilir
+    if (storedIslem.linkedInvoiceId) {
+      throw new Error("Bu kayıt bir faturaya bağlı otomatik tahsilat/ödemedir. Değiştirmek veya silmek için bağlı faturayı düzenleyin ya da silin.");
+    }
+
+    // 2. Read linked receipts (deleted together with the invoice)
+    const linkedReceipts: { ref: any, data: Transaction }[] = [];
+    if (Array.isArray(storedIslem.linkedReceiptIds)) {
+      for (const receiptId of storedIslem.linkedReceiptIds) {
+        if (!receiptId) continue;
+        const receiptRef = doc(db, getPath(ISLEMLER_COLL), receiptId);
+        const receiptSnap = await getDoc(receiptRef);
+        if (receiptSnap.exists()) {
+          linkedReceipts.push({ ref: receiptRef, data: receiptSnap.data() as Transaction });
+        }
+      }
+    }
+
+    // 3. Cari reference & read to reverse balance
     let cariRef = null;
     let currentCariBalance = 0;
     let cariExists = false;
@@ -386,7 +501,7 @@ export async function removeTransaction(islem: Transaction) {
       }
     }
 
-    // 3. Read stock levels to reverse quantities
+    // 4. Read stock levels to reverse quantities
     const stockUpdates: { ref: any, newQty: number }[] = [];
     if (islem.items && Array.isArray(islem.items) && islem.items.length > 0) {
       for (const item of islem.items) {
@@ -413,20 +528,22 @@ export async function removeTransaction(islem: Transaction) {
       }
     }
 
-    // 4. Calculate reversed Cari balance
+    // 5. Calculate reversed Cari balance (invoice + its linked receipts)
     let newCariBalance = currentCariBalance;
     if (cariRef && cariExists) {
-      const effectAmount = islem.convertedAmount !== undefined && islem.convertedAmount !== 0 ? islem.convertedAmount : (islem.amount || 0);
-      if (islem.type === 'sale' || islem.type === 'payment' || islem.type === 'purchase_return') {
-        newCariBalance -= effectAmount;
-      } else if (islem.type === 'purchase' || islem.type === 'collection' || islem.type === 'sale_return') {
-        newCariBalance += effectAmount;
+      newCariBalance -= getCariBalanceEffect(islem);
+      for (const receipt of linkedReceipts) {
+        newCariBalance -= getCariBalanceEffect(receipt.data);
       }
     }
 
-    // 5. Perform deletes and updates in a batch
+    // 6. Perform deletes and updates in a batch
     const batch = writeBatch(db);
     batch.delete(islemRef);
+
+    for (const receipt of linkedReceipts) {
+      batch.delete(receipt.ref);
+    }
 
     if (cariRef && cariExists) {
       batch.update(cariRef, { balance: newCariBalance });

@@ -377,9 +377,9 @@ export function LedgerDrawer({
               : t.type === "purchase"
                 ? "Alış Faturası"
                 : t.type === "collection"
-                  ? (t.account === "" || t.description?.toLowerCase().includes("iskonto") || t.description?.toLowerCase().includes("düzeltme") || t.description?.toLowerCase().includes("indirim") ? "İskonto / Alacak Dekontu" : "Tahsilat")
+                  ? t.linkedInvoiceId ? "Peşin Tahsilat" : (t.account === "" || t.description?.toLowerCase().includes("iskonto") || t.description?.toLowerCase().includes("düzeltme") || t.description?.toLowerCase().includes("indirim") ? "İskonto / Alacak Dekontu" : "Tahsilat")
                   : t.type === "payment"
-                    ? (t.account === "" || t.description?.toLowerCase().includes("dekont") || t.description?.toLowerCase().includes("düzeltme") || t.description?.toLowerCase().includes("masraf") ? "Borç Dekontu / Düzeltme" : "Ödeme")
+                    ? t.linkedInvoiceId ? "Peşin Ödeme" : (t.account === "" || t.description?.toLowerCase().includes("dekont") || t.description?.toLowerCase().includes("düzeltme") || t.description?.toLowerCase().includes("masraf") ? "Borç Dekontu / Düzeltme" : "Ödeme")
                     : t.type === "sale_return"
                       ? "Satıştan İade"
                       : t.type === "purchase_return"

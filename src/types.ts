@@ -76,6 +76,16 @@ export interface Transaction {
   currency?: "TRY" | "USD" | "EUR";
   exchangeRate?: number; // Manual exchange rate for multi-currency transactions
   convertedAmount?: number; // Amount after applying exchange rate to modify Cari's native balance
+  linkedInvoiceId?: string; // Faturayla birlikte otomatik oluşan tahsilat/ödemede bağlı faturanın id'si
+  linkedReceiptIds?: string[]; // Faturada, onunla birlikte oluşturulan tahsilat/ödeme kayıtlarının id'leri
+}
+
+// Fatura kaydedilirken aynı anda oluşturulacak tahsilat/ödeme (peşin veya POS satışı)
+export interface LinkedReceiptInput {
+  amount: number;
+  account: "cash" | "bank" | "pos" | "";
+  bankAccountId?: string;
+  description?: string;
 }
 
 export interface DashboardStats {

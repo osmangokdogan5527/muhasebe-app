@@ -79,6 +79,11 @@ export const PosSplitPaymentModal: React.FC<PosSplitPaymentModalProps> = ({
         return;
       }
 
+      if (remainingToAllocate < -0.01) {
+        alert(`Dağıtılan tutar satış toplamını ₺${Math.abs(remainingToAllocate).toFixed(2)} aşıyor. Fazla nakit için "Alınan Nakit" alanını kullanın; para üstü otomatik hesaplanır.`);
+        return;
+      }
+
       if (openAccountAmount > 0 && !selectedCari) {
         alert('Açık Hesap (Veresiye) kalemi için lütfen müşteri (cari) seçiniz!');
         return;

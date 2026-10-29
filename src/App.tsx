@@ -7,7 +7,7 @@ import { usePrintSettings } from './hooks/usePrintSettings';
 import { useBackupActions } from './hooks/useBackupActions';
 import { useLogoActions } from './hooks/useLogoActions';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { Cari, Stock, Transaction, CekSenet, Expense, Employee, EmployeeTransaction, Credit, BankAccount, AccountTransaction, KeyboardShortcut } from './types';
+import { Cari, Stock, Transaction, CekSenet, Expense, Employee, EmployeeTransaction, Credit, BankAccount, AccountTransaction, KeyboardShortcut, LinkedReceiptInput } from './types';
 import { 
   subscribeCariler, 
   subscribeStoklar, 
@@ -30,6 +30,7 @@ import {
   setActiveUser,
   saveBankAccount,
   createTransaction,
+  ensureRetailCari,
   db
 } from './firebase';
 import { logError } from './utils/errorLogger';
@@ -824,27 +825,46 @@ export default function App() {
         total: item.totalLine,
       }));
 
-      // 1. Ana Satış Faturası / İşlemi
+      // Müşteri seçilmediyse satış sabit "Perakende Müşteri" carisine yazılır (yoksa oluşturulur)
+      const cariId = saleData.cariId || await ensureRetailCari();
+      const split = saleData.paymentSplit;
+
+      // 1. Ana Satış Faturası: tahsil edilen tutarlar aşağıdaki bağlı tahsilatlarla kasaya/POS'a girer,
+      // fatura kendisi açık hesap olarak kaydedilir; ödenmeyen kısım (veresiye) carinin borcunda kalır.
       const mainTransaction: Omit<Transaction, 'id'> = {
         invoiceNo: saleData.receiptNo,
         type: 'sale',
-        cariId: saleData.cariId || 'perakende_musteri',
+        cariId,
         cariName: saleData.cariName || 'Perakende Müşteri',
         date: saleData.date,
         amount: saleData.grandTotal,
-        account: saleData.paymentSplit.cashAmount > 0
-          ? 'cash'
-          : saleData.paymentSplit.posAmount > 0
-          ? 'pos'
-          : '',
-        bankAccountId: saleData.paymentSplit.posAccountId,
+        account: '',
         description: `POS Hızlı Satış Fişi No: ${saleData.receiptNo}`,
         items,
         createdAt: new Date().toISOString(),
         currency: 'TRY',
       };
 
-      await createTransaction(mainTransaction);
+      // 2. Bağlı tahsilatlar: nakit ve kart kısmı ayrı kayıtlar olarak doğru hesaba işlenir
+      const linkedReceipts: LinkedReceiptInput[] = [];
+      if ((split.cashAmount || 0) > 0) {
+        linkedReceipts.push({
+          amount: split.cashAmount,
+          account: 'cash',
+          description: `POS Fişi ${saleData.receiptNo} - Nakit Tahsilat`,
+        });
+      }
+      if ((split.posAmount || 0) > 0) {
+        const posAccount = bankAccounts.find((a) => a.id === split.posAccountId);
+        linkedReceipts.push({
+          amount: split.posAmount,
+          account: posAccount?.type === 'banka' ? 'bank' : 'pos',
+          bankAccountId: split.posAccountId || undefined,
+          description: `POS Fişi ${saleData.receiptNo} - Kart/POS Tahsilat`,
+        });
+      }
+
+      await createTransaction(mainTransaction, linkedReceipts);
       showToast('Hızlı perakende satış başarıyla tamamlandı ve stoklar düşüldü.', 'success');
       return true;
     } catch (err: any) {
