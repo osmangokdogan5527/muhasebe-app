@@ -415,11 +415,16 @@ export const PosView: React.FC<PosViewProps> = ({
 
       const cariName = selectedCari ? selectedCari.name : 'Perakende Müşteri';
 
+      // KDV zorunlu değildir: fiyat etiketteki gibi kalır, KDV yalnızca kasada seçilen orana göre
+      // fiyatın içinden ayrılır. Fiş, kayıt ve KDV raporu aynı oranı göstersin diye satırlara da
+      // kasada seçilen oran yazılır (stok kartındaki oran POS satışında kullanılmaz).
+      const saleItems = cartItems.map((item) => ({ ...item, taxRate: globalTaxRate }));
+
       const success = await onCompletePosSale({
         receiptNo,
         cariId: selectedCari?.id,
         cariName,
-        items: cartItems,
+        items: saleItems,
         paymentSplit,
         grandTotal: summary.grandTotal,
         subtotal: summary.subtotalAfterLineDiscounts,
@@ -434,7 +439,7 @@ export const PosView: React.FC<PosViewProps> = ({
           receiptNo,
           date,
           time,
-          items: cartItems,
+          items: saleItems,
           paymentSplit,
           cariId: selectedCari?.id,
           cariName,
