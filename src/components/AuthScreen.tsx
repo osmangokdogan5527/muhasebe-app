@@ -1,7 +1,8 @@
 import React from 'react';
 import { User, ChevronDown, Shield, X, CloudLightning, RotateCcw, Download, Trash2, AlertTriangle, Check, ChevronUp, MessageSquare } from 'lucide-react';
 import { StormLogo, APP_VERSION } from '../constants';
-import { signInTenant } from '../utils/tenantAuth';
+import { DeviceAccount } from '../utils/accountStore';
+import { TenantLoginPanel } from './auth/TenantLoginPanel';
 
 interface AuthScreenProps {
   currentThemeData: any;
@@ -11,13 +12,8 @@ interface AuthScreenProps {
   sidebarPattern: string;
   sidebarPatternOpacity: number;
   designStyle: string;
-  selectedPinAccount: any;
-  setSelectedPinAccount: (acc: any) => void;
-  usersList: any[];
-  enteredPin: string;
-  setEnteredPin: (pin: string) => void;
-  authError: string | null;
-  setAuthError: (err: string | null) => void;
+  accounts: DeviceAccount[];
+  setAccounts: (accounts: DeviceAccount[]) => void;
   setUserRole: (role: any) => void;
   setActiveTab: (tab: string) => void;
   setActiveUser: (user: string) => void;
@@ -48,13 +44,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   sidebarPattern,
   sidebarPatternOpacity,
   designStyle,
-  selectedPinAccount,
-  setSelectedPinAccount,
-  usersList,
-  enteredPin,
-  setEnteredPin,
-  authError,
-  setAuthError,
+  accounts,
+  setAccounts,
   setUserRole,
   setActiveTab,
   setActiveUser,
@@ -78,7 +69,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 }) => {
 
   const [adminTab, setAdminTab] = React.useState<'errors' | 'feedback'>('errors');
-  const [isSigningIn, setIsSigningIn] = React.useState(false);
   const [expandedLogId, setExpandedLogId] = React.useState<string | null>(null);
 
   const isFluidMesh = designStyle === 'fluid-mesh';
@@ -268,99 +258,28 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             <p className={`text-xs uppercase tracking-widest font-mono ${textTertiary}`}>Güvenli Yönetim Paneli</p>
           </div>
 
-          {!selectedPinAccount ? (
-            <div className="space-y-3 animate-fade-in">
-              <h2 className={`text-xs font-bold uppercase tracking-widest mb-6 text-center ${textSecondary}`}>Hesabınızı Seçin</h2>
-              {usersList.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => setSelectedPinAccount(u)}
-                  className={`w-full flex items-center justify-between p-4 rounded-xl transition group cursor-pointer ${buttonBgClass}`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition ${userIconBg}`}>
-                      <User size={20} />
-                    </div>
-                    <span className={`font-bold tracking-wide ${textPrimary}`}>{u.name}</span>
-                  </div>
-                  <ChevronDown className={`${textMuted} group-hover:text-teal-500 -rotate-90 transition`} size={18} />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className={`${cardBgClass} rounded-2xl p-8 animate-fade-in`}>
-              <button 
-                onClick={() => {
-                  setSelectedPinAccount(null);
-                  setEnteredPin('');
-                  setAuthError(null);
-                }}
-                className={`flex items-center gap-2 text-xs uppercase tracking-widest font-bold mb-8 transition cursor-pointer ${textTertiary} hover:text-teal-500`}
-              >
-                <ChevronDown className="rotate-90" size={14} />
-                Geri Dön
-              </button>
-              
-              <div className="text-center mb-8">
-                <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center mx-auto mb-4">
-                  <User size={24} />
-                </div>
-                <h3 className={`text-lg font-bold tracking-wider ${textPrimary}`}>{selectedPinAccount.name}</h3>
-                <p className={`text-xs mt-1 ${textTertiary}`}>Lütfen 6 haneli erişim şifrenizi girin</p>
-              </div>
-
-              <div className="space-y-6">
-                <div>
-                  <input
-                    type="password"
-                    maxLength={6}
-                    value={enteredPin}
-                    onChange={(e) => {
-                      if (isSigningIn) return;
-                      const val = e.target.value.replace(/[^0-9]/g, '');
-                      setEnteredPin(val);
-                      if (authError) setAuthError(null);
-                      
-                      if (val.length === 6) {
-                        if (val === selectedPinAccount.pin) {
-                          const account = selectedPinAccount;
-                          setIsSigningIn(true);
-                          // Firestore güvenlik kuralları için aynı firmanın Firebase hesabıyla oturum aç
-                          signInTenant(account.id)
-                            .then((result) => {
-                              if (result.status === 'failed') {
-                                alert(`Uyarı: ${result.message}\n\nUygulama açılacak ancak veriler sunucuyla eşitlenemeyebilir. Lütfen yöneticinize bildirin.`);
-                              }
-                              const userData = {
-                                uid: account.id,
-                                displayName: account.name,
-                                email: `${account.id}@storm.com`
-                              };
-                              localStorage.setItem('storm_muhasebe_active_user', JSON.stringify(userData));
-                              setUserRole('employee');
-                              const defaultTab = window.innerWidth < 768 ? 'menu' : 'cariler';
-                              setActiveTab(defaultTab);
-                              setActiveUser(account.id);
-                              setUser(userData as any);
-                            })
-                            .finally(() => setIsSigningIn(false));
-                        } else {
-                          setAuthError('Hatalı şifre girdiniz.');
-                          setEnteredPin('');
-                        }
-                      }
-                    }}
-                    placeholder="••••••"
-                    className={`w-full text-center text-3xl tracking-[1em] placeholder-slate-400 transition outline-none font-mono px-4 py-4 rounded-xl focus:border-teal-500/50 ${inputStyleClass}`}
-                    autoFocus
-                  />
-                  {authError && (
-                    <p className="text-rose-500 text-xs text-center mt-3 font-bold">{authError}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          <TenantLoginPanel
+            accounts={accounts}
+            onAccountsChange={setAccounts}
+            styles={{ textPrimary, textSecondary, textTertiary, textMuted, cardBgClass, buttonBgClass, userIconBg, inputStyleClass }}
+            onLoggedIn={(account, offline) => {
+              if (offline) {
+                alert('İnternet bağlantısı yok: çevrimdışı giriş yapıldı. Yapılan işlemler bağlantı gelince sunucuya eşitlenir.');
+              }
+              const userData = {
+                uid: account.id,
+                displayName: account.name,
+                photoURL: account.photoURL || '',
+                email: `${account.id}@storm.com`
+              };
+              localStorage.setItem('storm_muhasebe_active_user', JSON.stringify(userData));
+              setUserRole('employee');
+              const defaultTab = window.innerWidth < 768 ? 'menu' : 'cariler';
+              setActiveTab(defaultTab);
+              setActiveUser(account.id);
+              setUser(userData as any);
+            }}
+          />
 
         </div>
 
@@ -395,8 +314,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   setAdminPin(val);
                   if (adminAuthError) setAdminAuthError(null);
                   
+                  // Sistem loglarına erişim, uygulamanın Yönetici PIN'i ile açılır (Ayarlar > Yetkiler)
+                  const adminPinCode = localStorage.getItem('storm_muhasebe_admin_pin') || '1923';
                   if (val.length >= 4) {
-                    if (val === '270212' || val === '000000') { 
+                    if (val === adminPinCode) { 
                       setShowAdminDashboard(true);
                       setShowAdminLogin(false);
                       setAdminPin('');

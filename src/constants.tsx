@@ -435,7 +435,8 @@ export const APP_VERSION = '1.8.2';
 export const CHANGELOG = {
   version: '1.8.2',
   features: [
-    "Güvenli Firma Oturumu: PIN girişinden sonra her firma kendi hesabıyla sunucuya bağlanır; veritabanı kurallarıyla her firma yalnızca kendi verisine erişebilir.",
+    "Yeni Firma Girişi: Uygulamada hazır hesap yoktur; ilk açılışta 'Yeni Firma Oluştur' ile firma kodu ve şifre belirlenir, diğer cihazlardan 'Mevcut Firmaya Bağlan' ile girilir. İnternet yokken de giriş yapılabilir.",
+    "Güvenli Firma Oturumu: Her firma kendi hesabıyla sunucuya bağlanır; veritabanı kurallarıyla her firma yalnızca kendi verisine erişebilir. Firma şifresi Ayarlar > Profil bölümünden değiştirilebilir.",
     "Peşin Satış ve Alış: Kasa/Banka/POS seçilerek kesilen faturalarda cariyi kapatan bağlı tahsilat/ödeme otomatik oluşturulur; cari ekstresinde 'Peşin Tahsilat' olarak görünür.",
     "Hızlı Satış (POS) İyileştirmeleri: Müşteri seçmeden satış için 'Perakende Müşteri' carisi otomatik oluşturulur; parçalı ödemede nakit kasaya, kart POS hesabına, veresiye cari borcuna ayrı ayrı işlenir.",
     "KDV Zorunlu Değil: POS'ta fiyat etiketteki gibi kalır, KDV yalnızca kasada seçilen orana göre fiyatın içinden ayrılır; fiş, kayıt ve KDV raporu aynı tutarı gösterir.",
@@ -456,14 +457,6 @@ export const CHANGELOG = {
     "Telegram hata bildirimi tamamen kaldırıldı; hatalar yalnızca cihazdaki hata günlüğüne yazılır."
   ]
 };
-
-export const PREDEFINED_USERS = [
-  { id: 'admin', name: 'XSTORM', pin: '270212' },
-  { id: 'muhasebe', name: 'GÖKDOĞAN TEKSTİL', pin: '041646' },
-  { id: 'firma_1', name: 'SAMPI10', pin: '111111' },
-  { id: 'firma_2', name: 'NİFER', pin: '222222' },
-  { id: 'firma_3', name: '3. Firma (Kullanıcı 3)', pin: '333333' },
-];
 
 export const COLOR_PRESETS = [
   {
@@ -702,20 +695,13 @@ export const SIDEBAR_PATTERNS = [
   { id: 'topography', name: 'Topografya', svg: `url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 50 Q 50 100 100 50 T 200 50 M0 70 Q 50 120 100 70 T 200 70 M0 90 Q 50 140 100 90 T 200 90 M0 110 Q 50 160 100 110 T 200 110 M0 130 Q 50 180 100 130 T 200 130 M0 150 Q 50 200 100 150 T 200 150' fill='none' stroke='PATTERNCOLOR' stroke-width='1' stroke-opacity='OPACITY'/%3E%3Cpath d='M0 30 Q 50 80 100 30 T 200 30 M0 10 Q 50 60 100 10 T 200 10 M0 -10 Q 50 40 100 -10 T 200 -10' fill='none' stroke='PATTERNCOLOR' stroke-width='1' stroke-opacity='OPACITY'/%3E%3Cpath d='M0 170 Q 50 220 100 170 T 200 170 M0 190 Q 50 240 100 190 T 200 190 M0 210 Q 50 260 100 210 T 200 210' fill='none' stroke='PATTERNCOLOR' stroke-width='1' stroke-opacity='OPACITY'/%3E%3C/svg%3E")`, size: '200px 200px' },
 ];
 
-export const PIN_ACCOUNTS = [
-  { name: 'XSTORM', pin: '270212', email: 'admin@storm.com', password: 'storm_admin_pass' },
-  { name: 'GÖKDOĞAN TEKSTİL', pin: '041646', email: 'muhasebe@storm.com', password: 'storm_muhasebe_pass' },
-  { name: 'SAMPI10', pin: '111111', email: 'firma_1@storm.com', password: 'storm_firma1_pass' },
-  { name: 'NİFER', pin: '222222', email: 'firma_2@storm.com', password: 'storm_firma2_pass' },
-  { name: '3. Firma (Kullanıcı 3)', pin: '333333', email: 'firma_3@storm.com', password: 'storm_firma3_pass' },
-];
-
 export const changelogData = [
   {
     version: "1.8.2",
     date: "30.10.2026",
     changes: [
-      "Güvenli Firma Oturumu: PIN girişinden sonra her firma kendi hesabıyla sunucuya bağlanır; veritabanı kurallarıyla her firma yalnızca kendi verisine erişebilir.",
+      "Yeni Firma Girişi: Uygulamada hazır hesap yoktur; ilk açılışta 'Yeni Firma Oluştur' ile firma kodu ve şifre belirlenir, diğer cihazlardan 'Mevcut Firmaya Bağlan' ile girilir. İnternet yokken de giriş yapılabilir.",
+      "Güvenli Firma Oturumu: Her firma kendi hesabıyla sunucuya bağlanır; veritabanı kurallarıyla her firma yalnızca kendi verisine erişebilir. Firma şifresi Ayarlar > Profil bölümünden değiştirilebilir.",
       "Peşin Satış ve Alış: Kasa/Banka/POS seçilerek kesilen faturalarda cariyi kapatan bağlı tahsilat/ödeme otomatik oluşturulur; cari ekstresinde 'Peşin Tahsilat' olarak görünür.",
       "Hızlı Satış (POS) İyileştirmeleri: Müşteri seçmeden satış için 'Perakende Müşteri' carisi otomatik oluşturulur; parçalı ödemede nakit kasaya, kart POS hesabına, veresiye cari borcuna ayrı ayrı işlenir.",
       "KDV Zorunlu Değil: POS'ta fiyat etiketteki gibi kalır, KDV yalnızca kasada seçilen orana göre fiyatın içinden ayrılır; fiş, kayıt ve KDV raporu aynı tutarı gösterir.",

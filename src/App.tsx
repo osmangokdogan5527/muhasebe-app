@@ -90,7 +90,9 @@ import {
 } from 'lucide-react';
 import { compressImage } from './utils/imageCompressor';
 
-import { StormLogo, APP_VERSION, CHANGELOG, PREDEFINED_USERS, COLOR_PRESETS, TAB_DEFS, SIDEBAR_PATTERNS, PIN_ACCOUNTS, changelogData, DEFAULT_SHORTCUTS } from "./constants";
+import { StormLogo, APP_VERSION, CHANGELOG, COLOR_PRESETS, TAB_DEFS, SIDEBAR_PATTERNS, changelogData, DEFAULT_SHORTCUTS } from "./constants";
+import { DeviceAccount, loadDeviceAccounts, upsertDeviceAccount } from "./utils/accountStore";
+import { changeTenantPassword } from "./utils/tenantAuth";
 export default function App() {
   const [isBackupWizardOpen, setIsBackupWizardOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -195,9 +197,7 @@ export default function App() {
   const {
     user, setUser,
     authLoading, setAuthLoading,
-    authError, setAuthError,
-    enteredPin, setEnteredPin,
-    handlePinLogin, handleSignOut
+    handleSignOut
   } = useAppAuth(showToast, setUserRole, setActiveTab);
 
   
@@ -214,49 +214,8 @@ export default function App() {
   const [feedbackImage, setFeedbackImage] = useState<string | null>(null);
   const [feedbackImageLoading, setFeedbackImageLoading] = useState(false);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
-  // Init users from localStorage or predefined
-  const [usersList, setUsersList] = useState<any[]>(() => {
-    const saved = localStorage.getItem('storm_muhasebe_users');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Map PREDEFINED_USERS so any code updates (like name or ID changes) are reflected,
-        // but retain customized fields like photoURL and explicitly changed pins/names
-        return PREDEFINED_USERS.map(defaultUser => {
-          // Check for exact ID match or old ID match (company_3 -> firma_1 etc)
-          let matchId = defaultUser.id;
-          if (defaultUser.id === 'firma_1') matchId = 'company_3';
-          if (defaultUser.id === 'firma_2') matchId = 'company_4';
-          if (defaultUser.id === 'firma_3') matchId = 'company_5';
-          
-          const savedUser = parsed.find((u: any) => u.id === defaultUser.id || u.id === matchId);
-          if (savedUser) {
-            // Only use saved name/pin if they were actually customized from the old default
-            const oldDefaults: any = {
-              'admin': { name: 'Yönetici', pin: '270212' },
-              'muhasebe': { name: 'Muhasebe Departmanı', pin: '041646' },
-              'company_3': { name: 'Kullanıcı 3', pin: '111111' },
-              'company_4': { name: 'Kullanıcı 4', pin: '222222' },
-              'company_5': { name: 'Kullanıcı 5', pin: '333333' }
-            };
-            const isNameCustomized = oldDefaults[matchId] && savedUser.name !== oldDefaults[matchId].name && savedUser.name !== defaultUser.name;
-            const isPinCustomized = oldDefaults[matchId] && savedUser.pin !== oldDefaults[matchId].pin && savedUser.pin !== defaultUser.pin;
-            
-            return {
-              ...defaultUser,
-              name: isNameCustomized ? savedUser.name : defaultUser.name,
-              pin: isPinCustomized ? savedUser.pin : defaultUser.pin,
-              photoURL: savedUser.photoURL || ''
-            };
-          }
-          return defaultUser;
-        });
-      } catch (e) {}
-    }
-    return PREDEFINED_USERS;
-  });
-
-  const [selectedPinAccount, setSelectedPinAccount] = useState<typeof PREDEFINED_USERS[0] | null>(null);
+  // Bu cihazda oluşturulan/bağlanılan firmalar (kodda hazır hesap yoktur)
+  const [accounts, setAccounts] = useState<DeviceAccount[]>(() => loadDeviceAccounts());
 
   // Settings password variables
   const [settingsPasswordSuccess, setSettingsPasswordSuccess] = useState<string | null>(null);
@@ -580,18 +539,15 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
-    // 1. Update in the user list so that it shows on the login screen
-    const updatedUsers = usersList.map(u => {
-      if (u.id === user?.uid) {
-        return {
-          ...u,
-          name: profileName || user.displayName || u.name,
-          photoURL: profilePhoto || (user as any).photoURL || u.photoURL
-        };
+    // 1. Update in the device account list so that it shows on the login screen
+    const existing = accounts.find(a => a.id === user.uid);
+    if (existing) {
+      const name = profileName || user.displayName || existing.name;
+      const photoURL = profilePhoto || (user as any).photoURL || existing.photoURL || '';
+      if (name !== existing.name || photoURL !== (existing.photoURL || '')) {
+        setAccounts(upsertDeviceAccount({ ...existing, name, photoURL }));
       }
-      return u;
-    });
-    localStorage.setItem('storm_muhasebe_users', JSON.stringify(updatedUsers));
+    }
     // 2. Update the active logged in user in localStorage
     const updatedUser = {
       ...user,
@@ -599,7 +555,7 @@ export default function App() {
       photoURL: profilePhoto || (user as any).photoURL
     };
     localStorage.setItem('storm_muhasebe_active_user', JSON.stringify(updatedUser));
-  }, [user, profileName, profilePhoto, usersList]);
+  }, [user, profileName, profilePhoto, accounts]);
 
 
 
@@ -738,14 +694,30 @@ export default function App() {
     }
   };
 
-  const handleProfileUpdate = async () => {
+  const handleProfileUpdate = async (currentPassword?: string) => {
     if (!user) return;
+    setSettingsPasswordError(null);
+    setSettingsPasswordSuccess(null);
     try {
-      if (profileName) {
-        await updateProfile(user, { displayName: profileName });
+      // Firma adı Firebase hesabına da yazılır (başka cihazdan bağlanırken bu ad görünür)
+      if (profileName && auth.currentUser && auth.currentUser.email === `${user.uid}@storm.com`) {
+        await updateProfile(auth.currentUser, { displayName: profileName });
+      }
+
+      if (profilePassword) {
+        const account = accounts.find(a => a.id === user.uid) || { id: user.uid, name: profileName || user.displayName || user.uid };
+        const result = await changeTenantPassword(account, currentPassword || '', profilePassword);
+        if (!result.ok) {
+          setSettingsPasswordError(result.message || 'Şifre değiştirilemedi.');
+          return;
+        }
+        setAccounts(loadDeviceAccounts());
+        setProfilePassword('');
+        setSettingsPasswordSuccess('Firma şifresi güncellendi. Diğer cihazlarda yeni şifreyle giriş yapın.');
       }
       showToast("Profil bilgileri başarıyla güncellendi.", "success");
     } catch (err: any) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'App.handleProfileUpdate');
       showToast(`Profil güncellenirken hata oluştu: ${err.message}`, "error");
     }
   };
@@ -760,13 +732,8 @@ export default function App() {
         sidebarPattern={sidebarPattern}
         sidebarPatternOpacity={sidebarPatternOpacity}
         designStyle={designStyle}
-        selectedPinAccount={selectedPinAccount}
-        setSelectedPinAccount={setSelectedPinAccount}
-        usersList={usersList}
-        enteredPin={enteredPin}
-        setEnteredPin={setEnteredPin}
-        authError={authError}
-        setAuthError={setAuthError}
+        accounts={accounts}
+        setAccounts={setAccounts}
         setUserRole={setUserRole}
         setActiveTab={setActiveTab}
         setActiveUser={setActiveUser}

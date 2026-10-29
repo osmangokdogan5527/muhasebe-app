@@ -31,6 +31,8 @@ import {
   sendPasswordResetEmail,
   updatePassword,
   reauthenticateWithPopup,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   signInAnonymously
 } from 'firebase/auth';
 import { Cari, Stock, Transaction, CekSenet, Expense, Employee, EmployeeTransaction, Credit, RecurringTransaction, LinkedReceiptInput } from './types';
@@ -67,6 +69,8 @@ export {
   updateProfile,
   sendPasswordResetEmail,
   updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   signInAnonymously
 };
 export type { User };

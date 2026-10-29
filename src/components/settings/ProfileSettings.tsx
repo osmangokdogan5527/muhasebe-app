@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { User, ShieldCheck, Download, Upload, FolderOpen, RotateCcw, Shield } from 'lucide-react';
 
 export interface ProfileSettingsProps {
@@ -10,7 +10,7 @@ export interface ProfileSettingsProps {
   setProfilePassword: (password: string) => void;
   settingsPasswordSuccess: string | null;
   settingsPasswordError: string | null;
-  handleProfileUpdate: () => void;
+  handleProfileUpdate: (currentPassword?: string) => void;
   handleManualBackup: () => void;
   handleRestoreBackup: () => void;
   isBackupLoading: boolean;
@@ -42,6 +42,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   setResetModalOpen,
   onOpenBackupWizard
 }) => {
+  const [currentPassword, setCurrentPassword] = useState('');
   return (
 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
             {/* Card 5: Kullanıcı Profil Ayarları */}
@@ -78,14 +79,23 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                       className="w-full bg-white/5 border border-white/10 focus:border-teal-500 rounded-xl px-4 py-2 text-sm text-white transition outline-none"
                     />
                   </div>
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <label className="text-xs font-bold text-white/80 uppercase tracking-wider">Yeni PIN Şifresi (6 Hane)</label>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-white/80 uppercase tracking-wider">Yeni Firma Şifresi</label>
                     <input
                       type="password"
-                      maxLength={6}
                       value={profilePassword}
-                      onChange={(e) => setProfilePassword(e.target.value.replace(/[^0-9]/g, ''))}
+                      onChange={(e) => setProfilePassword(e.target.value)}
                       placeholder="Değiştirmek istemiyorsanız boş bırakın"
+                      className="w-full bg-white/5 border border-white/10 focus:border-teal-500 rounded-xl px-4 py-2 text-sm text-white transition outline-none font-semibold"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-white/80 uppercase tracking-wider">Mevcut Şifre</label>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Şifre değiştirirken gerekli"
                       className="w-full bg-white/5 border border-white/10 focus:border-teal-500 rounded-xl px-4 py-2 text-sm text-white transition outline-none font-semibold"
                     />
                   </div>
@@ -105,7 +115,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
 
               <div className="mt-6 pt-4 border-t border-white/5 flex justify-end">
                 <button
-                  onClick={handleProfileUpdate}
+                  onClick={() => { handleProfileUpdate(currentPassword); setCurrentPassword(''); }}
                   className="flex items-center justify-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider transition cursor-pointer shadow-md hover:shadow-lg active:scale-98"
                 >
                   <span>Bilgileri Güncelle</span>

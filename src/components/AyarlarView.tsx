@@ -86,7 +86,7 @@ export interface AyarlarViewProps {
   setProfilePassword: (password: string) => void;
   settingsPasswordSuccess: string | null;
   settingsPasswordError: string | null;
-  handleProfileUpdate: () => void;
+  handleProfileUpdate: (currentPassword?: string) => void;
   handleManualBackup: () => void;
   isBackupLoading: boolean;
   handleRestoreBackup: () => void;
