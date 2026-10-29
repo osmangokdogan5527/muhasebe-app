@@ -162,7 +162,7 @@ export function StockModal({
           brand: formData.brand,
           createdAt: editingStock.createdAt || new Date().toISOString()
         };
-        await saveStock(updatedStock, editingStock.id);
+        await saveStock(updatedStock, editingStock.id, editingStock.quantity);
       } else {
         const newStock: Omit<Stock, 'id'> = {
           name: formData.name,

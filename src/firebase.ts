@@ -5,6 +5,7 @@ import {
   persistentMultipleTabManager,
   CACHE_SIZE_UNLIMITED,
   writeBatch,
+  increment,
   collection,
   doc,
   setDoc,
@@ -221,12 +222,30 @@ export async function saveCari(cari: Omit<Cari, 'id'>, id?: string) {
   try {
     const docRef = id ? doc(db, getPath(CARILER_COLL), id) : doc(collection(db, getPath(CARILER_COLL)));
     const newId = id || docRef.id;
-    
-    // Balance equals opening balance initially if editing doesn't override
+
+    if (id) {
+      const existingSnap = await getDoc(docRef);
+      if (existingSnap.exists()) {
+        // Düzenleme: bakiye formdaki (açıldığı andaki) değerle EZİLMEZ; form açıkken eklenen
+        // işlemler kaybolmasın diye yalnızca açılış bakiyesi farkı bakiyeye artırımlı eklenir.
+        const stored = existingSnap.data() as Cari;
+        const { balance: _ignoredBalance, ...fields } = cari;
+        const openingDiff = (Number(cari.openingBalance) || 0) - (Number(stored.openingBalance) || 0);
+        const batch = writeBatch(db);
+        batch.set(docRef, cleanUndefined({ id: newId, ...fields }), { merge: true });
+        if (openingDiff !== 0) {
+          batch.update(docRef, { balance: increment(openingDiff) });
+        }
+        await batch.commit();
+        return newId;
+      }
+    }
+
+    // Yeni kayıt: id verilmediyse bakiye açılış bakiyesiyle başlar (id verilen içe aktarmada verilen bakiye kullanılır)
     const finalCari: Cari = cleanUndefined({
       id: newId,
       ...cari,
-      balance: id ? cari.balance : cari.openingBalance, // Keep balance if editing, use openingBalance if creating
+      balance: id ? cari.balance : cari.openingBalance,
     });
     
     await setDoc(docRef, finalCari);
@@ -247,10 +266,26 @@ export async function deleteCari(id: string) {
 }
 
 // STOCK OPERATIONS
-export async function saveStock(stock: Omit<Stock, 'id'>, id?: string) {
+// originalQuantity: düzenleme formu açıldığında stokta görünen miktar. Verilirse miktar mutlak
+// değer olarak yazılmaz, yalnızca kullanıcının yaptığı değişiklik (fark) artırımlı uygulanır;
+// böylece form açıkken yapılan satış/alışların stok hareketi ezilmez.
+export async function saveStock(stock: Omit<Stock, 'id'>, id?: string, originalQuantity?: number) {
   try {
     const docRef = id ? doc(db, getPath(STOKLAR_COLL), id) : doc(collection(db, getPath(STOKLAR_COLL)));
     const newId = id || docRef.id;
+
+    if (id && originalQuantity !== undefined) {
+      const { quantity, ...fields } = stock;
+      const quantityDiff = (Number(quantity) || 0) - (Number(originalQuantity) || 0);
+      const batch = writeBatch(db);
+      batch.set(docRef, cleanUndefined({ id: newId, ...fields }), { merge: true });
+      if (quantityDiff !== 0) {
+        batch.update(docRef, { quantity: increment(quantityDiff) });
+      }
+      await batch.commit();
+      return newId;
+    }
+
     const finalStock: Stock = cleanUndefined({
       id: newId,
       ...stock
@@ -363,7 +398,7 @@ export async function createTransaction(islemData: Omit<Transaction, 'id'>, link
     }
 
     // 2. Read stock levels if transaction has items (sale/purchase)
-    const stockUpdates: { ref: any, newQty: number }[] = [];
+    const stockUpdates: { ref: any, delta: number }[] = [];
     if (islem.items && Array.isArray(islem.items) && islem.items.length > 0) {
       for (const item of islem.items) {
         if (item && item.stockId && typeof item.stockId === 'string' && item.stockId.trim() !== '') {
@@ -378,7 +413,7 @@ export async function createTransaction(islemData: Omit<Transaction, 'id'>, link
             } else if (islem.type === 'purchase' || islem.type === 'sale_return') {
               newQty = currentQty + (item.quantity || 0);
             }
-            stockUpdates.push({ ref: stockRef, newQty });
+            stockUpdates.push({ ref: stockRef, delta: newQty - currentQty });
           } else {
             throw new Error(`Stok (ID: ${item.stockId}) bulunamadı. Silinmiş olabilir.`);
           }
@@ -433,12 +468,17 @@ export async function createTransaction(islemData: Omit<Transaction, 'id'>, link
       batch.set(receipt.ref, receipt.data);
     }
 
-    if (cariRef && cariExists) {
-      batch.update(cariRef, { balance: newCariBalance });
+    // Artırımlı güncelleme: aynı anda başka cihazdan yapılan işlemlerin bakiye etkisi ezilmez
+    const cariBalanceDelta = roundMoney(newCariBalance - currentCariBalance);
+    if (cariRef && cariExists && cariBalanceDelta !== 0) {
+      batch.update(cariRef, { balance: increment(cariBalanceDelta) });
     }
 
+    // Artırımlı güncelleme: aynı anda başka cihazdan yapılan stok hareketleri ezilmez
     for (const update of stockUpdates) {
-      batch.update(update.ref, { quantity: update.newQty });
+      if (update.delta !== 0) {
+        batch.update(update.ref, { quantity: increment(update.delta) });
+      }
     }
 
     await batch.commit();
@@ -501,7 +541,7 @@ export async function removeTransaction(islem: Transaction) {
     }
 
     // 4. Read stock levels to reverse quantities
-    const stockUpdates: { ref: any, newQty: number }[] = [];
+    const stockUpdates: { ref: any, delta: number }[] = [];
     if (islem.items && Array.isArray(islem.items) && islem.items.length > 0) {
       for (const item of islem.items) {
         if (item && item.stockId && typeof item.stockId === 'string' && item.stockId.trim() !== '') {
@@ -518,7 +558,7 @@ export async function removeTransaction(islem: Transaction) {
               } else if (islem.type === 'purchase' || islem.type === 'sale_return') {
                 newQty = currentQty - (item.quantity || 0);
               }
-              stockUpdates.push({ ref: stockRef, newQty });
+              stockUpdates.push({ ref: stockRef, delta: newQty - currentQty });
             }
           } catch (stockErr) {
             console.warn(`Stok miktarı geri alınırken hata oluştu (stok ${item.stockId} silinmiş olabilir):`, stockErr);
@@ -544,12 +584,17 @@ export async function removeTransaction(islem: Transaction) {
       batch.delete(receipt.ref);
     }
 
-    if (cariRef && cariExists) {
-      batch.update(cariRef, { balance: newCariBalance });
+    // Artırımlı güncelleme: aynı anda başka cihazdan yapılan işlemlerin bakiye etkisi ezilmez
+    const cariBalanceDelta = roundMoney(newCariBalance - currentCariBalance);
+    if (cariRef && cariExists && cariBalanceDelta !== 0) {
+      batch.update(cariRef, { balance: increment(cariBalanceDelta) });
     }
 
+    // Artırımlı güncelleme: aynı anda başka cihazdan yapılan stok hareketleri ezilmez
     for (const update of stockUpdates) {
-      batch.update(update.ref, { quantity: update.newQty });
+      if (update.delta !== 0) {
+        batch.update(update.ref, { quantity: increment(update.delta) });
+      }
     }
 
     await batch.commit();
