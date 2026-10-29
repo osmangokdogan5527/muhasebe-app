@@ -435,6 +435,7 @@ export const APP_VERSION = '1.8.2';
 export const CHANGELOG = {
   version: '1.8.2',
   features: [
+    "Yenilenen Sıvı Mesh Tasarımı: Arka plan aurorası seçili temanın renklerinden oluşur; kartlar daha okunaklı koyu buzlu cam görünümüne, sol menü sade ve vurgulu aktif sekme yapısına kavuştu. Giriş ekranında da aynı aurora kullanılır; cihazda hareket azaltma açıksa animasyon durur.",
     "Storm AI Her İşi Yapar: Ücretsiz Gemini ile sohbet ederek fatura kesme, tahsilat/ödeme, masraf, personel, cari/ürün kartı, çek/senet, kasa hareketi/transfer, kayıt silme, ekstre ve kâr-zarar raporu yapılabilir; kayıt işlemleri onay kartıyla onaylandıktan sonra yapılır.",
     "Yeni Firma Girişi: Uygulamada hazır hesap yoktur; ilk açılışta 'Yeni Firma Oluştur' ile firma kodu ve şifre belirlenir, diğer cihazlardan 'Mevcut Firmaya Bağlan' ile girilir. İnternet yokken de giriş yapılabilir.",
     "Güvenli Firma Oturumu: Her firma kendi hesabıyla sunucuya bağlanır; veritabanı kurallarıyla her firma yalnızca kendi verisine erişebilir. Firma şifresi Ayarlar > Profil bölümünden değiştirilebilir.",
@@ -701,6 +702,7 @@ export const changelogData = [
     version: "1.8.2",
     date: "30.10.2026",
     changes: [
+      "Yenilenen Sıvı Mesh Tasarımı: Arka plan aurorası seçili temanın renklerinden oluşur; kartlar daha okunaklı koyu buzlu cam görünümüne, sol menü sade ve vurgulu aktif sekme yapısına kavuştu. Giriş ekranında da aynı aurora kullanılır; cihazda hareket azaltma açıksa animasyon durur.",
       "Storm AI Her İşi Yapar: Ücretsiz Gemini ile sohbet ederek fatura kesme, tahsilat/ödeme, masraf, personel, cari/ürün kartı, çek/senet, kasa hareketi/transfer, kayıt silme, ekstre ve kâr-zarar raporu yapılabilir; kayıt işlemleri onay kartıyla onaylandıktan sonra yapılır.",
       "Yeni Firma Girişi: Uygulamada hazır hesap yoktur; ilk açılışta 'Yeni Firma Oluştur' ile firma kodu ve şifre belirlenir, diğer cihazlardan 'Mevcut Firmaya Bağlan' ile girilir. İnternet yokken de giriş yapılabilir.",
       "Güvenli Firma Oturumu: Her firma kendi hesabıyla sunucuya bağlanır; veritabanı kurallarıyla her firma yalnızca kendi verisine erişebilir. Firma şifresi Ayarlar > Profil bölümünden değiştirilebilir.",

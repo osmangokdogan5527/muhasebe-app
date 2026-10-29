@@ -38,6 +38,7 @@ import { PosCartItem, PosPaymentSplit } from './types/pos';
 import { PosView } from './components/pos/PosView';
 import { enableNetwork, disableNetwork } from 'firebase/firestore';
 import { BackupWizardModal } from './components/backup/BackupWizardModal';
+import { FluidMeshBackground } from './components/FluidMeshBackground';
 import DashboardView from './components/DashboardView';
 import CarilerView from './components/CarilerView';
 import StoklarView from './components/StoklarView';
@@ -845,17 +846,7 @@ export default function App() {
     <div data-design-style={designStyle} className={`min-h-screen relative ${(currentThemeData as any).bgClass || 'bg-[#050505]'} text-[#e0e0e0] flex flex-col md:flex-row font-sans overflow-x-hidden`}>
       <GlobalStyles themeCssRules={themeCssRules} bodyPatternSvg={bodyPatternSvg} activePattern={activePatternObj} />
 
-      {designStyle === 'fluid-mesh' && (
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 select-none">
-          {/* Base deep purple/black background */}
-          <div className="absolute inset-0 bg-[#06040e]" />
-          {/* Floating fluid blobs with blur */}
-          <div className="absolute -top-1/4 -left-1/4 w-[70vw] h-[70vw] rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 opacity-[0.35] blur-[120px] animate-mesh-float-1" />
-          <div className="absolute -bottom-1/4 -right-1/4 w-[75vw] h-[75vw] rounded-full bg-gradient-to-br from-pink-500 to-rose-600 opacity-[0.35] blur-[120px] animate-mesh-float-2" />
-          <div className="absolute top-1/4 right-1/4 w-[60vw] h-[60vw] rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 opacity-[0.25] blur-[100px] animate-mesh-float-3" />
-          <div className="absolute bottom-1/4 left-1/4 w-[65vw] h-[65vw] rounded-full bg-gradient-to-br from-amber-500 to-orange-500 opacity-[0.25] blur-[100px] animate-mesh-float-4" />
-        </div>
-      )}
+      {designStyle === 'fluid-mesh' && <FluidMeshBackground />}
 
 
       
