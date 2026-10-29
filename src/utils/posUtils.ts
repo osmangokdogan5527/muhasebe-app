@@ -1,6 +1,7 @@
 import { Stock } from '../types';
 import { PosCartItem, PosPaymentSplit } from '../types/pos';
-import { reportErrorToTelegram } from './telegramLogger';
+import { logError } from './errorLogger';
+import { formatDateISO } from './dateUtils';
 
 /**
  * Barkod veya Arama Terimine göre stok bulur
@@ -24,7 +25,7 @@ export function findStockByBarcodeOrSearch(stocks: Stock[], searchTerm: string):
 
     return null;
   } catch (err: any) {
-    reportErrorToTelegram(err, 'posUtils:findStockByBarcodeOrSearch');
+    logError(err, 'posUtils:findStockByBarcodeOrSearch');
     return null;
   }
 }
@@ -43,13 +44,16 @@ export function calculateLineTotal(unitPrice: number, quantity: number, discount
 }
 
 /**
- * Benzersiz Fiş Numarası Üretir (Örn: POS-20260729-1024)
+ * Benzersiz Fiş Numarası Üretir (Örn: POS-20261101-003015-A7K2)
+ * Tarih + saat (saniye) + 4 karakterlik rastgele ek: aynı saniyede iki satış olsa bile
+ * çakışma ihtimali ~1/1,7 milyondur (eski 4 haneli rastgele sayıda günde 100 satışta ~%40'tı).
  */
 export function generateReceiptNo(): string {
   const now = new Date();
-  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-  return `POS-${dateStr}-${randomSuffix}`;
+  const dateStr = formatDateISO(now).replace(/-/g, '');
+  const timeStr = [now.getHours(), now.getMinutes(), now.getSeconds()].map((n) => String(n).padStart(2, '0')).join('');
+  const randomSuffix = Math.floor(Math.random() * 36 ** 4).toString(36).toUpperCase().padStart(4, '0');
+  return `POS-${dateStr}-${timeStr}-${randomSuffix}`;
 }
 
 /**
@@ -114,7 +118,7 @@ export function calculateCartSummary(
       grandTotal: Number(grandTotal.toFixed(2)),
     };
   } catch (err: any) {
-    reportErrorToTelegram(err, 'posUtils:calculateCartSummary');
+    logError(err, 'posUtils:calculateCartSummary');
     return {
       rawTotal: 0,
       totalLineDiscount: 0,

@@ -1,6 +1,9 @@
 import React from 'react';
 import { User, ChevronDown, Shield, X, CloudLightning, RotateCcw, Download, Trash2, AlertTriangle, Check, ChevronUp, MessageSquare } from 'lucide-react';
 import { StormLogo, APP_VERSION } from '../constants';
+import { DeviceAccount } from '../utils/accountStore';
+import { TenantLoginPanel } from './auth/TenantLoginPanel';
+import { FluidMeshBackground } from './FluidMeshBackground';
 
 interface AuthScreenProps {
   currentThemeData: any;
@@ -10,13 +13,8 @@ interface AuthScreenProps {
   sidebarPattern: string;
   sidebarPatternOpacity: number;
   designStyle: string;
-  selectedPinAccount: any;
-  setSelectedPinAccount: (acc: any) => void;
-  usersList: any[];
-  enteredPin: string;
-  setEnteredPin: (pin: string) => void;
-  authError: string | null;
-  setAuthError: (err: string | null) => void;
+  accounts: DeviceAccount[];
+  setAccounts: (accounts: DeviceAccount[]) => void;
   setUserRole: (role: any) => void;
   setActiveTab: (tab: string) => void;
   setActiveUser: (user: string) => void;
@@ -47,13 +45,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   sidebarPattern,
   sidebarPatternOpacity,
   designStyle,
-  selectedPinAccount,
-  setSelectedPinAccount,
-  usersList,
-  enteredPin,
-  setEnteredPin,
-  authError,
-  setAuthError,
+  accounts,
+  setAccounts,
   setUserRole,
   setActiveTab,
   setActiveUser,
@@ -147,62 +140,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
   const timelineBorder = isCleanLight ? 'border-slate-100' : 'border-white/10';
 
-  // Dynamic mesh background gradients matching the activeTheme!
-  const getMeshGradients = (themeId: string) => {
-    switch (themeId) {
-      case 'sky':
-      case 'sampi10-blue':
-        return {
-          blob1: 'from-blue-600 to-sky-700',
-          blob2: 'from-indigo-500 to-cyan-600',
-          blob3: 'from-cyan-500 to-blue-600',
-          blob4: 'from-indigo-700 to-slate-800'
-        };
-      case 'teal':
-        return {
-          blob1: 'from-teal-600 to-emerald-700',
-          blob2: 'from-cyan-500 to-teal-600',
-          blob3: 'from-emerald-500 to-teal-600',
-          blob4: 'from-teal-800 to-cyan-900'
-        };
-      case 'amber':
-        return {
-          blob1: 'from-amber-600 to-orange-700',
-          blob2: 'from-yellow-500 to-amber-600',
-          blob3: 'from-orange-500 to-yellow-600',
-          blob4: 'from-amber-800 to-orange-950'
-        };
-      case 'emerald':
-        return {
-          blob1: 'from-emerald-600 to-teal-700',
-          blob2: 'from-green-500 to-emerald-600',
-          blob3: 'from-teal-500 to-green-600',
-          blob4: 'from-emerald-800 to-teal-950'
-        };
-      case 'red':
-        return {
-          blob1: 'from-red-600 to-rose-700',
-          blob2: 'from-orange-500 to-red-600',
-          blob3: 'from-rose-500 to-red-600',
-          blob4: 'from-red-800 to-rose-950'
-        };
-      case 'purple':
-        return {
-          blob1: 'from-purple-600 to-indigo-700',
-          blob2: 'from-fuchsia-500 to-purple-600',
-          blob3: 'from-indigo-500 to-fuchsia-600',
-          blob4: 'from-purple-800 to-indigo-950'
-        };
-      default:
-        return {
-          blob1: 'from-indigo-600 to-purple-700',
-          blob2: 'from-pink-500 to-rose-600',
-          blob3: 'from-teal-500 to-emerald-600',
-          blob4: 'from-amber-500 to-orange-500'
-        };
-    }
-  };
-  const meshColors = getMeshGradients(activeTheme);
 
   const mainBgStyle = isGlass 
     ? {
@@ -248,17 +185,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           }
         `}</style>
 
-        {isFluidMesh && (
-          <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 select-none">
-            {/* Deep background */}
-            <div className="absolute inset-0 bg-[#06040e]" />
-            {/* Rotating and scaling color blobs with heavy blur */}
-            <div className={`absolute -top-[20%] -left-[20%] w-[80vw] h-[80vw] rounded-full bg-gradient-to-br ${meshColors.blob1} opacity-[0.38] blur-[120px] animate-mesh-float-1`} />
-            <div className={`absolute -bottom-[20%] -right-[20%] w-[85vw] h-[85vw] rounded-full bg-gradient-to-br ${meshColors.blob2} opacity-[0.38] blur-[120px] animate-mesh-float-2`} />
-            <div className={`absolute top-[20%] right-[10%] w-[65vw] h-[65vw] rounded-full bg-gradient-to-br ${meshColors.blob3} opacity-[0.25] blur-[100px] animate-mesh-float-3`} />
-            <div className={`absolute bottom-[20%] left-[10%] w-[70vw] h-[70vw] rounded-full bg-gradient-to-br ${meshColors.blob4} opacity-[0.25] blur-[100px] animate-mesh-float-4`} />
-          </div>
-        )}
+        {isFluidMesh && <FluidMeshBackground />}
         
         <div className="w-full max-w-md my-auto relative z-10">
           <div className="text-center mb-10 flex flex-col items-center">
@@ -266,88 +193,28 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             <p className={`text-xs uppercase tracking-widest font-mono ${textTertiary}`}>Güvenli Yönetim Paneli</p>
           </div>
 
-          {!selectedPinAccount ? (
-            <div className="space-y-3 animate-fade-in">
-              <h2 className={`text-xs font-bold uppercase tracking-widest mb-6 text-center ${textSecondary}`}>Hesabınızı Seçin</h2>
-              {usersList.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => setSelectedPinAccount(u)}
-                  className={`w-full flex items-center justify-between p-4 rounded-xl transition group cursor-pointer ${buttonBgClass}`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition ${userIconBg}`}>
-                      <User size={20} />
-                    </div>
-                    <span className={`font-bold tracking-wide ${textPrimary}`}>{u.name}</span>
-                  </div>
-                  <ChevronDown className={`${textMuted} group-hover:text-teal-500 -rotate-90 transition`} size={18} />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className={`${cardBgClass} rounded-2xl p-8 animate-fade-in`}>
-              <button 
-                onClick={() => {
-                  setSelectedPinAccount(null);
-                  setEnteredPin('');
-                  setAuthError(null);
-                }}
-                className={`flex items-center gap-2 text-xs uppercase tracking-widest font-bold mb-8 transition cursor-pointer ${textTertiary} hover:text-teal-500`}
-              >
-                <ChevronDown className="rotate-90" size={14} />
-                Geri Dön
-              </button>
-              
-              <div className="text-center mb-8">
-                <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center mx-auto mb-4">
-                  <User size={24} />
-                </div>
-                <h3 className={`text-lg font-bold tracking-wider ${textPrimary}`}>{selectedPinAccount.name}</h3>
-                <p className={`text-xs mt-1 ${textTertiary}`}>Lütfen 6 haneli erişim şifrenizi girin</p>
-              </div>
-
-              <div className="space-y-6">
-                <div>
-                  <input
-                    type="password"
-                    maxLength={6}
-                    value={enteredPin}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/[^0-9]/g, '');
-                      setEnteredPin(val);
-                      if (authError) setAuthError(null);
-                      
-                      if (val.length === 6) {
-                        if (val === selectedPinAccount.pin) {
-                          const userData = {
-                            uid: selectedPinAccount.id,
-                            displayName: selectedPinAccount.name,
-                            email: `${selectedPinAccount.id}@storm.com`
-                          };
-                          localStorage.setItem('storm_muhasebe_active_user', JSON.stringify(userData));
-                          setUserRole('employee');
-                          const defaultTab = window.innerWidth < 768 ? 'menu' : 'cariler';
-                          setActiveTab(defaultTab);
-                          setActiveUser(selectedPinAccount.id);
-                          setUser(userData as any);
-                        } else {
-                          setAuthError('Hatalı şifre girdiniz.');
-                          setEnteredPin('');
-                        }
-                      }
-                    }}
-                    placeholder="••••••"
-                    className={`w-full text-center text-3xl tracking-[1em] placeholder-slate-400 transition outline-none font-mono px-4 py-4 rounded-xl focus:border-teal-500/50 ${inputStyleClass}`}
-                    autoFocus
-                  />
-                  {authError && (
-                    <p className="text-rose-500 text-xs text-center mt-3 font-bold">{authError}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          <TenantLoginPanel
+            accounts={accounts}
+            onAccountsChange={setAccounts}
+            styles={{ textPrimary, textSecondary, textTertiary, textMuted, cardBgClass, buttonBgClass, userIconBg, inputStyleClass }}
+            onLoggedIn={(account, offline) => {
+              if (offline) {
+                alert('İnternet bağlantısı yok: çevrimdışı giriş yapıldı. Yapılan işlemler bağlantı gelince sunucuya eşitlenir.');
+              }
+              const userData = {
+                uid: account.id,
+                displayName: account.name,
+                photoURL: account.photoURL || '',
+                email: `${account.id}@storm.com`
+              };
+              localStorage.setItem('storm_muhasebe_active_user', JSON.stringify(userData));
+              setUserRole('employee');
+              const defaultTab = window.innerWidth < 768 ? 'menu' : 'cariler';
+              setActiveTab(defaultTab);
+              setActiveUser(account.id);
+              setUser(userData as any);
+            }}
+          />
 
         </div>
 
@@ -382,8 +249,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   setAdminPin(val);
                   if (adminAuthError) setAdminAuthError(null);
                   
+                  // Sistem loglarına erişim, uygulamanın Yönetici PIN'i ile açılır (Ayarlar > Yetkiler)
+                  const adminPinCode = localStorage.getItem('storm_muhasebe_admin_pin') || '1923';
                   if (val.length >= 4) {
-                    if (val === '270212' || val === '000000') { 
+                    if (val === adminPinCode) { 
                       setShowAdminDashboard(true);
                       setShowAdminLogin(false);
                       setAdminPin('');

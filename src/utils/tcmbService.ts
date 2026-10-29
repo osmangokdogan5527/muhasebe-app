@@ -54,6 +54,23 @@ function parseTCMBXml(xmlText: string): { USD: TCMBRate; EUR: TCMBRate } | null 
   return null;
 }
 
+/**
+ * Son kaydedilen kurları (tarihi geçmiş olsa da) senkron döndürür; hiç yoksa sabit yedek kurları.
+ * Ekranlar ilk açılışta bunu kullanır, ardından fetchTCMBRates ile güncel kura geçer.
+ */
+export function getCachedOrFallbackRates(): TCMBRatesResult {
+  try {
+    const cached = localStorage.getItem('storm_tcmb_rates_cache');
+    if (cached) {
+      const parsed = JSON.parse(cached) as TCMBRatesResult;
+      if (parsed && parsed.USD && parsed.EUR) return parsed;
+    }
+  } catch (e) {
+    console.error('Failed to read cached rates:', e);
+  }
+  return FALLBACK_RATES;
+}
+
 export async function fetchTCMBRates(forceRefresh: boolean = false): Promise<TCMBRatesResult> {
   // Check localStorage Cache first
   if (!forceRefresh) {

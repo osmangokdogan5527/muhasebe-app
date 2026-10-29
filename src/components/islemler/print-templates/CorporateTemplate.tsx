@@ -128,7 +128,7 @@ export function CorporateTemplate({ dynamicPrintVars, printSettings }: any) {
                                               <td className="py-2.5 px-3 text-zinc-400 text-center font-mono">%0</td>
                                             )}
                                             {activeTemplate?.showVatRate && (
-                                              <td className="py-2.5 px-3 text-zinc-400 text-center font-mono">%{item.taxRate || 20}</td>
+                                              <td className="py-2.5 px-3 text-zinc-400 text-center font-mono">%{item.taxRate ?? 0}</td>
                                             )}
                                             <td className="py-2.5 px-3 font-bold text-zinc-900 text-right font-mono text-[10px]">
                                               {formatPrintCurrency(item.total, transaction.currency || 'TRY')}
@@ -206,7 +206,7 @@ export function CorporateTemplate({ dynamicPrintVars, printSettings }: any) {
                                             <div className="flex justify-between">
                                               <span>KDV MATRAH TOPLAMI:</span>
                                               <span>{formatPrintCurrency(
-                                                transaction.items.reduce((acc, curr) => acc + (curr.total / (1 + (curr.taxRate || 20)/100)), 0),
+                                                transaction.items.reduce((acc, curr) => acc + (curr.total / (1 + (curr.taxRate ?? 0)/100)), 0),
                                                 transaction.currency || 'TRY'
                                               )}</span>
                                             </div>
@@ -227,7 +227,7 @@ export function CorporateTemplate({ dynamicPrintVars, printSettings }: any) {
                                           <span>TOPLAM KDV:</span>
                                           <span>{formatPrintCurrency(
                                             transaction.items && transaction.items.length > 0
-                                              ? transaction.items.reduce((acc, curr) => acc + (curr.total - (curr.total / (1 + (curr.taxRate || 20)/100))), 0)
+                                              ? transaction.items.reduce((acc, curr) => acc + (curr.total - (curr.total / (1 + (curr.taxRate ?? 0)/100))), 0)
                                               : 0,
                                             transaction.currency || 'TRY'
                                           )}</span>

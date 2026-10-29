@@ -4,8 +4,10 @@ import { X, Printer, Download, Plus, ArrowRight, ArrowLeft, RotateCcw, AlertTria
 
 
 import { createTransaction, saveCari } from '../../firebase';
+import { calculateInvoiceLine } from '../../utils/invoiceMath';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { getTodayISO } from '../../utils/dateUtils';
 
 export interface LedgerDrawerProps {
   isOpen: boolean;
@@ -39,7 +41,7 @@ export function LedgerDrawer({
   const [targetBalanceInput, setTargetBalanceInput] = useState("");
   const [quickTxAmount, setQuickTxAmount] = useState("");
   const [quickTxInvoiceNo, setQuickTxInvoiceNo] = useState("");
-  const [quickTxDate, setQuickTxDate] = useState(new Date().toISOString().substring(0, 10));
+  const [quickTxDate, setQuickTxDate] = useState(getTodayISO());
   const [quickTxAccount, setQuickTxAccount] = useState<"cash" | "bank" | "pos" | "">("cash");
   const [quickTxBankAccountId, setQuickTxBankAccountId] = useState("");
   const [quickTxDescription, setQuickTxDescription] = useState("");
@@ -59,7 +61,7 @@ export function LedgerDrawer({
         const price = quickTxType === "sale_return" ? selectedStock.salesPrice : selectedStock.purchasePrice;
         setQuickTxUnitPrice(price.toString());
         const qty = parseFloat(quickTxQuantity) || 1;
-        setQuickTxAmount((qty * price).toFixed(2));
+        setQuickTxAmount(calculateInvoiceLine(qty, price, selectedStock.taxRate).total.toFixed(2));
       } else {
         setQuickTxUnitPrice("");
         setQuickTxAmount("");
@@ -72,11 +74,13 @@ export function LedgerDrawer({
     if (quickTxType === "sale_return" || quickTxType === "purchase_return") {
       const qty = parseFloat(quickTxQuantity) || 0;
       const price = parseFloat(quickTxUnitPrice) || 0;
+      const selectedStock = stoklar.find(s => s.id === quickTxStockId);
       if (qty > 0 && price > 0) {
-        setQuickTxAmount((qty * price).toFixed(2));
+        // İade tutarı KDV dahil olmalı; aksi halde satışın KDV kısmı cari borcunda kalır
+        setQuickTxAmount(calculateInvoiceLine(qty, price, selectedStock?.taxRate || 0).total.toFixed(2));
       }
     }
-  }, [quickTxQuantity, quickTxUnitPrice, quickTxType]);
+  }, [quickTxQuantity, quickTxUnitPrice, quickTxType, quickTxStockId, stoklar]);
 
   // Populate Notes when currentCari changes
   useEffect(() => {
@@ -240,7 +244,7 @@ export function LedgerDrawer({
       }
       const price = parseFloat(quickTxUnitPrice) || 0;
       const taxRateValue = selectedStock.taxRate || 0;
-      const itemTotal = qty * price * (1 + taxRateValue / 100);
+      const itemTotal = calculateInvoiceLine(qty, price, taxRateValue).total;
 
       items = [{
         stockId: selectedStock.id,
@@ -377,9 +381,9 @@ export function LedgerDrawer({
               : t.type === "purchase"
                 ? "Alış Faturası"
                 : t.type === "collection"
-                  ? (t.account === "" || t.description?.toLowerCase().includes("iskonto") || t.description?.toLowerCase().includes("düzeltme") || t.description?.toLowerCase().includes("indirim") ? "İskonto / Alacak Dekontu" : "Tahsilat")
+                  ? t.linkedInvoiceId ? "Peşin Tahsilat" : (t.account === "" || t.description?.toLowerCase().includes("iskonto") || t.description?.toLowerCase().includes("düzeltme") || t.description?.toLowerCase().includes("indirim") ? "İskonto / Alacak Dekontu" : "Tahsilat")
                   : t.type === "payment"
-                    ? (t.account === "" || t.description?.toLowerCase().includes("dekont") || t.description?.toLowerCase().includes("düzeltme") || t.description?.toLowerCase().includes("masraf") ? "Borç Dekontu / Düzeltme" : "Ödeme")
+                    ? t.linkedInvoiceId ? "Peşin Ödeme" : (t.account === "" || t.description?.toLowerCase().includes("dekont") || t.description?.toLowerCase().includes("düzeltme") || t.description?.toLowerCase().includes("masraf") ? "Borç Dekontu / Düzeltme" : "Ödeme")
                     : t.type === "sale_return"
                       ? "Satıştan İade"
                       : t.type === "purchase_return"

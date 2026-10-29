@@ -7,7 +7,7 @@ import { usePrintSettings } from './hooks/usePrintSettings';
 import { useBackupActions } from './hooks/useBackupActions';
 import { useLogoActions } from './hooks/useLogoActions';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { Cari, Stock, Transaction, CekSenet, Expense, Employee, EmployeeTransaction, Credit, BankAccount, AccountTransaction, KeyboardShortcut } from './types';
+import { Cari, Stock, Transaction, CekSenet, Expense, Employee, EmployeeTransaction, Credit, BankAccount, AccountTransaction, KeyboardShortcut, LinkedReceiptInput } from './types';
 import { 
   subscribeCariler, 
   subscribeStoklar, 
@@ -30,13 +30,15 @@ import {
   setActiveUser,
   saveBankAccount,
   createTransaction,
+  ensureRetailCari,
   db
 } from './firebase';
-import { reportErrorToTelegram } from './utils/telegramLogger';
+import { logError } from './utils/errorLogger';
 import { PosCartItem, PosPaymentSplit } from './types/pos';
 import { PosView } from './components/pos/PosView';
 import { enableNetwork, disableNetwork } from 'firebase/firestore';
 import { BackupWizardModal } from './components/backup/BackupWizardModal';
+import { FluidMeshBackground } from './components/FluidMeshBackground';
 import DashboardView from './components/DashboardView';
 import CarilerView from './components/CarilerView';
 import StoklarView from './components/StoklarView';
@@ -89,7 +91,9 @@ import {
 } from 'lucide-react';
 import { compressImage } from './utils/imageCompressor';
 
-import { StormLogo, APP_VERSION, CHANGELOG, PREDEFINED_USERS, COLOR_PRESETS, TAB_DEFS, SIDEBAR_PATTERNS, PIN_ACCOUNTS, changelogData, DEFAULT_SHORTCUTS } from "./constants";
+import { StormLogo, APP_VERSION, CHANGELOG, COLOR_PRESETS, TAB_DEFS, SIDEBAR_PATTERNS, changelogData, DEFAULT_SHORTCUTS } from "./constants";
+import { DeviceAccount, loadDeviceAccounts, upsertDeviceAccount } from "./utils/accountStore";
+import { changeTenantPassword } from "./utils/tenantAuth";
 export default function App() {
   const [isBackupWizardOpen, setIsBackupWizardOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -194,9 +198,7 @@ export default function App() {
   const {
     user, setUser,
     authLoading, setAuthLoading,
-    authError, setAuthError,
-    enteredPin, setEnteredPin,
-    handlePinLogin, handleSignOut
+    handleSignOut
   } = useAppAuth(showToast, setUserRole, setActiveTab);
 
   
@@ -213,49 +215,8 @@ export default function App() {
   const [feedbackImage, setFeedbackImage] = useState<string | null>(null);
   const [feedbackImageLoading, setFeedbackImageLoading] = useState(false);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
-  // Init users from localStorage or predefined
-  const [usersList, setUsersList] = useState<any[]>(() => {
-    const saved = localStorage.getItem('storm_muhasebe_users');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Map PREDEFINED_USERS so any code updates (like name or ID changes) are reflected,
-        // but retain customized fields like photoURL and explicitly changed pins/names
-        return PREDEFINED_USERS.map(defaultUser => {
-          // Check for exact ID match or old ID match (company_3 -> firma_1 etc)
-          let matchId = defaultUser.id;
-          if (defaultUser.id === 'firma_1') matchId = 'company_3';
-          if (defaultUser.id === 'firma_2') matchId = 'company_4';
-          if (defaultUser.id === 'firma_3') matchId = 'company_5';
-          
-          const savedUser = parsed.find((u: any) => u.id === defaultUser.id || u.id === matchId);
-          if (savedUser) {
-            // Only use saved name/pin if they were actually customized from the old default
-            const oldDefaults: any = {
-              'admin': { name: 'Yönetici', pin: '270212' },
-              'muhasebe': { name: 'Muhasebe Departmanı', pin: '041646' },
-              'company_3': { name: 'Kullanıcı 3', pin: '111111' },
-              'company_4': { name: 'Kullanıcı 4', pin: '222222' },
-              'company_5': { name: 'Kullanıcı 5', pin: '333333' }
-            };
-            const isNameCustomized = oldDefaults[matchId] && savedUser.name !== oldDefaults[matchId].name && savedUser.name !== defaultUser.name;
-            const isPinCustomized = oldDefaults[matchId] && savedUser.pin !== oldDefaults[matchId].pin && savedUser.pin !== defaultUser.pin;
-            
-            return {
-              ...defaultUser,
-              name: isNameCustomized ? savedUser.name : defaultUser.name,
-              pin: isPinCustomized ? savedUser.pin : defaultUser.pin,
-              photoURL: savedUser.photoURL || ''
-            };
-          }
-          return defaultUser;
-        });
-      } catch (e) {}
-    }
-    return PREDEFINED_USERS;
-  });
-
-  const [selectedPinAccount, setSelectedPinAccount] = useState<typeof PREDEFINED_USERS[0] | null>(null);
+  // Bu cihazda oluşturulan/bağlanılan firmalar (kodda hazır hesap yoktur)
+  const [accounts, setAccounts] = useState<DeviceAccount[]>(() => loadDeviceAccounts());
 
   // Settings password variables
   const [settingsPasswordSuccess, setSettingsPasswordSuccess] = useState<string | null>(null);
@@ -579,18 +540,15 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
-    // 1. Update in the user list so that it shows on the login screen
-    const updatedUsers = usersList.map(u => {
-      if (u.id === user?.uid) {
-        return {
-          ...u,
-          name: profileName || user.displayName || u.name,
-          photoURL: profilePhoto || (user as any).photoURL || u.photoURL
-        };
+    // 1. Update in the device account list so that it shows on the login screen
+    const existing = accounts.find(a => a.id === user.uid);
+    if (existing) {
+      const name = profileName || user.displayName || existing.name;
+      const photoURL = profilePhoto || (user as any).photoURL || existing.photoURL || '';
+      if (name !== existing.name || photoURL !== (existing.photoURL || '')) {
+        setAccounts(upsertDeviceAccount({ ...existing, name, photoURL }));
       }
-      return u;
-    });
-    localStorage.setItem('storm_muhasebe_users', JSON.stringify(updatedUsers));
+    }
     // 2. Update the active logged in user in localStorage
     const updatedUser = {
       ...user,
@@ -598,7 +556,7 @@ export default function App() {
       photoURL: profilePhoto || (user as any).photoURL
     };
     localStorage.setItem('storm_muhasebe_active_user', JSON.stringify(updatedUser));
-  }, [user, profileName, profilePhoto, usersList]);
+  }, [user, profileName, profilePhoto, accounts]);
 
 
 
@@ -737,14 +695,30 @@ export default function App() {
     }
   };
 
-  const handleProfileUpdate = async () => {
+  const handleProfileUpdate = async (currentPassword?: string) => {
     if (!user) return;
+    setSettingsPasswordError(null);
+    setSettingsPasswordSuccess(null);
     try {
-      if (profileName) {
-        await updateProfile(user, { displayName: profileName });
+      // Firma adı Firebase hesabına da yazılır (başka cihazdan bağlanırken bu ad görünür)
+      if (profileName && auth.currentUser && auth.currentUser.email === `${user.uid}@storm.com`) {
+        await updateProfile(auth.currentUser, { displayName: profileName });
+      }
+
+      if (profilePassword) {
+        const account = accounts.find(a => a.id === user.uid) || { id: user.uid, name: profileName || user.displayName || user.uid };
+        const result = await changeTenantPassword(account, currentPassword || '', profilePassword);
+        if (!result.ok) {
+          setSettingsPasswordError(result.message || 'Şifre değiştirilemedi.');
+          return;
+        }
+        setAccounts(loadDeviceAccounts());
+        setProfilePassword('');
+        setSettingsPasswordSuccess('Firma şifresi güncellendi. Diğer cihazlarda yeni şifreyle giriş yapın.');
       }
       showToast("Profil bilgileri başarıyla güncellendi.", "success");
     } catch (err: any) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'App.handleProfileUpdate');
       showToast(`Profil güncellenirken hata oluştu: ${err.message}`, "error");
     }
   };
@@ -759,13 +733,8 @@ export default function App() {
         sidebarPattern={sidebarPattern}
         sidebarPatternOpacity={sidebarPatternOpacity}
         designStyle={designStyle}
-        selectedPinAccount={selectedPinAccount}
-        setSelectedPinAccount={setSelectedPinAccount}
-        usersList={usersList}
-        enteredPin={enteredPin}
-        setEnteredPin={setEnteredPin}
-        authError={authError}
-        setAuthError={setAuthError}
+        accounts={accounts}
+        setAccounts={setAccounts}
         setUserRole={setUserRole}
         setActiveTab={setActiveTab}
         setActiveUser={setActiveUser}
@@ -824,31 +793,50 @@ export default function App() {
         total: item.totalLine,
       }));
 
-      // 1. Ana Satış Faturası / İşlemi
+      // Müşteri seçilmediyse satış sabit "Perakende Müşteri" carisine yazılır (yoksa oluşturulur)
+      const cariId = saleData.cariId || await ensureRetailCari();
+      const split = saleData.paymentSplit;
+
+      // 1. Ana Satış Faturası: tahsil edilen tutarlar aşağıdaki bağlı tahsilatlarla kasaya/POS'a girer,
+      // fatura kendisi açık hesap olarak kaydedilir; ödenmeyen kısım (veresiye) carinin borcunda kalır.
       const mainTransaction: Omit<Transaction, 'id'> = {
         invoiceNo: saleData.receiptNo,
         type: 'sale',
-        cariId: saleData.cariId || 'perakende_musteri',
+        cariId,
         cariName: saleData.cariName || 'Perakende Müşteri',
         date: saleData.date,
         amount: saleData.grandTotal,
-        account: saleData.paymentSplit.cashAmount > 0
-          ? 'cash'
-          : saleData.paymentSplit.posAmount > 0
-          ? 'pos'
-          : '',
-        bankAccountId: saleData.paymentSplit.posAccountId,
+        account: '',
         description: `POS Hızlı Satış Fişi No: ${saleData.receiptNo}`,
         items,
         createdAt: new Date().toISOString(),
         currency: 'TRY',
       };
 
-      await createTransaction(mainTransaction);
+      // 2. Bağlı tahsilatlar: nakit ve kart kısmı ayrı kayıtlar olarak doğru hesaba işlenir
+      const linkedReceipts: LinkedReceiptInput[] = [];
+      if ((split.cashAmount || 0) > 0) {
+        linkedReceipts.push({
+          amount: split.cashAmount,
+          account: 'cash',
+          description: `POS Fişi ${saleData.receiptNo} - Nakit Tahsilat`,
+        });
+      }
+      if ((split.posAmount || 0) > 0) {
+        const posAccount = bankAccounts.find((a) => a.id === split.posAccountId);
+        linkedReceipts.push({
+          amount: split.posAmount,
+          account: posAccount?.type === 'banka' ? 'bank' : 'pos',
+          bankAccountId: split.posAccountId || undefined,
+          description: `POS Fişi ${saleData.receiptNo} - Kart/POS Tahsilat`,
+        });
+      }
+
+      await createTransaction(mainTransaction, linkedReceipts);
       showToast('Hızlı perakende satış başarıyla tamamlandı ve stoklar düşüldü.', 'success');
       return true;
     } catch (err: any) {
-      reportErrorToTelegram(err, 'App:handleCompletePosSale');
+      logError(err, 'App:handleCompletePosSale');
       showToast('Satış kaydı oluşturulurken hata: ' + (err.message || err), 'error');
       return false;
     }
@@ -858,17 +846,7 @@ export default function App() {
     <div data-design-style={designStyle} className={`min-h-screen relative ${(currentThemeData as any).bgClass || 'bg-[#050505]'} text-[#e0e0e0] flex flex-col md:flex-row font-sans overflow-x-hidden`}>
       <GlobalStyles themeCssRules={themeCssRules} bodyPatternSvg={bodyPatternSvg} activePattern={activePatternObj} />
 
-      {designStyle === 'fluid-mesh' && (
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 select-none">
-          {/* Base deep purple/black background */}
-          <div className="absolute inset-0 bg-[#06040e]" />
-          {/* Floating fluid blobs with blur */}
-          <div className="absolute -top-1/4 -left-1/4 w-[70vw] h-[70vw] rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 opacity-[0.35] blur-[120px] animate-mesh-float-1" />
-          <div className="absolute -bottom-1/4 -right-1/4 w-[75vw] h-[75vw] rounded-full bg-gradient-to-br from-pink-500 to-rose-600 opacity-[0.35] blur-[120px] animate-mesh-float-2" />
-          <div className="absolute top-1/4 right-1/4 w-[60vw] h-[60vw] rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 opacity-[0.25] blur-[100px] animate-mesh-float-3" />
-          <div className="absolute bottom-1/4 left-1/4 w-[65vw] h-[65vw] rounded-full bg-gradient-to-br from-amber-500 to-orange-500 opacity-[0.25] blur-[100px] animate-mesh-float-4" />
-        </div>
-      )}
+      {designStyle === 'fluid-mesh' && <FluidMeshBackground />}
 
 
       
@@ -1038,7 +1016,7 @@ export default function App() {
           {renderWorkspaceView('calisanlar', <CalisanlarView employees={employees} transactions={employeeTransactions} ceksenet={ceksenet} aiPrefilledData={aiPrefilledData} onClearAiPrefilledData={() => setAiPrefilledData(null)} />)}
         </div>
         <div className={activeTab === 'kasa' ? 'block animate-fade-in' : 'hidden'}>
-          {renderWorkspaceView('kasa', <KasaView islemler={islemler} expenses={expenses} employeeTransactions={employeeTransactions} bankAccounts={bankAccounts} accountTransactions={accountTransactions} />)}
+          {renderWorkspaceView('kasa', <KasaView islemler={islemler} cariler={cariler} expenses={expenses} employeeTransactions={employeeTransactions} bankAccounts={bankAccounts} accountTransactions={accountTransactions} />)}
         </div>
         <div className={activeTab === 'krediler' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('krediler', <KredilerView credits={credits} />)}
@@ -1117,7 +1095,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         setAiPrefilledData={setAiPrefilledData}
         setFeedbackList={setFeedbackList}
-        financialData={{ cariler, stoklar, islemler, ceksenet, expenses, bankAccounts }}
+        financialData={{ cariler, stoklar, islemler, ceksenet, expenses, bankAccounts, employees, employeeTransactions, accountTransactions }}
         userRole={userRole}
         isSecurityActive={isSecurityActive}
         sensitiveTabs={sensitiveTabs}

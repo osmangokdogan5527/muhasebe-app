@@ -17,6 +17,7 @@ import {
   RecurringTransaction
 } from "../types";
 import { getPendingRecurringItems, getTodayISO } from "../utils/recurringUtils";
+import { getSyncedEmployeeExpenseIds } from "../utils/expenseUtils";
 import { 
   ResponsiveContainer,
   AreaChart,
@@ -289,6 +290,7 @@ export default function DashboardView({
 
     // Subtract expenses from Cash & Bank balances based on payment account and currency
     let totalExpenses = 0;
+    const syncedExpenseIds = getSyncedEmployeeExpenseIds(employeeTransactions);
     expenses.forEach((exp) => {
       const cur = exp.currency || "TRY";
       if (cur !== dashboardCurrency) return;
@@ -297,7 +299,8 @@ export default function DashboardView({
       totalExpenses += amt;
 
       const expDate = new Date(exp.date).getTime();
-      if (expDate >= currentMonthStart && expDate <= currentMonthEnd) {
+      // Maaş ödemeleri aylık net hesabına monthlySalaries üzerinden giriyor
+      if (expDate >= currentMonthStart && expDate <= currentMonthEnd && !syncedExpenseIds.has(exp.id)) {
         monthlyExpenses += amt;
       }
 
@@ -312,10 +315,10 @@ export default function DashboardView({
 
     // Add employee transactions for monthly salaries
     employeeTransactions?.forEach((et) => {
-      // Basic assumption: employee transactions are in TRY since no currency field in EmployeeTransaction
-      if (dashboardCurrency !== "TRY") return;
+      if ((et.currency || "TRY") !== dashboardCurrency) return;
 
-      if (et.type === "payment") {
+      // Avans da maaşın peşin ödenen kısmıdır; ödeme ile birlikte sayılır
+      if (et.type === "payment" || et.type === "advance") {
         const etDate = new Date(et.date).getTime();
         if (etDate >= currentMonthStart && etDate <= currentMonthEnd) {
           monthlySalaries += et.amount;

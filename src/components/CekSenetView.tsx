@@ -20,6 +20,7 @@ import {
   Wallet,
   AlertCircle
 } from 'lucide-react';
+import { addDaysISO, getTodayISO } from '../utils/dateUtils';
 
 interface CekSenetViewProps {
   ceksenet: CekSenet[];
@@ -47,8 +48,8 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
   const [selectedCariId, setSelectedCariId] = useState('');
   const [amount, setAmount] = useState<number>(0);
   const [currency, setCurrency] = useState<'TRY' | 'USD' | 'EUR'>('TRY');
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().substring(0, 10));
-  const [dueDate, setDueDate] = useState(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10));
+  const [issueDate, setIssueDate] = useState(getTodayISO());
+  const [dueDate, setDueDate] = useState(addDaysISO(30));
   const [bankName, setBankName] = useState('');
   const [bankBranch, setBankBranch] = useState('');
   const [accountNo, setAccountNo] = useState('');
@@ -153,8 +154,8 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
     let collectedTotal = 0;
     let nearMaturityCount = 0;
 
-    const todayStr = new Date().toISOString().substring(0, 10);
-    const thirtyDaysLater = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
+    const todayStr = getTodayISO();
+    const thirtyDaysLater = addDaysISO(30);
 
     ceksenet.forEach(item => {
       if (item.currency !== activeCurrency) return;
@@ -215,8 +216,8 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
     setSelectedCariId('');
     setAmount(0);
     setCurrency(activeCurrency);
-    setIssueDate(new Date().toISOString().substring(0, 10));
-    setDueDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10));
+    setIssueDate(getTodayISO());
+    setDueDate(addDaysISO(30));
     setBankName('');
     setBankBranch('');
     setAccountNo('');
@@ -332,7 +333,7 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
           type: 'collection',
           cariId: selectedItem.cariId,
           cariName: selectedItem.cariName,
-          date: new Date().toISOString().substring(0, 10),
+          date: getTodayISO(),
           amount: selectedItem.amount,
           currency: selectedItem.currency,
           account: actionType === 'collect_cash' ? 'cash' : 'bank',
@@ -349,7 +350,7 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
           type: 'payment',
           cariId: selectedItem.cariId,
           cariName: selectedItem.cariName,
-          date: new Date().toISOString().substring(0, 10),
+          date: getTodayISO(),
           amount: selectedItem.amount,
           currency: selectedItem.currency,
           account: 'bank',
@@ -374,7 +375,7 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
           type: 'payment',
           cariId: targetCari.id,
           cariName: targetCari.name,
-          date: new Date().toISOString().substring(0, 10),
+          date: getTodayISO(),
           amount: selectedItem.amount,
           currency: selectedItem.currency,
           exchangeRate: selectedItem.currency !== 'TRY' ? endorseExchangeRate : 1,
@@ -629,7 +630,7 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
                 <tbody className="divide-y divide-white/5 text-xs text-white/80">
                   {filteredCekSenet.map((item) => {
                     const isReceivable = item.type === 'receivable';
-                    const isPastDue = item.dueDate < new Date().toISOString().substring(0, 10) && item.status === 'portfolio';
+                    const isPastDue = item.dueDate < getTodayISO() && item.status === 'portfolio';
                     
                     return (
                       <tr 
@@ -780,7 +781,7 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
             <div className="block md:hidden divide-y divide-white/5">
               {filteredCekSenet.map((item) => {
                 const isReceivable = item.type === 'receivable';
-                const isPastDue = item.dueDate < new Date().toISOString().substring(0, 10) && item.status === 'portfolio';
+                const isPastDue = item.dueDate < getTodayISO() && item.status === 'portfolio';
 
                 return (
                   <div 

@@ -47,6 +47,8 @@ import {
 } from 'recharts';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
+import { formatDateISO } from '../utils/dateUtils';
+import { useFxRates } from '../hooks/useFxRates';
 
 interface RaporlarViewProps {
   cariler: Cari[];
@@ -79,7 +81,7 @@ export default function RaporlarView({
   });
   const [endDate, setEndDate] = useState(() => {
     const d = new Date();
-    return d.toISOString().split('T')[0];
+    return formatDateISO(d);
   });
 
   // Search/Filter states for subgroups
@@ -92,7 +94,7 @@ export default function RaporlarView({
   // Helpers to resolve date ranges based on preset
   const resolvedDates = useMemo(() => {
     const today = new Date();
-    const formatYMD = (d: Date) => d.toISOString().split('T')[0];
+    const formatYMD = formatDateISO;
 
     switch (datePreset) {
       case 'today':
@@ -146,9 +148,12 @@ export default function RaporlarView({
     return text.replace(/[ğĞüÜşŞıİöÖçÇ]/g, (char) => map[char] || char);
   };
 
+  // Döviz kurları (günlük önbellek, ardından güncel kur)
+  const fxRates = useFxRates();
+
   // Convert foreign amounts to the selected report currency
   // Simple rate converter (in-app fallback rates, or user manual exchangeRate in records)
-  const { convertAmount, formatMoney, filteredIslemler, filteredExpenses, filteredEmployeeTransactions, selectedCari, kdvStats, cariEkstreStats, summaryStats, stockStats, cariStats, incomeExpenseStats } = useRaporlarStats({ islemler, expenses, employeeTransactions, cariler, stoklar, resolvedDates, selectedCariId, selectedCurrency, stockValuationType, stockSearch, cariSearch, cariTypeFilter });
+  const { convertAmount, formatMoney, filteredIslemler, filteredExpenses, filteredEmployeeTransactions, selectedCari, kdvStats, cariEkstreStats, summaryStats, stockStats, cariStats, incomeExpenseStats } = useRaporlarStats({ islemler, expenses, employeeTransactions, cariler, stoklar, resolvedDates, selectedCariId, selectedCurrency, stockValuationType, stockSearch, cariSearch, cariTypeFilter, fxRates });
 
 
   // COLOR THEMES FOR CHART CELLS

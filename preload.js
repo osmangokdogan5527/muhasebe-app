@@ -26,7 +26,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('download-progress', subscription);
   },
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
-  reportError: (errorInfo) => ipcRenderer.send('report-error', errorInfo),
   openExternal: (url) => ipcRenderer.send('open-external', url),
   setAutoBackup: (enabled) => ipcRenderer.send('set-auto-backup', enabled),
   createManualBackup: () => ipcRenderer.invoke('create-manual-backup'),

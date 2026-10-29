@@ -18,6 +18,29 @@ import {
   Key
 } from 'lucide-react';
 import { encryptBackup, decryptBackup, BackupDataPayload } from '../../utils/backupCrypto';
+import { getTodayISO } from '../../utils/dateUtils';
+import { exportAllDatabaseData } from '../../firebase';
+import { APP_VERSION } from '../../constants';
+
+// Yedeğe alınan ve geri yüklemede kabul edilen ayar anahtarları (başka anahtar geri yüklenmez)
+const BACKUP_SETTINGS_KEYS = [
+  'kolay_hesap_accent_theme',
+  'storm_muhasebe_design_style',
+  'storm_muhasebe_logo_theme',
+  'storm_muhasebe_font_size',
+  'storm_muhasebe_sidebar_bg',
+  'storm_muhasebe_sidebar_pattern',
+  'storm_muhasebe_sidebar_pattern_opacity',
+  'storm_muhasebe_sidebar_pattern_color',
+  'storm_muhasebe_hidden_tabs',
+  'storm_muhasebe_tab_order',
+  'storm_muhasebe_print_settings',
+  'storm_print_templates',
+  'storm_muhasebe_shortcuts',
+  'storm_muhasebe_admin_pin',
+  'storm_muhasebe_security_active',
+  'storm_muhasebe_action_permissions'
+];
 
 interface BackupWizardModalProps {
   isOpen: boolean;
@@ -135,49 +158,35 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
   };
 
   // Trigger Backup Download
-  const handleCreateBackup = () => {
+  const handleCreateBackup = async () => {
     setIsActionLoading(true);
     try {
+      // Veriler ekrandaki listelerden değil doğrudan veritabanından okunur (eksiksiz yedek)
+      const dbData = await exportAllDatabaseData();
+
       // Gather current localStorage settings
       const settingsToBackup: { [key: string]: string | null } = {};
-      const settingsKeys = [
-        'kolay_hesap_accent_theme',
-        'storm_muhasebe_design_style',
-        'storm_muhasebe_logo_theme',
-        'storm_muhasebe_font_size',
-        'storm_muhasebe_sidebar_bg',
-        'storm_muhasebe_sidebar_pattern',
-        'storm_muhasebe_sidebar_pattern_opacity',
-        'storm_muhasebe_sidebar_pattern_color',
-        'storm_muhasebe_hidden_tabs',
-        'storm_muhasebe_tab_order',
-        'storm_muhasebe_print_settings',
-        'storm_print_templates',
-        'storm_muhasebe_shortcuts',
-        'storm_muhasebe_admin_pin',
-        'storm_muhasebe_security_active',
-        'storm_muhasebe_action_permissions'
-      ];
+      const settingsKeys = BACKUP_SETTINGS_KEYS;
 
       settingsKeys.forEach(key => {
         settingsToBackup[key] = localStorage.getItem(key);
       });
 
       const payload: BackupDataPayload = {
-        version: '1.8.1',
+        version: APP_VERSION,
         timestamp: new Date().toISOString(),
         collections: {
-          cariler,
-          stoklar,
-          islemler,
-          ceksenet,
-          giderler: expenses,
-          calisanlar: employees,
-          calisanIslemler: employeeTransactions,
-          krediler: credits,
-          hesaplar: bankAccounts,
-          hesapIslemleri: accountTransactions,
-          tekrarlayanIslemler: recurringTransactions
+          cariler: dbData.cariler || [],
+          stoklar: dbData.stoklar || [],
+          islemler: dbData.islemler || [],
+          ceksenet: dbData.ceksenet || [],
+          giderler: dbData.giderler || [],
+          calisanlar: dbData.calisanlar || [],
+          calisanIslemler: dbData.calisanIslemler || [],
+          krediler: dbData.krediler || [],
+          hesaplar: dbData.hesaplar || [],
+          hesapIslemleri: dbData.hesapIslemleri || [],
+          tekrarlayanIslemler: dbData.tekrarlayanIslemler || []
         },
         localStorage: settingsToBackup
       };
@@ -190,7 +199,7 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `storm_yedek_${new Date().toISOString().split('T')[0]}_${pass ? 'sifreli' : 'standart'}.storm`;
+      a.download = `storm_yedek_${getTodayISO()}_${pass ? 'sifreli' : 'standart'}.storm`;
       a.click();
       URL.revokeObjectURL(url);
 
@@ -279,6 +288,7 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
       // 2. Restore localStorages
       if (restorePreview.localStorage) {
         Object.entries(restorePreview.localStorage).forEach(([key, val]) => {
+          if (!BACKUP_SETTINGS_KEYS.includes(key)) return;
           if (val !== null && val !== undefined) {
             localStorage.setItem(key, val as string);
           }
@@ -778,7 +788,7 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
 
         {/* Footer */}
         <div className="p-4 bg-zinc-950/60 border-t border-zinc-800 flex justify-between items-center text-[10px] text-zinc-500">
-          <span>Storm Muhasebe Güvenli Veri Motoru v1.8.1</span>
+          <span>Storm Muhasebe Güvenli Veri Motoru v{APP_VERSION}</span>
           <span>Bütün Hakları Saklıdır © 2026</span>
         </div>
 

@@ -35,7 +35,7 @@ export function OzetTab({ summaryStats, incomeExpenseStats, formatMoney }: OzetT
           </div>
           <div className="mt-4">
             <h3 className="text-xl font-bold text-white font-mono">{formatMoney(summaryStats.sales)}</h3>
-            <p className="text-[10px] text-zinc-500 mt-1">Sadece gerçekleşen (satış) tutarları</p>
+            <p className="text-[10px] text-zinc-500 mt-1">KDV hariç, iadeler düşülmüş</p>
           </div>
         </div>
 
@@ -125,7 +125,7 @@ export function OzetTab({ summaryStats, incomeExpenseStats, formatMoney }: OzetT
           <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-4">Mali Özet Tablosu</h3>
           <div className="space-y-3.5 flex-1">
             <div className="flex items-center justify-between text-xs py-1 border-b border-white/5">
-              <span className="text-zinc-400">Satış Gelirleri (+)</span>
+              <span className="text-zinc-400">Satış Gelirleri (KDV Hariç) (+)</span>
               <span className="text-emerald-400 font-mono font-semibold">{formatMoney(summaryStats.sales)}</span>
             </div>
             <div className="flex items-center justify-between text-xs py-1 border-b border-white/5">

@@ -25,6 +25,7 @@ import {
   ArrowDownLeft,
   AlertCircle,
 } from "lucide-react";
+import { getTodayISO } from '../utils/dateUtils';
 interface CalisanlarViewProps {
   employees: Employee[];
   transactions: EmployeeTransaction[];
@@ -66,7 +67,7 @@ export default function CalisanlarView({
     role: "",
     phone: "",
     email: "",
-    hireDate: new Date().toISOString().split("T")[0],
+    hireDate: getTodayISO(),
     baseSalary: 0,
     currency: "TRY" as "TRY" | "USD" | "EUR",
     isActive: true,
@@ -77,7 +78,7 @@ export default function CalisanlarView({
     type: "accrual" as "accrual" | "payment" | "advance",
     amount: 0,
     currency: "TRY" as "TRY" | "USD" | "EUR",
-    date: new Date().toISOString().split("T")[0],
+    date: getTodayISO(),
     account: "" as "cash" | "bank" | "pos" | "cek_portfoy" | "cek_firma" | "",
     description: "",
     selectedPortfolioCekId: "",
@@ -118,7 +119,7 @@ export default function CalisanlarView({
         type: txType,
         amount: aiPrefilledData.fiyat || 0,
         currency: 'TRY',
-        date: new Date().toISOString().split("T")[0],
+        date: getTodayISO(),
         account: 'cash',
         description: 'Storm AI tarafından dolduruldu.',
         selectedPortfolioCekId: "",
@@ -224,7 +225,7 @@ export default function CalisanlarView({
       role: "",
       phone: "",
       email: "",
-      hireDate: new Date().toISOString().split("T")[0],
+      hireDate: getTodayISO(),
       baseSalary: 0,
       currency: "TRY",
       isActive: true,
@@ -275,7 +276,7 @@ export default function CalisanlarView({
       type: "accrual",
       amount: emp ? emp.baseSalary : 0,
       currency: emp ? emp.currency : "TRY",
-      date: new Date().toISOString().split("T")[0],
+      date: getTodayISO(),
       account: "",
       description: "",
       selectedPortfolioCekId: "",

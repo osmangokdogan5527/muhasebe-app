@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RecurringTransaction, Expense, BankAccount, Cari } from '../../types';
 import { saveRecurringTransaction } from '../../firebase';
-import { reportErrorToTelegram } from '../../utils/telegramLogger';
+import { logError } from '../../utils/errorLogger';
 import { calculateNextDueDate, getTodayISO } from '../../utils/recurringUtils';
 import { X, Calendar, DollarSign, FileText, CheckCircle, Clock, Building, Wallet, Layers } from 'lucide-react';
 
@@ -154,7 +154,7 @@ export default function TekrarlayanModal({
       await saveRecurringTransaction(payload, editingItem?.id);
       onClose();
     } catch (err: any) {
-      reportErrorToTelegram(err, 'TekrarlayanModal.handleSubmit');
+      logError(err, 'TekrarlayanModal.handleSubmit');
       setErrorMsg(`Kaydedilirken hata oluştu: ${err.message || 'Bilinmeyen hata'}`);
     } finally {
       setIsSaving(false);

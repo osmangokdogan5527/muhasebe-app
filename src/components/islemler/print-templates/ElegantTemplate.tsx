@@ -99,7 +99,7 @@ export function ElegantTemplate({ dynamicPrintVars, printSettings }: any) {
                                             <td className="py-3 px-1 text-zinc-400 text-center font-mono">%0</td>
                                           )}
                                           {activeTemplate?.showVatRate && (
-                                            <td className="py-3 px-1 text-zinc-400 text-center font-mono">%{item.taxRate || 20}</td>
+                                            <td className="py-3 px-1 text-zinc-400 text-center font-mono">%{item.taxRate ?? 0}</td>
                                           )}
                                           <td className="py-3 px-1 font-bold text-zinc-900 text-right font-serif">
                                             {formatPrintCurrency(item.total, transaction.currency || 'TRY')}

@@ -1,8 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Her firma yalnızca kendi verisine erişir: users/{firmaId}/... verisine yalnızca
+    // Firebase'de firmaId@storm.com hesabıyla oturum açmış kullanıcı okuyup yazabilir.
+    // Uygulama PIN doğrulandıktan sonra bu hesapla oturum açar (src/utils/tenantAuth.ts).
+    match /users/{tenantId}/{document=**} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email == (tenantId + '@storm.com');
+    }
+
+    // Bunun dışındaki her yol kapalıdır.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

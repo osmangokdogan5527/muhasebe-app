@@ -316,7 +316,7 @@ export function PdfPrintModal({ transaction, cariler, stoklar, onClose }: PdfPri
           const groups: Record<number, { rate: number; total: number; matrah: number; kdv: number }> = {};
           
           transaction.items.forEach(item => {
-            const rate = item.taxRate || 20; // default 20%
+            const rate = item.taxRate ?? 0;
             const total = item.total || 0;
             const matrah = total / (1 + rate / 100);
             const kdv = total - matrah;
@@ -570,12 +570,12 @@ export function PdfPrintModal({ transaction, cariler, stoklar, onClose }: PdfPri
                           printContent.style.transform = originalTransform;
                           console.error('PDF İndirme Hatası:', err);
 
-                          // Hata Savunması (try-catch, and Telegram logging)
+                          // Hata Savunması (try-catch ve yerel hata günlüğü)
                           try {
-                            const { reportErrorToTelegram } = await import('../../utils/telegramLogger');
-                            reportErrorToTelegram(err instanceof Error ? err : new Error(String(err)), 'IslemlerView_DownloadPDF');
+                            const { logError } = await import('../../utils/errorLogger');
+                            logError(err instanceof Error ? err : new Error(String(err)), 'IslemlerView_DownloadPDF');
                           } catch (logErr) {
-                            console.error('Telegram loglama hatası:', logErr);
+                            console.error('Hata günlüğü yazılamadı:', logErr);
                           }
 
                           alert('PDF oluşturulurken bir hata meydana geldi.');

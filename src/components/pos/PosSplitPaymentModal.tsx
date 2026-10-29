@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PosPaymentSplit } from '../../types/pos';
 import { BankAccount, Cari } from '../../types';
 import { DollarSign, CreditCard, User, AlertCircle, CheckCircle2, X } from 'lucide-react';
-import { reportErrorToTelegram } from '../../utils/telegramLogger';
+import { logError } from '../../utils/errorLogger';
 
 interface PosSplitPaymentModalProps {
   isOpen: boolean;
@@ -43,7 +43,7 @@ export const PosSplitPaymentModal: React.FC<PosSplitPaymentModalProps> = ({
         setPosAccountId(posAccounts[0].id);
       }
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosSplitPaymentModal:useEffect');
+      logError(err, 'PosSplitPaymentModal:useEffect');
     }
   }, [grandTotal, isOpen]);
 
@@ -68,7 +68,7 @@ export const PosSplitPaymentModal: React.FC<PosSplitPaymentModalProps> = ({
         setOpenAccountAmount(Math.max(0, newOpen));
       }
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosSplitPaymentModal:fillRemainingTo');
+      logError(err, 'PosSplitPaymentModal:fillRemainingTo');
     }
   };
 
@@ -76,6 +76,11 @@ export const PosSplitPaymentModal: React.FC<PosSplitPaymentModalProps> = ({
     try {
       if (remainingToAllocate > 0.01) {
         alert(`Lütfen kalan ₺${remainingToAllocate.toFixed(2)} tutarı ödeme türlerine tam olarak dağıtın.`);
+        return;
+      }
+
+      if (remainingToAllocate < -0.01) {
+        alert(`Dağıtılan tutar satış toplamını ₺${Math.abs(remainingToAllocate).toFixed(2)} aşıyor. Fazla nakit için "Alınan Nakit" alanını kullanın; para üstü otomatik hesaplanır.`);
         return;
       }
 
@@ -93,7 +98,7 @@ export const PosSplitPaymentModal: React.FC<PosSplitPaymentModalProps> = ({
         openAccountAmount,
       });
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosSplitPaymentModal:handleConfirm');
+      logError(err, 'PosSplitPaymentModal:handleConfirm');
     }
   };
 

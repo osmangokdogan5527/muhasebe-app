@@ -1,21 +1,7 @@
 import { RecurringTransaction } from '../types';
+import { formatDateISO, getTodayISO, parseDateISO } from './dateUtils';
 
-/**
- * Formats a Date object as YYYY-MM-DD string in local time.
- */
-export function formatDateISO(date: Date): string {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-/**
- * Returns today's date formatted as YYYY-MM-DD.
- */
-export function getTodayISO(): string {
-  return formatDateISO(new Date());
-}
+export { formatDateISO, getTodayISO };
 
 /**
  * Calculates the next due date based on frequency and target day of month.
@@ -28,7 +14,7 @@ export function calculateNextDueDate(
   frequency: 'monthly' | 'weekly' | 'yearly' = 'monthly',
   targetDayOfMonth: number = 1
 ): string {
-  const baseDate = new Date(fromDateStr || getTodayISO());
+  const baseDate = parseDateISO(fromDateStr || getTodayISO());
   if (isNaN(baseDate.getTime())) {
     return getTodayISO();
   }

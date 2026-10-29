@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { logError } from '../utils/errorLogger';
 
 interface Props {
   children: ReactNode;
@@ -22,11 +23,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
   private handleGlobalError = (event: ErrorEvent) => {
     // Prevent default handling so it doesn't just print to console (optional, maybe don't prevent if we want to see it in console too)
-    this.reportToTelegram(event.error || new Error(event.message));
+    this.reportError(event.error || new Error(event.message));
   };
 
   private handleGlobalPromiseRejection = (event: PromiseRejectionEvent) => {
-    this.reportToTelegram(event.reason instanceof Error ? event.reason : new Error(String(event.reason)));
+    this.reportError(event.reason instanceof Error ? event.reason : new Error(String(event.reason)));
   };
 
   public componentDidMount() {
@@ -39,73 +40,13 @@ export class ErrorBoundary extends Component<Props, State> {
     window.removeEventListener('unhandledrejection', this.handleGlobalPromiseRejection);
   }
 
-  private reportToTelegram(error: Error, errorInfo?: ErrorInfo) {
-    const stackTrace = errorInfo?.componentStack || error.stack || '';
-    
-    let activeUserStr: string | null = null;
-    let activeUser = 'Sistem/Giriş Ekranı';
-    
-    // 1. Local Error Logging
-    try {
-      activeUserStr = localStorage.getItem('storm_muhasebe_active_user');
-      activeUser = activeUserStr ? JSON.parse(activeUserStr).displayName : 'Sistem/Giriş Ekranı';
-      
-      const newLog = {
-        id: Date.now().toString(),
-        date: new Date().toLocaleString('tr-TR'),
-        user: activeUser,
-        message: error.message || 'Bilinmeyen Hata',
-        stack: stackTrace
-      };
-      
-      const existingLogsStr = localStorage.getItem('storm_error_logs');
-      const existingLogs = existingLogsStr ? JSON.parse(existingLogsStr) : [];
-      existingLogs.unshift(newLog); // Add to beginning
-      
-      // Keep only last 100 logs to prevent localStorage bloat
-      if (existingLogs.length > 100) existingLogs.pop();
-      
-      localStorage.setItem('storm_error_logs', JSON.stringify(existingLogs));
-    } catch (e) {
-      console.error('Local error logging failed:', e);
-    }
-
-    // 2. Electron / Telegram Reporting
-    if (window.electronAPI && (window.electronAPI as any).reportError) {
-      (window.electronAPI as any).reportError({
-        message: error.message || 'Bilinmeyen Hata',
-        stack: stackTrace
-      });
-    } else {
-      // Web Fallback for Telegram Reporting
-      try {
-        const TELEGRAM_BOT_TOKEN = localStorage.getItem('storm_muhasebe_telegram_bot_token') || import.meta.env.VITE_TELEGRAM_BOT_TOKEN || "8661867798:AAHVgj4cyEw3D_NS19jjiSBqkJe7nvIFfy0";
-        const TELEGRAM_CHAT_ID = localStorage.getItem('storm_muhasebe_telegram_chat_id') || import.meta.env.VITE_TELEGRAM_CHAT_ID || "-5266920189";
-        if (TELEGRAM_BOT_TOKEN) {
-          const shortStack = stackTrace.split('\n').slice(0, 3).join('\n');
-          const text = `🚨 <b>STORM MUHASEBE HATA RAPORU (WEB)</b>\n\n<b>Hata:</b> ${error.message}\n\n<b>Kullanıcı:</b> ${activeUser}\n\n<b>Stack Trace:</b>\n<pre>${shortStack}</pre>`;
-          
-          fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              chat_id: TELEGRAM_CHAT_ID,
-              text: text,
-              parse_mode: 'HTML'
-            })
-          }).catch(err => console.error('Telegram web send error:', err));
-        }
-      } catch (err) {
-        console.error('Error while sending telegram report:', err);
-      }
-    }
+  private reportError(error: Error, errorInfo?: ErrorInfo) {
+    logError(error, 'ErrorBoundary', errorInfo?.componentStack || undefined);
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo);
-    this.reportToTelegram(error, errorInfo);
+    this.reportError(error, errorInfo);
   }
 
   private handleReload = () => {

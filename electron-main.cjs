@@ -1,68 +1,16 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog, shell, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const https = require('https');
-const os = require('os');
 const { autoUpdater } = require('electron-updater');
 
 let autoBackupEnabled = true;
 
-function sendTelegramAlert(errorMessage, stackTrace) {
-  const TELEGRAM_BOT_TOKEN = process.env.VITE_TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "8661867798:AAHVgj4cyEw3D_NS19jjiSBqkJe7nvIFfy0";
-  const TELEGRAM_CHAT_ID = process.env.VITE_TELEGRAM_CHAT_ID || process.env.TELEGRAM_CHAT_ID || "-5266920189";
-
-  if (!TELEGRAM_BOT_TOKEN) return;
-
-  const osVersion = `${os.type()} ${os.release()}`;
-  const appVersion = app.getVersion();
-
-  const text = `🚨 <b>STORM MUHASEBE HATA RAPORU</b>\n\n<b>Hata:</b> ${errorMessage}\n\n<b>Stack Trace:</b>\n<pre>${stackTrace}</pre>\n\n<b>OS:</b> ${osVersion}\n<b>Sürüm:</b> v${appVersion}`;
-
-  const postData = JSON.stringify({
-    chat_id: TELEGRAM_CHAT_ID,
-    text: text,
-    parse_mode: 'HTML'
-  });
-
-  const options = {
-    hostname: 'api.telegram.org',
-    port: 443,
-    path: `/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(postData)
-    }
-  };
-
-  const req = https.request(options, (res) => {
-    res.on('data', () => {});
-  });
-
-  req.on('error', (e) => {
-    console.error('Telegram bildirim hatası:', e);
-  });
-
-  req.write(postData);
-  req.end();
-}
-
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
-  const stack = error.stack ? error.stack.split('\n').slice(0, 3).join('\n') : '';
-  sendTelegramAlert(error.message, stack);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  const message = reason instanceof Error ? reason.message : String(reason);
-  const stack = reason instanceof Error && reason.stack ? reason.stack.split('\n').slice(0, 3).join('\n') : '';
-  sendTelegramAlert(message, stack);
-});
-
-ipcMain.on('report-error', (event, { message, stack }) => {
-  const shortStack = stack ? stack.split('\n').slice(0, 3).join('\n') : '';
-  sendTelegramAlert(message, shortStack);
 });
 
 ipcMain.on('open-external', (event, url) => {

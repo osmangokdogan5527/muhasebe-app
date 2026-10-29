@@ -8,7 +8,9 @@ import { PosReceiptModal } from './PosReceiptModal';
 import { PosParkedSalesModal } from './PosParkedSalesModal';
 import { findStockByBarcodeOrSearch, calculateLineTotal, calculateCartSummary, generateReceiptNo } from '../../utils/posUtils';
 import { ShoppingCart, Zap, DollarSign, CreditCard, User, Clock, CheckCircle2, RotateCcw, Search, Plus, Sparkles, HelpCircle, Percent } from 'lucide-react';
-import { reportErrorToTelegram } from '../../utils/telegramLogger';
+import { logError } from '../../utils/errorLogger';
+import { formatDateISO } from '../../utils/dateUtils';
+import { APP_VERSION } from '../../constants';
 
 interface PosViewProps {
   stocks: Stock[];
@@ -79,7 +81,7 @@ export const PosView: React.FC<PosViewProps> = ({
     try {
       localStorage.setItem('storm_pos_parked_sales', JSON.stringify(parkedSales));
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:saveParkedSales');
+      logError(err, 'PosView:saveParkedSales');
     }
   }, [parkedSales]);
 
@@ -151,7 +153,7 @@ export const PosView: React.FC<PosViewProps> = ({
       });
       setProductSearchTerm('');
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:handleAddToCart');
+      logError(err, 'PosView:handleAddToCart');
     }
   }, []);
 
@@ -205,7 +207,7 @@ export const PosView: React.FC<PosViewProps> = ({
           setProductSearchTerm('');
         }
       } catch (err: any) {
-        reportErrorToTelegram(err, 'PosView:handleKeyDown');
+        logError(err, 'PosView:handleKeyDown');
       }
     };
 
@@ -245,7 +247,7 @@ export const PosView: React.FC<PosViewProps> = ({
           .filter((item) => item.quantity > 0)
       );
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:handleUpdateQuantity');
+      logError(err, 'PosView:handleUpdateQuantity');
     }
   };
 
@@ -265,7 +267,7 @@ export const PosView: React.FC<PosViewProps> = ({
         })
       );
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:handleSetQuantity');
+      logError(err, 'PosView:handleSetQuantity');
     }
   };
 
@@ -287,7 +289,7 @@ export const PosView: React.FC<PosViewProps> = ({
         })
       );
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:handleUpdateUnitPrice');
+      logError(err, 'PosView:handleUpdateUnitPrice');
     }
   };
 
@@ -309,7 +311,7 @@ export const PosView: React.FC<PosViewProps> = ({
         })
       );
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:handleUpdateDiscount');
+      logError(err, 'PosView:handleUpdateDiscount');
     }
   };
 
@@ -382,7 +384,7 @@ export const PosView: React.FC<PosViewProps> = ({
       setSelectedCari(null);
       alert('Satış başarıyla askıya alındı.');
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:handleParkSale');
+      logError(err, 'PosView:handleParkSale');
     }
   };
 
@@ -399,7 +401,7 @@ export const PosView: React.FC<PosViewProps> = ({
       setParkedSales((prev) => prev.filter((p) => p.id !== parked.id));
       setIsParkedModalOpen(false);
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:handleRestoreParkedSale');
+      logError(err, 'PosView:handleRestoreParkedSale');
     }
   };
 
@@ -409,16 +411,21 @@ export const PosView: React.FC<PosViewProps> = ({
       setIsProcessing(true);
       const receiptNo = generateReceiptNo();
       const now = new Date();
-      const date = now.toISOString().slice(0, 10);
+      const date = formatDateISO(now);
       const time = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
       const cariName = selectedCari ? selectedCari.name : 'Perakende Müşteri';
+
+      // KDV zorunlu değildir: fiyat etiketteki gibi kalır, KDV yalnızca kasada seçilen orana göre
+      // fiyatın içinden ayrılır. Fiş, kayıt ve KDV raporu aynı oranı göstersin diye satırlara da
+      // kasada seçilen oran yazılır (stok kartındaki oran POS satışında kullanılmaz).
+      const saleItems = cartItems.map((item) => ({ ...item, taxRate: globalTaxRate }));
 
       const success = await onCompletePosSale({
         receiptNo,
         cariId: selectedCari?.id,
         cariName,
-        items: cartItems,
+        items: saleItems,
         paymentSplit,
         grandTotal: summary.grandTotal,
         subtotal: summary.subtotalAfterLineDiscounts,
@@ -433,7 +440,7 @@ export const PosView: React.FC<PosViewProps> = ({
           receiptNo,
           date,
           time,
-          items: cartItems,
+          items: saleItems,
           paymentSplit,
           cariId: selectedCari?.id,
           cariName,
@@ -453,7 +460,7 @@ export const PosView: React.FC<PosViewProps> = ({
         setIsSplitModalOpen(false);
       }
     } catch (err: any) {
-      reportErrorToTelegram(err, 'PosView:executeSale');
+      logError(err, 'PosView:executeSale');
       alert('Satış kaydı sırasında bir hata oluştu: ' + (err.message || err));
     } finally {
       setIsProcessing(false);
@@ -478,7 +485,7 @@ export const PosView: React.FC<PosViewProps> = ({
             <h2 className="text-sm font-black text-white flex items-center gap-2">
               <span>HIZLI SATIŞ TERMİNALİ</span>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-teal-600 text-white border border-teal-400 font-black shadow-sm">
-                v1.8.1 POS Engine
+                v{APP_VERSION} POS Engine
               </span>
             </h2>
             <p className="text-[11px] text-slate-300 font-medium">

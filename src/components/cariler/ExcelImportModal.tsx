@@ -3,6 +3,7 @@ import { X, UploadCloud, FileSpreadsheet, CheckCircle, AlertCircle, Loader2 } fr
 import { parseExcelWithAI, ParsedCari, ExcelParseResult } from '../../utils/aiExcelParser';
 import { saveCari, createTransaction } from '../../firebase';
 import { Cari } from '../../types';
+import { getTodayISO } from '../../utils/dateUtils';
 
 interface ExcelImportModalProps {
   isOpen: boolean;
@@ -91,10 +92,11 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
             type: item.openingBalance > 0 ? "sale" : "purchase", // representation of opening balance
             cariId: newCari.id,
             cariName: newCari.name,
-            date: new Date().toISOString().split('T')[0],
+            date: getTodayISO(),
             amount: Math.abs(item.openingBalance),
             account: "", // Unpaid/Opening balance
             description: "Açılış Bakiyesi",
+            isOpeningBalance: true,
             createdAt: new Date().toISOString(),
             currency: item.currency || "TRY"
           });

@@ -2,8 +2,9 @@ import { CashFlowAnalysis } from './kasa/CashFlowAnalysis';
 import { InteractiveCashLedger } from './kasa/InteractiveCashLedger';
 import { KasaModals } from './kasa/KasaModals';
 import React, { useState, useMemo } from 'react';
-import { Transaction, Expense, EmployeeTransaction, BankAccount, AccountTransaction } from '../types';
+import { Transaction, Expense, EmployeeTransaction, BankAccount, AccountTransaction, Cari } from '../types';
 import { saveBankAccount, saveAccountTransaction, deleteBankAccount } from '../firebase';
+import { getSyncedEmployeeExpenseIds } from '../utils/expenseUtils';
 import { 
   Wallet, 
   CreditCard, 
@@ -31,14 +32,22 @@ import {
   Cell, 
   Tooltip
 } from 'recharts';
+import { getTodayISO } from '../utils/dateUtils';
+import { computeAccountBalances, createCashCurrencyConverters } from '../utils/cashBalances';
+import { useFxRates } from '../hooks/useFxRates';
 interface KasaViewProps {
   islemler: Transaction[];
+  cariler?: Cari[];
   expenses: Expense[];
   employeeTransactions?: EmployeeTransaction[];
   bankAccounts?: BankAccount[];
   accountTransactions?: AccountTransaction[];
 }
-export default function KasaView({ islemler, expenses, employeeTransactions = [], bankAccounts = [], accountTransactions = [] }: KasaViewProps) {
+export default function KasaView({ islemler, cariler = [], expenses, employeeTransactions = [], bankAccounts = [], accountTransactions = [] }: KasaViewProps) {
+  const fxRates = useFxRates();
+  // İşlemler, bağlı oldukları hesabın para birimine çevrilerek kasaya yansıtılır
+  // (ör. 100 USD'lik tahsilat TL kasasına bağlandıysa kasaya TL karşılığı girer)
+  const currencyConverters = useMemo(() => createCashCurrencyConverters(bankAccounts, cariler, fxRates), [bankAccounts, cariler, fxRates]);
   const [selectedCurrency, setSelectedCurrency] = useState<'TRY' | 'USD' | 'EUR'>('TRY');
   const [accountFilter, setAccountFilter] = useState<'all' | 'cash' | 'bank' | 'pos'>('all');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
@@ -137,7 +146,7 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
         accountId: txSourceAcc,
         type: 'transfer_out',
         amount: amountNum,
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayISO(),
         description: txDesc || 'Hesaplar arası transfer',
         targetAccountId: txTargetAcc,
         createdAt: new Date().toISOString()
@@ -147,7 +156,7 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
         accountId: txTargetAcc,
         type: 'transfer_in',
         amount: targetAmountFinal,
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayISO(),
         description: txDesc || 'Hesaplar arası transfer',
         targetAccountId: txSourceAcc,
         createdAt: new Date().toISOString()
@@ -158,7 +167,7 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
         accountId: txSourceAcc,
         type: txType,
         amount: amountNum,
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayISO(),
         description: txDesc || (txType === 'giris' ? 'Manuel Giriş' : 'Manuel Çıkış'),
         createdAt: new Date().toISOString()
       });
@@ -183,51 +192,9 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: cur }).format(val);
   };
   // Compute calculated balance for each BankAccount based on all transactions
-  const accountBalances = useMemo(() => {
-    const map: Record<string, number> = {};
-    // Initialize with initial balances
-    bankAccounts.forEach(acc => {
-      map[acc.id] = acc.initialBalance || 0;
-    });
-    // 1. Manual transactions & transfers
-    accountTransactions.forEach(tx => {
-      if (map[tx.accountId] !== undefined) {
-        if (tx.type === 'giris' || tx.type === 'transfer_in') {
-          map[tx.accountId] += tx.amount;
-        } else if (tx.type === 'cikis' || tx.type === 'transfer_out') {
-          map[tx.accountId] -= tx.amount;
-        }
-      }
-    });
-    // 2. Commercial / Invoice transactions (islemler)
-    islemler.forEach(islem => {
-      const targetId = islem.bankAccountId || (islem.account === 'cash' ? 'merkez_kasa' : islem.account === 'bank' ? 'merkez_banka' : islem.account === 'pos' ? 'merkez_pos' : '');
-      if (map[targetId] !== undefined) {
-        if (islem.type === 'collection' || islem.type === 'sale' || islem.type === 'purchase_return') {
-          map[targetId] += islem.amount;
-        } else if (islem.type === 'payment' || islem.type === 'purchase' || islem.type === 'sale_return') {
-          map[targetId] -= islem.amount;
-        }
-      }
-    });
-    // 3. Expenses
-    expenses.forEach(exp => {
-      const targetId = exp.bankAccountId || (exp.account === 'cash' ? 'merkez_kasa' : exp.account === 'bank' ? 'merkez_banka' : exp.account === 'pos' ? 'merkez_pos' : '');
-      if (map[targetId] !== undefined) {
-        map[targetId] -= exp.amount;
-      }
-    });
-    // 4. Employee Transactions
-    employeeTransactions.forEach(etx => {
-      if (etx.type === 'payment' || etx.type === 'advance') {
-        const targetId = etx.bankAccountId || (etx.account === 'cash' ? 'merkez_kasa' : etx.account === 'bank' ? 'merkez_banka' : etx.account === 'pos' ? 'merkez_pos' : '');
-        if (map[targetId] !== undefined) {
-          map[targetId] -= etx.amount;
-        }
-      }
-    });
-    return map;
-  }, [bankAccounts, accountTransactions, islemler, expenses, employeeTransactions]);
+  const accountBalances = useMemo(() => computeAccountBalances({
+    bankAccounts, accountTransactions, islemler, expenses, employeeTransactions, converters: currencyConverters
+  }), [bankAccounts, accountTransactions, islemler, expenses, employeeTransactions, currencyConverters]);
   // Compute Cash, Bank, POS combined balances by currency for the cards and footer
   const balances = useMemo(() => {
     const res = {
@@ -244,6 +211,12 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
     });
     return res;
   }, [bankAccounts, accountBalances]);
+  // Hesap para biriminden farklı kayıtlarda orijinal tutarı açıklamaya ekler
+  const withOriginalAmount = (description: string, amount: number, fromCurrency: string, accountCurrency: string) => {
+    if (fromCurrency === accountCurrency) return description;
+    const original = `Orijinal: ${new Intl.NumberFormat('tr-TR', { style: 'currency', currency: fromCurrency }).format(amount)}`;
+    return description ? `${description} (${original})` : original;
+  };
   // Merge and normalize all Cash/Bank/POS movements chronologically
   const allMovements = useMemo(() => {
     const list: any[] = [];
@@ -269,36 +242,41 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
       else if (islem.type === 'sale_return') categoryName = 'Satış İade';
       else if (islem.type === 'purchase_return') categoryName = 'Alış İade';
       const accountId = getAccountId(islem.bankAccountId, acc);
+      const accountCurrency = currencyConverters.getAccountCurrency(accountId);
+      const originalCurrency = islem.currency || 'TRY';
       list.push({
         id: `islem-${islem.id}`,
         date: islem.date,
         title,
-        description: islem.description || '',
+        description: withOriginalAmount(islem.description || '', islem.amount, originalCurrency, accountCurrency),
         category: categoryName,
         account: acc,
         accountId: accountId,
         type: isIncoming ? 'in' : 'out',
-        amount: islem.amount,
-        currency: islem.currency || 'TRY',
+        amount: currencyConverters.islemToAccount(islem, accountId),
+        currency: accountCurrency,
         rawType: islem.type
       });
     });
-    // 2. Add expenses
+    // 2. Add expenses (maaş/avans ödemesinden otomatik oluşan masraflar 3. adımda listeleniyor)
+    const syncedExpenseIds = getSyncedEmployeeExpenseIds(employeeTransactions);
     expenses.forEach(exp => {
+      if (syncedExpenseIds.has(exp.id)) return;
       const acc = exp.account;
       if (acc !== 'cash' && acc !== 'bank' && acc !== 'pos') return;
       const accountId = getAccountId(exp.bankAccountId, acc);
+      const accountCurrency = currencyConverters.getAccountCurrency(accountId);
       list.push({
         id: `expense-${exp.id}`,
         date: exp.date,
         title: exp.title || 'Masraf',
-        description: exp.description || '',
+        description: withOriginalAmount(exp.description || '', exp.amount, exp.currency || 'TRY', accountCurrency),
         category: exp.category || 'Diğer Gider',
         account: acc,
         accountId: accountId,
         type: 'out',
-        amount: exp.amount,
-        currency: exp.currency || 'TRY',
+        amount: currencyConverters.amountToAccount(exp.amount, exp.currency, accountId),
+        currency: accountCurrency,
         rawType: 'expense'
       });
     });
@@ -308,17 +286,18 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
       if (acc !== 'cash' && acc !== 'bank' && acc !== 'pos') return;
       if (etx.type !== 'payment' && etx.type !== 'advance') return;
       const accountId = getAccountId(etx.bankAccountId, acc);
+      const accountCurrency = currencyConverters.getAccountCurrency(accountId);
       list.push({
         id: `employee-${etx.id}`,
         date: etx.date,
         title: `${etx.employeeName} (${etx.type === 'payment' ? 'Maaş Ödemesi' : 'Avans Ödemesi'})`,
-        description: etx.description || '',
+        description: withOriginalAmount(etx.description || '', etx.amount, etx.currency || 'TRY', accountCurrency),
         category: etx.type === 'payment' ? 'Personel Maaş/Avans' : 'Personel Avans',
         account: acc,
         accountId: accountId,
         type: 'out',
-        amount: etx.amount,
-        currency: etx.currency || 'TRY',
+        amount: currencyConverters.amountToAccount(etx.amount, etx.currency, accountId),
+        currency: accountCurrency,
         rawType: 'employee_tx'
       });
     });
@@ -361,10 +340,10 @@ export default function KasaView({ islemler, expenses, employeeTransactions = []
       if (dateCompare !== 0) return dateCompare;
       return b.id.localeCompare(a.id);
     });
-  }, [islemler, expenses, employeeTransactions, accountTransactions, bankAccounts]);
+  }, [islemler, expenses, employeeTransactions, accountTransactions, bankAccounts, currencyConverters]);
   // Filtered movements based on filters
   const filteredMovements = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getTodayISO();
     const currentMonthPrefix = todayStr.substring(0, 7); // "YYYY-MM"
     return allMovements.filter(m => {
       // 1. Currency filter

@@ -28,6 +28,7 @@ import {
 import { IslemModal } from './islemler/IslemModal';
 import { PdfPrintModal } from './islemler/PdfPrintModal';
 import { parseScannedQrCode } from '../utils/formatters';
+import { formatDateISO } from '../utils/dateUtils';
 
 interface IslemlerViewProps {
   islemler: Transaction[];
@@ -103,8 +104,8 @@ function IslemlerView({
   defaultStartDate.setMonth(defaultStartDate.getMonth() - 1);
   
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ 
-    start: defaultStartDate.toISOString().split('T')[0], 
-    end: defaultEndDate.toISOString().split('T')[0] 
+    start: formatDateISO(defaultStartDate), 
+    end: formatDateISO(defaultEndDate) 
   });
   
   // Print PDF Receipt states
@@ -171,6 +172,10 @@ function IslemlerView({
 
   // Handle invoice item changes (dropdown selection, quantity/price changes)
   const handleEditTransaction = useCallback((islem: Transaction) => {
+    if (islem.linkedInvoiceId) {
+      alert('Bu kayıt bir faturayla birlikte otomatik oluşturulmuş peşin tahsilat/ödemedir. Değiştirmek veya silmek için bağlı faturayı düzenleyin ya da silin.');
+      return;
+    }
     const isSaleType = ['sale', 'sale_return'].includes(islem.type);
     const actionKey = isSaleType ? 'edit_sale' : 'edit_payment';
 
@@ -183,6 +188,10 @@ function IslemlerView({
 
   // Handle transaction deletion trigger
   const handleDeleteTransaction = useCallback((islem: Transaction) => {
+    if (islem.linkedInvoiceId) {
+      alert('Bu kayıt bir faturayla birlikte otomatik oluşturulmuş peşin tahsilat/ödemedir. Değiştirmek veya silmek için bağlı faturayı düzenleyin ya da silin.');
+      return;
+    }
     const isSaleType = ['sale', 'sale_return'].includes(islem.type);
     const actionKey = isSaleType ? 'delete_sale' : 'delete_payment';
 
@@ -277,7 +286,9 @@ function IslemlerView({
         <td className="p-4 text-xs text-white/50 font-sans">
           {islem.account === 'cash' ? '💵 Kasa' :
            islem.account === 'bank' ? '🏦 Banka' : 
-           islem.account === 'pos' ? '💳 POS' : '⏳ Vadeli'}
+           islem.account === 'pos' ? '💳 POS' :
+           islem.linkedInvoiceId ? '🔗 Peşin (Faturaya Bağlı)' :
+           islem.linkedReceiptIds?.length ? '🔗 Tahsilatlı (POS)' : '⏳ Vadeli'}
         </td>
         <td className="p-4 text-xs text-white/40 max-w-xs truncate" title={islem.description}>
           {islem.description}
@@ -611,7 +622,7 @@ function IslemlerView({
 
                     <div className="text-xs text-white/60 space-y-1 bg-white/[0.02] p-2.5 rounded border border-white/5 font-mono">
                       {islem.invoiceNo && <div>Belge No: <strong>{islem.invoiceNo}</strong></div>}
-                      <div>Hesap: <strong>{islem.account === 'cash' ? 'Kasa' : islem.account === 'bank' ? 'Banka' : islem.account === 'pos' ? 'POS' : 'Açık Hesap'}</strong></div>
+                      <div>Hesap: <strong>{islem.account === 'cash' ? 'Kasa' : islem.account === 'bank' ? 'Banka' : islem.account === 'pos' ? 'POS' : islem.linkedInvoiceId ? 'Peşin (Faturaya Bağlı)' : islem.linkedReceiptIds?.length ? 'Tahsilatlı (POS)' : 'Açık Hesap'}</strong></div>
                       {islem.description && <div className="line-clamp-2 text-white/40 italic mt-0.5">"{islem.description}"</div>}
                     </div>
 
