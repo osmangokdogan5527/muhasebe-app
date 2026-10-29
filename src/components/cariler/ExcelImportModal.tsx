@@ -96,6 +96,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
             amount: Math.abs(item.openingBalance),
             account: "", // Unpaid/Opening balance
             description: "Açılış Bakiyesi",
+            isOpeningBalance: true,
             createdAt: new Date().toISOString(),
             currency: item.currency || "TRY"
           });

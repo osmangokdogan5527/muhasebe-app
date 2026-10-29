@@ -2,26 +2,24 @@ import { useMemo } from 'react';
 import { Transaction as Islem, Expense, EmployeeTransaction, Cari, Stock } from '../../types';
 import { getSyncedEmployeeExpenseIds } from '../../utils/expenseUtils';
 import { formatDateISO, parseDateISO } from '../../utils/dateUtils';
+import { splitInvoiceVat, isOpeningBalanceTransaction } from '../../utils/invoiceMath';
+import { convertWithRates, convertTransactionAmount } from '../../utils/currencyUtils';
+import { getCachedOrFallbackRates } from '../../utils/tcmbService';
 
 export const useRaporlarStats = (deps: any) => {
   const { islemler, expenses, employeeTransactions, cariler, stoklar, resolvedDates, selectedCariId, selectedCurrency, stockValuationType, stockSearch, cariSearch, cariTypeFilter } = deps;
+  const fxRates = deps.fxRates || getCachedOrFallbackRates();
 
-    const convertAmount = (amount: number, fromCurrency: string = 'TRY', recordRate?: number) => {
-      if (fromCurrency === selectedCurrency) return amount;
-      
-      // Fallback static conversion rates if exchangeRate is missing
-      const rates: Record<string, number> = {
-        TRY: 1,
-        USD: 33.5,
-        EUR: 36.0
-      };
-  
-      const targetRate = rates[selectedCurrency] || 1;
-      const sourceRate = recordRate || rates[fromCurrency] || 1;
-  
-      // Convert to TRY first, then to target currency
-      const amountInTry = amount * sourceRate;
-      return amountInTry / targetRate;
+    // Masraf, maaş, stok ve cari bakiyesi gibi işlem dışı tutarları rapor para birimine çevirir
+    const convertAmount = (amount: number, fromCurrency: string = 'TRY') => {
+      return convertWithRates(amount, fromCurrency || 'TRY', selectedCurrency, fxRates);
+    };
+
+    // Cari işlemlerinde kullanıcının girdiği kurla hesaplanan tutar (convertedAmount) esas alınır
+    const cariCurrencyMap = new Map<string, string>();
+    (cariler as Cari[]).forEach(c => cariCurrencyMap.set(c.id, c.currency || 'TRY'));
+    const convertIslemAmount = (islem: Islem, amount: number = islem.amount) => {
+      return convertTransactionAmount(islem, amount, selectedCurrency, cariCurrencyMap.get(islem.cariId), fxRates);
     };
   
     // Format currency output with selected locale format
@@ -88,66 +86,49 @@ export const useRaporlarStats = (deps: any) => {
         const isPurchase = islem.type === 'purchase' || islem.type === 'purchase_return';
         
         if (!isSale && !isPurchase) return;
+        // Açılış bakiyesi kayıtları gerçek satış/alış değildir, KDV doğurmaz
+        if (isOpeningBalanceTransaction(islem)) return;
   
         const sign = (islem.type === 'sale_return' || islem.type === 'purchase_return') ? -1 : 1;
-        const rateMultiplier = sign;
   
-        if (islem.items && islem.items.length > 0) {
-          islem.items.forEach(item => {
-            const qty = item.quantity || 1;
-            const taxRate = item.taxRate || 0;
-            const convertedExTaxAmount = convertAmount(item.price * qty, islem.currency, islem.exchangeRate) * rateMultiplier;
-            const convertedKdvAmount = convertedExTaxAmount * (taxRate / 100);
-  
-            if (isSale) {
-              salesKdvTotal += convertedKdvAmount;
-              if (taxRate === 20) {
-                salesKdv20 += convertedKdvAmount;
-                salesBase20 += convertedExTaxAmount;
-              } else if (taxRate === 10) {
-                salesKdv10 += convertedKdvAmount;
-                salesBase10 += convertedExTaxAmount;
-              } else if (taxRate === 1) {
-                salesKdv1 += convertedKdvAmount;
-                salesBase1 += convertedExTaxAmount;
-              } else {
-                salesKdvOther += convertedKdvAmount;
-                salesBaseOther += convertedExTaxAmount;
-              }
-            } else {
-              purchaseKdvTotal += convertedKdvAmount;
-              if (taxRate === 20) {
-                purchaseKdv20 += convertedKdvAmount;
-                purchaseBase20 += convertedExTaxAmount;
-              } else if (taxRate === 10) {
-                purchaseKdv10 += convertedKdvAmount;
-                purchaseBase10 += convertedExTaxAmount;
-              } else if (taxRate === 1) {
-                purchaseKdv1 += convertedKdvAmount;
-                purchaseBase1 += convertedExTaxAmount;
-              } else {
-                purchaseKdvOther += convertedKdvAmount;
-                purchaseBaseOther += convertedExTaxAmount;
-              }
-            }
-          });
-        } else {
-          // Fallback for transactions without items: assume 20% KDV is included in the total amount
-          const totalAmt = convertAmount(islem.amount, islem.currency, islem.exchangeRate) * rateMultiplier;
-          const taxRate = 20; // fallback standard rate
-          const convertedKdvAmount = totalAmt * (taxRate / (100 + taxRate)); // 20/120 of total
-          const convertedExTaxAmount = totalAmt - convertedKdvAmount;
+        // Matrah ve KDV satır toplamlarından (KDV dahil) geri hesaplanır ve faturanın gerçek tutarına oranlanır
+        splitInvoiceVat(islem).forEach(group => {
+          const convertedExTaxAmount = convertIslemAmount(islem, group.net) * sign;
+          const convertedKdvAmount = convertIslemAmount(islem, group.tax) * sign;
+          const taxRate = group.rate;
   
           if (isSale) {
             salesKdvTotal += convertedKdvAmount;
-            salesKdv20 += convertedKdvAmount;
-            salesBase20 += convertedExTaxAmount;
+            if (taxRate === 20) {
+              salesKdv20 += convertedKdvAmount;
+              salesBase20 += convertedExTaxAmount;
+            } else if (taxRate === 10) {
+              salesKdv10 += convertedKdvAmount;
+              salesBase10 += convertedExTaxAmount;
+            } else if (taxRate === 1) {
+              salesKdv1 += convertedKdvAmount;
+              salesBase1 += convertedExTaxAmount;
+            } else {
+              salesKdvOther += convertedKdvAmount;
+              salesBaseOther += convertedExTaxAmount;
+            }
           } else {
             purchaseKdvTotal += convertedKdvAmount;
-            purchaseKdv20 += convertedKdvAmount;
-            purchaseBase20 += convertedExTaxAmount;
+            if (taxRate === 20) {
+              purchaseKdv20 += convertedKdvAmount;
+              purchaseBase20 += convertedExTaxAmount;
+            } else if (taxRate === 10) {
+              purchaseKdv10 += convertedKdvAmount;
+              purchaseBase10 += convertedExTaxAmount;
+            } else if (taxRate === 1) {
+              purchaseKdv1 += convertedKdvAmount;
+              purchaseBase1 += convertedExTaxAmount;
+            } else {
+              purchaseKdvOther += convertedKdvAmount;
+              purchaseBaseOther += convertedExTaxAmount;
+            }
           }
-        }
+        });
       });
   
       const netKdvDifference = salesKdvTotal - purchaseKdvTotal;
@@ -177,7 +158,7 @@ export const useRaporlarStats = (deps: any) => {
         devredenKdv,
         netKdvDifference
       };
-    }, [filteredIslemler, selectedCurrency]);
+    }, [filteredIslemler, cariler, selectedCurrency, fxRates]);
   
     // Cari Ekstre Calculations
     const cariEkstreStats = useMemo(() => {
@@ -269,24 +250,46 @@ export const useRaporlarStats = (deps: any) => {
       const stockMap = new Map<string, Stock>();
       stoklar.forEach(s => stockMap.set(s.id, s));
   
+      // Satılan malın maliyeti (SMM): stok kartındaki alış fiyatı KDV hariç ve TL'dir.
+      // Stok kartı bulunamazsa satırın KDV hariç tutarının %70'i tahmini maliyet sayılır.
+      const ESTIMATED_COST_RATIO = 0.7;
+      const estimateCostOfItems = (islem: Islem) => {
+        const items = islem.items || [];
+        if (items.length === 0) {
+          const net = splitInvoiceVat(islem).reduce((acc, g) => acc + g.net, 0);
+          return convertIslemAmount(islem, net) * ESTIMATED_COST_RATIO;
+        }
+        let cost = 0;
+        items.forEach(item => {
+          const st = item.stockId ? stockMap.get(item.stockId) : undefined;
+          if (st) {
+            cost += convertAmount((st.purchasePrice || 0) * (item.quantity || 0), 'TRY');
+          } else {
+            const rate = Number(item.taxRate) || 0;
+            const lineNet = (Number(item.total) || 0) / (1 + rate / 100);
+            cost += convertIslemAmount(islem, lineNet) * ESTIMATED_COST_RATIO;
+          }
+        });
+        return cost;
+      };
+
       // Process transactions within date range
       filteredIslemler.forEach(islem => {
-        const amt = convertAmount(islem.amount, islem.currency, islem.exchangeRate);
-        
-        if (islem.type === 'sale') {
-          sales += amt;
-          // Estimate Cost of Goods Sold (SMM)
-          if (islem.items && islem.items.length > 0) {
-            islem.items.forEach(item => {
-              const st = stockMap.get(item.stockId);
-              const costRate = st ? st.purchasePrice : (item.price * 0.7); // 70% of sales price as fallback cost
-              costOfSales += convertAmount(costRate * item.quantity, islem.currency, islem.exchangeRate);
-            });
-          } else {
-            costOfSales += amt * 0.7; // Fallback 70% if items details missing
-          }
+        const amt = convertIslemAmount(islem);
+        const isInvoice = islem.type === 'sale' || islem.type === 'sale_return' || islem.type === 'purchase' || islem.type === 'purchase_return';
+        // Açılış bakiyesi kayıtları satış/alış değildir
+        if (isInvoice && isOpeningBalanceTransaction(islem)) return;
+
+        if (islem.type === 'sale' || islem.type === 'sale_return') {
+          // Satış geliri KDV hariç; KDV devlete ait olduğu için kâra dahil edilmez. İadeler düşülür.
+          const sign = islem.type === 'sale_return' ? -1 : 1;
+          const netSales = splitInvoiceVat(islem).reduce((acc, g) => acc + g.net, 0);
+          sales += convertIslemAmount(islem, netSales) * sign;
+          costOfSales += estimateCostOfItems(islem) * sign;
         } else if (islem.type === 'purchase') {
           purchases += amt;
+        } else if (islem.type === 'purchase_return') {
+          purchases -= amt;
         } else if (islem.type === 'collection') {
           collections += amt;
         } else if (islem.type === 'payment') {
@@ -323,7 +326,7 @@ export const useRaporlarStats = (deps: any) => {
         employeeSalaries,
         netProfit
       };
-    }, [filteredIslemler, stoklar, filteredExpenses, filteredEmployeeTransactions, employeeTransactions, selectedCurrency]);
+    }, [filteredIslemler, stoklar, filteredExpenses, filteredEmployeeTransactions, employeeTransactions, cariler, selectedCurrency, fxRates]);
   
     // 3. COMPUTATIONS - STOK ANALYSIS
     const stockStats = useMemo(() => {
@@ -336,7 +339,8 @@ export const useRaporlarStats = (deps: any) => {
       stoklar.forEach(s => {
         totalStockCount += s.quantity;
         const unitVal = stockValuationType === 'purchase' ? s.purchasePrice : s.salesPrice;
-        const value = s.quantity * unitVal;
+        // Stok fiyatları TL tutulur; rapor para birimine çevrilir
+        const value = convertAmount(s.quantity * unitVal, 'TRY');
         totalValuation += value;
         
         if (s.quantity <= s.minQuantity) {
@@ -362,7 +366,7 @@ export const useRaporlarStats = (deps: any) => {
           s.code.toLowerCase().includes(stockSearch.toLowerCase())
         )
       };
-    }, [stoklar, stockValuationType, stockSearch]);
+    }, [stoklar, stockValuationType, stockSearch, selectedCurrency, fxRates]);
   
     // 4. COMPUTATIONS - CARI ANALYSIS
     const cariStats = useMemo(() => {
@@ -402,7 +406,7 @@ export const useRaporlarStats = (deps: any) => {
         totalPayables,
         itemsList: filteredList.sort((a, b) => Math.abs(b.convertedBalance) - Math.abs(a.convertedBalance))
       };
-    }, [cariler, cariSearch, cariTypeFilter, selectedCurrency]);
+    }, [cariler, cariSearch, cariTypeFilter, selectedCurrency, fxRates]);
   
     // 5. COMPUTATIONS - INCOME-EXPENSE & GRAPH DATA
     const incomeExpenseStats = useMemo(() => {
@@ -436,8 +440,8 @@ export const useRaporlarStats = (deps: any) => {
       }
   
       filteredIslemler.forEach(islem => {
-        if (dateTrendMap[islem.date]) {
-          const amt = convertAmount(islem.amount, islem.currency, islem.exchangeRate);
+        if (dateTrendMap[islem.date] && !isOpeningBalanceTransaction(islem)) {
+          const amt = convertIslemAmount(islem);
           if (islem.type === 'sale') {
             dateTrendMap[islem.date].sales += amt;
           } else if (islem.type === 'collection') {
@@ -461,7 +465,7 @@ export const useRaporlarStats = (deps: any) => {
         trendData,
         totalExp
       };
-    }, [filteredExpenses, filteredIslemler, resolvedDates, selectedCurrency]);
+    }, [filteredExpenses, filteredIslemler, resolvedDates, cariler, selectedCurrency, fxRates]);
   
   return { convertAmount, formatMoney, filteredIslemler, filteredExpenses, filteredEmployeeTransactions, selectedCari, kdvStats, cariEkstreStats, summaryStats, stockStats, cariStats, incomeExpenseStats };
 }

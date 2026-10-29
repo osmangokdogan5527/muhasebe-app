@@ -78,6 +78,7 @@ export interface Transaction {
   convertedAmount?: number; // Amount after applying exchange rate to modify Cari's native balance
   linkedInvoiceId?: string; // Faturayla birlikte otomatik oluşan tahsilat/ödemede bağlı faturanın id'si
   linkedReceiptIds?: string[]; // Faturada, onunla birlikte oluşturulan tahsilat/ödeme kayıtlarının id'leri
+  isOpeningBalance?: boolean; // Excel içe aktarmada açılış bakiyesi için oluşturulan kayıt (gerçek satış/alış değil)
 }
 
 // Fatura kaydedilirken aynı anda oluşturulacak tahsilat/ödeme (peşin veya POS satışı)

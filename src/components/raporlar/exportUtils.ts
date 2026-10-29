@@ -11,7 +11,7 @@ export const getExportFunctions = (deps: any) => {
       if (activeTab === 'ozet') {
         // 1. P&L Sheet
         const plData = [
-          { 'Finansal Rapor Başlığı': 'Satış Gelirleri', 'Tutar': summaryStats.sales, 'Döviz': selectedCurrency },
+          { 'Finansal Rapor Başlığı': 'Satış Gelirleri (KDV Hariç)', 'Tutar': summaryStats.sales, 'Döviz': selectedCurrency },
           { 'Finansal Rapor Başlığı': 'Satılan Malın Maliyeti (SMM)', 'Tutar': summaryStats.costOfSales, 'Döviz': selectedCurrency },
           { 'Finansal Rapor Başlığı': 'Brüt Kar', 'Tutar': summaryStats.grossProfit, 'Döviz': selectedCurrency },
           { 'Finansal Rapor Başlığı': 'Faaliyet Giderleri (Masraflar)', 'Tutar': summaryStats.totalExpenses, 'Döviz': selectedCurrency },
@@ -181,7 +181,7 @@ export const getExportFunctions = (deps: any) => {
         
         // Let's draw table manually for total P&L
         const rows = [
-          ['Satış Gelirleri', formatMoney(summaryStats.sales)],
+          ['Satış Gelirleri (KDV Hariç)', formatMoney(summaryStats.sales)],
           ['Satılan Malın Maliyeti (SMM)', formatMoney(summaryStats.costOfSales)],
           ['Brüt Kar', formatMoney(summaryStats.grossProfit)],
           ['Faaliyet Giderleri (Masraflar)', formatMoney(summaryStats.totalExpenses)],
@@ -709,10 +709,11 @@ export const getExportFunctions = (deps: any) => {
       doc.text(turkishToPdf('2. DETAYLI KAR-ZARAR TABLOSU (KDV HARIC)'), 10, y);
       y += 5;
   
-      const salesExVat = summaryStats.sales - kdvStats.salesKdvTotal;
-      const costExVat = summaryStats.costOfSales - kdvStats.purchaseKdvTotal;
-      const grossProfitExVat = salesExVat - costExVat;
-      const netProfitExVat = grossProfitExVat - summaryStats.totalExpenses - summaryStats.employeeSalaries;
+      // summaryStats satış ve maliyeti zaten KDV hariç hesaplar (iadeler düşülmüş)
+      const salesExVat = summaryStats.sales;
+      const costExVat = summaryStats.costOfSales;
+      const grossProfitExVat = summaryStats.grossProfit;
+      const netProfitExVat = summaryStats.netProfit;
   
       const plRows = [
         ['Brüt Satış Gelirleri (KDV Hariç)', formatMoney(salesExVat)],

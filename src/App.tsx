@@ -1058,7 +1058,7 @@ export default function App() {
           {renderWorkspaceView('calisanlar', <CalisanlarView employees={employees} transactions={employeeTransactions} ceksenet={ceksenet} aiPrefilledData={aiPrefilledData} onClearAiPrefilledData={() => setAiPrefilledData(null)} />)}
         </div>
         <div className={activeTab === 'kasa' ? 'block animate-fade-in' : 'hidden'}>
-          {renderWorkspaceView('kasa', <KasaView islemler={islemler} expenses={expenses} employeeTransactions={employeeTransactions} bankAccounts={bankAccounts} accountTransactions={accountTransactions} />)}
+          {renderWorkspaceView('kasa', <KasaView islemler={islemler} cariler={cariler} expenses={expenses} employeeTransactions={employeeTransactions} bankAccounts={bankAccounts} accountTransactions={accountTransactions} />)}
         </div>
         <div className={activeTab === 'krediler' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('krediler', <KredilerView credits={credits} />)}

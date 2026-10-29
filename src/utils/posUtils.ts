@@ -44,13 +44,16 @@ export function calculateLineTotal(unitPrice: number, quantity: number, discount
 }
 
 /**
- * Benzersiz Fiş Numarası Üretir (Örn: POS-20260729-1024)
+ * Benzersiz Fiş Numarası Üretir (Örn: POS-20261101-003015-A7K2)
+ * Tarih + saat (saniye) + 4 karakterlik rastgele ek: aynı saniyede iki satış olsa bile
+ * çakışma ihtimali ~1/1,7 milyondur (eski 4 haneli rastgele sayıda günde 100 satışta ~%40'tı).
  */
 export function generateReceiptNo(): string {
   const now = new Date();
   const dateStr = formatDateISO(now).replace(/-/g, '');
-  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-  return `POS-${dateStr}-${randomSuffix}`;
+  const timeStr = [now.getHours(), now.getMinutes(), now.getSeconds()].map((n) => String(n).padStart(2, '0')).join('');
+  const randomSuffix = Math.floor(Math.random() * 36 ** 4).toString(36).toUpperCase().padStart(4, '0');
+  return `POS-${dateStr}-${timeStr}-${randomSuffix}`;
 }
 
 /**

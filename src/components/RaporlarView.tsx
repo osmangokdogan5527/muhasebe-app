@@ -48,6 +48,7 @@ import {
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import { formatDateISO } from '../utils/dateUtils';
+import { useFxRates } from '../hooks/useFxRates';
 
 interface RaporlarViewProps {
   cariler: Cari[];
@@ -147,9 +148,12 @@ export default function RaporlarView({
     return text.replace(/[ğĞüÜşŞıİöÖçÇ]/g, (char) => map[char] || char);
   };
 
+  // Döviz kurları (günlük önbellek, ardından güncel kur)
+  const fxRates = useFxRates();
+
   // Convert foreign amounts to the selected report currency
   // Simple rate converter (in-app fallback rates, or user manual exchangeRate in records)
-  const { convertAmount, formatMoney, filteredIslemler, filteredExpenses, filteredEmployeeTransactions, selectedCari, kdvStats, cariEkstreStats, summaryStats, stockStats, cariStats, incomeExpenseStats } = useRaporlarStats({ islemler, expenses, employeeTransactions, cariler, stoklar, resolvedDates, selectedCariId, selectedCurrency, stockValuationType, stockSearch, cariSearch, cariTypeFilter });
+  const { convertAmount, formatMoney, filteredIslemler, filteredExpenses, filteredEmployeeTransactions, selectedCari, kdvStats, cariEkstreStats, summaryStats, stockStats, cariStats, incomeExpenseStats } = useRaporlarStats({ islemler, expenses, employeeTransactions, cariler, stoklar, resolvedDates, selectedCariId, selectedCurrency, stockValuationType, stockSearch, cariSearch, cariTypeFilter, fxRates });
 
 
   // COLOR THEMES FOR CHART CELLS
