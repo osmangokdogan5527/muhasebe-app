@@ -1,12 +1,21 @@
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
 import { getTodayISO } from '../../utils/dateUtils';
+import { logError } from '../../utils/errorLogger';
 import { alertDialog } from '../../utils/dialogs';
+
+// Excel ve PDF kütüphaneleri büyük olduğu için yalnızca dışa aktarma istendiğinde indirilir
+const reportLoadError = (err: unknown, what: string): never => {
+  logError(err instanceof Error ? err : new Error(String(err)), `exportUtils.load ${what}`);
+  alertDialog(`${what} modülü yüklenemedi. İnternet bağlantınızı kontrol edip tekrar deneyin.`);
+  throw err;
+};
+const loadXlsx = () => import('xlsx').catch((err) => reportLoadError(err, 'Excel'));
+const loadJsPdf = () => import('jspdf').then((m) => m.jsPDF).catch((err) => reportLoadError(err, 'PDF'));
 
 export const getExportFunctions = (deps: any) => {
   const { activeTab, summaryStats, selectedCurrency, stockStats, cariStats, filteredExpenses, kdvStats, selectedCari, resolvedDates, cariEkstreStats, formatMoney, turkishToPdf, cariler, incomeExpenseStats, stoklar, islemler, expenses } = deps;
 
-    const downloadExcel = () => {
+    const downloadExcel = async () => {
+      const XLSX = await loadXlsx();
       const workbook = XLSX.utils.book_new();
   
       if (activeTab === 'ozet') {
@@ -121,7 +130,8 @@ export const getExportFunctions = (deps: any) => {
     };
   
     // PDF DOWNLOAD IMPLEMENTATION (CLEAN & PURE CLIENT-SIDE WITHOUT LIBS ERRORS)
-    const downloadPDF = () => {
+    const downloadPDF = async () => {
+      const jsPDF = await loadJsPdf();
       if (activeTab === 'kdvkarzarar') {
         downloadKdvPdf();
         return;
@@ -402,7 +412,8 @@ export const getExportFunctions = (deps: any) => {
       doc.save(`Storm_Muhasebe_Raporu_${activeTab}_${resolvedDates.start}_to_${resolvedDates.end}.pdf`);
     };
   
-    const exportAllToExcel = () => {
+    const exportAllToExcel = async () => {
+      const XLSX = await loadXlsx();
       const workbook = XLSX.utils.book_new();
   
       // 1. Cariler Sheet
@@ -469,7 +480,8 @@ export const getExportFunctions = (deps: any) => {
       XLSX.writeFile(workbook, `Storm_On_Muhasebe_Yedek_Export_${getTodayISO()}.xlsx`);
     };
   
-    const downloadCariEkstrePDF = () => {
+    const downloadCariEkstrePDF = async () => {
+      const jsPDF = await loadJsPdf();
       if (!selectedCari) return;
   
       const doc = new jsPDF({
@@ -603,7 +615,8 @@ export const getExportFunctions = (deps: any) => {
       doc.save(`Ekstre_${selectedCari.name.replace(/\s+/g, '_')}_${resolvedDates.start}_${resolvedDates.end}.pdf`);
     };
   
-    const downloadKdvPdf = () => {
+    const downloadKdvPdf = async () => {
+      const jsPDF = await loadJsPdf();
       const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',

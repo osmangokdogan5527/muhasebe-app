@@ -6,8 +6,12 @@
  * - Sayfa açılışı: önce ağ, ağ yoksa önbellekteki sürüm (internetsiz açılış)
  * - /assets/ altındaki adı özetli (hash) dosyalar: önce önbellek
  * - Diğer kendi dosyalarımız: önbellekten hemen ver, arkada güncelle
+ * - Ekranlar ayrı dosyalarda olduğu için derlemenin dosya listesi (asset-manifest.json)
+ *   okunup hepsi önceden önbelleğe alınır; eski sürümlerden kalan dosyalar silinir.
  */
-const CACHE_NAME = 'storm-pwa-v2';
+const CACHE_NAME = 'storm-pwa-v3';
+const ASSET_MANIFEST_URL = './asset-manifest.json';
+const PRECACHE_CONCURRENCY = 4;
 const APP_SHELL = [
   './',
   './index.html',
@@ -38,6 +42,56 @@ async function cacheShellAssets(cache, html) {
   }));
 }
 
+// Derlemenin tüm dosyalarını (her ekranın kodu, stiller) önbelleğe alır ve listede olmayan
+// eski /assets/ dosyalarını siler. Liste alınamazsa (internet yok) hiçbir şey silinmez.
+let buildAssetsPromise = null;
+function cacheBuildAssets(cache) {
+  if (buildAssetsPromise) return buildAssetsPromise;
+  buildAssetsPromise = (async () => {
+    let manifest;
+    try {
+      const response = await fetch(new URL(ASSET_MANIFEST_URL, self.registration.scope).href, { cache: 'no-store' });
+      if (!response || !response.ok) return;
+      manifest = await response.json();
+    } catch (err) {
+      return;
+    }
+    const wanted = new Set();
+    Object.values(manifest || {}).forEach((entry) => {
+      if (!entry || typeof entry !== 'object') return;
+      [entry.file, ...(entry.css || []), ...(entry.assets || [])].forEach((file) => {
+        if (typeof file === 'string' && file) wanted.add(new URL(file, self.registration.scope).href);
+      });
+    });
+    const missing = [];
+    for (const url of wanted) {
+      if (!(await cache.match(url))) missing.push(url);
+    }
+    let index = 0;
+    const worker = async () => {
+      while (index < missing.length) {
+        const url = missing[index++];
+        try {
+          const response = await fetch(url);
+          if (response && response.ok) await cache.put(url, response);
+        } catch (err) {
+          console.warn('[sw] Dosya önbelleğe alınamadı:', url, err);
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: PRECACHE_CONCURRENCY }, worker));
+    if (wanted.size > 0) {
+      const keys = await cache.keys();
+      await Promise.all(keys
+        .filter((request) => request.url.includes('/assets/') && !wanted.has(request.url))
+        .map((request) => cache.delete(request)));
+    }
+  })()
+    .catch((err) => console.warn('[sw] Derleme dosyaları önbelleğe alınamadı:', err))
+    .finally(() => { buildAssetsPromise = null; });
+  return buildAssetsPromise;
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -45,6 +99,7 @@ self.addEventListener('install', (event) => {
         await cache.addAll(APP_SHELL);
         const indexResponse = await cache.match('./index.html');
         if (indexResponse) await cacheShellAssets(cache, await indexResponse.text());
+        await cacheBuildAssets(cache);
       })
       .catch((err) => console.warn('[sw] Önbellek hazırlanamadı:', err))
       .then(() => self.skipWaiting())
@@ -71,6 +126,7 @@ async function networkFirst(request, event) {
           .then(async (html) => {
             await cache.put('./index.html', new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } }));
             await cacheShellAssets(cache, html);
+            await cacheBuildAssets(cache);
           })
           .catch((err) => console.warn('[sw] Sayfa önbelleğe alınamadı:', err))
       );

@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 import {
   ColumnMapping,
   ColumnTargetType,
@@ -515,6 +514,8 @@ export function calculateImportSummary(items: CariImportItem[]): ImportAnalysisS
  */
 export async function parseExcelFile(file: File): Promise<RawExcelData> {
   const arrayBuffer = await file.arrayBuffer();
+  // Excel kütüphanesi büyük olduğu için yalnızca dosya okunurken indirilir
+  const XLSX = await import('xlsx');
   const workbook = XLSX.read(arrayBuffer, { type: 'array' });
 
   const firstSheetName = workbook.SheetNames[0];

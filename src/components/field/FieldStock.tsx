@@ -1,10 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, Suspense } from 'react';
+import { lazyWithReload } from '../../utils/lazyWithReload';
 import { Package, AlertTriangle, X } from 'lucide-react';
 import { Stock } from '../../types';
 import { findStockByBarcodeOrSearch } from '../../utils/posUtils';
 import { parseScannedQrCode } from '../../utils/formatters';
-import BarcodeScannerModal from '../BarcodeScannerModal';
 import { Card, SectionTitle, SegmentedControl, SearchBox, EmptyState, formatMoney, norm } from './fieldUi';
+
+// Kamera/barkod kütüphanesi büyük olduğu için tarayıcı ilk açıldığında indirilir
+const BarcodeScannerModal = lazyWithReload(() => import('../BarcodeScannerModal'));
 
 interface FieldStockProps {
   stoklar: Stock[];
@@ -96,7 +99,11 @@ export const FieldStock: React.FC<FieldStockProps> = ({ stoklar, showToast }) =>
         </div>
       </div>
 
-      <BarcodeScannerModal isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={handleScan} title="Stok Sorgula" />
+      {isScannerOpen && (
+        <Suspense fallback={null}>
+        <BarcodeScannerModal isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={handleScan} title="Stok Sorgula" />
+        </Suspense>
+      )}
     </div>
   );
 };

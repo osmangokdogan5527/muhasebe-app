@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Stock } from '../../types';
 import { X, Printer, Settings, Layers, Download } from 'lucide-react';
 import Barcode from 'react-barcode';
-import { jsPDF } from 'jspdf';
 import { toPng } from 'html-to-image';
 import { QrCodeImage } from '../templatedesigner/QrCodeImage';
 import { alertDialog } from '../../utils/dialogs';
