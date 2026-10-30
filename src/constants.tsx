@@ -435,11 +435,15 @@ export const APP_VERSION = '1.8.3';
 export const CHANGELOG = {
   version: '1.8.3',
   features: [
+    "Storm Saha – Telefon Uygulaması: Program telefona uygulama olarak kurulabilir (Android: Yükle, iPhone: Ana Ekrana Ekle). Hızlı satış (barkod okutma, Nakit/Kart/Veresiye), tahsilat/ödeme, stok sorgulama, cari bakiye ve Storm AI tek elle kullanılacak sade ekranda; kayıtlar bilgisayardaki programla anında eşitlenir.",
+    "İnternetsiz Saha Kaydı: Çekim olmayan yerde yapılan satış ve tahsilatlar telefona kaydedilir, internet gelince otomatik gönderilir; uygulama internetsiz de açılır.",
+    "Otomatik Güncelleme: Masaüstü program yeni sürümü arka planda kendisi bulup indirir; 'Şimdi Yeniden Başlat' ya da 'Sonra' seçilebilir, 'Sonra' denirse program kapanırken kurulur. Telefon uygulaması yeni sürümü bir sonraki açılışta kendiliğinden alır.",
     "Sıvı Mesh Işık Efektleri: Arka plana kuzey ışığı gibi çok yavaş dönen akışkan bir renk şeridi eklendi; kartların kenarları sol üstten parlayıp tema rengine dönen ince bir cam halkasıyla çevrelendi.",
     "İmleci Takip Eden Işık: Fare bir kartın üzerinde gezinirken imlecin altında tema renginde yumuşak bir ışık oluşur.",
     "Renkli Uyarı Kutuları: Sıvı Mesh tasarımında bilgi, uyarı ve hata kutuları koyu zemine uygun yarı saydam renkli cam görünümüne, yazıları o rengin açık tonuna kavuştu."
   ],
   fixes: [
+    "İnternet yokken POS satışı ve tahsilat kaydının 'Kaydediliyor...' ekranında takılı kalması düzeltildi.",
     "Sıvı Mesh tasarımında sayfa başlıkları, açıklamalar ve uyarı yazıları görünmüyordu (ör. Ayarlar, Masraflar, Çalışanlar başlıkları); okunabilirlik kuralları yeniden çalışır hale getirildi.",
     "Kasa ekranındaki açık zeminli hesap seçim kutusunda beyaz yazının görünmemesi düzeltildi.",
     "Çok soluk açıklama ve boş durum yazıları okunabilir tona getirildi.",
@@ -689,6 +693,10 @@ export const changelogData = [
     version: "1.8.3",
     date: "30.10.2026",
     changes: [
+      "Storm Saha – Telefon Uygulaması: Program telefona uygulama olarak kurulabilir (Android: Yükle, iPhone: Ana Ekrana Ekle). Hızlı satış (barkod okutma, Nakit/Kart/Veresiye), tahsilat/ödeme, stok sorgulama, cari bakiye ve Storm AI tek elle kullanılacak sade ekranda; kayıtlar bilgisayardaki programla anında eşitlenir.",
+      "İnternetsiz Saha Kaydı: Çekim olmayan yerde yapılan satış ve tahsilatlar telefona kaydedilir, internet gelince otomatik gönderilir; uygulama internetsiz de açılır.",
+      "Otomatik Güncelleme: Masaüstü program yeni sürümü arka planda kendisi bulup indirir; 'Şimdi Yeniden Başlat' ya da 'Sonra' seçilebilir, 'Sonra' denirse program kapanırken kurulur. Telefon uygulaması yeni sürümü bir sonraki açılışta kendiliğinden alır.",
+      "İnternet yokken POS satışı ve tahsilat kaydının 'Kaydediliyor...' ekranında takılı kalması düzeltildi.",
       "Sıvı Mesh Işık Efektleri: Arka plana kuzey ışığı gibi çok yavaş dönen akışkan bir renk şeridi eklendi; kartların kenarları sol üstten parlayıp tema rengine dönen ince bir cam halkasıyla çevrelendi.",
       "İmleci Takip Eden Işık: Fare bir kartın üzerinde gezinirken imlecin altında tema renginde yumuşak bir ışık oluşur.",
       "Renkli Uyarı Kutuları: Sıvı Mesh tasarımında bilgi, uyarı ve hata kutuları koyu zemine uygun yarı saydam renkli cam görünümüne, yazıları o rengin açık tonuna kavuştu.",

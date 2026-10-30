@@ -1,0 +1,59 @@
+name: Web ve Telefon Sürümünü Yayınla
+
+# main dalına her gönderimde web sürümü (telefon uygulaması) Firebase Hosting'e yüklenir.
+# Telefonlar yeni sürümü bir sonraki açılışta kendiliğinden alır.
+# Gerekli: GitHub > Settings > Secrets and variables > Actions >
+#   FIREBASE_SERVICE_ACCOUNT  (Firebase servis hesabı JSON anahtarının tamamı)
+#   ya da "firebase init hosting:github" komutunun eklediği FIREBASE_SERVICE_ACCOUNT_AESTHETIC_LIGHT_CW2H4
+# Anahtar eklenmemişse iş hata vermeden atlanır ve uyarı bırakır.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT || secrets.FIREBASE_SERVICE_ACCOUNT_AESTHETIC_LIGHT_CW2H4 }}
+    steps:
+      - name: Firebase Anahtarı Kontrolü
+        if: env.FIREBASE_SERVICE_ACCOUNT == ''
+        run: echo "::warning::FIREBASE_SERVICE_ACCOUNT anahtarı eklenmemiş; web/telefon sürümü yayınlanmadı. Kurulum için docs/TELEFON_UYGULAMASI.md dosyasına bakın."
+
+      - name: Kodu İndir
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+        uses: actions/checkout@v4
+
+      - name: Node.js Kur
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Bağımlılıkları Yükle
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+        shell: bash
+        run: |
+          rm -f package-lock.json
+          npm install --no-audit --no-fund
+
+      - name: Web Sürümünü Derle
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+        run: npm run build
+
+      - name: Firebase Hosting'e Yükle
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ env.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: aesthetic-light-cw2h4

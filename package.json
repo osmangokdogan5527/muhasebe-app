@@ -59,7 +59,8 @@
       {
         "provider": "github",
         "owner": "osmangokdogan5527",
-        "repo": "muhasebe-app"
+        "repo": "muhasebe-app",
+        "releaseType": "release"
       }
     ]
   },

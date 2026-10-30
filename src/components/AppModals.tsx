@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { RotateCcw, CloudLightning, Check, MessageSquare, ImageIcon, ShieldCheck, X, Download, ShieldAlert, Info } from 'lucide-react';
 import { StormLogo, } from '../constants';
 import AiAssistant from "./AiAssistant";
@@ -124,6 +124,8 @@ export const AppModals: React.FC<AppModalsProps> = ({
   actionPermissions,
   handleNavigate
 }) => {
+  // Arka planda indirilen güncelleme için "Sonra" denirse pencere kapanır, program kapanırken kurulur
+  const [isUpdateReadyDismissed, setIsUpdateReadyDismissed] = useState(false);
   return (
     <>
 {/* RESET DATABASE MODAL */}
@@ -192,7 +194,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
       )}
 
       {/* UPDATE DOWNLOADED MODAL */}
-      {updateStatus === 'downloaded' && (
+      {updateStatus === 'downloaded' && !isUpdateReadyDismissed && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
           <div className="bg-[#ffffff] rounded-2xl max-w-sm w-full border border-slate-200 shadow-2xl p-6 overflow-hidden text-center">
             <div className="mx-auto mb-6 flex justify-center">
@@ -214,6 +216,13 @@ export const AppModals: React.FC<AppModalsProps> = ({
             >
               <RotateCcw className="w-4 h-4" />
               Şimdi Yeniden Başlat
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsUpdateReadyDismissed(true)}
+              className="w-full mt-2 py-2.5 px-4 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+            >
+              Sonra (program kapanırken kurulur)
             </button>
           </div>
         </div>

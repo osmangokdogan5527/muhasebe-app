@@ -5,36 +5,55 @@ telefona "uygulama" olarak eklenir (PWA). Sunucu kiralamak gerekmez, ücretsizdi
 Veriler bilgisayardaki programla aynı Firebase veritabanını kullanır; telefonda yapılan
 satış/tahsilat bilgisayarda anında görünür, bilgisayardaki kayıtlar da telefonda.
 
-## 1. Web sürümünü yayına alma (bir kez, sonra her yeni sürümde)
+## 1. Otomatik yayın (bir kez kurulur)
 
-> Bu adım canlı yayındır. Yalnızca "yayınla" kararı verildiğinde yapılır.
+Kod GitHub'da `main` dalına girdiğinde iki şey kendiliğinden olur:
 
-### Seçenek A – Firebase Hosting (önerilen, ücretsiz Spark planı yeterli)
-Proje zaten Firebase kullandığı için ek ayar gerekmez. Adres:
-`https://aesthetic-light-cw2h4.web.app`
+| | Ne olur | Kullanıcıya nasıl ulaşır |
+|---|---|---|
+| Bilgisayar programı | `release.yml` Windows kurulumunu derler ve GitHub Releases'te **yayınlanmış** sürüm olarak açar | Program açıldıktan ~15 sn sonra ve 4 saatte bir yeni sürüm arar, sessizce indirir, "Güncelleme Hazır" der. "Sonra" denirse program kapanırken kurulur. |
+| Telefon / web | `deploy-web.yml` web sürümünü Firebase Hosting'e yükler | Telefon uygulaması yeni sürümü bir sonraki açılışta kendisi alır. |
 
-Bilgisayarda proje klasöründe (Node.js kurulu olmalı):
+> Yeni masaüstü sürümü için `package.json` içindeki sürüm numarası artırılmalıdır
+> (aynı numarayla gönderilen kod mevcut sürümü değiştirmez).
 
-```bash
-npm install
-```
+### Telefon yayını için tek seferlik anahtar
+Telefon yayınının çalışması için GitHub'a Firebase'e yükleme izni veren bir anahtar eklenir.
+Anahtar yoksa iş hata vermez, sadece "anahtar eklenmemiş" uyarısıyla atlanır.
+
+**Kolay yol (bilgisayarda, proje klasöründe):**
 
 ```bash
 npx firebase-tools@13.35.1 login
 ```
 
 ```bash
+npx firebase-tools@13.35.1 init hosting:github
+```
+
+- Depo sorulunca: `osmangokdogan5527/muhasebe-app`
+- "Set up the workflow to run a build script before every deploy?" → **No**
+- "Set up automatic deployment to your site's live channel when a PR is merged?" → **No**
+- Komut anahtarı GitHub'a `FIREBASE_SERVICE_ACCOUNT_AESTHETIC_LIGHT_CW2H4` adıyla kendisi ekler.
+  Oluşturduğu `.github/workflows/firebase-hosting-*.yml` dosyası olursa silin
+  (bizim `deploy-web.yml` aynı işi yapıyor).
+
+**Elle yol:** Google Cloud Console → IAM → Hizmet Hesapları → yeni hesap
+(roller: *Firebase Hosting Admin*, *API Keys Viewer*) → Anahtarlar → JSON anahtar oluştur.
+GitHub → depo → Settings → Secrets and variables → Actions → *New repository secret*:
+ad `FIREBASE_SERVICE_ACCOUNT`, değer JSON dosyasının tamamı.
+
+### Elle yayın (gerekirse)
+Otomatik yayını beklemeden yüklemek için:
+
+```bash
 npm run deploy:web
 ```
 
-- `login` komutu tarayıcıda Google hesabını sorar: Firebase projesinin sahibi olan hesapla giriş yapın.
-- `deploy:web` programı derler ve yalnızca web sitesini (Hosting) yükler; veritabanına
-  ve güvenlik kurallarına dokunmaz.
+Firebase kullanmadan: `npm run build` → `dist` klasörünü https://app.netlify.com/drop adresine
+sürükleyin.
 
-### Seçenek B – Netlify Drop (komut satırı olmadan)
-1. `npm run build` ile derleyin; `dist` klasörü oluşur.
-2. https://app.netlify.com/drop adresine `dist` klasörünü sürükleyip bırakın.
-3. Verilen `https://….netlify.app` adresini kullanın.
+Web adresi: `https://aesthetic-light-cw2h4.web.app`
 
 ## 2. Telefona kurma
 
@@ -69,5 +88,5 @@ npm run deploy:web
 
 ## 5. Yeni sürüm yayınlandığında
 
-Telefon yeni sürümü bir sonraki açılışta kendisi indirir; tekrar kurmaya gerek yoktur.
-Hemen görmek için uygulamayı kapatıp yeniden açın.
+Telefon uygulaması internet varken her açılışta en son sürümü yükler; tekrar kurmaya gerek
+yoktur. Açıkken yayınlanan bir sürümü görmek için uygulamayı tamamen kapatıp yeniden açın.

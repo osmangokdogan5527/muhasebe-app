@@ -100,8 +100,53 @@ function createWindow() {
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
+// Otomatik (arka plan) güncelleme: program açıldıktan kısa süre sonra ve 4 saatte bir
+// yeni sürüm aranır, varsa sessizce indirilir. İndirme bitince "Güncelleme Hazır" penceresi
+// açılır; kullanıcı hemen yeniden başlatabilir ya da program kapanırken kurulur.
+// İnternet yokken vb. arka plan hataları kullanıcıya gösterilmez, yalnızca günlüğe yazılır.
+const AUTO_UPDATE_FIRST_CHECK_MS = 15 * 1000;
+const AUTO_UPDATE_INTERVAL_MS = 4 * 60 * 60 * 1000;
+let silentUpdateInProgress = false;
+let updateDownloadStarted = false;
+let updateAlreadyDownloaded = false;
+
+function runBackgroundUpdateCheck() {
+  if (!app.isPackaged || silentUpdateInProgress || updateDownloadStarted || updateAlreadyDownloaded) return;
+  silentUpdateInProgress = true;
+  autoUpdater.checkForUpdates().catch((err) => {
+    console.error('Arka plan güncelleme kontrolü başarısız:', err && err.message ? err.message : err);
+    silentUpdateInProgress = false;
+  });
+}
+
+function startAutoUpdateSchedule() {
+  if (!app.isPackaged) return;
+  setTimeout(runBackgroundUpdateCheck, AUTO_UPDATE_FIRST_CHECK_MS);
+  setInterval(runBackgroundUpdateCheck, AUTO_UPDATE_INTERVAL_MS);
+}
+
+autoUpdater.on('update-available', () => {
+  if (!silentUpdateInProgress || updateDownloadStarted) return;
+  updateDownloadStarted = true;
+  autoUpdater.downloadUpdate().catch((err) => {
+    console.error('Arka plan güncelleme indirmesi başarısız:', err && err.message ? err.message : err);
+    updateDownloadStarted = false;
+    silentUpdateInProgress = false;
+  });
+});
+
+autoUpdater.on('update-not-available', () => {
+  silentUpdateInProgress = false;
+});
+
 autoUpdater.on('error', (err) => {
   console.error('Update error:', err);
+  if (silentUpdateInProgress) {
+    // Arka plandaki otomatik kontrol/indirme hatası: kullanıcıyı rahatsız etme, sonraki denemede tekrar denenir
+    silentUpdateInProgress = false;
+    updateDownloadStarted = false;
+    return;
+  }
   if (mainWindow) {
     let errMsg = err.message || 'Bilinmeyen bir hata oluştu';
     if (errMsg.includes('No published versions on GitHub')) {
@@ -120,6 +165,9 @@ autoUpdater.on('download-progress', (progressObj) => {
 });
 
 autoUpdater.on('update-downloaded', (info) => {
+  silentUpdateInProgress = false;
+  updateDownloadStarted = false;
+  updateAlreadyDownloaded = true;
   if (mainWindow) mainWindow.webContents.send('update_downloaded');
 });
 
@@ -166,7 +214,16 @@ ipcMain.handle('check-for-updates', async () => {
 });
 
 ipcMain.on('download-update', () => {
-  autoUpdater.downloadUpdate();
+  // Arka planda zaten indiriliyorsa ya da indirildiyse ikinci kez başlatma
+  if (updateDownloadStarted || updateAlreadyDownloaded) {
+    if (updateAlreadyDownloaded && mainWindow) mainWindow.webContents.send('update_downloaded');
+    return;
+  }
+  updateDownloadStarted = true;
+  autoUpdater.downloadUpdate().catch((err) => {
+    console.error('Güncelleme indirmesi başarısız:', err && err.message ? err.message : err);
+    updateDownloadStarted = false;
+  });
 });
 
 ipcMain.handle('get-app-version', () => app.getVersion());
@@ -197,6 +254,7 @@ app.whenReady().then(() => {
 
   performSchemaMigration(); // Uygulama başlarken şema göç kontrollerini yap
   createWindow();
+  startAutoUpdateSchedule();
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) {
