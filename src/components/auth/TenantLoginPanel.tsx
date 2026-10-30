@@ -103,12 +103,20 @@ export const TenantLoginPanel: React.FC<TenantLoginPanelProps> = ({ accounts, on
     run(() => connectTenant(firmCode, password));
   };
 
+  // Onay tarayıcı penceresiyle (window.confirm) değil sayfa içinde sorulur: AI Studio önizlemesi gibi
+  // gömülü çerçevelerde tarayıcı onay pencereleri engellenir ve düğme hiçbir şey yapmıyormuş gibi görünür.
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
+
   const handleRemove = (account: DeviceAccount) => {
-    const ok = window.confirm(`"${account.name}" bu cihazın giriş listesinden kaldırılsın mı?\n\nFirmanın verileri silinmez; daha sonra "Mevcut Firmaya Bağlan" ile tekrar ekleyebilirsiniz.`);
-    if (!ok) return;
-    const next = removeDeviceAccount(account.id);
-    onAccountsChange(next);
-    if (next.length === 0) resetForm('create');
+    try {
+      const next = removeDeviceAccount(account.id);
+      onAccountsChange(next);
+      setPendingRemoveId(null);
+      if (next.length === 0) resetForm('create');
+    } catch (err: any) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'TenantLoginPanel.handleRemove');
+      setError('Firma listeden kaldırılamadı.');
+    }
   };
 
   const inputClass = `w-full transition outline-none px-4 py-3 rounded-xl text-sm ${inputStyleClass}`;
@@ -134,10 +142,32 @@ export const TenantLoginPanel: React.FC<TenantLoginPanelProps> = ({ accounts, on
       <div className="space-y-3 animate-fade-in">
         <h2 className={`text-xs font-bold uppercase tracking-widest mb-6 text-center ${textSecondary}`}>Hesabınızı Seçin</h2>
         {accounts.map((account) => (
-          <div key={account.id} className="relative group">
+          pendingRemoveId === account.id ? (
+            <div key={account.id} className={`p-4 rounded-xl border border-rose-500/30 bg-rose-500/10 animate-fade-in`}>
+              <p className={`text-xs leading-relaxed mb-3 ${textPrimary}`}>
+                <b>{account.name}</b> bu cihazın giriş listesinden kaldırılsın mı? Firmanın verileri silinmez; daha sonra
+                "Mevcut Firmaya Bağlan" ile tekrar ekleyebilirsiniz.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleRemove(account)}
+                  className="flex-1 py-2 rounded-lg text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white transition cursor-pointer"
+                >
+                  Listeden Kaldır
+                </button>
+                <button
+                  onClick={() => setPendingRemoveId(null)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${buttonBgClass} ${textSecondary}`}
+                >
+                  Vazgeç
+                </button>
+              </div>
+            </div>
+          ) : (
+          <div key={account.id} className="flex items-stretch gap-2 group">
             <button
               onClick={() => { setSelectedAccount(account); resetForm('login'); }}
-              className={`w-full flex items-center justify-between p-4 rounded-xl transition cursor-pointer ${buttonBgClass}`}
+              className={`flex-1 min-w-0 flex items-center justify-between p-4 rounded-xl transition cursor-pointer ${buttonBgClass}`}
             >
               <div className="flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden transition ${userIconBg}`}>
@@ -150,14 +180,17 @@ export const TenantLoginPanel: React.FC<TenantLoginPanelProps> = ({ accounts, on
               </div>
               <ChevronDown className={`${textMuted} group-hover:text-teal-500 -rotate-90 transition`} size={18} />
             </button>
+            {/* Telefonda fareyle üzerine gelme olmadığı için kaldırma düğmesi her zaman görünür */}
             <button
-              onClick={() => handleRemove(account)}
-              title="Bu cihazdan kaldır"
-              className={`absolute top-1 right-1 p-1 rounded opacity-0 group-hover:opacity-100 transition cursor-pointer ${textTertiary} hover:text-rose-500`}
+              onClick={() => setPendingRemoveId(account.id)}
+              title="Bu cihazın listesinden kaldır"
+              aria-label={`${account.name} firmasını bu cihazın listesinden kaldır`}
+              className={`shrink-0 w-11 flex items-center justify-center rounded-xl transition cursor-pointer ${buttonBgClass} ${textTertiary} hover:text-rose-500`}
             >
-              <X size={12} />
+              <X size={16} />
             </button>
           </div>
+          )
         ))}
         <div className="flex items-center justify-center gap-6 pt-4">
           <button onClick={() => resetForm('create')} className={`flex items-center gap-1.5 ${linkBtn}`}>

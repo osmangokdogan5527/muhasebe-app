@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 /**
  * Sıvı Mesh tasarım stilinin arka planı (giriş ekranı ve uygulama ortak kullanır).
@@ -37,6 +37,31 @@ const FLUID_MESH_CSS = `
           bottom: -6%; left: 18%; width: 46vw; height: 46vw;
           background: radial-gradient(circle, color-mix(in oklab, var(--accent-600, #4f46e5) 55%, #db2777) 0%, transparent 66%);
           opacity: 0.42;
+        }
+        /* Kuzey ışığı gibi çok yavaş dönen akışkan renk şeridi */
+        .fluid-mesh-ribbon {
+          position: absolute;
+          left: 50%; top: 45%;
+          width: 150vmax; height: 150vmax;
+          margin: -75vmax 0 0 -75vmax;
+          background: conic-gradient(from 210deg,
+            transparent 0deg,
+            rgba(var(--accent-rgb, 99, 102, 241), 0.42) 40deg,
+            transparent 95deg,
+            color-mix(in oklab, var(--accent-300, #a5b4fc) 45%, transparent) 150deg,
+            transparent 205deg,
+            color-mix(in oklab, var(--accent-600, #4f46e5) 50%, transparent) 260deg,
+            transparent 320deg);
+          filter: blur(80px);
+          mix-blend-mode: screen;
+          opacity: 0.4;
+          animation: mesh-ribbon-spin 120s linear infinite;
+          will-change: transform;
+        }
+        @keyframes mesh-ribbon-spin {
+          from { transform: rotate(0deg) scale(1); }
+          50% { transform: rotate(180deg) scale(1.08); }
+          to { transform: rotate(360deg) scale(1); }
         }
         .fluid-mesh-vignette {
           position: absolute; inset: 0;
@@ -80,20 +105,90 @@ const FLUID_MESH_CSS = `
           .animate-mesh-float-1,
           .animate-mesh-float-2,
           .animate-mesh-float-3,
-          .animate-mesh-float-4 { animation: none !important; }
+          .animate-mesh-float-4,
+          .fluid-mesh-ribbon { animation: none !important; }
         }
 `;
 
-export const FluidMeshBackground: React.FC = () => (
-  <>
-    <style>{FLUID_MESH_CSS}</style>
-    <div className="fluid-mesh-bg fixed inset-0 overflow-hidden pointer-events-none z-0 select-none" aria-hidden="true">
-      <div className="fluid-mesh-blob fluid-mesh-blob-1 animate-mesh-float-1" />
-      <div className="fluid-mesh-blob fluid-mesh-blob-2 animate-mesh-float-2" />
-      <div className="fluid-mesh-blob fluid-mesh-blob-3 animate-mesh-float-3" />
-      <div className="fluid-mesh-blob fluid-mesh-blob-4 animate-mesh-float-4" />
-      <div className="fluid-mesh-vignette" />
-      <div className="fluid-mesh-grain" />
-    </div>
-  </>
-);
+// GlobalStyles.tsx'teki Sıvı Mesh yüzey (kart) sınıflarıyla aynı liste
+const SURFACE_CLASSES = [
+  'bg-white', 'bg-[#ffffff]', 'bg-[#0a0a0a]', 'bg-[#0c0c0c]', 'bg-[#0d0d0d]', 'bg-[#0f0f0f]', 'bg-[#111111]',
+  'bg-[#121212]', 'bg-[#151515]', 'bg-[#111111]/80', 'bg-[#121316]', 'bg-[#0b0c0e]', 'bg-zinc-950', 'bg-zinc-950/50',
+  'bg-zinc-900/50', 'bg-zinc-900', 'bg-zinc-800', 'bg-slate-50', 'bg-slate-100', 'bg-slate-900/50',
+  'bg-zinc-50', 'bg-zinc-100', 'bg-gray-50', 'bg-gray-100', 'bg-neutral-50',
+];
+
+/**
+ * İmleç bir kartın üzerindeyken, imlecin altında tema renginde yumuşak bir ışık oluşturur
+ * (kartların arka planındaki --spot-x/--spot-y değişkenleri). Her ekran karesinde en fazla bir kez çalışır.
+ */
+function useSurfaceSpotlight() {
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof CSS === 'undefined' || !CSS.escape) return;
+    const selector = SURFACE_CLASSES.map(c => '.' + CSS.escape(c)).join(',');
+    let lit: HTMLElement[] = [];
+    let frame = 0;
+    let lastEvent: PointerEvent | null = null;
+
+    const clear = () => {
+      lit.forEach(el => { el.style.removeProperty('--spot-x'); el.style.removeProperty('--spot-y'); });
+      lit = [];
+    };
+
+    const update = () => {
+      frame = 0;
+      const event = lastEvent;
+      if (!event) return;
+      // İmlecin altındaki kart ve onu içeren en fazla iki üst kart birlikte aydınlanır
+      const chain: HTMLElement[] = [];
+      let node = (event.target as Element | null)?.closest?.(selector) as HTMLElement | null;
+      if (node && node.closest('.print-paper-sheet')) node = null; // yazdırma önizlemesi beyaz kâğıt kalır
+      while (node && chain.length < 3) {
+        chain.push(node);
+        node = node.parentElement?.closest(selector) as HTMLElement | null;
+      }
+      lit.filter(el => !chain.includes(el)).forEach(el => { el.style.removeProperty('--spot-x'); el.style.removeProperty('--spot-y'); });
+      chain.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        el.style.setProperty('--spot-x', `${event.clientX - rect.left}px`);
+        el.style.setProperty('--spot-y', `${event.clientY - rect.top}px`);
+      });
+      lit = chain;
+    };
+
+    const onMove = (event: PointerEvent) => {
+      lastEvent = event;
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    const onLeave = () => { lastEvent = null; clear(); };
+
+    document.addEventListener('pointermove', onMove, { passive: true });
+    document.documentElement.addEventListener('pointerleave', onLeave);
+    window.addEventListener('blur', onLeave);
+    return () => {
+      document.removeEventListener('pointermove', onMove);
+      document.documentElement.removeEventListener('pointerleave', onLeave);
+      window.removeEventListener('blur', onLeave);
+      if (frame) cancelAnimationFrame(frame);
+      clear();
+    };
+  }, []);
+}
+
+export const FluidMeshBackground: React.FC = () => {
+  useSurfaceSpotlight();
+  return (
+    <>
+      <style>{FLUID_MESH_CSS}</style>
+      <div className="fluid-mesh-bg fixed inset-0 overflow-hidden pointer-events-none z-0 select-none" aria-hidden="true">
+        <div className="fluid-mesh-ribbon" />
+        <div className="fluid-mesh-blob fluid-mesh-blob-1 animate-mesh-float-1" />
+        <div className="fluid-mesh-blob fluid-mesh-blob-2 animate-mesh-float-2" />
+        <div className="fluid-mesh-blob fluid-mesh-blob-3 animate-mesh-float-3" />
+        <div className="fluid-mesh-blob fluid-mesh-blob-4 animate-mesh-float-4" />
+        <div className="fluid-mesh-vignette" />
+        <div className="fluid-mesh-grain" />
+      </div>
+    </>
+  );
+};

@@ -1,0 +1,61 @@
+name: Web ve Telefon Sürümünü Yayınla
+
+# main dalına her gönderimde web sürümü (telefon uygulaması) GitHub Pages'e yüklenir:
+#   https://osmangokdogan5527.github.io/muhasebe-app/
+# Telefonlar yeni sürümü bir sonraki açılışta kendiliğinden alır. Anahtar/şifre gerekmez.
+# Tek seferlik ayar: GitHub > depo > Settings > Pages > Build and deployment > Source: "GitHub Actions"
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kodu İndir
+        uses: actions/checkout@v4
+
+      - name: Node.js Kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Bağımlılıkları Yükle
+        shell: bash
+        run: |
+          rm -f package-lock.json
+          npm install --no-audit --no-fund
+
+      - name: Web Sürümünü Derle
+        run: npm run build
+
+      - name: GitHub Pages Ayarı
+        uses: actions/configure-pages@v5
+
+      - name: Derlenen Dosyaları Hazırla
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: GitHub Pages'e Yayınla
+        id: deployment
+        uses: actions/deploy-pages@v4

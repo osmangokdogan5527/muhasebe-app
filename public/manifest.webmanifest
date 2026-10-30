@@ -1,0 +1,20 @@
+{
+  "name": "Storm Ön Muhasebe",
+  "short_name": "Storm",
+  "description": "Ön muhasebe, stok ve hızlı satış — telefonda saha işlemleri",
+  "lang": "tr",
+  "dir": "ltr",
+  "start_url": "./?mod=saha",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#04050c",
+  "theme_color": "#090b1c",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

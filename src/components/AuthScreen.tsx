@@ -3,6 +3,7 @@ import { User, ChevronDown, Shield, X, CloudLightning, RotateCcw, Download, Tras
 import { StormLogo, APP_VERSION } from '../constants';
 import { DeviceAccount } from '../utils/accountStore';
 import { TenantLoginPanel } from './auth/TenantLoginPanel';
+import { InstallAppBanner } from './auth/InstallAppBanner';
 import { FluidMeshBackground } from './FluidMeshBackground';
 
 interface AuthScreenProps {
@@ -215,6 +216,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               setUser(userData as any);
             }}
           />
+          <InstallAppBanner textPrimary={textPrimary} textTertiary={textTertiary} cardBgClass={cardBgClass} />
 
         </div>
 
@@ -287,7 +289,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         </div>
 
         {/* Changelog Section */}
-        <div className={`hidden md:block absolute top-8 right-8 w-[360px] rounded-2xl p-6 shadow-2xl animate-fade-in max-h-[calc(100vh-4rem)] overflow-y-auto custom-scrollbar ${changelogBoxClass}`}>
+        <div className={`hidden xl:block absolute top-8 right-8 w-[360px] rounded-2xl p-6 shadow-2xl animate-fade-in max-h-[calc(100vh-4rem)] overflow-y-auto custom-scrollbar ${changelogBoxClass}`}>
           <h3 className={`text-xs font-bold uppercase tracking-widest mb-6 flex items-center gap-2 ${textPrimary}`}>
             <CloudLightning size={16} className="text-teal-500 shrink-0" />
             Sürüm Notları & Güncellemeler

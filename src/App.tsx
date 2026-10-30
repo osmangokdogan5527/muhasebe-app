@@ -39,6 +39,8 @@ import { PosView } from './components/pos/PosView';
 import { enableNetwork, disableNetwork } from 'firebase/firestore';
 import { BackupWizardModal } from './components/backup/BackupWizardModal';
 import { FluidMeshBackground } from './components/FluidMeshBackground';
+import { FieldApp } from './components/field/FieldApp';
+import { isStandaloneApp } from './utils/pwa';
 import DashboardView from './components/DashboardView';
 import CarilerView from './components/CarilerView';
 import StoklarView from './components/StoklarView';
@@ -113,6 +115,27 @@ export default function App() {
   };
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Saha (telefon) modu: ana ekrandan açılan uygulama (?mod=saha) veya kullanıcının tercihi
+  const FIELD_MODE_KEY = 'storm_field_mode';
+  const [fieldMode, setFieldMode] = useState<boolean>(() => {
+    try {
+      if (new URLSearchParams(window.location.search).get('mod') === 'saha') {
+        const saved = localStorage.getItem(FIELD_MODE_KEY);
+        return saved !== 'off';
+      }
+      const saved = localStorage.getItem(FIELD_MODE_KEY);
+      if (saved === 'on') return true;
+      if (saved === 'off') return false;
+      return isStandaloneApp() && window.innerWidth < 768;
+    } catch (e) {
+      return false;
+    }
+  });
+  const switchFieldMode = (on: boolean) => {
+    setFieldMode(on);
+    try { localStorage.setItem(FIELD_MODE_KEY, on ? 'on' : 'off'); } catch (e) { /* tercih kaydedilemezse bu oturumla sınırlı kalır */ }
+  };
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
@@ -842,6 +865,49 @@ export default function App() {
     }
   };
 
+  if (fieldMode) {
+    return (
+      <>
+        <style>{`:root { ${themeCssRules} }`}</style>
+        <FieldApp
+          firmName={user.displayName || 'Storm'}
+          cariler={cariler}
+          stoklar={stoklar}
+          islemler={islemler}
+          bankAccounts={bankAccounts}
+          isOnline={isOnline}
+          toastMessage={toastMessage}
+          showToast={showToast as any}
+          onCompleteSale={handleCompletePosSale}
+          onSwitchToFull={(targetTab) => {
+            switchFieldMode(false);
+            if (targetTab) setActiveTab(targetTab as any);
+          }}
+          onSignOut={handleSignOut}
+          isRestricted={isSecurityActive && userRole === 'employee'}
+          sensitiveTabs={sensitiveTabs}
+          activeTheme={activeTheme}
+          onChangeTheme={(themeId) => {
+            setActiveTheme(themeId);
+            try {
+              localStorage.setItem('kolay_hesap_accent_theme', themeId);
+            } catch (err) {
+              logError(err instanceof Error ? err : new Error(String(err)), 'App.fieldChangeTheme');
+            }
+          }}
+          ai={{
+            enabled: isAiEnabled,
+            apiKey: geminiApiKey,
+            userRole,
+            isSecurityActive,
+            actionPermissions,
+            financialData: { cariler, stoklar, islemler, ceksenet, expenses, bankAccounts, employees, employeeTransactions, accountTransactions },
+          }}
+        />
+      </>
+    );
+  }
+
   return (
     <div data-design-style={designStyle} className={`min-h-screen relative ${(currentThemeData as any).bgClass || 'bg-[#050505]'} text-[#e0e0e0] flex flex-col md:flex-row font-sans overflow-x-hidden`}>
       <GlobalStyles themeCssRules={themeCssRules} bodyPatternSvg={bodyPatternSvg} activePattern={activePatternObj} />
@@ -925,6 +991,7 @@ export default function App() {
             userRole={userRole}
             sensitiveTabs={sensitiveTabs}
             handleSignOut={handleSignOut}
+            onSwitchToField={() => switchFieldMode(true)}
             setAdminPinError={setAdminPinError}
             setAdminPinInput={setAdminPinInput}
             setIsAdminPinModalOpen={setIsAdminPinModalOpen}
