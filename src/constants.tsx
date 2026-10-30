@@ -430,28 +430,21 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.8.3';
+export const APP_VERSION = '1.8.4';
 
 export const CHANGELOG = {
-  version: '1.8.3',
+  version: '1.8.4',
   features: [
-    "Storm Saha – Telefon Uygulaması: Program telefona uygulama olarak kurulabilir (Android: Yükle, iPhone: Ana Ekrana Ekle). Hızlı satış (barkod okutma, Nakit/Kart/Veresiye), tahsilat/ödeme, stok sorgulama, cari bakiye ve Storm AI tek elle kullanılacak sade ekranda; kayıtlar bilgisayardaki programla anında eşitlenir.",
-    "İnternetsiz Saha Kaydı: Çekim olmayan yerde yapılan satış ve tahsilatlar telefona kaydedilir, internet gelince otomatik gönderilir; uygulama internetsiz de açılır.",
-    "Otomatik Güncelleme: Masaüstü program yeni sürümü arka planda kendisi bulup indirir; 'Şimdi Yeniden Başlat' ya da 'Sonra' seçilebilir, 'Sonra' denirse program kapanırken kurulur. Telefon uygulaması yeni sürümü bir sonraki açılışta kendiliğinden alır.",
-    "Taşınabilir Storm AI Butonu: Sağ alttaki Storm AI butonu fareyle veya parmakla tutulup istenen yere sürüklenebilir; yeri hatırlanır ve ekran dışına taşmaz.",
-    "Telefonda Tema Rengi: Telefonda seçilen tema rengi artık korunur; saha ekranının menüsüne 'Tema Rengi' seçimi eklendi.",
-    "Sıvı Mesh Işık Efektleri: Arka plana kuzey ışığı gibi çok yavaş dönen akışkan bir renk şeridi eklendi; kartların kenarları sol üstten parlayıp tema rengine dönen ince bir cam halkasıyla çevrelendi.",
-    "İmleci Takip Eden Işık: Fare bir kartın üzerinde gezinirken imlecin altında tema renginde yumuşak bir ışık oluşur.",
-    "Renkli Uyarı Kutuları: Sıvı Mesh tasarımında bilgi, uyarı ve hata kutuları koyu zemine uygun yarı saydam renkli cam görünümüne, yazıları o rengin açık tonuna kavuştu."
+    "Daha Hızlı Açılış: Program açılırken yalnızca görünen ekranı yükler; diğer ekranlar ilk açıldıklarında gelir. Açılışta indirilen kod yaklaşık yarıdan fazla azaldı, özellikle telefonda daha çabuk açılır.",
+    "Akıllı Güncelleme İndirmesi: Yeni sürümde yalnızca değişen dosyalar indirilir; Firebase ve React gibi büyük parçalar önbellekte kalır.",
+    "Excel ve PDF İsteğe Bağlı: Excel/PDF dışa aktarma ve barkod kamerası yalnızca kullanıldığında yüklenir.",
+    "Sayfa İçi Onay Pencereleri: Silme, iptal ve sıfırlama gibi işlemlerin onayları ile bilgi/uyarı mesajları artık programın içinde, okunaklı pencerelerde gösterilir; Esc tuşuyla kapatılabilir.",
   ],
   fixes: [
-    "İnternet yokken POS satışı ve tahsilat kaydının 'Kaydediliyor...' ekranında takılı kalması düzeltildi.",
-    "Giriş ekranında firmayı cihaz listesinden kaldırma (X) düğmesi her zaman görünür; onay sayfa içinde sorulur (telefonda ve önizleme ekranlarında düğme çalışmıyordu).",
-    "Giriş ekranındaki Sürüm Notları paneli orta boy ekranlarda firma oluşturma formunun üzerine binmiyor.",
-    "Sıvı Mesh tasarımında sayfa başlıkları, açıklamalar ve uyarı yazıları görünmüyordu (ör. Ayarlar, Masraflar, Çalışanlar başlıkları); okunabilirlik kuralları yeniden çalışır hale getirildi.",
-    "Kasa ekranındaki açık zeminli hesap seçim kutusunda beyaz yazının görünmemesi düzeltildi.",
-    "Çok soluk açıklama ve boş durum yazıları okunabilir tona getirildi.",
-    "Cam Arayüz (Glass) tasarımında sol menü profil kartının bazı stillerinin uygulanmaması düzeltildi."
+    "AI Studio önizlemesi gibi gömülü ekranlarda silme onaylarının çalışmaması ve hata/uyarı mesajlarının hiç görünmemesi düzeltildi.",
+    "Telefon uygulaması tüm ekranları önceden önbelleğe alır; internetsiz açılışta da her sekme çalışır.",
+    "Yeni sürüm yayınlandığında açık kalan eski sayfada bir ekran açılamazsa sayfa kendiliğinden yenilenir.",
+    "GitHub'da masaüstü sürümünün yayınlanmasını engelleyen 'etiket yok' hatası düzeltildi; sürüm derlendikten sonra otomatik yayınlanır.",
   ]
 };
 
@@ -693,6 +686,20 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.8.4",
+    date: "31.10.2026",
+    changes: [
+      "Daha Hızlı Açılış: Program açılırken yalnızca görünen ekranı yükler; diğer ekranlar ilk açıldıklarında gelir. Açılışta indirilen kod yaklaşık yarıdan fazla azaldı, özellikle telefonda daha çabuk açılır.",
+      "Akıllı Güncelleme İndirmesi: Yeni sürümde yalnızca değişen dosyalar indirilir; Firebase ve React gibi büyük parçalar önbellekte kalır.",
+      "Excel ve PDF İsteğe Bağlı: Excel/PDF dışa aktarma ve barkod kamerası yalnızca kullanıldığında yüklenir.",
+      "Sayfa İçi Onay Pencereleri: Silme, iptal ve sıfırlama gibi işlemlerin onayları ile bilgi/uyarı mesajları artık programın içinde, okunaklı pencerelerde gösterilir; Esc tuşuyla kapatılabilir.",
+      "AI Studio önizlemesi gibi gömülü ekranlarda silme onaylarının çalışmaması ve hata/uyarı mesajlarının hiç görünmemesi düzeltildi.",
+      "Telefon uygulaması tüm ekranları önceden önbelleğe alır; internetsiz açılışta da her sekme çalışır.",
+      "Yeni sürüm yayınlandığında açık kalan eski sayfada bir ekran açılamazsa sayfa kendiliğinden yenilenir.",
+      "GitHub'da masaüstü sürümünün yayınlanmasını engelleyen 'etiket yok' hatası düzeltildi; sürüm derlendikten sonra otomatik yayınlanır.",
+    ]
+  },
   {
     version: "1.8.3",
     date: "30.10.2026",
