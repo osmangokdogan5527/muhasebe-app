@@ -3,6 +3,7 @@ import { User, ChevronDown, Shield, X, CloudLightning, RotateCcw, Download, Tras
 import { StormLogo, APP_VERSION } from '../constants';
 import { DeviceAccount } from '../utils/accountStore';
 import { TenantLoginPanel } from './auth/TenantLoginPanel';
+import { InstallAppBanner } from './auth/InstallAppBanner';
 import { FluidMeshBackground } from './FluidMeshBackground';
 
 interface AuthScreenProps {
@@ -215,6 +216,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               setUser(userData as any);
             }}
           />
+          <InstallAppBanner textPrimary={textPrimary} textTertiary={textTertiary} cardBgClass={cardBgClass} />
 
         </div>
 
