@@ -16,6 +16,8 @@ interface AiAssistantProps {
   onNavigateToSettings: () => void;
   onCommandParsed: (command: any) => void;
   financialData?: any;
+  // Telefon saha ekranında: yüzen buton olmadan, bulunduğu alanı dolduran sohbet
+  embedded?: boolean;
 }
 
 interface Message {
@@ -58,9 +60,11 @@ export default function AiAssistant({
   actionPermissions = {},
   onNavigateToSettings, 
   onCommandParsed, 
-  financialData 
+  financialData,
+  embedded = false
 }: AiAssistantProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpenState, setIsOpen] = useState(false);
+  const isOpen = embedded || isOpenState;
   const [input, setInput] = useState('');
 
   // Drag states for floating button on mobile / desktop
@@ -696,10 +700,12 @@ export default function AiAssistant({
   };
 
   return (
-    <div className="fixed bottom-20 right-1.5 sm:right-4 z-[100]">
+    <div className={embedded ? 'w-full h-full flex flex-col min-h-0' : 'fixed bottom-20 right-1.5 sm:right-4 z-[100]'}>
       {/* Chat Window */}
       {isOpen && (
-        <div className="mb-4 w-[calc(100vw-12px)] sm:w-[380px] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-slide-up origin-bottom-right">
+        <div className={embedded
+          ? 'w-full h-full min-h-0 bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col'
+          : 'mb-4 w-[calc(100vw-12px)] sm:w-[380px] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-slide-up origin-bottom-right'}>
           {/* Header */}
           <div className="p-4 flex items-center justify-between" style={{ background: 'linear-gradient(to right, var(--accent-800, #991b1b), var(--accent-950, #4c0519))' }}>
             <div className="flex items-center gap-3">
@@ -722,12 +728,14 @@ export default function AiAssistant({
                   <HelpCircle size={18} />
                 </button>
               )}
-              <button 
-                onClick={() => setIsOpen(false)}
-                className="text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition"
-              >
-                <X size={20} />
-              </button>
+              {!embedded && (
+                <button 
+                  onClick={() => setIsOpen(false)}
+                  className="text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition"
+                >
+                  <X size={20} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -937,7 +945,7 @@ export default function AiAssistant({
           ) : (
             <>
               {/* Messages Area */}
-              <div ref={messagesContainerRef} className="p-4 h-[55vh] max-h-[350px] sm:h-[350px] sm:max-h-none overflow-y-auto bg-slate-50 flex flex-col gap-3">
+              <div ref={messagesContainerRef} className={`p-4 overflow-y-auto bg-slate-50 flex flex-col gap-3 ${embedded ? 'flex-1 min-h-0' : 'h-[55vh] max-h-[350px] sm:h-[350px] sm:max-h-none'}`}>
                 {messages.map((msg) => (
                   <div 
                     key={msg.id} 
@@ -1220,7 +1228,7 @@ export default function AiAssistant({
       )}
 
       {/* Floating Button */}
-      {!isOpen && (
+      {!isOpen && !embedded && (
         <div 
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}

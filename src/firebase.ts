@@ -36,6 +36,7 @@ import {
   signInAnonymously
 } from 'firebase/auth';
 import { Cari, Stock, Transaction, CekSenet, Expense, Employee, EmployeeTransaction, Credit, RecurringTransaction, LinkedReceiptInput } from './types';
+import { logError } from './utils/errorLogger';
 
 // Read config from the provisioned project
 const firebaseConfig = {
@@ -334,13 +335,37 @@ function getLinkedReceiptType(invoiceType: Transaction['type']): 'collection' | 
   return invoiceType === 'sale' || invoiceType === 'purchase_return' ? 'collection' : 'payment';
 }
 
+/**
+ * Çevrimdışıyken yazma işlemi sunucu onayını beklemez: Firestore kaydı yerel önbelleğe yazar
+ * ve bağlantı gelince otomatik gönderir (ekran "Kaydediliyor..." durumunda takılı kalmaz).
+ * Çevrimiçiyken sunucu onayı beklenir ve hatalar çağırana iletilir.
+ */
+async function commitWrite(write: Promise<void>, context: string): Promise<void> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    write.catch((err) => logError(err instanceof Error ? err : new Error(String(err)), `${context} (çevrimdışı kuyruk)`));
+    return;
+  }
+  await write;
+}
+
 export const RETAIL_CARI_ID = 'perakende_musteri';
 
 // POS'ta müşteri seçilmeden yapılan satışlar için sabit "Perakende Müşteri" carisini oluşturur
 export async function ensureRetailCari(): Promise<string> {
   try {
     const cariRef = doc(db, getPath(CARILER_COLL), RETAIL_CARI_ID);
-    const cariSnap = await getDoc(cariRef);
+    let cariSnap;
+    try {
+      cariSnap = await getDoc(cariRef);
+    } catch (readError) {
+      // Çevrimdışı ve kart bu cihazın önbelleğinde yok: sunucudaki olası bakiyeyi ezmemek için
+      // bakiye alanı yazılmadan birleştirerek oluşturulur
+      await commitWrite(setDoc(cariRef, {
+        id: RETAIL_CARI_ID, name: 'Perakende Müşteri', code: 'PERAKENDE', type: 'customer',
+        phone: '', email: '', address: '', openingBalance: 0, isActive: true, currency: 'TRY'
+      }, { merge: true }), 'ensureRetailCari');
+      return RETAIL_CARI_ID;
+    }
     if (!cariSnap.exists()) {
       const retailCari: Cari = {
         id: RETAIL_CARI_ID,
@@ -356,7 +381,7 @@ export async function ensureRetailCari(): Promise<string> {
         isActive: true,
         currency: 'TRY'
       };
-      await setDoc(cariRef, retailCari);
+      await commitWrite(setDoc(cariRef, retailCari), 'ensureRetailCari');
     }
     return RETAIL_CARI_ID;
   } catch (error) {
@@ -485,7 +510,7 @@ export async function createTransaction(islemData: Omit<Transaction, 'id'>, link
       }
     }
 
-    await batch.commit();
+    await commitWrite(batch.commit(), 'createTransaction');
     return islemId;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, getPath(ISLEMLER_COLL));
@@ -601,7 +626,7 @@ export async function removeTransaction(islem: Transaction) {
       }
     }
 
-    await batch.commit();
+    await commitWrite(batch.commit(), 'removeTransaction');
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getPath(ISLEMLER_COLL)}/${islem.id}`);
     throw error;
