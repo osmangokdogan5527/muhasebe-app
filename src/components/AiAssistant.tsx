@@ -67,52 +67,111 @@ export default function AiAssistant({
   const isOpen = embedded || isOpenState;
   const [input, setInput] = useState('');
 
-  // Drag states for floating button on mobile / desktop
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  // Yüzen Storm AI butonu fare ve dokunmayla sürüklenebilir; yeri hatırlanır ve ekran dışına taşmaz
+  const AI_BUTTON_POSITION_KEY = 'storm_ai_button_position';
+  const DRAG_THRESHOLD_PX = 6;
+  const SCREEN_MARGIN_PX = 6;
+  const [position, setPosition] = useState<{ x: number; y: number }>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(AI_BUTTON_POSITION_KEY) || 'null');
+      if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) return { x: saved.x, y: saved.y };
+    } catch (err) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'AiAssistant.loadButtonPosition');
+    }
+    return { x: 0, y: 0 };
+  });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const initialPos = useRef({ x: 0, y: 0 });
+  const dragBounds = useRef({ minX: 0, maxX: 0, minY: 0, maxY: 0 });
   const hasMovedRef = useRef(false);
+  const floatingButtonRef = useRef<HTMLDivElement | null>(null);
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (e.pointerType === 'mouse') {
-      setIsDragging(false);
-      hasMovedRef.current = false;
-      return;
-    }
-    if (e.button !== 0) return;
-    setIsDragging(true);
+  const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+  // Pencere küçülünce ya da kayıtlı konum bu ekrana sığmıyorsa buton görünür alana geri çekilir
+  useEffect(() => {
+    if (embedded) return;
+    const keepInside = () => {
+      const el = floatingButtonRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      let dx = 0;
+      let dy = 0;
+      if (rect.left < SCREEN_MARGIN_PX) dx = SCREEN_MARGIN_PX - rect.left;
+      else if (rect.right > window.innerWidth - SCREEN_MARGIN_PX) dx = window.innerWidth - SCREEN_MARGIN_PX - rect.right;
+      if (rect.top < SCREEN_MARGIN_PX) dy = SCREEN_MARGIN_PX - rect.top;
+      else if (rect.bottom > window.innerHeight - SCREEN_MARGIN_PX) dy = window.innerHeight - SCREEN_MARGIN_PX - rect.bottom;
+      if (dx !== 0 || dy !== 0) setPosition(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+    };
+    keepInside();
+    window.addEventListener('resize', keepInside);
+    return () => window.removeEventListener('resize', keepInside);
+  }, [embedded, isOpenState]);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    dragBounds.current = {
+      minX: SCREEN_MARGIN_PX - rect.left,
+      maxX: window.innerWidth - SCREEN_MARGIN_PX - rect.right,
+      minY: SCREEN_MARGIN_PX - rect.top,
+      maxY: window.innerHeight - SCREEN_MARGIN_PX - rect.bottom,
+    };
     dragStart.current = { x: e.clientX, y: e.clientY };
     initialPos.current = { ...position };
     hasMovedRef.current = false;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setIsDragging(true);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (err) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'AiAssistant.setPointerCapture');
+    }
   };
 
-  const handlePointerMove = (e: React.PointerEvent) => {
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDragging) return;
     const dx = e.clientX - dragStart.current.x;
     const dy = e.clientY - dragStart.current.y;
-    if (Math.abs(dx) > 15 || Math.abs(dy) > 15) {
-      hasMovedRef.current = true;
-    }
+    if (!hasMovedRef.current && Math.abs(dx) < DRAG_THRESHOLD_PX && Math.abs(dy) < DRAG_THRESHOLD_PX) return;
+    hasMovedRef.current = true;
+    const b = dragBounds.current;
     setPosition({
-      x: initialPos.current.x + dx,
-      y: initialPos.current.y + dy
+      x: initialPos.current.x + clamp(dx, b.minX, b.maxX),
+      y: initialPos.current.y + clamp(dy, b.minY, b.maxY),
     });
   };
 
-  const handlePointerUp = (e: React.PointerEvent) => {
-    if (e.pointerType === 'mouse') {
-      setIsOpen(true);
-      return;
-    }
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDragging) return;
     setIsDragging(false);
-    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    if (!hasMovedRef.current) {
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (err) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'AiAssistant.releasePointerCapture');
+    }
+    if (hasMovedRef.current) {
+      try {
+        localStorage.setItem(AI_BUTTON_POSITION_KEY, JSON.stringify(position));
+      } catch (err) {
+        logError(err instanceof Error ? err : new Error(String(err)), 'AiAssistant.saveButtonPosition');
+      }
+    } else {
       setIsOpen(true);
     }
   };
+
+  const handleButtonClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Sürükleme bittiğinde gelen tıklama asistanı açmasın (klavye ile Enter/Boşluk yine açar)
+    if (hasMovedRef.current) {
+      hasMovedRef.current = false;
+      return;
+    }
+    setIsOpen(true);
+  };
+
   const [messages, setMessages] = useState<Message[]>([]);
   // Gemini sohbet geçmişi ve onay bekleyen işlemler (render dışı tutulur)
   const agentHistoryRef = useRef<GeminiContent[]>([]);
@@ -1230,9 +1289,12 @@ export default function AiAssistant({
       {/* Floating Button */}
       {!isOpen && !embedded && (
         <div 
+          ref={floatingButtonRef}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          title="Sürükleyerek yerini değiştirebilirsiniz"
           className="flex flex-col items-center gap-1 relative group mt-2 select-none touch-none"
           style={{
             transform: `translate(${position.x}px, ${position.y}px)`,
@@ -1251,11 +1313,7 @@ export default function AiAssistant({
             <div className="absolute -inset-0.5 rounded-full animate-pulse opacity-20" style={{ backgroundColor: 'var(--accent-400, #f87171)' }}></div>
             
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsOpen(true);
-              }}
+              onClick={handleButtonClick}
               className="w-10 h-10 md:w-[58px] md:h-[58px] text-white rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 border-2 border-white/90 relative hover:brightness-125 z-10"
               style={{ 
                 background: 'linear-gradient(135deg, var(--accent-400, #f87171), var(--accent-600, #dc2626), var(--accent-900, #7f1d1d))',

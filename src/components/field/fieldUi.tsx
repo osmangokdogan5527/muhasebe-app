@@ -3,7 +3,7 @@
  * Büyük dokunma alanları, koyu zemin, vurgu rengi temadan (--accent-*) gelir.
  */
 import React, { useMemo, useState } from 'react';
-import { Search, X, ScanLine, User } from 'lucide-react';
+import { Search, X, ScanLine, User, Check } from 'lucide-react';
 import { Cari } from '../../types';
 
 export const formatMoney = (value: number, currency: string = 'TRY') =>
@@ -176,6 +176,47 @@ export const CariPickerSheet: React.FC<{
             </button>
           ))}
           {list.length === 0 && <EmptyState icon={<User size={28} />} text="Cari bulunamadı." />}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/** Alttan açılan tema rengi seçme paneli (masaüstündeki Ayarlar > Tema Rengi ile aynı listeyi kullanır). */
+export const ThemePickerSheet: React.FC<{
+  isOpen: boolean;
+  presets: { id: string; name: string; preview: string }[];
+  activeTheme: string;
+  onSelect: (themeId: string) => void;
+  onClose: () => void;
+}> = ({ isOpen, presets, activeTheme, onSelect, onClose }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[120] flex flex-col justify-end" role="dialog" aria-modal="true">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative max-h-[80vh] flex flex-col rounded-t-3xl border-t border-white/10 bg-[#0b0d1f] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] animate-slide-up">
+        <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-3" />
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-base font-bold text-white">Tema Rengi</h3>
+          <button type="button" onClick={onClose} className="p-2 text-slate-400 cursor-pointer" aria-label="Kapat"><X size={20} /></button>
+        </div>
+        <div className="overflow-y-auto grid grid-cols-2 gap-2 -mx-1 px-1">
+          {presets.map(preset => {
+            const selected = preset.id === activeTheme;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => onSelect(preset.id)}
+                className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition cursor-pointer active:scale-[0.98] ${selected ? 'border-white/40 bg-white/10' : 'border-white/10 bg-white/[0.04]'}`}
+              >
+                <span className="w-7 h-7 rounded-full shrink-0 border border-white/20 flex items-center justify-center" style={{ backgroundColor: preset.preview }}>
+                  {selected && <Check size={15} className="text-white drop-shadow" />}
+                </span>
+                <span className={`text-sm truncate ${selected ? 'font-bold text-white' : 'text-slate-300'}`}>{preset.name}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

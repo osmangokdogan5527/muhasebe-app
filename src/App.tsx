@@ -886,6 +886,15 @@ export default function App() {
           onSignOut={handleSignOut}
           isRestricted={isSecurityActive && userRole === 'employee'}
           sensitiveTabs={sensitiveTabs}
+          activeTheme={activeTheme}
+          onChangeTheme={(themeId) => {
+            setActiveTheme(themeId);
+            try {
+              localStorage.setItem('kolay_hesap_accent_theme', themeId);
+            } catch (err) {
+              logError(err instanceof Error ? err : new Error(String(err)), 'App.fieldChangeTheme');
+            }
+          }}
           ai={{
             enabled: isAiEnabled,
             apiKey: geminiApiKey,

@@ -3,10 +3,8 @@ import { useState, useEffect } from 'react';
 export function useAppSettings() {
   const isMobileInitial = typeof window !== 'undefined' && window.innerWidth < 768;
 
+  // Tema rengi telefonda da seçilebilir ve hatırlanır (telefonda yalnızca tasarım stili Sıvı Mesh'e sabitlenir)
   const [activeTheme, setActiveTheme] = useState<string>(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      return 'sky';
-    }
     // Migration check to ensure previous users get the new default 'sky' with 'fluid-mesh'
     const isInitializedV4 = localStorage.getItem('storm_default_setup_v4');
     if (!isInitializedV4) {
@@ -33,7 +31,6 @@ export function useAppSettings() {
     const applyMobileTheme = () => {
       if (window.innerWidth < 768) {
         setDesignStyle('fluid-mesh');
-        setActiveTheme('sky');
         document.documentElement.setAttribute('data-design-style', 'fluid-mesh');
       } else {
         document.documentElement.setAttribute('data-design-style', designStyle);

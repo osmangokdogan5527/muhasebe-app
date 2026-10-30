@@ -6,13 +6,15 @@
  * aynı fonksiyonlarla yapılır. "Tam Sürüm" ile bilgisayardaki tüm ekranlara geçilir.
  */
 import React, { useCallback, useState } from 'react';
-import { ShoppingCart, ArrowDownLeft, Package, Users, Bot, MoreVertical, Monitor, LogOut, Wifi, WifiOff, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { ShoppingCart, ArrowDownLeft, Package, Users, Bot, MoreVertical, Monitor, LogOut, Palette, Wifi, WifiOff, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { Cari, Stock, Transaction, BankAccount } from '../../types';
 import AiAssistant from '../AiAssistant';
 import { FieldSale, FieldSaleData } from './FieldSale';
 import { FieldCollection } from './FieldCollection';
 import { FieldStock } from './FieldStock';
 import { FieldCari } from './FieldCari';
+import { ThemePickerSheet } from './fieldUi';
+import { COLOR_PRESETS } from '../../constants';
 
 type FieldTab = 'satis' | 'tahsilat' | 'stok' | 'cari' | 'ai';
 
@@ -33,6 +35,8 @@ interface FieldAppProps {
   onSignOut: () => void;
   isRestricted: boolean;
   sensitiveTabs: string[];
+  activeTheme: string;
+  onChangeTheme: (themeId: string) => void;
   ai: {
     enabled: boolean;
     apiKey: string;
@@ -45,7 +49,7 @@ interface FieldAppProps {
 
 export const FieldApp: React.FC<FieldAppProps> = ({
   firmName, cariler, stoklar, islemler, bankAccounts, isOnline, toastMessage, showToast,
-  onCompleteSale, onSwitchToFull, onSignOut, isRestricted, sensitiveTabs, ai,
+  onCompleteSale, onSwitchToFull, onSignOut, isRestricted, sensitiveTabs, activeTheme, onChangeTheme, ai,
 }) => {
   const allowed = (tab: FieldTab) => {
     if (tab === 'ai') return ai.enabled;
@@ -62,6 +66,7 @@ export const FieldApp: React.FC<FieldAppProps> = ({
 
   const [activeTab, setActiveTab] = useState<FieldTab>(() => tabs[0]?.id || 'cari');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isThemeOpen, setIsThemeOpen] = useState(false);
   const [presetSaleCari, setPresetSaleCari] = useState<Cari | null>(null);
   const [presetCollectionCari, setPresetCollectionCari] = useState<Cari | null>(null);
   const clearSalePreset = useCallback(() => setPresetSaleCari(null), []);
@@ -95,7 +100,10 @@ export const FieldApp: React.FC<FieldAppProps> = ({
               <>
                 <div className="fixed inset-0 z-[90]" onClick={() => setIsMenuOpen(false)} />
                 <div className="absolute right-0 top-11 z-[95] w-56 rounded-2xl border border-white/10 bg-[#0d1024] shadow-2xl overflow-hidden">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); onSwitchToFull(); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-white hover:bg-white/5 cursor-pointer">
+                  <button type="button" onClick={() => { setIsMenuOpen(false); setIsThemeOpen(true); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-white hover:bg-white/5 cursor-pointer">
+                    <Palette size={17} /> Tema Rengi
+                  </button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); onSwitchToFull(); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-white hover:bg-white/5 border-t border-white/5 cursor-pointer">
                     <Monitor size={17} /> Tam Sürüme Geç
                   </button>
                   <button type="button" onClick={() => { setIsMenuOpen(false); onSignOut(); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-rose-300 hover:bg-white/5 border-t border-white/5 cursor-pointer">
@@ -168,6 +176,14 @@ export const FieldApp: React.FC<FieldAppProps> = ({
           />
         )}
       </main>
+
+      <ThemePickerSheet
+        isOpen={isThemeOpen}
+        presets={COLOR_PRESETS}
+        activeTheme={activeTheme}
+        onSelect={onChangeTheme}
+        onClose={() => setIsThemeOpen(false)}
+      />
 
       {/* Alt sekme çubuğu */}
       <nav className="shrink-0 grid border-t border-white/10 bg-[#070915]/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)]" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
