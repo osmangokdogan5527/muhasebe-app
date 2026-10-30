@@ -7,7 +7,7 @@
  * - /assets/ altındaki adı özetli (hash) dosyalar: önce önbellek
  * - Diğer kendi dosyalarımız: önbellekten hemen ver, arkada güncelle
  */
-const CACHE_NAME = 'storm-pwa-v1';
+const CACHE_NAME = 'storm-pwa-v2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -17,10 +17,35 @@ const APP_SHELL = [
   './icons/apple-touch-icon.png'
 ];
 
+// index.html içindeki derleme dosyalarını (assets/…js, …css) bulup önbelleğe alır.
+// İlk açılışta bu dosyalar service worker devreye girmeden indirildiği için
+// ayrıca alınmazlarsa internetsiz açılışta sayfa boş kalır.
+async function cacheShellAssets(cache, html) {
+  const urls = new Set();
+  const pattern = /(?:src|href)=["']([^"']*assets\/[^"']+)["']/g;
+  let match;
+  while ((match = pattern.exec(html)) !== null) {
+    urls.add(new URL(match[1], self.registration.scope).href);
+  }
+  await Promise.all(Array.from(urls).map(async (url) => {
+    if (await cache.match(url)) return;
+    try {
+      const response = await fetch(url);
+      if (response && response.ok) await cache.put(url, response);
+    } catch (err) {
+      console.warn('[sw] Dosya önbelleğe alınamadı:', url, err);
+    }
+  }));
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
+      .then(async (cache) => {
+        await cache.addAll(APP_SHELL);
+        const indexResponse = await cache.match('./index.html');
+        if (indexResponse) await cacheShellAssets(cache, await indexResponse.text());
+      })
       .catch((err) => console.warn('[sw] Önbellek hazırlanamadı:', err))
       .then(() => self.skipWaiting())
   );
@@ -34,11 +59,22 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-async function networkFirst(request) {
+async function networkFirst(request, event) {
   const cache = await caches.open(CACHE_NAME);
   try {
     const response = await fetch(request);
-    if (response && response.ok) cache.put('./index.html', response.clone());
+    if (response && response.ok) {
+      const copy = response.clone();
+      // Yeni sürüm yayınlandığında yeni derleme dosyaları da arka planda önbelleğe alınır
+      event.waitUntil(
+        copy.text()
+          .then(async (html) => {
+            await cache.put('./index.html', new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } }));
+            await cacheShellAssets(cache, html);
+          })
+          .catch((err) => console.warn('[sw] Sayfa önbelleğe alınamadı:', err))
+      );
+    }
     return response;
   } catch (err) {
     const cached = (await cache.match('./index.html')) || (await cache.match('./'));
@@ -76,7 +112,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === 'navigate') {
-    event.respondWith(networkFirst(request));
+    event.respondWith(networkFirst(request, event));
   } else if (url.pathname.includes('/assets/')) {
     event.respondWith(cacheFirst(request));
   } else {

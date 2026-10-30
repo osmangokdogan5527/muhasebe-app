@@ -14,7 +14,8 @@
     "lint": "tsc --noEmit",
     "electron:dev": "electron .",
     "electron:start": "concurrently \"npm run dev\" \"electron .\"",
-    "electron:build": "vite build && electron-builder --win"
+    "electron:build": "vite build && electron-builder --win",
+    "deploy:web": "vite build && npx firebase-tools@13.35.1 deploy --only hosting"
   },
   "build": {
     "appId": "com.onmuhasebe.app",

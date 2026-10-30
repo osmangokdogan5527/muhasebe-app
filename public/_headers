@@ -1,0 +1,25 @@
+# Netlify / Cloudflare Pages önbellek ve güvenlik başlıkları (Firebase Hosting firebase.json kullanır)
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/icons/*
+  Cache-Control: public, max-age=604800
+
+/sw.js
+  Cache-Control: no-cache
+  Service-Worker-Allowed: /
+
+/manifest.webmanifest
+  Cache-Control: no-cache
+  Content-Type: application/manifest+json
+
+/
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(self), microphone=(), geolocation=()
