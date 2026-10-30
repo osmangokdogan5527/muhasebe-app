@@ -134,10 +134,10 @@ export const TenantLoginPanel: React.FC<TenantLoginPanelProps> = ({ accounts, on
       <div className="space-y-3 animate-fade-in">
         <h2 className={`text-xs font-bold uppercase tracking-widest mb-6 text-center ${textSecondary}`}>Hesabınızı Seçin</h2>
         {accounts.map((account) => (
-          <div key={account.id} className="relative group">
+          <div key={account.id} className="flex items-stretch gap-2 group">
             <button
               onClick={() => { setSelectedAccount(account); resetForm('login'); }}
-              className={`w-full flex items-center justify-between p-4 rounded-xl transition cursor-pointer ${buttonBgClass}`}
+              className={`flex-1 min-w-0 flex items-center justify-between p-4 rounded-xl transition cursor-pointer ${buttonBgClass}`}
             >
               <div className="flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden transition ${userIconBg}`}>
@@ -150,12 +150,14 @@ export const TenantLoginPanel: React.FC<TenantLoginPanelProps> = ({ accounts, on
               </div>
               <ChevronDown className={`${textMuted} group-hover:text-teal-500 -rotate-90 transition`} size={18} />
             </button>
+            {/* Telefonda fareyle üzerine gelme olmadığı için kaldırma düğmesi her zaman görünür */}
             <button
               onClick={() => handleRemove(account)}
-              title="Bu cihazdan kaldır"
-              className={`absolute top-1 right-1 p-1 rounded opacity-0 group-hover:opacity-100 transition cursor-pointer ${textTertiary} hover:text-rose-500`}
+              title="Bu cihazın listesinden kaldır"
+              aria-label={`${account.name} firmasını bu cihazın listesinden kaldır`}
+              className={`shrink-0 w-11 flex items-center justify-center rounded-xl transition cursor-pointer ${buttonBgClass} ${textTertiary} hover:text-rose-500`}
             >
-              <X size={12} />
+              <X size={16} />
             </button>
           </div>
         ))}
