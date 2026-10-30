@@ -25,6 +25,7 @@ import {
   AlertCircle,
   Receipt
 } from 'lucide-react';
+import { confirmDialog, alertDialog } from '../utils/dialogs';
 
 interface MasraflarViewProps {
   expenses: Expense[];
@@ -221,11 +222,11 @@ export default function MasraflarView({
   };
 
   const handleDeleteExpense = async (id: string) => {
-    if (!window.confirm('Bu masraf kaydını silmek istediğinize emin misiniz?')) return;
+    if (!(await confirmDialog('Bu masraf kaydını silmek istediğinize emin misiniz?'))) return;
     try {
       await deleteExpense(id);
     } catch (err: any) {
-      alert('Masraf silinirken hata oluştu: ' + err.message);
+      alertDialog('Masraf silinirken hata oluştu: ' + err.message);
     }
   };
 

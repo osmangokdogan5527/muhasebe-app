@@ -21,6 +21,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { addDaysISO, getTodayISO } from '../utils/dateUtils';
+import { confirmDialog, alertDialog } from '../utils/dialogs';
 
 interface CekSenetViewProps {
   ceksenet: CekSenet[];
@@ -360,7 +361,7 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
 
       } else if (actionType === 'endorse') {
         if (!endorseCariId) {
-          alert('Lütfen ciro edilecek tedarikçi cariyi seçin.');
+          alertDialog('Lütfen ciro edilecek tedarikçi cariyi seçin.');
           return;
         }
         const targetCari = cariler.find(c => c.id === endorseCariId);
@@ -398,12 +399,12 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
       setSelectedItem(null);
     } catch (err) {
       console.error('Eylem yürütülürken hata oluştu:', err);
-      alert('İşlem gerçekleştirilemedi.');
+      alertDialog('İşlem gerçekleştirilemedi.');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Bu çek/senet kaydını silmek istediğinize emin misiniz? (Finansal hareket geçmişini etkilemez)')) {
+    if (await confirmDialog('Bu çek/senet kaydını silmek istediğinize emin misiniz? (Finansal hareket geçmişini etkilemez)')) {
       try {
         await deleteCekSenet(id);
       } catch (err) {

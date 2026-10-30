@@ -5,6 +5,7 @@ import { DeviceAccount } from '../utils/accountStore';
 import { TenantLoginPanel } from './auth/TenantLoginPanel';
 import { InstallAppBanner } from './auth/InstallAppBanner';
 import { FluidMeshBackground } from './FluidMeshBackground';
+import { confirmDialog, alertDialog } from '../utils/dialogs';
 
 interface AuthScreenProps {
   currentThemeData: any;
@@ -200,7 +201,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             styles={{ textPrimary, textSecondary, textTertiary, textMuted, cardBgClass, buttonBgClass, userIconBg, inputStyleClass }}
             onLoggedIn={(account, offline) => {
               if (offline) {
-                alert('İnternet bağlantısı yok: çevrimdışı giriş yapıldı. Yapılan işlemler bağlantı gelince sunucuya eşitlenir.');
+                alertDialog('İnternet bağlantısı yok: çevrimdışı giriş yapıldı. Yapılan işlemler bağlantı gelince sunucuya eşitlenir.');
               }
               const userData = {
                 uid: account.id,
@@ -323,7 +324,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   type="button"
                   onClick={async () => {
                     if (!window.electronAPI) {
-                      alert("Bu özellik yalnızca masaüstü uygulamasında (Electron) kullanılabilir.");
+                      alertDialog("Bu özellik yalnızca masaüstü uygulamasında (Electron) kullanılabilir.");
                       return;
                     }
                     setUpdateStatus('checking');
@@ -343,11 +344,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                           }
                         }
                         
-                        alert(errMsg ? `Hata: ${errMsg}` : "Şu an için yeni bir güncelleme bulunmuyor.");
+                        alertDialog(errMsg ? `Hata: ${errMsg}` : "Şu an için yeni bir güncelleme bulunmuyor.");
                       }
                     } catch (err) {
                       setUpdateStatus('idle');
-                      alert("Güncelleme kontrolü sırasında bir hata oluştu.");
+                      alertDialog("Güncelleme kontrolü sırasında bir hata oluştu.");
                     }
                   }}
                   className={`w-full py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${changelogBtnClass}`}
@@ -657,8 +658,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                                 </div>
                                 <div className="flex items-center gap-2 self-start md:self-end mt-1">
                                   <button
-                                    onClick={() => {
-                                      if (confirm("Bu bildirimi silmek istediğinizden emin misiniz?")) {
+                                    onClick={async () => {
+                                      if (await confirmDialog("Bu bildirimi silmek istediğinizden emin misiniz?")) {
                                         const newFeedbackList = feedbackList.filter(f => f.id !== feedback.id);
                                         localStorage.setItem('storm_feedback_logs', JSON.stringify(newFeedbackList));
                                         setFeedbackList(newFeedbackList);

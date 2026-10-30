@@ -8,6 +8,7 @@ import { calculateInvoiceLine } from '../../utils/invoiceMath';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { getTodayISO } from '../../utils/dateUtils';
+import { alertDialog } from '../../utils/dialogs';
 
 export interface LedgerDrawerProps {
   isOpen: boolean;
@@ -490,7 +491,7 @@ export function LedgerDrawer({
       pdf.save(`cari_ekstre_${currentCari.name.replace(/\s+/g, '_')}.pdf`);
     } catch (err) {
       console.error("PDF oluşturulurken hata:", err);
-      alert("PDF oluşturulurken bir hata oluştu.");
+      alertDialog("PDF oluşturulurken bir hata oluştu.");
     }
   };
 

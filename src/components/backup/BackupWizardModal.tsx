@@ -21,6 +21,7 @@ import { encryptBackup, decryptBackup, BackupDataPayload } from '../../utils/bac
 import { getTodayISO } from '../../utils/dateUtils';
 import { exportAllDatabaseData } from '../../firebase';
 import { APP_VERSION } from '../../constants';
+import { confirmDialog } from '../../utils/dialogs';
 
 // Yedeğe alınan ve geri yüklemede kabul edilen ayar anahtarları (başka anahtar geri yüklenmez)
 const BACKUP_SETTINGS_KEYS = [
@@ -274,9 +275,12 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
   const handleRestoreBackupFile = async () => {
     if (!restorePreview) return;
 
-    const confirmRestore = window.confirm(
-      '⚠️ KRİTİK UYARI!\n\nYedek yükleme işlemi mevcut tüm verilerinizi (cariler, stoklar, işlemler, masraflar vb.) kalıcı olarak silecek ve yedek dosyasındaki verileri yükleyecektir.\n\nBu işlemi onaylıyor musunuz?'
-    );
+    const confirmRestore = await confirmDialog({
+      title: 'Kritik Uyarı',
+      message: 'Yedek yükleme işlemi mevcut tüm verilerinizi (cariler, stoklar, işlemler, masraflar vb.) kalıcı olarak silecek ve yedek dosyasındaki verileri yükleyecektir.\n\nBu işlemi onaylıyor musunuz?',
+      confirmText: 'Evet, Yedeği Yükle',
+      danger: true,
+    });
 
     if (!confirmRestore) return;
 

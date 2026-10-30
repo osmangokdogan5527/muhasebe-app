@@ -11,6 +11,7 @@ import { toPng } from 'html-to-image';
 
 import Barcode from 'react-barcode';
 import { Stock } from '../../types';
+import { alertDialog } from '../../utils/dialogs';
 
 export interface PdfPrintModalProps {
   transaction: Transaction | null;
@@ -578,7 +579,7 @@ export function PdfPrintModal({ transaction, cariler, stoklar, onClose }: PdfPri
                             console.error('Hata günlüğü yazılamadı:', logErr);
                           }
 
-                          alert('PDF oluşturulurken bir hata meydana geldi.');
+                          alertDialog('PDF oluşturulurken bir hata meydana geldi.');
                         } finally {
                           setIsPdfDownloading(false);
                         }

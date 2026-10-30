@@ -96,6 +96,7 @@ import { compressImage } from './utils/imageCompressor';
 import { StormLogo, APP_VERSION, CHANGELOG, COLOR_PRESETS, TAB_DEFS, SIDEBAR_PATTERNS, changelogData, DEFAULT_SHORTCUTS } from "./constants";
 import { DeviceAccount, loadDeviceAccounts, upsertDeviceAccount } from "./utils/accountStore";
 import { changeTenantPassword } from "./utils/tenantAuth";
+import { alertDialog } from './utils/dialogs';
 export default function App() {
   const [isBackupWizardOpen, setIsBackupWizardOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -530,7 +531,7 @@ export default function App() {
             }
           }
           
-          alert(`Güncelleme indirilirken hata oluştu:\n${friendlyError}`);
+          alertDialog(`Güncelleme indirilirken hata oluştu:\n${friendlyError}`);
         });
       }
     }

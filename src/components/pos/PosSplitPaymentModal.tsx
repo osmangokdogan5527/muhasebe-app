@@ -3,6 +3,7 @@ import { PosPaymentSplit } from '../../types/pos';
 import { BankAccount, Cari } from '../../types';
 import { DollarSign, CreditCard, User, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { logError } from '../../utils/errorLogger';
+import { alertDialog } from '../../utils/dialogs';
 
 interface PosSplitPaymentModalProps {
   isOpen: boolean;
@@ -75,17 +76,17 @@ export const PosSplitPaymentModal: React.FC<PosSplitPaymentModalProps> = ({
   const handleConfirm = () => {
     try {
       if (remainingToAllocate > 0.01) {
-        alert(`Lütfen kalan ₺${remainingToAllocate.toFixed(2)} tutarı ödeme türlerine tam olarak dağıtın.`);
+        alertDialog(`Lütfen kalan ₺${remainingToAllocate.toFixed(2)} tutarı ödeme türlerine tam olarak dağıtın.`);
         return;
       }
 
       if (remainingToAllocate < -0.01) {
-        alert(`Dağıtılan tutar satış toplamını ₺${Math.abs(remainingToAllocate).toFixed(2)} aşıyor. Fazla nakit için "Alınan Nakit" alanını kullanın; para üstü otomatik hesaplanır.`);
+        alertDialog(`Dağıtılan tutar satış toplamını ₺${Math.abs(remainingToAllocate).toFixed(2)} aşıyor. Fazla nakit için "Alınan Nakit" alanını kullanın; para üstü otomatik hesaplanır.`);
         return;
       }
 
       if (openAccountAmount > 0 && !selectedCari) {
-        alert('Açık Hesap (Veresiye) kalemi için lütfen müşteri (cari) seçiniz!');
+        alertDialog('Açık Hesap (Veresiye) kalemi için lütfen müşteri (cari) seçiniz!');
         return;
       }
 

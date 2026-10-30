@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import { getTodayISO } from '../../utils/dateUtils';
+import { alertDialog } from '../../utils/dialogs';
 
 export const getExportFunctions = (deps: any) => {
   const { activeTab, summaryStats, selectedCurrency, stockStats, cariStats, filteredExpenses, kdvStats, selectedCari, resolvedDates, cariEkstreStats, formatMoney, turkishToPdf, cariler, incomeExpenseStats, stoklar, islemler, expenses } = deps;
@@ -97,7 +98,7 @@ export const getExportFunctions = (deps: any) => {
       }
       else if (activeTab === 'cariekstre') {
         if (!selectedCari) {
-          alert('Lütfen önce bir cari hesap seçiniz.');
+          alertDialog('Lütfen önce bir cari hesap seçiniz.');
           return;
         }
         const ekstreData = [

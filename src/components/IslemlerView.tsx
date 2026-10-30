@@ -29,6 +29,7 @@ import { IslemModal } from './islemler/IslemModal';
 import { PdfPrintModal } from './islemler/PdfPrintModal';
 import { parseScannedQrCode } from '../utils/formatters';
 import { formatDateISO } from '../utils/dateUtils';
+import { alertDialog } from '../utils/dialogs';
 
 interface IslemlerViewProps {
   islemler: Transaction[];
@@ -173,7 +174,7 @@ function IslemlerView({
   // Handle invoice item changes (dropdown selection, quantity/price changes)
   const handleEditTransaction = useCallback((islem: Transaction) => {
     if (islem.linkedInvoiceId) {
-      alert('Bu kayıt bir faturayla birlikte otomatik oluşturulmuş peşin tahsilat/ödemedir. Değiştirmek veya silmek için bağlı faturayı düzenleyin ya da silin.');
+      alertDialog('Bu kayıt bir faturayla birlikte otomatik oluşturulmuş peşin tahsilat/ödemedir. Değiştirmek veya silmek için bağlı faturayı düzenleyin ya da silin.');
       return;
     }
     const isSaleType = ['sale', 'sale_return'].includes(islem.type);
@@ -189,7 +190,7 @@ function IslemlerView({
   // Handle transaction deletion trigger
   const handleDeleteTransaction = useCallback((islem: Transaction) => {
     if (islem.linkedInvoiceId) {
-      alert('Bu kayıt bir faturayla birlikte otomatik oluşturulmuş peşin tahsilat/ödemedir. Değiştirmek veya silmek için bağlı faturayı düzenleyin ya da silin.');
+      alertDialog('Bu kayıt bir faturayla birlikte otomatik oluşturulmuş peşin tahsilat/ödemedir. Değiştirmek veya silmek için bağlı faturayı düzenleyin ya da silin.');
       return;
     }
     const isSaleType = ['sale', 'sale_return'].includes(islem.type);
@@ -209,7 +210,7 @@ function IslemlerView({
       setDeleteConfirmTransaction(null);
     } catch (err: any) {
       console.error(err);
-      alert(`İşlem silinirken hata oluştu: ${err.message || err}`);
+      alertDialog(`İşlem silinirken hata oluştu: ${err.message || err}`);
     } finally {
       setIsDeleting(false);
     }

@@ -28,6 +28,7 @@ import {
 import BarcodeScannerModal from './BarcodeScannerModal';
 import { StockModal } from './stoklar/StockModal';
 import { PrintBarcodeModal } from './stoklar/PrintBarcodeModal';
+import { confirmDialog, alertDialog } from '../utils/dialogs';
 
 interface StoklarViewProps {
   stoklar?: Stock[];
@@ -331,12 +332,12 @@ function StoklarView({
   // Handle stock deletion
   const handleDelete = useCallback(async (id: string, name: string) => {
     const executeDelete = async () => {
-      if (window.confirm(`"${name}" isimli stok kartını silmek istediğinize emin misiniz?`)) {
+      if (await confirmDialog(`"${name}" isimli stok kartını silmek istediğinize emin misiniz?`)) {
         try {
           await deleteStock(id);
         } catch (err) {
           console.error(err);
-          alert('Stok kartı silinirken bir hata oluştu.');
+          alertDialog('Stok kartı silinirken bir hata oluştu.');
         }
       }
     };
