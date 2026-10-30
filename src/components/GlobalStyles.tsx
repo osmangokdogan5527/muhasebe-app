@@ -30,15 +30,21 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ themeCssRules, bodyP
         }
 
         [data-design-style="fluid-mesh"] body,
-        [data-design-style="fluid-mesh"].bg-\[\#050505\],
+        [data-design-style="fluid-mesh"].bg-\\[\\#050505\\],
         body:has([data-design-style="fluid-mesh"]) {
           background: #04050c !important;
           color: #eef2ff !important;
         }
 
         /* --- Yüzeyler: buzlu cam kartlar --- */
-        [data-design-style="fluid-mesh"] :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50) {
+        /* Cam kenar halkası için konum bağlamı (absolute/fixed/sticky öğelerin konumu korunur) */
+        [data-design-style="fluid-mesh"] :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50, .bg-zinc-50, .bg-zinc-100, .bg-gray-50, .bg-gray-100, .bg-neutral-50):not(.absolute):not(.fixed):not(.sticky) {
+          position: relative;
+        }
+
+        [data-design-style="fluid-mesh"] :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50, .bg-zinc-50, .bg-zinc-100, .bg-gray-50, .bg-gray-100, .bg-neutral-50) {
           background:
+            radial-gradient(420px circle at var(--spot-x, -999px) var(--spot-y, -999px), rgba(var(--accent-rgb), 0.13), transparent 60%),
             linear-gradient(165deg, rgba(255, 255, 255, 0.065) 0%, rgba(255, 255, 255, 0.018) 45%, rgba(255, 255, 255, 0.01) 100%),
             var(--mesh-surface) !important;
           backdrop-filter: blur(22px) saturate(135%) !important;
@@ -52,7 +58,7 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ themeCssRules, bodyP
           transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease !important;
         }
 
-        [data-design-style="fluid-mesh"] :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50):hover {
+        [data-design-style="fluid-mesh"] :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50, .bg-zinc-50, .bg-zinc-100, .bg-gray-50, .bg-gray-100, .bg-neutral-50):hover {
           border-color: rgba(var(--accent-rgb), 0.28) !important;
           border-top-color: rgba(var(--accent-rgb), 0.4) !important;
           box-shadow:
@@ -61,22 +67,46 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ themeCssRules, bodyP
             0 16px 42px -16px rgba(var(--accent-rgb), 0.38) !important;
         }
 
+        /* Işıklı cam kenar: sol üstten parlayıp tema rengine dönen ince halka */
+        [data-design-style="fluid-mesh"] :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50, .bg-zinc-50, .bg-zinc-100, .bg-gray-50, .bg-gray-100, .bg-neutral-50):not([class*="after:"]):not(.print-paper-sheet *)::after {
+          content: "";
+          position: absolute;
+          inset: -1px;
+          border-radius: inherit;
+          padding: 1px;
+          background: linear-gradient(145deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.06) 28%, transparent 55%, rgba(var(--accent-rgb), 0.22) 85%, rgba(var(--accent-rgb), 0.38) 100%);
+          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          pointer-events: none;
+          opacity: 0.75;
+          transition: opacity 0.35s ease;
+        }
+        [data-design-style="fluid-mesh"] :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50, .bg-zinc-50, .bg-zinc-100, .bg-gray-50, .bg-gray-100, .bg-neutral-50):not([class*="after:"]):not(.print-paper-sheet *):hover::after {
+          opacity: 1;
+        }
+
         /* Kart içindeki kartlar: daha hafif, ek bulanıklık yok (okunabilirlik ve performans) */
-        [data-design-style="fluid-mesh"] :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50) :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50) {
-          background: rgba(255, 255, 255, 0.035) !important;
+        [data-design-style="fluid-mesh"] :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50, .bg-zinc-50, .bg-zinc-100, .bg-gray-50, .bg-gray-100, .bg-neutral-50) :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50, .bg-zinc-50, .bg-zinc-100, .bg-gray-50, .bg-gray-100, .bg-neutral-50)::after {
+          content: none;
+        }
+        [data-design-style="fluid-mesh"] :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50, .bg-zinc-50, .bg-zinc-100, .bg-gray-50, .bg-gray-100, .bg-neutral-50) :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50, .bg-zinc-50, .bg-zinc-100, .bg-gray-50, .bg-gray-100, .bg-neutral-50) {
+          background:
+            radial-gradient(300px circle at var(--spot-x, -999px) var(--spot-y, -999px), rgba(var(--accent-rgb), 0.12), transparent 60%),
+            rgba(255, 255, 255, 0.035) !important;
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
           box-shadow: none !important;
           border-color: rgba(255, 255, 255, 0.07) !important;
         }
-        [data-design-style="fluid-mesh"] :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50) :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50):hover {
+        [data-design-style="fluid-mesh"] :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50, .bg-zinc-50, .bg-zinc-100, .bg-gray-50, .bg-gray-100, .bg-neutral-50) :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50, .bg-zinc-50, .bg-zinc-100, .bg-gray-50, .bg-gray-100, .bg-neutral-50):hover {
           background: rgba(255, 255, 255, 0.055) !important;
           border-color: rgba(var(--accent-rgb), 0.22) !important;
           box-shadow: none !important;
         }
 
         /* Küçük yumuşak yüzeyler (ikon kutuları, rozetler) */
-        [data-design-style="fluid-mesh"] .bg-white\/5 {
+        [data-design-style="fluid-mesh"] .bg-white\\/5 {
           background-color: rgba(255, 255, 255, 0.05) !important;
           border-color: rgba(255, 255, 255, 0.09) !important;
         }
@@ -111,16 +141,16 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ themeCssRules, bodyP
         }
 
         /* --- Modal pencereler: sayfadan net ayrışan koyu cam --- */
-        [data-design-style="fluid-mesh"] .fixed.inset-0.bg-black\/80,
-        [data-design-style="fluid-mesh"] .fixed.inset-0.bg-black\/70,
-        [data-design-style="fluid-mesh"] .fixed.inset-0.bg-black\/60,
-        [data-design-style="fluid-mesh"] .fixed.inset-0.bg-black\/50 {
+        [data-design-style="fluid-mesh"] .fixed.inset-0.bg-black\\/80,
+        [data-design-style="fluid-mesh"] .fixed.inset-0.bg-black\\/70,
+        [data-design-style="fluid-mesh"] .fixed.inset-0.bg-black\\/60,
+        [data-design-style="fluid-mesh"] .fixed.inset-0.bg-black\\/50 {
           background-color: rgba(3, 4, 12, 0.62) !important;
           backdrop-filter: blur(14px) saturate(120%) !important;
           -webkit-backdrop-filter: blur(14px) saturate(120%) !important;
         }
-        [data-design-style="fluid-mesh"] .fixed.inset-0 > :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50),
-        [data-design-style="fluid-mesh"] .fixed.inset-0 > div > :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50) {
+        [data-design-style="fluid-mesh"] .fixed.inset-0 > :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50, .bg-zinc-50, .bg-zinc-100, .bg-gray-50, .bg-gray-100, .bg-neutral-50),
+        [data-design-style="fluid-mesh"] .fixed.inset-0 > div > :is(.bg-white, .bg-\\[\\#ffffff\\], .bg-\\[\\#0a0a0a\\], .bg-\\[\\#0c0c0c\\], .bg-\\[\\#0d0d0d\\], .bg-\\[\\#0f0f0f\\], .bg-\\[\\#111111\\], .bg-\\[\\#121212\\], .bg-\\[\\#151515\\], .bg-\\[\\#111111\\]\\/80, .bg-\\[\\#121316\\], .bg-\\[\\#0b0c0e\\], .bg-zinc-950, .bg-zinc-950\\/50, .bg-zinc-900\\/50, .bg-zinc-900, .bg-zinc-800, .bg-slate-50, .bg-slate-100, .bg-slate-900\\/50, .bg-zinc-50, .bg-zinc-100, .bg-gray-50, .bg-gray-100, .bg-neutral-50) {
           background:
             linear-gradient(170deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.015) 40%),
             var(--mesh-surface-strong) !important;
@@ -137,7 +167,9 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ themeCssRules, bodyP
         /* --- Vurgu butonları --- */
         [data-design-style="fluid-mesh"] .bg-indigo-600,
         [data-design-style="fluid-mesh"] .bg-indigo-500 {
-          background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.95) 0%, color-mix(in oklab, var(--accent-600, #4f46e5) 80%, #000) 100%) !important;
+          background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.04) 48%, transparent 52%),
+            linear-gradient(135deg, rgba(var(--accent-rgb), 0.95) 0%, color-mix(in oklab, var(--accent-600, #4f46e5) 80%, #000) 100%) !important;
           border: 1px solid rgba(255, 255, 255, 0.16) !important;
           box-shadow:
             0 6px 18px -6px rgba(var(--accent-rgb), 0.6),
@@ -154,9 +186,9 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ themeCssRules, bodyP
 
         /* --- Metin okunabilirliği (açık zemin sınıflarını koyu cama uyarlar) --- */
         [data-design-style="fluid-mesh"] main .text-white,
-        [data-design-style="fluid-mesh"] main .text-white\/95,
-        [data-design-style="fluid-mesh"] main .text-white\/90,
-        [data-design-style="fluid-mesh"] main .text-\[\#e0e0e0\],
+        [data-design-style="fluid-mesh"] main .text-white\\/95,
+        [data-design-style="fluid-mesh"] main .text-white\\/90,
+        [data-design-style="fluid-mesh"] main .text-\\[\\#e0e0e0\\],
         [data-design-style="fluid-mesh"] .text-slate-900,
         [data-design-style="fluid-mesh"] .text-slate-800,
         [data-design-style="fluid-mesh"] .text-slate-700,
@@ -168,9 +200,9 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ themeCssRules, bodyP
         [data-design-style="fluid-mesh"] .text-gray-700 {
           color: #f5f7ff !important;
         }
-        [data-design-style="fluid-mesh"] main .text-white\/80,
-        [data-design-style="fluid-mesh"] main .text-white\/70,
-        [data-design-style="fluid-mesh"] main .text-white\/60,
+        [data-design-style="fluid-mesh"] main .text-white\\/80,
+        [data-design-style="fluid-mesh"] main .text-white\\/70,
+        [data-design-style="fluid-mesh"] main .text-white\\/60,
         [data-design-style="fluid-mesh"] .text-slate-500,
         [data-design-style="fluid-mesh"] .text-slate-600,
         [data-design-style="fluid-mesh"] .text-zinc-500,
@@ -179,8 +211,10 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ themeCssRules, bodyP
         [data-design-style="fluid-mesh"] .text-gray-600 {
           color: var(--mesh-text-soft) !important;
         }
-        [data-design-style="fluid-mesh"] main .text-white\/50,
-        [data-design-style="fluid-mesh"] main .text-white\/40,
+        [data-design-style="fluid-mesh"] main .text-white\\/50,
+        [data-design-style="fluid-mesh"] main .text-white\\/40,
+        [data-design-style="fluid-mesh"] main .text-white\\/30,
+        [data-design-style="fluid-mesh"] main .text-white\\/25,
         [data-design-style="fluid-mesh"] .text-zinc-400,
         [data-design-style="fluid-mesh"] .text-slate-400,
         [data-design-style="fluid-mesh"] .text-gray-400 {
@@ -190,9 +224,267 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ themeCssRules, bodyP
         [data-design-style="fluid-mesh"] .border-slate-200,
         [data-design-style="fluid-mesh"] .border-slate-100,
         [data-design-style="fluid-mesh"] .border-zinc-800,
-        [data-design-style="fluid-mesh"] .border-white\/10,
-        [data-design-style="fluid-mesh"] .border-white\/5 {
+        [data-design-style="fluid-mesh"] .border-white\\/10,
+        [data-design-style="fluid-mesh"] .border-white\\/5,
+        [data-design-style="fluid-mesh"] .border-zinc-200,
+        [data-design-style="fluid-mesh"] .border-zinc-100,
+        [data-design-style="fluid-mesh"] .border-gray-200,
+        [data-design-style="fluid-mesh"] .border-slate-300 {
           border-color: rgba(255, 255, 255, 0.07) !important;
+        }
+
+        /* --- Pastel uyarı/bilgi kutuları: koyu zeminde renkli yarı saydam cam, açık tonlu yazı --- */
+        [data-design-style="fluid-mesh"] .bg-red-50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-red-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-red-50\\/50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-red-50\\/70:not(.print-paper-sheet *) {
+          background-color: rgba(239, 68, 68, 0.12) !important;
+          border-color: rgba(239, 68, 68, 0.32) !important;
+        }
+        [data-design-style="fluid-mesh"] .text-red-700:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-red-800:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-red-900:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-red-950:not(.print-paper-sheet *) {
+          color: #fca5a5 !important;
+        }
+        [data-design-style="fluid-mesh"] .border-red-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-red-200:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-red-300:not(.print-paper-sheet *) {
+          border-color: rgba(239, 68, 68, 0.35) !important;
+        }
+        [data-design-style="fluid-mesh"] .bg-rose-50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-rose-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-rose-50\\/50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-rose-50\\/70:not(.print-paper-sheet *) {
+          background-color: rgba(244, 63, 94, 0.12) !important;
+          border-color: rgba(244, 63, 94, 0.32) !important;
+        }
+        [data-design-style="fluid-mesh"] .text-rose-700:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-rose-800:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-rose-900:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-rose-950:not(.print-paper-sheet *) {
+          color: #fda4af !important;
+        }
+        [data-design-style="fluid-mesh"] .border-rose-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-rose-200:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-rose-300:not(.print-paper-sheet *) {
+          border-color: rgba(244, 63, 94, 0.35) !important;
+        }
+        [data-design-style="fluid-mesh"] .bg-orange-50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-orange-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-orange-50\\/50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-orange-50\\/70:not(.print-paper-sheet *) {
+          background-color: rgba(249, 115, 22, 0.12) !important;
+          border-color: rgba(249, 115, 22, 0.32) !important;
+        }
+        [data-design-style="fluid-mesh"] .text-orange-700:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-orange-800:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-orange-900:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-orange-950:not(.print-paper-sheet *) {
+          color: #fdba74 !important;
+        }
+        [data-design-style="fluid-mesh"] .border-orange-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-orange-200:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-orange-300:not(.print-paper-sheet *) {
+          border-color: rgba(249, 115, 22, 0.35) !important;
+        }
+        [data-design-style="fluid-mesh"] .bg-amber-50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-amber-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-amber-50\\/50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-amber-50\\/70:not(.print-paper-sheet *) {
+          background-color: rgba(245, 158, 11, 0.12) !important;
+          border-color: rgba(245, 158, 11, 0.32) !important;
+        }
+        [data-design-style="fluid-mesh"] .text-amber-700:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-amber-800:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-amber-900:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-amber-950:not(.print-paper-sheet *) {
+          color: #fcd34d !important;
+        }
+        [data-design-style="fluid-mesh"] .border-amber-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-amber-200:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-amber-300:not(.print-paper-sheet *) {
+          border-color: rgba(245, 158, 11, 0.35) !important;
+        }
+        [data-design-style="fluid-mesh"] .bg-yellow-50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-yellow-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-yellow-50\\/50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-yellow-50\\/70:not(.print-paper-sheet *) {
+          background-color: rgba(234, 179, 8, 0.12) !important;
+          border-color: rgba(234, 179, 8, 0.32) !important;
+        }
+        [data-design-style="fluid-mesh"] .text-yellow-700:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-yellow-800:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-yellow-900:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-yellow-950:not(.print-paper-sheet *) {
+          color: #fde047 !important;
+        }
+        [data-design-style="fluid-mesh"] .border-yellow-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-yellow-200:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-yellow-300:not(.print-paper-sheet *) {
+          border-color: rgba(234, 179, 8, 0.35) !important;
+        }
+        [data-design-style="fluid-mesh"] .bg-emerald-50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-emerald-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-emerald-50\\/50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-emerald-50\\/70:not(.print-paper-sheet *) {
+          background-color: rgba(16, 185, 129, 0.12) !important;
+          border-color: rgba(16, 185, 129, 0.32) !important;
+        }
+        [data-design-style="fluid-mesh"] .text-emerald-700:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-emerald-800:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-emerald-900:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-emerald-950:not(.print-paper-sheet *) {
+          color: #6ee7b7 !important;
+        }
+        [data-design-style="fluid-mesh"] .border-emerald-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-emerald-200:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-emerald-300:not(.print-paper-sheet *) {
+          border-color: rgba(16, 185, 129, 0.35) !important;
+        }
+        [data-design-style="fluid-mesh"] .bg-green-50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-green-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-green-50\\/50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-green-50\\/70:not(.print-paper-sheet *) {
+          background-color: rgba(34, 197, 94, 0.12) !important;
+          border-color: rgba(34, 197, 94, 0.32) !important;
+        }
+        [data-design-style="fluid-mesh"] .text-green-700:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-green-800:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-green-900:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-green-950:not(.print-paper-sheet *) {
+          color: #86efac !important;
+        }
+        [data-design-style="fluid-mesh"] .border-green-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-green-200:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-green-300:not(.print-paper-sheet *) {
+          border-color: rgba(34, 197, 94, 0.35) !important;
+        }
+        [data-design-style="fluid-mesh"] .bg-teal-50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-teal-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-teal-50\\/50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-teal-50\\/70:not(.print-paper-sheet *) {
+          background-color: rgba(20, 184, 166, 0.12) !important;
+          border-color: rgba(20, 184, 166, 0.32) !important;
+        }
+        [data-design-style="fluid-mesh"] .text-teal-700:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-teal-800:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-teal-900:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-teal-950:not(.print-paper-sheet *) {
+          color: #5eead4 !important;
+        }
+        [data-design-style="fluid-mesh"] .border-teal-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-teal-200:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-teal-300:not(.print-paper-sheet *) {
+          border-color: rgba(20, 184, 166, 0.35) !important;
+        }
+        [data-design-style="fluid-mesh"] .bg-cyan-50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-cyan-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-cyan-50\\/50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-cyan-50\\/70:not(.print-paper-sheet *) {
+          background-color: rgba(6, 182, 212, 0.12) !important;
+          border-color: rgba(6, 182, 212, 0.32) !important;
+        }
+        [data-design-style="fluid-mesh"] .text-cyan-700:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-cyan-800:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-cyan-900:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-cyan-950:not(.print-paper-sheet *) {
+          color: #67e8f9 !important;
+        }
+        [data-design-style="fluid-mesh"] .border-cyan-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-cyan-200:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-cyan-300:not(.print-paper-sheet *) {
+          border-color: rgba(6, 182, 212, 0.35) !important;
+        }
+        [data-design-style="fluid-mesh"] .bg-sky-50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-sky-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-sky-50\\/50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-sky-50\\/70:not(.print-paper-sheet *) {
+          background-color: rgba(14, 165, 233, 0.12) !important;
+          border-color: rgba(14, 165, 233, 0.32) !important;
+        }
+        [data-design-style="fluid-mesh"] .text-sky-700:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-sky-800:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-sky-900:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-sky-950:not(.print-paper-sheet *) {
+          color: #7dd3fc !important;
+        }
+        [data-design-style="fluid-mesh"] .border-sky-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-sky-200:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-sky-300:not(.print-paper-sheet *) {
+          border-color: rgba(14, 165, 233, 0.35) !important;
+        }
+        [data-design-style="fluid-mesh"] .bg-blue-50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-blue-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-blue-50\\/50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-blue-50\\/70:not(.print-paper-sheet *) {
+          background-color: rgba(59, 130, 246, 0.12) !important;
+          border-color: rgba(59, 130, 246, 0.32) !important;
+        }
+        [data-design-style="fluid-mesh"] .text-blue-700:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-blue-800:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-blue-900:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-blue-950:not(.print-paper-sheet *) {
+          color: #93c5fd !important;
+        }
+        [data-design-style="fluid-mesh"] .border-blue-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-blue-200:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-blue-300:not(.print-paper-sheet *) {
+          border-color: rgba(59, 130, 246, 0.35) !important;
+        }
+        [data-design-style="fluid-mesh"] .bg-indigo-50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-indigo-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-indigo-50\\/50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-indigo-50\\/70:not(.print-paper-sheet *) {
+          background-color: rgba(99, 102, 241, 0.12) !important;
+          border-color: rgba(99, 102, 241, 0.32) !important;
+        }
+        [data-design-style="fluid-mesh"] .text-indigo-700:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-indigo-800:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-indigo-900:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-indigo-950:not(.print-paper-sheet *) {
+          color: #a5b4fc !important;
+        }
+        [data-design-style="fluid-mesh"] .border-indigo-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-indigo-200:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-indigo-300:not(.print-paper-sheet *) {
+          border-color: rgba(99, 102, 241, 0.35) !important;
+        }
+        [data-design-style="fluid-mesh"] .bg-violet-50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-violet-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-violet-50\\/50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-violet-50\\/70:not(.print-paper-sheet *) {
+          background-color: rgba(139, 92, 246, 0.12) !important;
+          border-color: rgba(139, 92, 246, 0.32) !important;
+        }
+        [data-design-style="fluid-mesh"] .text-violet-700:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-violet-800:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-violet-900:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-violet-950:not(.print-paper-sheet *) {
+          color: #c4b5fd !important;
+        }
+        [data-design-style="fluid-mesh"] .border-violet-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-violet-200:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-violet-300:not(.print-paper-sheet *) {
+          border-color: rgba(139, 92, 246, 0.35) !important;
+        }
+        [data-design-style="fluid-mesh"] .bg-purple-50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-purple-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-purple-50\\/50:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .bg-purple-50\\/70:not(.print-paper-sheet *) {
+          background-color: rgba(168, 85, 247, 0.12) !important;
+          border-color: rgba(168, 85, 247, 0.32) !important;
+        }
+        [data-design-style="fluid-mesh"] .text-purple-700:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-purple-800:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-purple-900:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .text-purple-950:not(.print-paper-sheet *) {
+          color: #d8b4fe !important;
+        }
+        [data-design-style="fluid-mesh"] .border-purple-100:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-purple-200:not(.print-paper-sheet *),
+        [data-design-style="fluid-mesh"] .border-purple-300:not(.print-paper-sheet *) {
+          border-color: rgba(168, 85, 247, 0.35) !important;
         }
 
         /* --- Tablolar --- */
@@ -252,9 +544,9 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ themeCssRules, bodyP
             0 8px 24px -12px rgba(var(--accent-rgb), 0.6) !important;
           color: #ffffff !important;
         }
-        [data-design-style="fluid-mesh"] aside .bg-black\/40,
-        [data-design-style="fluid-mesh"] aside .bg-black\/20,
-        [data-design-style="fluid-mesh"] aside .bg-black\/15 {
+        [data-design-style="fluid-mesh"] aside .bg-black\\/40,
+        [data-design-style="fluid-mesh"] aside .bg-black\\/20,
+        [data-design-style="fluid-mesh"] aside .bg-black\\/15 {
           background-color: rgba(255, 255, 255, 0.04) !important;
           border: 1px solid rgba(255, 255, 255, 0.08) !important;
         }
@@ -644,10 +936,10 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ themeCssRules, bodyP
         }
 
         /* Profile details container and feedback/admin buttons in Glass mode */
-        [data-design-style="glass"] aside div.mt-auto div.border-white\/5,
-        [data-design-style="glass"] aside div.mt-auto button.border-white\/5,
-        [data-design-style="glass"] aside div.mt-auto button.border-teal-500\/20,
-        [data-design-style="glass"] aside div.mt-auto button.border-red-500\/20 {
+        [data-design-style="glass"] aside div.mt-auto div.border-white\\/5,
+        [data-design-style="glass"] aside div.mt-auto button.border-white\\/5,
+        [data-design-style="glass"] aside div.mt-auto button.border-teal-500\\/20,
+        [data-design-style="glass"] aside div.mt-auto button.border-red-500\\/20 {
           background-color: rgba(255, 255, 255, 0.08) !important;
           border: 1px solid rgba(255, 255, 255, 0.16) !important;
           backdrop-filter: blur(12px) !important;

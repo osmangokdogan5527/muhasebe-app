@@ -430,33 +430,20 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.8.2';
+export const APP_VERSION = '1.8.3';
 
 export const CHANGELOG = {
-  version: '1.8.2',
+  version: '1.8.3',
   features: [
-    "Yenilenen Sıvı Mesh Tasarımı: Arka plan aurorası seçili temanın renklerinden oluşur; kartlar daha okunaklı koyu buzlu cam görünümüne, sol menü sade ve vurgulu aktif sekme yapısına kavuştu. Giriş ekranında da aynı aurora kullanılır; cihazda hareket azaltma açıksa animasyon durur.",
-    "Storm AI Her İşi Yapar: Ücretsiz Gemini ile sohbet ederek fatura kesme, tahsilat/ödeme, masraf, personel, cari/ürün kartı, çek/senet, kasa hareketi/transfer, kayıt silme, ekstre ve kâr-zarar raporu yapılabilir; kayıt işlemleri onay kartıyla onaylandıktan sonra yapılır.",
-    "Yeni Firma Girişi: Uygulamada hazır hesap yoktur; ilk açılışta 'Yeni Firma Oluştur' ile firma kodu ve şifre belirlenir, diğer cihazlardan 'Mevcut Firmaya Bağlan' ile girilir. İnternet yokken de giriş yapılabilir.",
-    "Güvenli Firma Oturumu: Her firma kendi hesabıyla sunucuya bağlanır; veritabanı kurallarıyla her firma yalnızca kendi verisine erişebilir. Firma şifresi Ayarlar > Profil bölümünden değiştirilebilir.",
-    "Peşin Satış ve Alış: Kasa/Banka/POS seçilerek kesilen faturalarda cariyi kapatan bağlı tahsilat/ödeme otomatik oluşturulur; cari ekstresinde 'Peşin Tahsilat' olarak görünür.",
-    "Hızlı Satış (POS) İyileştirmeleri: Müşteri seçmeden satış için 'Perakende Müşteri' carisi otomatik oluşturulur; parçalı ödemede nakit kasaya, kart POS hesabına, veresiye cari borcuna ayrı ayrı işlenir.",
-    "KDV Zorunlu Değil: POS'ta fiyat etiketteki gibi kalır, KDV yalnızca kasada seçilen orana göre fiyatın içinden ayrılır; fiş, kayıt ve KDV raporu aynı tutarı gösterir.",
-    "Eksiksiz Yedekleme: Yedek doğrudan veritabanından alınır; geri yükleme yarıda kesilse bile mevcut veriler silinmez.",
-    "Güncel Döviz Kurları: Raporlar ve kasa, sabit kurlar yerine güncel TCMB kurlarını ve işlemde girilen kuru kullanır."
+    "Sıvı Mesh Işık Efektleri: Arka plana kuzey ışığı gibi çok yavaş dönen akışkan bir renk şeridi eklendi; kartların kenarları sol üstten parlayıp tema rengine dönen ince bir cam halkasıyla çevrelendi.",
+    "İmleci Takip Eden Işık: Fare bir kartın üzerinde gezinirken imlecin altında tema renginde yumuşak bir ışık oluşur.",
+    "Renkli Uyarı Kutuları: Sıvı Mesh tasarımında bilgi, uyarı ve hata kutuları koyu zemine uygun yarı saydam renkli cam görünümüne, yazıları o rengin açık tonuna kavuştu."
   ],
   fixes: [
-    "Maaş ödemeleri kasada, kâr raporunda ve gösterge panelinde iki kez düşülüyordu.",
-    "Kâr raporu: satışlar KDV hariç hesaplanır, iadeler gelirden düşülür, açılış bakiyeleri satış sayılmaz.",
-    "500 kayıt sınırı kaldırıldı; çok kayıtlı firmalarda raporlar, kasa ve ekstreler eksik hesaplanıyordu.",
-    "Aynı anda iki cihazdan işlem yapıldığında cari bakiyesi ve stok miktarının ezilmesi önlendi.",
-    "Gece 00:00-03:00 arasında girilen kayıtların bir önceki günün tarihini alması ve 'Bu Ay' raporunun boş görünmesi düzeltildi.",
-    "Yazdırılan faturalarda %0 KDV'li kalemlerin %20 KDV ile basılması düzeltildi.",
-    "Fatura satırları ve KDV kuruşa yuvarlanır; AI asistanın doldurduğu faturada KDV toplama eklenir.",
-    "Satıştan iade faturasında ürün seçilince alış fiyatı gelmesi düzeltildi.",
-    "Kasada farklı para birimindeki kayıtlar hesabın para birimine çevrilerek yansıtılır.",
-    "POS fiş numaralarının çakışma ihtimali giderildi.",
-    "Telegram hata bildirimi tamamen kaldırıldı; hatalar yalnızca cihazdaki hata günlüğüne yazılır."
+    "Sıvı Mesh tasarımında sayfa başlıkları, açıklamalar ve uyarı yazıları görünmüyordu (ör. Ayarlar, Masraflar, Çalışanlar başlıkları); okunabilirlik kuralları yeniden çalışır hale getirildi.",
+    "Kasa ekranındaki açık zeminli hesap seçim kutusunda beyaz yazının görünmemesi düzeltildi.",
+    "Çok soluk açıklama ve boş durum yazıları okunabilir tona getirildi.",
+    "Cam Arayüz (Glass) tasarımında sol menü profil kartının bazı stillerinin uygulanmaması düzeltildi."
   ]
 };
 
@@ -698,6 +685,19 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.8.3",
+    date: "30.10.2026",
+    changes: [
+      "Sıvı Mesh Işık Efektleri: Arka plana kuzey ışığı gibi çok yavaş dönen akışkan bir renk şeridi eklendi; kartların kenarları sol üstten parlayıp tema rengine dönen ince bir cam halkasıyla çevrelendi.",
+      "İmleci Takip Eden Işık: Fare bir kartın üzerinde gezinirken imlecin altında tema renginde yumuşak bir ışık oluşur.",
+      "Renkli Uyarı Kutuları: Sıvı Mesh tasarımında bilgi, uyarı ve hata kutuları koyu zemine uygun yarı saydam renkli cam görünümüne, yazıları o rengin açık tonuna kavuştu.",
+      "Sıvı Mesh tasarımında sayfa başlıkları, açıklamalar ve uyarı yazıları görünmüyordu (ör. Ayarlar, Masraflar, Çalışanlar başlıkları); okunabilirlik kuralları yeniden çalışır hale getirildi.",
+      "Kasa ekranındaki açık zeminli hesap seçim kutusunda beyaz yazının görünmemesi düzeltildi.",
+      "Çok soluk açıklama ve boş durum yazıları okunabilir tona getirildi.",
+      "Cam Arayüz (Glass) tasarımında sol menü profil kartının bazı stillerinin uygulanmaması düzeltildi."
+    ]
+  },
   {
     version: "1.8.2",
     date: "30.10.2026",
