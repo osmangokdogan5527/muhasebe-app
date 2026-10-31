@@ -5,6 +5,7 @@ import { DeviceAccount } from '../utils/accountStore';
 import { TenantLoginPanel } from './auth/TenantLoginPanel';
 import { InstallAppBanner } from './auth/InstallAppBanner';
 import { FluidMeshBackground } from './FluidMeshBackground';
+import { PusulaAuthHero } from './auth/PusulaAuthHero';
 import { confirmDialog, alertDialog } from '../utils/dialogs';
 
 interface AuthScreenProps {
@@ -148,6 +149,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         `}</style>
 
         {isFluidMesh && <FluidMeshBackground />}
+        {designStyle === 'pusula' && (
+          <PusulaAuthHero activeLogoTheme={activeLogoTheme} activeTheme={activeTheme} designStyle={designStyle} />
+        )}
         
         <div className="w-full max-w-md my-auto relative z-10">
           <div className="text-center mb-10 flex flex-col items-center">
