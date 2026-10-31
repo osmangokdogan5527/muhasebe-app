@@ -1693,3 +1693,111 @@ main[data-design-style="pusula"] > .max-w-md > div:first-child p {
 [data-design-style="pusula"] .field-app main button.shrink-0.w-12.rounded-2xl svg {
   color: #ffffff !important;
 }
+
+/* Krem/sarımsı açık zeminli büyük kutular (ör. raporlardaki "Satılan Malın Maliyeti")
+   nötr zemine ve turuncu kenar çizgisine çevrilir: sıcak krem ton kullanılmaz */
+[data-design-style="pusula"] main :is(.bg-amber-50, .bg-yellow-50, .bg-orange-50, .bg-amber-100, .bg-yellow-100, .bg-orange-100):is(.rounded-lg, .rounded-xl, .rounded-2xl, .rounded-3xl) {
+  background-color: #ffffff !important;
+  background-image: linear-gradient(90deg, #f59e0b, #d97706) !important;
+  background-size: 100% 4px !important;
+  background-repeat: no-repeat !important;
+  border-color: var(--k-border) !important;
+}
+
+/* ---------------------------------------------------------------------
+   22. BELGE PENCERELERİ (PDF önizleme, etiket tasarımcısı)
+   Bu pencerelerin renkleri satır içi verilir; Pusula'da açığa çevrilir.
+   --------------------------------------------------------------------- */
+[data-design-style="pusula"] .storm-doc-modal,
+html[data-design-style="pusula"] .storm-doc-modal {
+  background-color: #ffffff !important;
+  color: var(--k-text-2) !important;
+  border-color: var(--k-border) !important;
+}
+
+html[data-design-style="pusula"] .storm-doc-modal :is(h2, h3, strong) {
+  color: var(--k-text) !important;
+}
+
+html[data-design-style="pusula"] .storm-doc-modal :is([style*="color: rgb(226, 232, 240)"], [style*="color: rgb(255, 255, 255)"], [style*="color: rgb(203, 213, 225)"]) {
+  color: var(--k-text) !important;
+}
+
+html[data-design-style="pusula"] .storm-doc-modal [style*="color: rgb(148, 163, 184)"] {
+  color: var(--k-text-3) !important;
+}
+
+html[data-design-style="pusula"] .storm-doc-modal [style*="color: rgb(125, 211, 252)"] {
+  color: var(--accent-700) !important;
+}
+
+html[data-design-style="pusula"] .storm-doc-modal :is([style*="background-color: rgba(255, 255, 255, 0.03)"], [style*="background-color: rgba(0, 0, 0, 0.25)"]) {
+  background-color: var(--k-surface-2) !important;
+  border-color: var(--k-border) !important;
+}
+
+html[data-design-style="pusula"] .storm-doc-modal :is([style*="background-color: rgb(22, 26, 51)"], [style*="background-color: rgb(15, 18, 37)"]) {
+  background-color: #ffffff !important;
+  color: var(--k-text) !important;
+  border-color: var(--k-border-strong) !important;
+}
+
+/* Seçilmemiş onay kutusu */
+html[data-design-style="pusula"] .storm-doc-modal [style*="background-color: rgba(255, 255, 255, 0.08)"] {
+  background-color: #ffffff !important;
+  box-shadow: inset 0 0 0 1.5px var(--k-border-strong);
+}
+
+html[data-design-style="pusula"] .storm-doc-modal [style*="background-color: rgba(56, 189, 248, 0.14)"] {
+  background: var(--k-grad) !important;
+  color: #ffffff !important;
+}
+
+/* Etiket önizleme alanı: dama deseni açık tonda */
+html[data-design-style="pusula"] .storm-doc-modal [style*="repeating-conic-gradient"] {
+  background: repeating-conic-gradient(#eef1f6 0% 25%, #ffffff 0% 50%) 50% / 16px 16px !important;
+}
+
+/* Pencere başlığı gradyan bant */
+html[data-design-style="pusula"] .storm-doc-modal > div:first-child {
+  background: var(--k-grad) !important;
+  border: none !important;
+}
+
+html[data-design-style="pusula"] .storm-doc-modal > div:first-child :is(h2, p, button, svg, span) {
+  color: #ffffff !important;
+}
+
+html[data-design-style="pusula"] .storm-doc-modal > div:first-child > div:first-child {
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+/* Storm AI sohbet başlığı: koyu tema gradyanı üzerinde beyaz yazı */
+[data-design-style="pusula"] div[style*="linear-gradient(to right, var(--accent-800"] :is(h3, p, span, svg, button) {
+  color: #ffffff !important;
+}
+
+/* Cari ekstre çekmecesinin sağ paneli ve diğer #1e293b kutular */
+[data-design-style="pusula"] :is(.bg-\[\#1e293b\]) {
+  background-color: var(--k-surface-2) !important;
+  border-color: var(--k-border) !important;
+  color: var(--k-text-2) !important;
+}
+
+[data-design-style="pusula"] .hidden-print.bg-\[\#0f172a\] {
+  background-color: #ffffff !important;
+  border-color: var(--k-border) !important;
+}
+
+[data-design-style="pusula"] .hidden-print.bg-\[\#0f172a\] .bg-slate-800 {
+  background-color: var(--k-surface-3) !important;
+}
+
+[data-design-style="pusula"] .hidden-print :is(.border-slate-800, .border-slate-700, .border-slate-700\/80) {
+  border-color: var(--k-border) !important;
+}
+
+/* Sağdan açılan çekmecelerin arka karartması yumuşak */
+[data-design-style="pusula"] .fixed.inset-0.bg-black\/85 {
+  background-color: rgba(15, 23, 42, 0.32) !important;
+}
