@@ -130,6 +130,12 @@ export interface CekSenet {
   description?: string; // Açıklama
   createdAt: string;
   exchangeRate?: number; // Manual exchange rate for multi-currency checks
+  /**
+   * Girişte cari bakiyesine işlendi mi? (alınan çekte cari alacaklandı / verilen çekte borcumuz düştü)
+   * İşlendiyse tahsil/ödeme anında yalnızca kasa/banka hareketi yazılır, cari ikinci kez etkilenmez.
+   * Alan yoksa (eski kayıt) işlendi kabul edilir; giriş formunda bu seçenek varsayılan olarak açıktı.
+   */
+  cariBalanceApplied?: boolean;
   convertedAmount?: number; // Amount after applying exchange rate to modify Cari's native balance
 }
 

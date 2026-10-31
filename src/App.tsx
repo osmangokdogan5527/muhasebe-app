@@ -1078,7 +1078,7 @@ export default function App() {
           />)}
         </div>
         <div className={activeTab === 'ceksenet' ? 'block animate-fade-in' : 'hidden'}>
-          {renderWorkspaceView('ceksenet', <CekSenetView ceksenet={ceksenet} cariler={cariler} islemler={islemler} />)}
+          {renderWorkspaceView('ceksenet', <CekSenetView ceksenet={ceksenet} cariler={cariler} islemler={islemler} bankAccounts={bankAccounts} />)}
         </div>
         <div className={activeTab === 'masraflar' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('masraflar', <MasraflarView expenses={expenses} recurringTransactions={recurringTransactions} bankAccounts={bankAccounts} cariler={cariler} aiPrefilledData={aiPrefilledData} onClearAiPrefilledData={() => setAiPrefilledData(null)} />)}

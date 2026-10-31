@@ -1,7 +1,11 @@
 import { CekSenetModals } from './ceksenet/CekSenetModals';
 import React, { useMemo, useState, useEffect } from 'react';
-import { Cari, CekSenet, Transaction } from '../types';
-import { saveCekSenet, deleteCekSenet, createTransaction } from '../firebase';
+import { Cari, CekSenet, Transaction, BankAccount } from '../types';
+import { saveCekSenet, deleteCekSenet, createTransaction, saveAccountTransaction } from '../firebase';
+import { useFxRates } from '../hooks/useFxRates';
+import { convertWithRates } from '../utils/currencyUtils';
+import { roundMoney } from '../utils/invoiceMath';
+import { logError } from '../utils/errorLogger';
 import { fetchTCMBRates, calculateExchangeRate } from '../utils/tcmbService';
 import { 
   FileText, 
@@ -27,9 +31,11 @@ interface CekSenetViewProps {
   ceksenet: CekSenet[];
   cariler: Cari[];
   islemler: Transaction[];
+  bankAccounts?: BankAccount[];
 }
 
-export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }: CekSenetViewProps) {
+export default function CekSenetView({ ceksenet, cariler, islemler: _islemler, bankAccounts = [] }: CekSenetViewProps) {
+  const fxRates = useFxRates();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'receivable' | 'payable'>('all');
   const [filterDocType, setFilterDocType] = useState<'all' | 'cheque' | 'note'>('all');
@@ -274,7 +280,8 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
         description: description.trim(),
         createdAt: new Date().toISOString(),
         exchangeRate: isMultiCurrency ? exchangeRate : undefined,
-        convertedAmount: isMultiCurrency ? customConvertedAmount : undefined
+        convertedAmount: isMultiCurrency ? customConvertedAmount : undefined,
+        cariBalanceApplied: affectCariBalance
       };
 
       await saveCekSenet(payload);
@@ -311,8 +318,19 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
     setActionType(act);
     setEndorseCariId('');
     setEndorseExchangeRate(1);
-    setActionAccount('bank');
+    // "Kasaya tahsil" penceresi kasa hesabıyla açılır; kullanıcı isterse bankayı seçer
+    setActionAccount(act === 'collect_cash' ? 'cash' : 'bank');
     setIsActionModalOpen(true);
+  };
+
+  // Tahsil/ödeme için hesap: aynı para birimindeki hesap, yoksa merkez hesap, yoksa ilk uygun hesap
+  const pickCashAccount = (kind: BankAccount['type'], currency: string): BankAccount | undefined => {
+    const ofKind = bankAccounts.filter((a) => a.type === kind);
+    const defaultId = kind === 'kasa' ? 'merkez_kasa' : 'merkez_banka';
+    return ofKind.find((a) => a.id === defaultId && (a.currency || 'TRY') === currency)
+      || ofKind.find((a) => (a.currency || 'TRY') === currency)
+      || ofKind.find((a) => a.id === defaultId)
+      || ofKind[0];
   };
 
   // Execute State Transition
@@ -323,41 +341,57 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
       const updatedItem = { ...selectedItem };
       const docLabel = selectedItem.docType === 'cheque' ? 'Çek' : 'Senet';
 
-      if (actionType === 'collect_cash' || actionType === 'collect_bank') {
-        updatedItem.status = 'collected';
-        
-        // Save the updated check state
+      if (actionType === 'collect_cash' || actionType === 'collect_bank' || actionType === 'pay_bank') {
+        const isPayment = actionType === 'pay_bank';
+        const accountKind: BankAccount['type'] = actionType === 'collect_cash' && actionAccount === 'cash' ? 'kasa' : 'banka';
+        const targetAccount = pickCashAccount(accountKind, selectedItem.currency || 'TRY');
+        if (!targetAccount) {
+          alertDialog(`İşlem için bir ${accountKind === 'kasa' ? 'kasa' : 'banka'} hesabı bulunamadı. Önce Kasa ekranından hesap ekleyin.`);
+          return;
+        }
+
+        updatedItem.status = isPayment ? 'paid' : 'collected';
         await saveCekSenet(updatedItem, selectedItem.id);
 
-        // Create transaction to receive cash or bank funds (this does NOT affect Cari balance, because cari balance was already updated when check was entered. It moves from cheque portfolio to cash/bank asset)
-        await createTransaction({
-          type: 'collection',
-          cariId: selectedItem.cariId,
-          cariName: selectedItem.cariName,
-          date: getTodayISO(),
-          amount: selectedItem.amount,
-          currency: selectedItem.currency,
-          account: actionType === 'collect_cash' ? 'cash' : 'bank',
-          description: `${docLabel} Tahsilatı (Seri: ${selectedItem.serialNo})`,
-          createdAt: new Date().toISOString()
-        });
-
-      } else if (actionType === 'pay_bank') {
-        updatedItem.status = 'paid';
-        await saveCekSenet(updatedItem, selectedItem.id);
-
-        // Create payment transaction from bank
-        await createTransaction({
-          type: 'payment',
-          cariId: selectedItem.cariId,
-          cariName: selectedItem.cariName,
-          date: getTodayISO(),
-          amount: selectedItem.amount,
-          currency: selectedItem.currency,
-          account: 'bank',
-          description: `Kendi ${docLabel} Ödememiz (Seri: ${selectedItem.serialNo})`,
-          createdAt: new Date().toISOString()
-        });
+        try {
+          if (selectedItem.cariBalanceApplied !== false) {
+            // Cari, çek girişinde zaten alacaklandırıldı / borcumuz düşüldü: burada yalnızca para
+            // portföyden kasaya/bankaya (ya da bankadan dışarı) geçer, cari ikinci kez etkilenmez.
+            const accountCurrency = targetAccount.currency || 'TRY';
+            const itemCurrency = selectedItem.currency || 'TRY';
+            const amountInAccount = roundMoney(convertWithRates(selectedItem.amount, itemCurrency, accountCurrency, fxRates));
+            const original = itemCurrency !== accountCurrency
+              ? ` (Orijinal: ${selectedItem.amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ${itemCurrency})`
+              : '';
+            await saveAccountTransaction({
+              accountId: targetAccount.id,
+              type: isPayment ? 'cikis' : 'giris',
+              amount: amountInAccount,
+              date: getTodayISO(),
+              description: `${isPayment ? `Kendi ${docLabel} Ödememiz` : `${docLabel} Tahsilatı`} — ${selectedItem.cariName} (Seri: ${selectedItem.serialNo})${original}`,
+              createdAt: new Date().toISOString()
+            });
+          } else {
+            // Girişte cariye işlenmediyse tahsilat/ödeme cariyi de kapatır
+            await createTransaction({
+              type: isPayment ? 'payment' : 'collection',
+              cariId: selectedItem.cariId,
+              cariName: selectedItem.cariName,
+              date: getTodayISO(),
+              amount: selectedItem.amount,
+              currency: selectedItem.currency,
+              account: accountKind === 'kasa' ? 'cash' : 'bank',
+              bankAccountId: targetAccount.id,
+              description: `${isPayment ? `Kendi ${docLabel} Ödememiz` : `${docLabel} Tahsilatı`} (Seri: ${selectedItem.serialNo})`,
+              createdAt: new Date().toISOString()
+            });
+          }
+        } catch (moveErr) {
+          // Para hareketi yazılamadıysa çek eski durumuna döner; kullanıcı yeniden deneyebilir
+          await saveCekSenet(selectedItem, selectedItem.id).catch((revertErr) =>
+            logError(revertErr instanceof Error ? revertErr : new Error(String(revertErr)), 'CekSenetView: durum geri alınamadı'));
+          throw moveErr;
+        }
 
       } else if (actionType === 'endorse') {
         if (!endorseCariId) {
@@ -398,7 +432,7 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler }:
       setIsActionModalOpen(false);
       setSelectedItem(null);
     } catch (err) {
-      console.error('Eylem yürütülürken hata oluştu:', err);
+      logError(err instanceof Error ? err : new Error(String(err)), 'CekSenetView.handleExecuteAction');
       alertDialog('İşlem gerçekleştirilemedi.');
     }
   };

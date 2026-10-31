@@ -934,6 +934,7 @@ const writeTools: AiTool[] = [
             type, docType, portfolioNo, serialNo: (args.seri_no || '').trim(), debtor: (args.borclu || '').trim() || cari.name,
             cariId: cari.id, cariName: cari.name, amount, currency, issueDate, dueDate, bankName: (args.banka || '').trim(),
             bankBranch: '', accountNo: '', status: 'portfolio', description: (args.aciklama || '').trim(), createdAt: new Date().toISOString(),
+            cariBalanceApplied: affect,
           });
           if (affect) {
             await createTransaction({
