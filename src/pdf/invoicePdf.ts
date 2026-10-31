@@ -1,0 +1,310 @@
+/**
+ * Fatura PDF'i (satış, alış ve iade faturaları).
+ *
+ * Tutarlar kaydın kendisinden okunur: satır toplamları KDV dahildir (item.total); matrah ve KDV
+ * oranlara göre splitInvoiceVat ile ayrılır. POS genel iskontosu varsa satırlar ile genel toplam
+ * arasındaki fark "İskonto" olarak gösterilir; böylece matrah + KDV her zaman genel toplama eşittir.
+ */
+import { Cari, Transaction } from '../types';
+import { calculateInvoiceLine, roundMoney, splitInvoiceVat } from '../utils/invoiceMath';
+import { DocumentBranding } from './branding';
+import { registerPdfFonts, PDF_FONT, PDF_FONT_SEMIBOLD } from './fonts';
+import { amountToTurkishWords, formatDate, formatMoney, formatNumber, formatQuantity, normalizeCurrency, safeFileName } from './format';
+import {
+  COLORS,
+  FOOTER_HEIGHT,
+  PAGE_MARGIN,
+  drawContinuationHeader,
+  drawDocumentHeader,
+  drawFooters,
+  drawInfoBox,
+  hexToRgb,
+  setText,
+  tint,
+} from './layout';
+
+export const INVOICE_TYPES: Transaction['type'][] = ['sale', 'purchase', 'sale_return', 'purchase_return'];
+
+export function isInvoiceTransaction(islem: Pick<Transaction, 'type'>): boolean {
+  return INVOICE_TYPES.includes(islem.type);
+}
+
+const INVOICE_TITLES: Record<string, string> = {
+  sale: 'SATIŞ FATURASI',
+  purchase: 'ALIŞ FATURASI',
+  sale_return: 'SATIŞ İADE FATURASI',
+  purchase_return: 'ALIŞ İADE FATURASI',
+};
+
+// Karşı tarafın kutu başlığı: alış faturasında satıcı, satış iadesinde iade eden müşteri
+const PARTY_HEADINGS: Record<string, string> = {
+  sale: 'Sayın',
+  purchase: 'Satıcı / Tedarikçi',
+  sale_return: 'İade Eden Müşteri',
+  purchase_return: 'Sayın',
+};
+
+const PAYMENT_LABELS: Record<string, string> = {
+  cash: 'Peşin (Nakit)',
+  bank: 'Banka / Havale',
+  pos: 'Kredi Kartı (POS)',
+  '': 'Açık Hesap (Vadeli)',
+};
+
+export interface GeneratedPdf {
+  blob: Blob;
+  fileName: string;
+  pageCount: number;
+}
+
+interface InvoiceRow {
+  name: string;
+  quantity: number;
+  unit: string;
+  unitNet: number;
+  taxRate: number;
+  lineNet: number;
+  lineTotal: number;
+}
+
+function buildRows(islem: Transaction): InvoiceRow[] {
+  const items = Array.isArray(islem.items) ? islem.items.filter(Boolean) : [];
+  if (items.length === 0) {
+    // Kalemsiz (eski veya içe aktarılmış) fatura: tek satır, tutar KDV dahil kabul edilir
+    const groups = splitInvoiceVat({ amount: islem.amount, items: [] });
+    const net = groups.reduce((sum, g) => sum + g.net, 0);
+    return [{
+      name: islem.description || 'Mal / Hizmet Bedeli',
+      quantity: 1,
+      unit: 'Adet',
+      unitNet: roundMoney(net),
+      taxRate: groups[0]?.rate ?? 0,
+      lineNet: roundMoney(net),
+      lineTotal: roundMoney(islem.amount),
+    }];
+  }
+  return items.map((item) => {
+    const rate = Number(item.taxRate) || 0;
+    const quantity = Number(item.quantity) || 0;
+    const lineTotal = item.total !== undefined && item.total !== null
+      ? roundMoney(Number(item.total) || 0)
+      : calculateInvoiceLine(quantity, item.price, rate).total;
+    const lineNet = roundMoney(lineTotal / (1 + rate / 100));
+    return {
+      name: item.stockName || 'Ürün',
+      quantity,
+      unit: item.unit || 'Adet',
+      unitNet: quantity ? lineNet / quantity : lineNet,
+      taxRate: rate,
+      lineNet,
+      lineTotal,
+    };
+  });
+}
+
+function partyRows(islem: Transaction, cari: Cari | undefined) {
+  return [
+    { value: cari?.name || islem.cariName || '-', bold: true },
+    { value: cari?.address || '' },
+    { label: 'Telefon', value: cari?.phone || '' },
+    { label: 'E-posta', value: cari?.email || '' },
+    { label: 'Vergi D.', value: cari?.taxOffice || '' },
+    { label: 'VKN/TCKN', value: cari?.taxNo || '' },
+  ];
+}
+
+export async function createInvoicePdf(islem: Transaction, cari: Cari | undefined, branding: DocumentBranding): Promise<GeneratedPdf> {
+  const [{ jsPDF }, { autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+  await registerPdfFonts(doc);
+
+  const currency = normalizeCurrency(islem.currency);
+  const accent = hexToRgb(branding.accentColor);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const contentWidth = pageWidth - PAGE_MARGIN * 2;
+  const title = INVOICE_TITLES[islem.type] || 'FATURA';
+  const reference = islem.invoiceNo || '';
+
+  doc.setProperties({ title: `${title} ${reference}`.trim(), subject: islem.cariName || '', creator: 'Storm Ön Muhasebe' });
+
+  // 1) Başlık
+  let y = drawDocumentHeader(doc, branding, {
+    title,
+    meta: [
+      { label: 'Fatura No', value: reference || '-' },
+      { label: 'Tarih', value: formatDate(islem.date) },
+    ],
+  });
+
+  // 2) Müşteri ve belge bilgileri
+  const gap = 6;
+  const boxWidth = (contentWidth - gap) / 2;
+  const documentRows = [
+    { label: 'Ödeme', value: PAYMENT_LABELS[islem.account || ''] || PAYMENT_LABELS[''] },
+    { label: 'Para Birimi', value: currency === 'TRY' ? 'Türk Lirası (TRY)' : currency },
+    { label: 'Kur', value: currency !== 'TRY' && islem.exchangeRate ? `1 ${currency} = ${formatNumber(islem.exchangeRate, 4)} TL` : '' },
+    { label: 'Cari Kodu', value: cari?.code || '' },
+  ];
+  const partyHeading = PARTY_HEADINGS[islem.type] || 'Sayın';
+  const boxHeight = Math.max(
+    drawInfoBox(doc, branding, 0, 0, boxWidth, partyHeading, partyRows(islem, cari), undefined, true),
+    drawInfoBox(doc, branding, 0, 0, boxWidth, 'Belge Bilgileri', documentRows, undefined, true),
+  );
+  drawInfoBox(doc, branding, PAGE_MARGIN, y, boxWidth, partyHeading, partyRows(islem, cari), boxHeight);
+  drawInfoBox(doc, branding, PAGE_MARGIN + boxWidth + gap, y, boxWidth, 'Belge Bilgileri', documentRows, boxHeight);
+  y += boxHeight + 7;
+
+  // 3) Kalemler
+  const rows = buildRows(islem);
+  const zebra = tint(accent, 0.965);
+  autoTable(doc, {
+    startY: y,
+    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN, top: PAGE_MARGIN + 11, bottom: FOOTER_HEIGHT + 4 },
+    head: [['#', 'Mal / Hizmet', 'Miktar', 'Birim Fiyat', 'KDV', 'Tutar']],
+    body: rows.map((row, index) => [
+      String(index + 1),
+      row.name,
+      `${formatQuantity(row.quantity)} ${row.unit}`,
+      formatMoney(row.unitNet, currency),
+      `%${formatQuantity(row.taxRate)}`,
+      formatMoney(row.lineNet, currency),
+    ]),
+    theme: 'plain',
+    showHead: 'everyPage',
+    styles: {
+      font: PDF_FONT,
+      fontSize: 8.5,
+      textColor: COLORS.text,
+      cellPadding: { top: 2.6, bottom: 2.6, left: 2.5, right: 2.5 },
+      valign: 'middle',
+      overflow: 'linebreak',
+    },
+    headStyles: {
+      font: PDF_FONT_SEMIBOLD,
+      fontStyle: 'normal',
+      fillColor: accent,
+      textColor: COLORS.white,
+      fontSize: 8,
+    },
+    alternateRowStyles: { fillColor: zebra },
+    columnStyles: {
+      0: { cellWidth: 9, halign: 'center', textColor: COLORS.muted },
+      1: { cellWidth: 'auto' },
+      2: { cellWidth: 26, halign: 'right' },
+      3: { cellWidth: 30, halign: 'right' },
+      4: { cellWidth: 14, halign: 'center' },
+      5: { cellWidth: 32, halign: 'right', font: PDF_FONT_SEMIBOLD },
+    },
+    didParseCell: (data) => {
+      if (data.section === 'head' && data.column.index >= 2) {
+        data.cell.styles.halign = data.column.index === 4 ? 'center' : 'right';
+      }
+    },
+    didDrawPage: (data) => {
+      if (data.pageNumber > 1) drawContinuationHeader(doc, branding, title, reference);
+      // Tablonun alt çizgisi
+      doc.setDrawColor(accent[0], accent[1], accent[2]);
+      doc.setLineWidth(0.4);
+      const tableBottom = data.cursor ? data.cursor.y : y;
+      doc.line(PAGE_MARGIN, tableBottom, pageWidth - PAGE_MARGIN, tableBottom);
+    },
+  });
+  y = ((doc as any).lastAutoTable?.finalY ?? y) + 6;
+
+  // 4) Toplamlar
+  const vatGroups = splitInvoiceVat({ amount: islem.amount, items: islem.items || [] })
+    .filter((g) => Math.abs(g.net) > 0.0049 || Math.abs(g.tax) > 0.0049)
+    .sort((a, b) => a.rate - b.rate);
+  const itemsTotal = roundMoney(rows.reduce((sum, row) => sum + row.lineTotal, 0));
+  const grandTotal = roundMoney(islem.amount);
+  const discount = roundMoney(itemsTotal - grandTotal);
+  const totalNet = roundMoney(vatGroups.reduce((sum, g) => sum + g.net, 0));
+
+  const totalLines: { label: string; value: string; strong?: boolean }[] = [];
+  if (discount > 0.009) {
+    totalLines.push({ label: 'Satır Toplamı (KDV dahil)', value: formatMoney(itemsTotal, currency) });
+    totalLines.push({ label: 'İskonto', value: `- ${formatMoney(discount, currency)}` });
+  }
+  totalLines.push({ label: 'Ara Toplam (KDV hariç)', value: formatMoney(totalNet, currency) });
+  vatGroups.forEach((g) => totalLines.push({ label: `KDV (%${formatQuantity(g.rate)})`, value: formatMoney(roundMoney(g.tax), currency) }));
+
+  const totalsWidth = 82;
+  const totalsX = pageWidth - PAGE_MARGIN - totalsWidth;
+  const lineHeight = 6;
+  const grandHeight = 11;
+  const totalsHeight = totalLines.length * lineHeight + grandHeight + 2;
+  const wordsText = amountToTurkishWords(grandTotal, currency);
+  const leftWidth = contentWidth - totalsWidth - 8;
+  setText(doc, 8.5, COLORS.text);
+  const wordLines = doc.splitTextToSize(wordsText, leftWidth) as string[];
+  const noteLines = islem.description && (islem.items || []).length > 0
+    ? (doc.splitTextToSize(islem.description, leftWidth) as string[]).slice(0, 6)
+    : [];
+  const leftHeight = 6 + wordLines.length * 4.2 + (noteLines.length ? 8 + noteLines.length * 4 : 0);
+  const blockHeight = Math.max(totalsHeight, leftHeight);
+  const signatureHeight = branding.showSignatureArea ? 24 : 0;
+
+  if (y + blockHeight + signatureHeight > pageHeight - FOOTER_HEIGHT - 4) {
+    doc.addPage();
+    drawContinuationHeader(doc, branding, title, reference);
+    y = PAGE_MARGIN + 12;
+  }
+
+  // Toplam satırları
+  let ty = y;
+  totalLines.forEach((line) => {
+    setText(doc, 8.5, COLORS.muted);
+    doc.text(line.label, totalsX + 3, ty + 4);
+    setText(doc, 9, COLORS.text, 'semibold');
+    doc.text(line.value, pageWidth - PAGE_MARGIN - 3, ty + 4, { align: 'right' });
+    doc.setDrawColor(COLORS.line[0], COLORS.line[1], COLORS.line[2]);
+    doc.setLineWidth(0.2);
+    doc.line(totalsX, ty + lineHeight, pageWidth - PAGE_MARGIN, ty + lineHeight);
+    ty += lineHeight;
+  });
+  ty += 2;
+  doc.setFillColor(accent[0], accent[1], accent[2]);
+  doc.roundedRect(totalsX, ty, totalsWidth, grandHeight, 1.8, 1.8, 'F');
+  setText(doc, 9, COLORS.white, 'semibold');
+  doc.text('GENEL TOPLAM', totalsX + 4, ty + 7.1);
+  setText(doc, 12, COLORS.white, 'bold');
+  doc.text(formatMoney(grandTotal, currency), pageWidth - PAGE_MARGIN - 4, ty + 7.4, { align: 'right' });
+
+  // Yazıyla tutar ve açıklama
+  let ly = y;
+  setText(doc, 7.5, accent, 'bold');
+  doc.text('TUTAR (YAZIYLA)', PAGE_MARGIN, ly + 4);
+  ly += 8;
+  setText(doc, 8.5, COLORS.text);
+  doc.text(wordLines, PAGE_MARGIN, ly);
+  ly += wordLines.length * 4.2 + 4;
+  if (noteLines.length) {
+    setText(doc, 7.5, accent, 'bold');
+    doc.text('AÇIKLAMA', PAGE_MARGIN, ly);
+    ly += 4.5;
+    setText(doc, 8.5, COLORS.text);
+    doc.text(noteLines, PAGE_MARGIN, ly);
+  }
+
+  // İmza alanı
+  if (branding.showSignatureArea) {
+    const sy = y + blockHeight + 8;
+    const sigWidth = 60;
+    [['Teslim Eden', PAGE_MARGIN], ['Teslim Alan', pageWidth - PAGE_MARGIN - sigWidth]].forEach(([label, x]) => {
+      setText(doc, 8, COLORS.muted);
+      doc.text(String(label), Number(x) + sigWidth / 2, sy, { align: 'center' });
+      doc.setDrawColor(COLORS.line[0], COLORS.line[1], COLORS.line[2]);
+      doc.setLineWidth(0.3);
+      doc.line(Number(x), sy + 13, Number(x) + sigWidth, sy + 13);
+      setText(doc, 7, tint(COLORS.muted, 0.3));
+      doc.text('Ad Soyad / İmza', Number(x) + sigWidth / 2, sy + 17, { align: 'center' });
+    });
+  }
+
+  drawFooters(doc, branding);
+
+  const blob = doc.output('blob');
+  const fileName = `${safeFileName(title.replace('FATURASI', 'Fatura'))}_${safeFileName(reference || islem.date)}_${safeFileName(cari?.name || islem.cariName || '')}.pdf`;
+  return { blob, fileName, pageCount: doc.getNumberOfPages() };
+}
