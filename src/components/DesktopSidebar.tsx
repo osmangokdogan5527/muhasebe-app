@@ -64,6 +64,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   setActiveTab,
 }) => {
   const isProSolid = designStyle === 'pro-solid';
+  const isKristal = designStyle === 'kristal';
 
   const [isHovered, setIsHovered] = React.useState(false);
   const [isPinned, setIsPinned] = React.useState(() => {
@@ -104,7 +105,18 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         {/* Sidebar Brand Logo Header */}
         <div className={`pt-5 pb-4 transition-all duration-500 ease-in-out flex items-center justify-between relative z-10 ${isExpanded ? 'px-6' : 'px-2'}`}>
           <div className="flex items-center justify-center min-w-0 flex-1">
-            {isExpanded ? (
+            {isExpanded && isKristal ? (
+              // Kristal: büyük kare logo yerine yatay marka satırı (simge + yazı)
+              <div className="kristal-brand flex items-center gap-3 w-full min-w-0">
+                <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 shadow-[0_6px_16px_-6px_var(--accent-500)]">
+                  <StormLogo className="w-full h-full" logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern="none" sidebarPatternOpacity={0} designStyle={designStyle} sidebarBg={sidebarBg} onlySvg={true} />
+                </div>
+                <div className="min-w-0 leading-tight">
+                  <div className="kristal-brand-title text-[15px] font-extrabold tracking-tight">Storm</div>
+                  <div className="kristal-brand-sub text-[10.5px] font-medium">Ön Muhasebe</div>
+                </div>
+              </div>
+            ) : isExpanded ? (
               <StormLogo className="w-36 h-auto mx-auto" logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern={sidebarPattern} sidebarPatternOpacity={sidebarPatternOpacity} designStyle={designStyle} sidebarBg={sidebarBg} />
             ) : (
               <div className="w-10 h-10 flex items-center justify-center rounded-xl overflow-hidden cursor-pointer" title="Storm Muhasebe">

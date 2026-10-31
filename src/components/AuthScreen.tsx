@@ -75,7 +75,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [expandedLogId, setExpandedLogId] = React.useState<string | null>(null);
 
   const isFluidMesh = designStyle === 'fluid-mesh';
-  const isCleanLight = designStyle === 'clean-light' || designStyle === 'pro-solid';
+  const isCleanLight = designStyle === 'clean-light' || designStyle === 'pro-solid' || designStyle === 'kristal';
 
   // Tema ve tasarım stiline uygun metin renkleri ve görsel hiyerarşi sınıfları
   const textPrimary = isCleanLight ? 'text-slate-800' : 'text-white';

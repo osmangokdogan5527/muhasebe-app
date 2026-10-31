@@ -1,0 +1,702 @@
+/* =========================================================================
+   KRİSTAL — Storm Ön Muhasebe açık tasarım stili
+   -------------------------------------------------------------------------
+   Soğuk beyaz ve gri tonlarda, ferah ve sakin bir çalışma alanı. Yüzeyler
+   beyaz; kenarlar ince, gölgeler yumuşak. Tek vurgu rengi kullanıcının
+   seçtiği tema rengidir (--accent-*). Sıcak/krem tonları bilinçli olarak
+   kullanılmaz.
+
+   Uygulamanın bileşenleri koyu zemin için yazıldığından bu dosya koyu
+   sınıfları (bg-[#0c0c0c], bg-white/5, text-white/60 ...) açık karşılıklarına
+   çevirir. Tüm kurallar [data-design-style="kristal"] altında kalır; diğer
+   stilleri etkilemez.
+   ========================================================================= */
+
+[data-design-style="kristal"] {
+  --k-bg: #f3f5f9;
+  --k-bg-deep: #eaeef4;
+  --k-surface: #ffffff;
+  --k-surface-2: #f7f9fc;
+  --k-surface-3: #eff2f7;
+  --k-border: #e3e8ef;
+  --k-border-strong: #d2d9e3;
+  --k-text: #0f172a;
+  --k-text-2: #334155;
+  --k-text-3: #5b6b82;
+  --k-text-4: #8a98ad;
+  --k-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --k-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 14px -4px rgba(15, 23, 42, 0.06);
+  --k-shadow-lg: 0 2px 6px rgba(15, 23, 42, 0.04), 0 18px 40px -12px rgba(15, 23, 42, 0.14);
+  --k-shadow-xl: 0 24px 64px -16px rgba(15, 23, 42, 0.28);
+  --k-ring: 0 0 0 3px color-mix(in srgb, var(--accent-500) 18%, transparent);
+  --k-radius: 14px;
+  --k-radius-sm: 10px;
+  --k-accent-soft: color-mix(in srgb, var(--accent-500) 9%, #ffffff);
+  --k-accent-soft-2: color-mix(in srgb, var(--accent-500) 15%, #ffffff);
+  --k-accent-text: color-mix(in srgb, var(--accent-700) 88%, #0f172a);
+  --k-pos: #047857;
+  --k-pos-bg: #ecfdf5;
+  --k-pos-border: #c7eedd;
+  --k-neg: #be123c;
+  --k-neg-bg: #fff1f3;
+  --k-neg-border: #fbd0d9;
+  --k-warn: #b45309;
+  --k-warn-bg: #fff7e6;
+  --k-warn-border: #fbe2b4;
+  --k-info: #1d4ed8;
+  --k-info-bg: #eff5ff;
+  --k-info-border: #cfdffd;
+  color: var(--k-text-2) !important;
+  color-scheme: light;
+}
+
+/* ---------------------------------------------------------------------
+   1. ZEMİN
+   Çok hafif, tema renginden gelen iki ışık lekesi; düz gri değil ama
+   dikkat çekmeyecek kadar sakin.
+   --------------------------------------------------------------------- */
+[data-design-style="kristal"] body,
+body:has([data-design-style="kristal"]),
+[data-design-style="kristal"].min-h-screen,
+[data-design-style="kristal"].bg-\[\#050505\] {
+  background-color: var(--k-bg) !important;
+  background-image:
+    radial-gradient(1200px 600px at 100% -10%, color-mix(in srgb, var(--accent-300) 16%, transparent), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, color-mix(in srgb, var(--accent-200) 14%, transparent), transparent 60%) !important;
+  background-attachment: fixed !important;
+  color: var(--k-text-2) !important;
+}
+
+/* Gövde deseni bu stilde kullanılmaz */
+[data-design-style="kristal"] .body-pattern-layer {
+  display: none !important;
+}
+
+[data-design-style="kristal"] ::selection {
+  background: color-mix(in srgb, var(--accent-500) 22%, transparent);
+  color: var(--k-text);
+}
+
+/* ---------------------------------------------------------------------
+   2. TİPOGRAFİ
+   --------------------------------------------------------------------- */
+[data-design-style="kristal"] :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--k-text) !important;
+  letter-spacing: -0.01em;
+}
+
+[data-design-style="kristal"] :is(strong, b) {
+  color: var(--k-text);
+}
+
+/* Etiket ve küçük başlıklarda kullanılan eşaralıklı yazı yerine Inter;
+   rakamlar sütun hizalı kalır */
+[data-design-style="kristal"] .font-mono {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+[data-design-style="kristal"] .tabular-nums,
+[data-design-style="kristal"] td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Koyu zemin için yazılmış açık metin renkleri → okunaklı gri ölçek */
+[data-design-style="kristal"] :is(.text-white, .text-white\/95, .text-white\/90, .text-zinc-50, .text-zinc-100, .text-slate-50, .text-slate-100, .text-gray-50, .text-gray-100, .text-neutral-100, .text-\[\#e0e0e0\], .text-\[\#ffffff\]) {
+  color: var(--k-text) !important;
+}
+
+[data-design-style="kristal"] :is(.text-white\/85, .text-white\/80, .text-white\/75, .text-white\/70, .text-zinc-200, .text-slate-200, .text-gray-200, .text-gray-300) {
+  color: var(--k-text-2) !important;
+}
+
+[data-design-style="kristal"] :is(.text-white\/65, .text-white\/60, .text-white\/55, .text-white\/50, .text-zinc-300, .text-slate-300, .text-zinc-400, .text-slate-400, .text-gray-400) {
+  color: var(--k-text-3) !important;
+}
+
+[data-design-style="kristal"] :is(.text-white\/45, .text-white\/40, .text-white\/35, .text-white\/30, .text-white\/25, .text-white\/20, .text-white\/10, .text-zinc-500, .text-slate-500, .text-slate-450, .text-gray-500) {
+  color: var(--k-text-4) !important;
+}
+
+/* Gradyan yazılar (koyu zemin için beyazdan griye) → düz koyu */
+[data-design-style="kristal"] .bg-clip-text.text-transparent {
+  background-image: none !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: var(--k-text) !important;
+}
+
+/* Renkli metinler: açık zeminde yeterli kontrast için bir ton koyusu */
+[data-design-style="kristal"] :is(.text-teal-300, .text-teal-400, .text-cyan-300, .text-cyan-400, .text-sky-300, .text-sky-400) {
+  color: var(--k-accent-text) !important;
+}
+[data-design-style="kristal"] :is(.text-emerald-300, .text-emerald-400, .text-green-300, .text-green-400, .text-lime-400) {
+  color: var(--k-pos) !important;
+}
+[data-design-style="kristal"] :is(.text-rose-300, .text-rose-400, .text-red-300, .text-red-400, .text-pink-400) {
+  color: var(--k-neg) !important;
+}
+[data-design-style="kristal"] :is(.text-amber-200, .text-amber-300, .text-amber-400, .text-yellow-300, .text-yellow-400, .text-orange-300, .text-orange-400) {
+  color: var(--k-warn) !important;
+}
+[data-design-style="kristal"] :is(.text-blue-300, .text-blue-400) {
+  color: var(--k-info) !important;
+}
+[data-design-style="kristal"] :is(.text-indigo-300, .text-indigo-400, .text-violet-300, .text-violet-400) {
+  color: #4338ca !important;
+}
+[data-design-style="kristal"] :is(.text-purple-300, .text-purple-400, .text-fuchsia-400) {
+  color: #7e22ce !important;
+}
+
+/* Dolu renkli (tema rengi, yeşil, kırmızı ...) yüzeylerin üzerindeki yazı beyaz kalır.
+   Sınıf adı tam eşleşmeyle aranır ([class~=...]); bg-amber-50 gibi açık tonlar etkilenmez. */
+[data-design-style="kristal"] :is(
+  [class~="bg-teal-500"], [class~="bg-teal-600"], [class~="bg-teal-700"], [class~="bg-emerald-500"],
+  [class~="bg-emerald-600"], [class~="bg-emerald-700"], [class~="bg-green-500"], [class~="bg-green-600"],
+  [class~="bg-green-700"], [class~="bg-rose-500"], [class~="bg-rose-600"], [class~="bg-rose-700"],
+  [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-700"], [class~="bg-blue-500"],
+  [class~="bg-blue-600"], [class~="bg-blue-700"], [class~="bg-sky-500"], [class~="bg-sky-600"],
+  [class~="bg-sky-700"], [class~="bg-indigo-500"], [class~="bg-indigo-600"], [class~="bg-indigo-700"],
+  [class~="bg-violet-500"], [class~="bg-violet-600"], [class~="bg-violet-700"], [class~="bg-purple-500"],
+  [class~="bg-purple-600"], [class~="bg-purple-700"], [class~="bg-cyan-500"], [class~="bg-cyan-600"],
+  [class~="bg-cyan-700"], [class~="bg-amber-500"], [class~="bg-amber-600"], [class~="bg-amber-700"],
+  [class~="bg-orange-500"], [class~="bg-orange-600"], [class~="bg-orange-700"], [class~="bg-pink-500"],
+  [class~="bg-pink-600"], [class~="bg-pink-700"], [class~="bg-fuchsia-500"], [class~="bg-fuchsia-600"],
+  [class~="bg-fuchsia-700"], [class~="bg-[var(--accent-500)]"], [class~="bg-[var(--accent-600)]"], [style*="background-color: var(--accent-5"],
+  [style*="background-color: var(--accent-6"], [style*="background-color: var(--accent-7"], [style*="background: var(--accent-5"], [style*="background: var(--accent-6"]
+):not([class*="bg-gradient"]) :is(.text-white, .text-white\/95, .text-white\/90, .text-white\/80, .text-white\/70),
+[data-design-style="kristal"] :is(
+  [class~="bg-teal-500"], [class~="bg-teal-600"], [class~="bg-teal-700"], [class~="bg-emerald-500"],
+  [class~="bg-emerald-600"], [class~="bg-emerald-700"], [class~="bg-green-500"], [class~="bg-green-600"],
+  [class~="bg-green-700"], [class~="bg-rose-500"], [class~="bg-rose-600"], [class~="bg-rose-700"],
+  [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-700"], [class~="bg-blue-500"],
+  [class~="bg-blue-600"], [class~="bg-blue-700"], [class~="bg-sky-500"], [class~="bg-sky-600"],
+  [class~="bg-sky-700"], [class~="bg-indigo-500"], [class~="bg-indigo-600"], [class~="bg-indigo-700"],
+  [class~="bg-violet-500"], [class~="bg-violet-600"], [class~="bg-violet-700"], [class~="bg-purple-500"],
+  [class~="bg-purple-600"], [class~="bg-purple-700"], [class~="bg-cyan-500"], [class~="bg-cyan-600"],
+  [class~="bg-cyan-700"], [class~="bg-amber-500"], [class~="bg-amber-600"], [class~="bg-amber-700"],
+  [class~="bg-orange-500"], [class~="bg-orange-600"], [class~="bg-orange-700"], [class~="bg-pink-500"],
+  [class~="bg-pink-600"], [class~="bg-pink-700"], [class~="bg-fuchsia-500"], [class~="bg-fuchsia-600"],
+  [class~="bg-fuchsia-700"], [class~="bg-[var(--accent-500)]"], [class~="bg-[var(--accent-600)]"], [style*="background-color: var(--accent-5"],
+  [style*="background-color: var(--accent-6"], [style*="background-color: var(--accent-7"], [style*="background: var(--accent-5"], [style*="background: var(--accent-6"]
+):not([class*="bg-gradient"]):is(.text-white, .text-white\/95, .text-white\/90),
+[data-design-style="kristal"] :is(button, a, span, label):is(
+  [class~="bg-teal-500"], [class~="bg-teal-600"], [class~="bg-teal-700"], [class~="bg-emerald-500"],
+  [class~="bg-emerald-600"], [class~="bg-emerald-700"], [class~="bg-green-500"], [class~="bg-green-600"],
+  [class~="bg-green-700"], [class~="bg-rose-500"], [class~="bg-rose-600"], [class~="bg-rose-700"],
+  [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-700"], [class~="bg-blue-500"],
+  [class~="bg-blue-600"], [class~="bg-blue-700"], [class~="bg-sky-500"], [class~="bg-sky-600"],
+  [class~="bg-sky-700"], [class~="bg-indigo-500"], [class~="bg-indigo-600"], [class~="bg-indigo-700"],
+  [class~="bg-violet-500"], [class~="bg-violet-600"], [class~="bg-violet-700"], [class~="bg-purple-500"],
+  [class~="bg-purple-600"], [class~="bg-purple-700"], [class~="bg-cyan-500"], [class~="bg-cyan-600"],
+  [class~="bg-cyan-700"], [class~="bg-amber-500"], [class~="bg-amber-600"], [class~="bg-amber-700"],
+  [class~="bg-orange-500"], [class~="bg-orange-600"], [class~="bg-orange-700"], [class~="bg-pink-500"],
+  [class~="bg-pink-600"], [class~="bg-pink-700"], [class~="bg-fuchsia-500"], [class~="bg-fuchsia-600"],
+  [class~="bg-fuchsia-700"], [class~="bg-[var(--accent-500)]"], [class~="bg-[var(--accent-600)]"], [style*="background-color: var(--accent-5"],
+  [style*="background-color: var(--accent-6"], [style*="background-color: var(--accent-7"], [style*="background: var(--accent-5"], [style*="background: var(--accent-6"]
+):not([class*="bg-gradient"]),
+[data-design-style="kristal"] :is(button, a, span, label):is(
+  [class~="bg-teal-500"], [class~="bg-teal-600"], [class~="bg-teal-700"], [class~="bg-emerald-500"],
+  [class~="bg-emerald-600"], [class~="bg-emerald-700"], [class~="bg-green-500"], [class~="bg-green-600"],
+  [class~="bg-green-700"], [class~="bg-rose-500"], [class~="bg-rose-600"], [class~="bg-rose-700"],
+  [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-700"], [class~="bg-blue-500"],
+  [class~="bg-blue-600"], [class~="bg-blue-700"], [class~="bg-sky-500"], [class~="bg-sky-600"],
+  [class~="bg-sky-700"], [class~="bg-indigo-500"], [class~="bg-indigo-600"], [class~="bg-indigo-700"],
+  [class~="bg-violet-500"], [class~="bg-violet-600"], [class~="bg-violet-700"], [class~="bg-purple-500"],
+  [class~="bg-purple-600"], [class~="bg-purple-700"], [class~="bg-cyan-500"], [class~="bg-cyan-600"],
+  [class~="bg-cyan-700"], [class~="bg-amber-500"], [class~="bg-amber-600"], [class~="bg-amber-700"],
+  [class~="bg-orange-500"], [class~="bg-orange-600"], [class~="bg-orange-700"], [class~="bg-pink-500"],
+  [class~="bg-pink-600"], [class~="bg-pink-700"], [class~="bg-fuchsia-500"], [class~="bg-fuchsia-600"],
+  [class~="bg-fuchsia-700"], [class~="bg-[var(--accent-500)]"], [class~="bg-[var(--accent-600)]"], [style*="background-color: var(--accent-5"],
+  [style*="background-color: var(--accent-6"], [style*="background-color: var(--accent-7"], [style*="background: var(--accent-5"], [style*="background: var(--accent-6"]
+):not([class*="bg-gradient"]) * {
+  color: #ffffff !important;
+}
+
+/* ---------------------------------------------------------------------
+   3. YÜZEYLER
+   Sayfa düzeyindeki koyu paneller → beyaz kart; iç içe yarı saydam
+   paneller → çok açık gri dolgu. Böylece her şey kutu kutu görünmez,
+   hiyerarşi korunur.
+   --------------------------------------------------------------------- */
+[data-design-style="kristal"] :is(
+  .bg-\[\#0c0c0c\], .bg-\[\#0a0a0a\], .bg-\[\#0d0d0d\], .bg-\[\#0f0f0f\], .bg-\[\#111111\], .bg-\[\#111\],
+  .bg-\[\#121212\], .bg-\[\#151515\], .bg-\[\#161616\], .bg-\[\#18181b\], .bg-\[\#18181c\], .bg-\[\#080808\],
+  .bg-\[\#0b0c0e\], .bg-\[\#0b0c10\], .bg-\[\#121316\], .bg-\[\#090d16\], .bg-\[\#0b0f19\], .bg-\[\#0f0f11\],
+  .bg-\[\#0f0f12\], .bg-\[\#0d1024\], .bg-\[\#0b0d1f\], .bg-\[\#070915\], .bg-\[\#1a1f36\], .bg-\[\#0f172a\],
+  .bg-\[\#111111\]\/80, .bg-zinc-950, .bg-zinc-900, .bg-slate-950, .bg-slate-900, .bg-neutral-900,
+  .bg-zinc-950\/50, .bg-zinc-950\/40, .bg-zinc-900\/50, .bg-slate-900\/50, .bg-slate-950\/80
+) {
+  background-color: var(--k-surface) !important;
+  background-image: none !important;
+  border-color: var(--k-border) !important;
+  color: var(--k-text-2);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Kart görünümü: köşesi yuvarlatılmış sayfa panellerine yumuşak gölge */
+[data-design-style="kristal"] main :is(.rounded-xl, .rounded-2xl, .rounded-3xl):is(
+  .bg-white, .bg-\[\#ffffff\], .bg-\[\#0c0c0c\], .bg-\[\#0a0a0a\], .bg-\[\#111111\], .bg-\[\#121316\], .bg-\[\#0b0c0e\],
+  .bg-zinc-950, .bg-zinc-900, .bg-slate-900, .bg-slate-950
+):is(.border, [class*="border-"]) {
+  box-shadow: var(--k-shadow) !important;
+}
+
+/* İç içe ince paneller */
+[data-design-style="kristal"] :is(
+  .bg-white\/5, .bg-white\/10, .bg-white\/\[0\.01\], .bg-white\/\[0\.02\], .bg-white\/\[0\.03\], .bg-white\/\[0\.035\],
+  .bg-white\/\[0\.04\], .bg-white\/\[0\.05\], .bg-white\/\[0\.08\], .bg-black\/10, .bg-black\/15, .bg-black\/20,
+  .bg-black\/30, .bg-black\/40, .bg-zinc-900\/20, .bg-zinc-950\/20, .bg-zinc-800\/30, .bg-slate-800\/50,
+  .bg-zinc-800, .bg-slate-800, .bg-slate-850, .bg-slate-700, .bg-zinc-700
+) {
+  background-color: var(--k-surface-2) !important;
+  background-image: none !important;
+  border-color: var(--k-border) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+[data-design-style="kristal"] :is(.bg-white\/20, .bg-white\/15) {
+  background-color: var(--k-surface-3) !important;
+}
+
+/* Hover durumları */
+[data-design-style="kristal"] :is(.hover\:bg-white\/5, .hover\:bg-white\/10, .hover\:bg-white\/\[0\.02\], .hover\:bg-white\/\[0\.03\], .hover\:bg-white\/\[0\.04\], .hover\:bg-zinc-800, .hover\:bg-slate-800, .hover\:bg-zinc-900):hover {
+  background-color: var(--k-surface-3) !important;
+}
+
+/* Saf siyah: tam ekran karartma değilse açık panel */
+[data-design-style="kristal"] .bg-black:not(.fixed):not(.absolute) {
+  background-color: var(--k-surface-2) !important;
+  border-color: var(--k-border) !important;
+}
+
+/* Kenarlar */
+[data-design-style="kristal"] :is(
+  .border-white\/5, .border-white\/10, .border-white\/15, .border-white\/20, .border-white\/30,
+  .border-black\/5, .border-black\/10, .border-black\/20, .border-zinc-800, .border-zinc-800\/50, .border-zinc-700,
+  .border-slate-800, .border-slate-700, .border-slate-700\/80, .border-\[\#1f1f1f\], .border-\[\#222\]
+) {
+  border-color: var(--k-border) !important;
+}
+
+[data-design-style="kristal"] :is(.divide-white\/5, .divide-white\/10) > * + * {
+  border-color: var(--k-border) !important;
+}
+
+[data-design-style="kristal"] hr {
+  border-color: var(--k-border) !important;
+}
+
+/* ---------------------------------------------------------------------
+   4. KENAR MENÜ
+   Beyaz, havada duran bir panel. Etkin sekme tema renginde yumuşak bir
+   hap; simgeler sakin gri, etkin olanı tema renginde.
+   --------------------------------------------------------------------- */
+[data-design-style="kristal"] aside,
+[data-design-style="kristal"] aside.sidebar-light {
+  background: rgba(255, 255, 255, 0.86) !important;
+  background-image: none !important;
+  border: 1px solid var(--k-border) !important;
+  box-shadow: var(--k-shadow-lg) !important;
+  color: var(--k-text-2) !important;
+  backdrop-filter: blur(18px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.4) !important;
+}
+
+/* Biraz daha dar menü: içerik alanına yer kalır */
+[data-design-style="kristal"] aside.w-72 {
+  width: 16.5rem !important;
+}
+
+[data-design-style="kristal"] aside .absolute.inset-0.pointer-events-none {
+  display: none !important;
+}
+
+[data-design-style="kristal"] aside.sidebar-light nav button {
+  color: var(--k-text-2) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  text-transform: none !important;
+  font-size: 12.5px !important;
+  border: 1px solid transparent !important;
+  background-color: transparent;
+  box-shadow: none !important;
+}
+
+[data-design-style="kristal"] aside.sidebar-light nav button:hover {
+  background-color: var(--k-surface-3) !important;
+  color: var(--k-text) !important;
+}
+
+/* Etkin sekme (bileşen satır içi arka plan veriyor) */
+[data-design-style="kristal"] aside.sidebar-light nav button[style*="background-color"] {
+  background-color: var(--k-accent-soft-2) !important;
+  color: var(--k-accent-text) !important;
+  border-color: color-mix(in srgb, var(--accent-500) 22%, transparent) !important;
+  box-shadow: inset 3px 0 0 var(--accent-500) !important;
+}
+
+[data-design-style="kristal"] aside.sidebar-light nav button[style*="background-color"] :is(span, .text-white) {
+  color: var(--k-accent-text) !important;
+}
+
+/* Marka satırı */
+[data-design-style="kristal"] .kristal-brand-title {
+  color: var(--k-text) !important;
+}
+
+[data-design-style="kristal"] .kristal-brand-sub {
+  color: var(--k-text-4) !important;
+  letter-spacing: 0.02em;
+}
+
+/* Alt menü kutusu */
+[data-design-style="kristal"] aside.sidebar-light nav .bg-black\/15 {
+  background-color: var(--k-surface-2) !important;
+  border: 1px solid var(--k-border) !important;
+}
+
+/* Simge kutuları */
+[data-design-style="kristal"] .storm-icon-wrapper {
+  background-color: var(--k-surface-3) !important;
+  color: var(--k-text-3) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+[data-design-style="kristal"] .storm-icon-wrapper.active-icon {
+  background-color: var(--accent-500) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px -2px color-mix(in srgb, var(--accent-500) 45%, transparent) !important;
+}
+
+[data-design-style="kristal"] .storm-icon-wrapper.active-icon svg {
+  color: #ffffff !important;
+}
+
+[data-design-style="kristal"] .sidebar-nav-left-scroll {
+  scrollbar-color: #cfd6e0 transparent;
+}
+
+[data-design-style="kristal"] .sidebar-nav-left-scroll::-webkit-scrollbar-thumb {
+  background: #cfd6e0 !important;
+}
+
+/* Telefon üst çubuğu */
+[data-design-style="kristal"] header,
+[data-design-style="kristal"] .md\:hidden.sticky.top-0 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-bottom: 1px solid var(--k-border) !important;
+  color: var(--k-text) !important;
+  backdrop-filter: blur(14px) !important;
+}
+
+/* ---------------------------------------------------------------------
+   5. TABLOLAR
+   --------------------------------------------------------------------- */
+[data-design-style="kristal"] table {
+  border-color: var(--k-border) !important;
+}
+
+[data-design-style="kristal"] thead,
+[data-design-style="kristal"] thead tr,
+[data-design-style="kristal"] th {
+  background-color: var(--k-surface-2) !important;
+  background-image: none !important;
+  color: var(--k-text-3) !important;
+  border-color: var(--k-border) !important;
+}
+
+[data-design-style="kristal"] th {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em !important;
+  border-bottom: 1px solid var(--k-border) !important;
+}
+
+[data-design-style="kristal"] tbody tr {
+  background-color: transparent !important;
+  border-color: #edf0f5 !important;
+  transition: background-color 120ms ease;
+}
+
+[data-design-style="kristal"] tbody tr:hover {
+  background-color: color-mix(in srgb, var(--accent-500) 4%, #f8fafc) !important;
+}
+
+[data-design-style="kristal"] tbody td {
+  border-color: #edf0f5 !important;
+}
+
+/* Tarih, belge no ve tutarlar satır içinde bölünmez */
+[data-design-style="kristal"] td:is(.font-mono, .tabular-nums, .text-right),
+[data-design-style="kristal"] td :is(.font-mono, .tabular-nums) {
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------
+   6. FORM ALANLARI
+   --------------------------------------------------------------------- */
+[data-design-style="kristal"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]), select, textarea) {
+  background-color: var(--k-surface) !important;
+  background-image: none;
+  color: var(--k-text) !important;
+  border: 1px solid var(--k-border-strong) !important;
+  box-shadow: var(--k-shadow-sm) !important;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+[data-design-style="kristal"] select,
+[data-design-style="kristal"] select[class] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 30px !important;
+}
+
+[data-design-style="kristal"] option {
+  background-color: #ffffff !important;
+  color: var(--k-text) !important;
+}
+
+[data-design-style="kristal"] :is(input, select, textarea):hover:not(:focus):not(:disabled) {
+  border-color: #bfc8d5 !important;
+}
+
+[data-design-style="kristal"] :is(input, select, textarea):focus {
+  border-color: var(--accent-500) !important;
+  box-shadow: var(--k-ring) !important;
+  outline: none !important;
+}
+
+[data-design-style="kristal"] :is(input, select, textarea):disabled {
+  background-color: var(--k-surface-3) !important;
+  color: var(--k-text-3) !important;
+}
+
+[data-design-style="kristal"] ::placeholder {
+  color: #9aa6b8 !important;
+  opacity: 1 !important;
+}
+
+/* Bileşenin bilerek saydam bıraktığı iç alanlar (ör. etiket tasarımcısı) */
+[data-design-style="kristal"] input.bg-transparent:not(:focus) {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+[data-design-style="kristal"] input[type="checkbox"],
+[data-design-style="kristal"] input[type="radio"],
+[data-design-style="kristal"] input[type="range"] {
+  accent-color: var(--accent-500);
+}
+
+/* Tarih seçici simgesi koyu kalsın */
+[data-design-style="kristal"] input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: none !important;
+  opacity: 0.6;
+}
+
+/* ---------------------------------------------------------------------
+   7. BUTONLAR
+   --------------------------------------------------------------------- */
+[data-design-style="kristal"] button {
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 160ms ease, transform 120ms ease, color 140ms ease;
+}
+
+/* Koyu zemin için yazılmış ikincil butonlar → beyaz, ince kenarlı */
+[data-design-style="kristal"] button:is(.bg-white\/5, .bg-white\/10, .bg-zinc-800, .bg-zinc-900, .bg-slate-800, .bg-slate-900, .bg-slate-700, .bg-black, .bg-\[\#0c0c0c\], .bg-\[\#111111\]) {
+  background-color: var(--k-surface) !important;
+  color: var(--k-text-2) !important;
+  border: 1px solid var(--k-border-strong) !important;
+  box-shadow: var(--k-shadow-sm) !important;
+}
+
+[data-design-style="kristal"] button:is(.bg-white\/5, .bg-white\/10, .bg-zinc-800, .bg-zinc-900, .bg-slate-800, .bg-slate-900, .bg-slate-700, .bg-black, .bg-\[\#0c0c0c\], .bg-\[\#111111\]):hover:not(:disabled) {
+  background-color: var(--k-surface-2) !important;
+  border-color: #bfc8d5 !important;
+  color: var(--k-text) !important;
+}
+
+/* Birincil (dolu renkli) butonlara derinlik */
+[data-design-style="kristal"] button:is([class~="bg-teal-500"], [class~="bg-teal-600"], [class~="bg-emerald-500"], [class~="bg-emerald-600"], [class~="bg-sky-500"], [class~="bg-sky-600"], [class~="bg-blue-500"], [class~="bg-blue-600"], [class~="bg-indigo-500"], [class~="bg-indigo-600"], [class~="bg-rose-500"], [class~="bg-rose-600"], [class~="bg-red-500"], [class~="bg-red-600"]) {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 6px 16px -6px color-mix(in srgb, currentColor 0%, rgba(15, 23, 42, 0.35)) !important;
+}
+
+[data-design-style="kristal"] button:is([class~="bg-teal-500"], [class~="bg-teal-600"], [class~="bg-emerald-500"], [class~="bg-emerald-600"], [class~="bg-sky-500"], [class~="bg-sky-600"], [class~="bg-blue-500"], [class~="bg-blue-600"], [class~="bg-indigo-500"], [class~="bg-indigo-600"]):hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+/* Koyu metinli birincil buton (text-black / text-slate-950) beyaz yazıya döner:
+   açık zeminde dolu renkli butonda beyaz yazı daha net */
+[data-design-style="kristal"] button:is([class~="bg-teal-500"], [class~="bg-teal-400"], [class~="bg-teal-600"]):is(.text-black, .text-slate-950, .text-zinc-950) {
+  color: #ffffff !important;
+}
+
+[data-design-style="kristal"] button:disabled {
+  opacity: 0.55;
+}
+
+/* ---------------------------------------------------------------------
+   8. ROZETLER VE YARI SAYDAM RENKLİ KUTULAR
+   Koyu zeminde yarı saydam renkler açık zeminde soluk kalır; yumuşak
+   dolgu + ince kenar + koyu ton yazıya çevrilir.
+   --------------------------------------------------------------------- */
+[data-design-style="kristal"] :is([class*="bg-teal-500/"], [class*="bg-teal-400/"], [class*="bg-cyan-500/"], [class*="bg-sky-500/"], [class*="bg-teal-950"], [class*="bg-teal-900"]) {
+  background-color: var(--k-accent-soft) !important;
+  border-color: color-mix(in srgb, var(--accent-500) 24%, #ffffff) !important;
+}
+
+[data-design-style="kristal"] :is([class*="bg-emerald-500/"], [class*="bg-emerald-400/"], [class*="bg-green-500/"], [class*="bg-emerald-950"], [class*="bg-emerald-900"]) {
+  background-color: var(--k-pos-bg) !important;
+  border-color: var(--k-pos-border) !important;
+}
+
+[data-design-style="kristal"] :is([class*="bg-rose-500/"], [class*="bg-rose-400/"], [class*="bg-red-500/"], [class*="bg-red-950"], [class*="bg-rose-950"], [class*="bg-red-900"]) {
+  background-color: var(--k-neg-bg) !important;
+  border-color: var(--k-neg-border) !important;
+}
+
+[data-design-style="kristal"] :is([class*="bg-amber-500/"], [class*="bg-amber-400/"], [class*="bg-yellow-500/"], [class*="bg-orange-500/"], [class*="bg-amber-950"], [class*="bg-amber-900"]) {
+  background-color: var(--k-warn-bg) !important;
+  border-color: var(--k-warn-border) !important;
+}
+
+[data-design-style="kristal"] :is([class*="bg-blue-500/"], [class*="bg-blue-400/"], [class*="bg-blue-950"], [class*="bg-blue-900"]) {
+  background-color: var(--k-info-bg) !important;
+  border-color: var(--k-info-border) !important;
+}
+
+[data-design-style="kristal"] :is([class*="bg-indigo-500/"], [class*="bg-indigo-400/"], [class*="bg-violet-500/"], [class*="bg-indigo-950"], [class*="bg-indigo-900"]) {
+  background-color: #eef0ff !important;
+  border-color: #d9dcfc !important;
+}
+
+[data-design-style="kristal"] :is([class*="bg-purple-500/"], [class*="bg-purple-400/"], [class*="bg-fuchsia-500/"], [class*="bg-purple-950"], [class*="bg-purple-900"]) {
+  background-color: #f6efff !important;
+  border-color: #e8d8fd !important;
+}
+
+/* ---------------------------------------------------------------------
+   9. PENCERELER (MODAL)
+   --------------------------------------------------------------------- */
+[data-design-style="kristal"] .fixed.inset-0:is(.bg-black\/40, .bg-black\/50, .bg-black\/60, .bg-black\/70, .bg-black\/80, .bg-black\/90, .bg-slate-900\/40, .bg-slate-900\/50, .bg-slate-950\/80, .bg-zinc-950\/80, .bg-black) {
+  background-color: rgba(15, 23, 42, 0.32) !important;
+  backdrop-filter: blur(6px) saturate(1.1) !important;
+  -webkit-backdrop-filter: blur(6px) saturate(1.1) !important;
+}
+
+[data-design-style="kristal"] .fixed.inset-0 > :is(div, form):is(.rounded-xl, .rounded-2xl, .rounded-3xl, .rounded-lg) {
+  background-color: var(--k-surface) !important;
+  border: 1px solid var(--k-border) !important;
+  box-shadow: var(--k-shadow-xl) !important;
+  border-radius: 20px !important;
+}
+
+/* ---------------------------------------------------------------------
+   10. ANA SAYFA PARÇALARI
+   --------------------------------------------------------------------- */
+/* Bölüm başlıkları kutu değil, sade bir etiket satırı */
+[data-design-style="kristal"] .dashboard-widget-header {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+  color: var(--k-text) !important;
+}
+
+[data-design-style="kristal"] .dashboard-widget-header .animate-pulse {
+  animation: none !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-500) 18%, transparent) !important;
+}
+
+[data-design-style="kristal"] .dashboard-widget-header *,
+[data-design-style="kristal"] .dashboard-widget-header :is(span, p, h1, h2, h3, h4, div, svg) {
+  color: var(--k-text-2) !important;
+}
+
+[data-design-style="kristal"] .dashboard-widget-header > span:first-child {
+  color: var(--k-text) !important;
+}
+
+/* Döviz kapsülü (koyu kalması istenen küçük kontrol) açık zemine uyarlanır */
+[data-design-style="kristal"] .currency-dark-capsule {
+  background: var(--k-surface) !important;
+  border: 1px solid var(--k-border-strong) !important;
+  box-shadow: var(--k-shadow-sm) !important;
+}
+
+[data-design-style="kristal"] .currency-dark-capsule button {
+  color: var(--k-text-2) !important;
+}
+
+/* Grafikler */
+[data-design-style="kristal"] :is(.recharts-cartesian-grid-horizontal line, .recharts-cartesian-grid-vertical line) {
+  stroke: #e7ebf1 !important;
+}
+
+[data-design-style="kristal"] .recharts-text {
+  fill: var(--k-text-4) !important;
+}
+
+[data-design-style="kristal"] .recharts-default-tooltip {
+  background-color: #ffffff !important;
+  border: 1px solid var(--k-border) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--k-shadow-lg) !important;
+}
+
+[data-design-style="kristal"] :is(.recharts-tooltip-label, .recharts-tooltip-item) {
+  color: var(--k-text) !important;
+}
+
+/* ---------------------------------------------------------------------
+   11. KÖŞELER, KAYDIRMA ÇUBUKLARI, ODAK
+   --------------------------------------------------------------------- */
+[data-design-style="kristal"] main :is(.rounded-2xl, .rounded-3xl) {
+  border-radius: 18px;
+}
+
+[data-design-style="kristal"] ::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+[data-design-style="kristal"] ::-webkit-scrollbar-thumb {
+  background: #cdd5e0 !important;
+  border-radius: 9999px !important;
+  border: 2px solid transparent;
+  background-clip: padding-box !important;
+}
+
+[data-design-style="kristal"] ::-webkit-scrollbar-thumb:hover {
+  background: #aeb9c8 !important;
+  background-clip: padding-box !important;
+}
+
+[data-design-style="kristal"] :focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent-500) 60%, transparent);
+  outline-offset: 2px;
+}
+
+/* Storm AI düğmesinin etiketi */
+[data-design-style="kristal"] .storm-ai-badge {
+  background: #ffffff !important;
+  color: var(--k-text) !important;
+  border: 1px solid var(--k-border) !important;
+  box-shadow: var(--k-shadow) !important;
+}
+
+/* Hareketi azaltmak isteyenler için yükselme efektleri kapalı */
+@media (prefers-reduced-motion: reduce) {
+  [data-design-style="kristal"] button:hover {
+    transform: none !important;
+  }
+}

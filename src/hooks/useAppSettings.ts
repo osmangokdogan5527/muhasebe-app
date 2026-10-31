@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 
 /** Ayarlarda seçilebilen arayüz tasarım stilleri */
-export const SUPPORTED_DESIGN_STYLES = ['fluid-mesh', 'clean-light', 'pro-solid'];
+export const SUPPORTED_DESIGN_STYLES = ['kristal', 'fluid-mesh', 'clean-light', 'pro-solid'];
+
+/** Masaüstünde varsayılan tasarım stili */
+export const DEFAULT_DESIGN_STYLE = 'kristal';
 
 export function useAppSettings() {
   const isMobileInitial = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -13,7 +16,7 @@ export function useAppSettings() {
     if (!isInitializedV4) {
       localStorage.setItem('storm_default_setup_v4', 'true');
       localStorage.setItem('kolay_hesap_accent_theme', 'sky');
-      localStorage.setItem('storm_muhasebe_design_style', 'fluid-mesh');
+      localStorage.setItem('storm_muhasebe_design_style', DEFAULT_DESIGN_STYLE);
       localStorage.setItem('storm_muhasebe_logo_theme', 'theme');
       return 'sky';
     }
@@ -27,9 +30,15 @@ export function useAppSettings() {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       return 'fluid-mesh';
     }
+    // 1.8.6: yeni varsayılan Kristal stili herkese bir kez uygulanır; sonra kullanıcı seçimi korunur
+    if (!localStorage.getItem('storm_default_setup_v5')) {
+      localStorage.setItem('storm_default_setup_v5', 'true');
+      localStorage.setItem('storm_muhasebe_design_style', DEFAULT_DESIGN_STYLE);
+      return DEFAULT_DESIGN_STYLE;
+    }
     const saved = localStorage.getItem('storm_muhasebe_design_style');
-    // Kaldırılan stiller (Cam Arayüz, Lacivert Performans) varsayılan Sıvı Mesh'e döner
-    return saved && SUPPORTED_DESIGN_STYLES.includes(saved) ? saved : 'fluid-mesh';
+    // Kaldırılan stiller (Cam Arayüz, Lacivert Performans) varsayılana döner
+    return saved && SUPPORTED_DESIGN_STYLES.includes(saved) ? saved : DEFAULT_DESIGN_STYLE;
   });
 
   useEffect(() => {

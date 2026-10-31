@@ -810,3 +810,10 @@ body:has([data-design-style="pro-solid"]),
 
 
 
+
+/* Sayfa içinden açılan pencereler (fatura, cari vb.) sol menünün altında kalmasın:
+   ana alan bir pencere içerdiği sürece menünün üstüne çıkar (tüm tasarım stilleri) */
+main:has(> * .fixed.inset-0),
+main:has(.fixed.inset-0[class*="z-"]) {
+  z-index: 60 !important;
+}

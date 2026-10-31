@@ -155,6 +155,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {[
+                      { id: 'kristal', name: 'Kristal (Açık)', badge: 'Varsayılan', dot: 'bg-gradient-to-r from-slate-200 to-sky-400' },
                       { id: 'fluid-mesh', name: 'Sıvı Mesh Gradient', badge: 'Seçkin & Canlı', dot: 'bg-gradient-to-r from-teal-400 to-indigo-500' },
                       { id: 'clean-light', name: 'Temiz Işık (Pure)', badge: 'Mikro Hız', dot: 'bg-emerald-400' },
                       { id: 'pro-solid', name: 'MuhasebePro (Solid)', badge: 'Pro Stil', dot: 'bg-rose-500' },
@@ -340,8 +341,8 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                       setActiveTheme('sky');
                       localStorage.setItem('kolay_hesap_accent_theme', 'sky');
                       
-                      setDesignStyle('fluid-mesh');
-                      localStorage.setItem('storm_muhasebe_design_style', 'fluid-mesh');
+                      setDesignStyle('kristal');
+                      localStorage.setItem('storm_muhasebe_design_style', 'kristal');
                       
                       setActiveLogoTheme('theme');
                       localStorage.setItem('storm_muhasebe_logo_theme', 'theme');
