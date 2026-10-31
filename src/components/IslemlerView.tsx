@@ -692,6 +692,7 @@ function IslemlerView({
         cariler={cariler}
         stoklar={stoklar}
         bankAccounts={bankAccounts}
+        islemler={islemler}
         aiPrefilledData={aiPrefilledData}
         onClearAiData={onClearPendingIslemModal}
       />

@@ -7,8 +7,9 @@ import { X, Printer, Download, Plus, ArrowRight, ArrowLeft, RotateCcw, AlertTria
 import { createTransaction, saveCari } from '../../firebase';
 import { calculateInvoiceLine } from '../../utils/invoiceMath';
 import { netSalesPrice } from '../../utils/stockPricing';
-import { getTodayISO } from '../../utils/dateUtils';
+import { formatDateISO, getTodayISO } from '../../utils/dateUtils';
 import { alertDialog } from '../../utils/dialogs';
+import { compareTransactions } from '../../utils/cariLedger';
 
 export interface LedgerDrawerProps {
   isOpen: boolean;
@@ -324,14 +325,14 @@ export function LedgerDrawer({
     // Filter and sort transactions related to selected Cari
     const relatedTransactions = islemler
       .filter((t) => t.cariId === currentCari.id)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .sort(compareTransactions);
 
     let runningBalance = currentCari.openingBalance;
 
     return [
       {
         id: "opening",
-        date: currentCari.createdAt?.substring(0, 10) || "Açılış",
+        date: currentCari.createdAt && !isNaN(new Date(currentCari.createdAt).getTime()) ? formatDateISO(new Date(currentCari.createdAt)) : "Açılış",
         type: "Açılış Bakiyesi",
         description: "Hesap açılış bakiyesi",
         amount: Math.abs(currentCari.openingBalance),

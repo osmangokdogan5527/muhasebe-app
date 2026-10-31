@@ -14,8 +14,14 @@ import {
   Expense,
   EmployeeTransaction,
   CekSenet,
-  RecurringTransaction
+  RecurringTransaction,
+  BankAccount,
+  AccountTransaction
 } from "../types";
+import { computeAccountBalances, createCashCurrencyConverters } from '../utils/cashBalances';
+import { useFxRates } from '../hooks/useFxRates';
+import { parseDateISO } from '../utils/dateUtils';
+import { logError } from '../utils/errorLogger';
 import { getPendingRecurringItems, getTodayISO } from "../utils/recurringUtils";
 import { getSyncedEmployeeExpenseIds } from "../utils/expenseUtils";
 import { 
@@ -37,6 +43,8 @@ interface DashboardViewProps {
   expenses?: Expense[];
   employeeTransactions?: EmployeeTransaction[];
   recurringTransactions?: RecurringTransaction[];
+  bankAccounts?: BankAccount[];
+  accountTransactions?: AccountTransaction[];
   onNavigate: (view: any) => void;
 }
 
@@ -109,8 +117,34 @@ export default function DashboardView({
   expenses = [],
   employeeTransactions = [],
   recurringTransactions = [],
+  bankAccounts = [],
+  accountTransactions = [],
   onNavigate,
 }: DashboardViewProps) {
+  // Kasa / Banka / POS bakiyeleri Kasa ekranıyla birebir aynı hesaplanır
+  // (açılış bakiyeleri, elle giriş-çıkışlar, virmanlar ve hesap para birimi dahil)
+  const fxRates = useFxRates();
+  const accountTypeBalances = useMemo(() => {
+    const totals: Record<'TRY' | 'USD' | 'EUR', { cash: number; bank: number; pos: number }> = {
+      TRY: { cash: 0, bank: 0, pos: 0 },
+      USD: { cash: 0, bank: 0, pos: 0 },
+      EUR: { cash: 0, bank: 0, pos: 0 },
+    };
+    try {
+      const converters = createCashCurrencyConverters(bankAccounts, cariler, fxRates);
+      const balances = computeAccountBalances({ bankAccounts, accountTransactions, islemler, expenses, employeeTransactions, converters });
+      bankAccounts.forEach((acc) => {
+        const cur = (acc.currency || 'TRY') as 'TRY' | 'USD' | 'EUR';
+        if (!totals[cur]) return;
+        const key = acc.type === 'kasa' ? 'cash' : acc.type === 'banka' ? 'bank' : 'pos';
+        totals[cur][key] += balances[acc.id] || 0;
+      });
+    } catch (err) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'DashboardView.accountTypeBalances');
+    }
+    return totals;
+  }, [bankAccounts, accountTransactions, islemler, expenses, employeeTransactions, cariler, fxRates]);
+
   const [dashboardCurrency, setDashboardCurrency] = useState<
     "TRY" | "USD" | "EUR"
   >("TRY");
@@ -216,9 +250,7 @@ export default function DashboardView({
     let totalCollections = 0;
     let totalPayments = 0;
 
-    let cashBalance = 0;
-    let bankBalance = 0;
-    let posBalance = 0;
+    const { cash: cashBalance, bank: bankBalance, pos: posBalance } = accountTypeBalances[dashboardCurrency];
 
     let monthlySales = 0;
     let monthlyPurchases = 0;
@@ -247,44 +279,26 @@ export default function DashboardView({
       if (cur !== dashboardCurrency) return;
 
       const islemAmount = islem.amount || 0;
-      const islemDate = new Date(islem.date).getTime();
+      const islemDate = parseDateISO(islem.date).getTime();
       const isCurrentMonth =
         islemDate >= currentMonthStart && islemDate <= currentMonthEnd;
 
       if (islem.type === "sale") {
         totalSales += islemAmount;
         if (isCurrentMonth) monthlySales += islemAmount;
-        if (islem.account === "cash") cashBalance += islemAmount;
-        if (islem.account === "bank") bankBalance += islemAmount;
-        if (islem.account === "pos") posBalance += islemAmount;
       } else if (islem.type === "purchase") {
         totalPurchases += islemAmount;
         if (isCurrentMonth) monthlyPurchases += islemAmount;
-        if (islem.account === "cash") cashBalance -= islemAmount;
-        if (islem.account === "bank") bankBalance -= islemAmount;
-        if (islem.account === "pos") posBalance -= islemAmount;
       } else if (islem.type === "sale_return") {
         totalSales -= islemAmount;
         if (isCurrentMonth) monthlySales -= islemAmount;
-        if (islem.account === "cash") cashBalance -= islemAmount;
-        if (islem.account === "bank") bankBalance -= islemAmount;
-        if (islem.account === "pos") posBalance -= islemAmount;
       } else if (islem.type === "purchase_return") {
         totalPurchases -= islemAmount;
         if (isCurrentMonth) monthlyPurchases -= islemAmount;
-        if (islem.account === "cash") cashBalance += islemAmount;
-        if (islem.account === "bank") bankBalance += islemAmount;
-        if (islem.account === "pos") posBalance += islemAmount;
       } else if (islem.type === "collection") {
         totalCollections += islemAmount;
-        if (islem.account === "cash") cashBalance += islemAmount;
-        if (islem.account === "bank") bankBalance += islemAmount;
-        if (islem.account === "pos") posBalance += islemAmount;
       } else if (islem.type === "payment") {
         totalPayments += islemAmount;
-        if (islem.account === "cash") cashBalance -= islemAmount;
-        if (islem.account === "bank") bankBalance -= islemAmount;
-        if (islem.account === "pos") posBalance -= islemAmount;
       }
     });
 
@@ -298,19 +312,12 @@ export default function DashboardView({
       const amt = exp.amount || 0;
       totalExpenses += amt;
 
-      const expDate = new Date(exp.date).getTime();
+      const expDate = parseDateISO(exp.date).getTime();
       // Maaş ödemeleri aylık net hesabına monthlySalaries üzerinden giriyor
       if (expDate >= currentMonthStart && expDate <= currentMonthEnd && !syncedExpenseIds.has(exp.id)) {
         monthlyExpenses += amt;
       }
 
-      if (exp.account === "cash") {
-        cashBalance -= amt;
-      } else if (exp.account === "bank") {
-        bankBalance -= amt;
-      } else if (exp.account === "pos") {
-        posBalance -= amt;
-      }
     });
 
     // Add employee transactions for monthly salaries
@@ -319,7 +326,7 @@ export default function DashboardView({
 
       // Avans da maaşın peşin ödenen kısmıdır; ödeme ile birlikte sayılır
       if (et.type === "payment" || et.type === "advance") {
-        const etDate = new Date(et.date).getTime();
+        const etDate = parseDateISO(et.date).getTime();
         if (etDate >= currentMonthStart && etDate <= currentMonthEnd) {
           monthlySalaries += et.amount;
         }
@@ -376,6 +383,7 @@ export default function DashboardView({
     expenses,
     employeeTransactions,
     dashboardCurrency,
+    accountTypeBalances,
   ]);
 
   // Chart data: Group sales and purchases by month for the last 6 months
@@ -547,7 +555,7 @@ export default function DashboardView({
     if (!dateStr) return 0;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const dueDate = new Date(dateStr);
+    const dueDate = parseDateISO(dateStr);
     dueDate.setHours(0, 0, 0, 0);
     const diffTime = dueDate.getTime() - today.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));

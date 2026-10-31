@@ -28,6 +28,8 @@ export function calculateNextDueDate(
   if (frequency === 'yearly') {
     const nextDate = new Date(baseDate);
     nextDate.setFullYear(nextDate.getFullYear() + 1);
+    // 29 Şubat → artık yıl olmayan yılda 1 Mart'a taşmasın, 28 Şubat olsun
+    if (nextDate.getMonth() !== baseDate.getMonth()) nextDate.setDate(0);
     return formatDateISO(nextDate);
   }
 

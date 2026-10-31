@@ -1008,7 +1008,7 @@ export default function App() {
           />
         </div>
         <div className={activeTab === 'dashboard' ? 'block animate-fade-in' : 'hidden'}>
-          {renderWorkspaceView('dashboard', <DashboardView cariler={cariler} stoklar={stoklar} islemler={islemler} ceksenet={ceksenet} expenses={expenses} employeeTransactions={employeeTransactions} recurringTransactions={recurringTransactions} onNavigate={handleNavigate} />)}
+          {renderWorkspaceView('dashboard', <DashboardView cariler={cariler} stoklar={stoklar} islemler={islemler} ceksenet={ceksenet} expenses={expenses} employeeTransactions={employeeTransactions} recurringTransactions={recurringTransactions} bankAccounts={bankAccounts} accountTransactions={accountTransactions} onNavigate={handleNavigate} />)}
         </div>
         <div className={activeTab === 'pos' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('pos', <PosView

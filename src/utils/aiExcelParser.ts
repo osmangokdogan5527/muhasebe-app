@@ -1,3 +1,4 @@
+import { parseLocaleNumber } from './excelParser';
 
 export interface ParsedCari {
   name: string;
@@ -153,8 +154,9 @@ Görevlerin şunlardır:
           
           let rawBalance = 0;
           if (mapping.balanceColumnIndex !== null && mapping.balanceColumnIndex !== -1 && row[mapping.balanceColumnIndex] !== undefined && row[mapping.balanceColumnIndex] !== "") {
-            const valStr = row[mapping.balanceColumnIndex].toString().replace(/,/g, '.').replace(/[^0-9.-]/g, '');
-            rawBalance = parseFloat(valStr) || 0;
+            const cell = row[mapping.balanceColumnIndex];
+            // "1.234,56" gibi Türkçe tutarlar binlik/ondalık ayırıcısına göre doğru çözülür
+            rawBalance = typeof cell === 'number' ? cell : (parseLocaleNumber(cell.toString().replace(/[^0-9.,+-]/g, '')) || 0);
           }
 
           let multiplier = 1;

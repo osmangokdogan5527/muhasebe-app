@@ -15,6 +15,7 @@ import { createPosReceiptPdf } from '../../pdf/posReceiptPdf';
 import { Cari, Transaction } from '../../types';
 import { PdfPreviewModal } from '../pdf/PdfPreviewModal';
 import { PdfOptionTabs } from '../pdf/PdfOptionTabs';
+import { getTodayISO } from '../../utils/dateUtils';
 
 const ACCENT_PRESETS = ['#0f4c81', '#1e3a8a', '#0e7490', '#047857', '#7c2d12', '#9f1239', '#6d28d9', '#334155', '#111827'];
 
@@ -27,11 +28,11 @@ const sampleItems = [
   { stockId: '', stockName: 'Ürün B (uzun ürün açıklaması örneği)', quantity: 1, unit: 'Adet', price: 1000, taxRate: 10, total: 1100 },
 ];
 const SAMPLE_INVOICE: Transaction = {
-  id: 'ornek-fatura', invoiceNo: 'FTR-ORNEK-0001', type: 'sale', cariId: 'ornek', cariName: SAMPLE_CARI.name, date: new Date().toISOString().slice(0, 10),
+  id: 'ornek-fatura', invoiceNo: 'FTR-ORNEK-0001', type: 'sale', cariId: 'ornek', cariName: SAMPLE_CARI.name, date: getTodayISO(),
   amount: 1700, account: '', description: 'Örnek açıklama: ödeme 30 gün vadelidir.', items: sampleItems, createdAt: '', currency: 'TRY',
 };
 const SAMPLE_COLLECTION: Transaction = {
-  id: 'ornek-tahsilat', type: 'collection', cariId: 'ornek', cariName: SAMPLE_CARI.name, date: new Date().toISOString().slice(0, 10),
+  id: 'ornek-tahsilat', type: 'collection', cariId: 'ornek', cariName: SAMPLE_CARI.name, date: getTodayISO(),
   amount: 1000, account: 'cash', description: 'Örnek tahsilat', createdAt: '', currency: 'TRY',
 };
 const SAMPLE_BALANCE = { before: 2500, effect: 1700, after: 4200, current: 3200 };

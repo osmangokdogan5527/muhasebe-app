@@ -322,6 +322,33 @@ export function predictColumnMappings(headers: string[], rows?: Record<string, a
 }
 
 /**
+ * Binlik/ondalık ayırıcısı belirsiz bir sayı metnini çözer (işaret korunur).
+ *  - "1.234,56" (Türkçe) ve "1,234.56" (İngilizce) → 1234.56
+ *  - "1.250" / "1.250.000" (yalnızca nokta, 3'lü gruplar) → Türkçe binlik: 1250 / 1250000
+ *  - "12,5" → 12.5, "1.5" → 1.5
+ * Çözülemezse NaN döner.
+ */
+export function parseLocaleNumber(input: string): number {
+  let str = String(input ?? '').trim().replace(/\s/g, '');
+  if (!str) return NaN;
+  const hasComma = str.includes(',');
+  const hasDot = str.includes('.');
+  if (hasComma && hasDot) {
+    if (str.lastIndexOf(',') > str.lastIndexOf('.')) {
+      str = str.replace(/\./g, '').replace(',', '.');
+    } else {
+      str = str.replace(/,/g, '');
+    }
+  } else if (hasComma) {
+    // Birden çok virgül İngilizce binlik ayırıcıdır ("1,250,000"); tek virgül Türkçe ondalıktır
+    str = (str.match(/,/g) || []).length > 1 ? str.replace(/,/g, '') : str.replace(',', '.');
+  } else if (hasDot && /^[+-]?\d{1,3}(\.\d{3})+$/.test(str) && ((str.match(/\./g) || []).length > 1 || !/^[+-]?0\./.test(str))) {
+    str = str.replace(/\./g, '');
+  }
+  return parseFloat(str);
+}
+
+/**
  * Parses numeric currency/amount values from diverse formats
  * Handles "1.250,50 TL", "(500.00)", " -1.200,00 ", "+500", "1500 (B)", "2000 (A)"
  */
@@ -340,20 +367,7 @@ export function parseAmount(val: any): number {
   const isBorc = lowerRaw.includes('(b)') || lowerRaw.includes(' borç') || lowerRaw.includes('borc') || lowerRaw.includes('(borç)') || lowerRaw.includes('b.') || lowerRaw.includes('-') || /^\(.*\)$/.test(rawStr);
   const isAlacak = lowerRaw.includes('(a)') || lowerRaw.includes(' alacak') || lowerRaw.includes('(alacak)') || lowerRaw.includes('a.');
 
-  // Handle Turkish formatting 1.250,50 vs Western 1,250.50
-  if (str.includes(',') && str.includes('.')) {
-    if (str.lastIndexOf(',') > str.lastIndexOf('.')) {
-      // Turkish format: 1.234,56
-      str = str.replace(/\./g, '').replace(',', '.');
-    } else {
-      // Western format: 1,234.56
-      str = str.replace(/,/g, '');
-    }
-  } else if (str.includes(',')) {
-    str = str.replace(',', '.');
-  }
-
-  let num = parseFloat(str);
+  let num = parseLocaleNumber(str);
   if (isNaN(num)) return 0;
 
   if (isBorc && !isAlacak && num > 0) {
