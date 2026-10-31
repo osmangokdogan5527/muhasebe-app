@@ -360,7 +360,7 @@ body:has([data-design-style="pusula"]),
   color: rgba(255, 255, 255, 0.92);
 }
 
-[data-design-style="pusula"] aside :is(.text-white\/95, .text-white\/90, .text-white\/80, .text-white\/70, .text-zinc-200, .text-zinc-300) {
+[data-design-style="pusula"] aside :is(.text-white\/95, .text-white\/90, .text-white\/80, .text-white\/70, .text-zinc-50, .text-zinc-100, .text-zinc-200, .text-zinc-300) {
   color: rgba(255, 255, 255, 0.85) !important;
 }
 
@@ -1195,4 +1195,234 @@ main[data-design-style="pusula"] > .max-w-md > div:first-child p {
   font-weight: 700;
   letter-spacing: 0.14em;
   color: var(--accent-700) !important;
+}
+
+/* ---------------------------------------------------------------------
+   19. HIZLI SATIŞ (KASA) — açık, ferah terminal
+   Kasa ekranı diğer stillerde bilerek koyu tutuluyor (index.css). Pusula'da
+   aynı ekran açık zemine, büyük ve net rakamlara çevrilir. Bileşenlerdeki
+   satır içi renkler (style="...") de burada karşılanır.
+   --------------------------------------------------------------------- */
+[data-design-style="pusula"] .pos-terminal-wrapper {
+  background: transparent !important;
+  color: var(--k-text-2) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is(label, span, p, div, strong, b, h1, h2, h3, h4, h5, h6) {
+  color: inherit !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is(h1, h2, h3, h4, strong, b) {
+  color: var(--k-text) !important;
+}
+
+/* Koyu paneller → beyaz kart / açık dolgu */
+[data-design-style="pusula"] .pos-terminal-wrapper :is(div, button, section).bg-slate-900,
+[data-design-style="pusula"] .pos-terminal-wrapper :is(div, button, section).bg-slate-950,
+[data-design-style="pusula"] .pos-terminal-wrapper :is(div, button).bg-\[\#0f172a\] {
+  background-color: #ffffff !important;
+  border-color: var(--k-border) !important;
+  color: var(--k-text-2) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is(div, button).bg-slate-800,
+[data-design-style="pusula"] .pos-terminal-wrapper :is(div, button).bg-slate-800\/90,
+[data-design-style="pusula"] .pos-terminal-wrapper :is(div, button).bg-slate-850,
+[data-design-style="pusula"] .pos-terminal-wrapper :is(div, button).bg-slate-700 {
+  background-color: var(--k-surface-2) !important;
+  border-color: var(--k-border) !important;
+  color: var(--k-text-2) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is(.border-slate-700, .border-slate-800, .border-slate-600, .border-2) {
+  border-color: var(--k-border) !important;
+}
+
+/* Koyu zemin için yazılmış metin renkleri */
+[data-design-style="pusula"] .pos-terminal-wrapper :is(.text-white, .text-slate-50, .text-slate-100, .text-slate-200) {
+  color: var(--k-text) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is(.text-slate-300, .text-slate-400, .text-zinc-300, .text-zinc-400) {
+  color: var(--k-text-3) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is(.text-slate-500, .text-slate-600) {
+  color: var(--k-text-4) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is(.text-teal-300, .text-teal-400, .text-cyan-400) {
+  color: var(--k-accent-text) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is(.text-amber-300, .text-amber-400, .text-yellow-400) {
+  color: var(--k-warn) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is(.text-red-400, .text-rose-400) {
+  color: var(--k-neg) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is(.text-emerald-300, .text-emerald-400, .text-green-400) {
+  color: var(--k-pos) !important;
+}
+
+/* Rozetler */
+[data-design-style="pusula"] .pos-terminal-wrapper :is(.bg-teal-500\/20, .bg-teal-500\/10, .bg-teal-500\/15) {
+  background-color: var(--k-accent-soft) !important;
+  color: var(--k-accent-text) !important;
+  border-color: color-mix(in srgb, var(--accent-500) 28%, #ffffff) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is(.bg-amber-500\/20, .bg-amber-500\/10) {
+  background-color: var(--k-warn-bg) !important;
+  color: var(--k-warn) !important;
+  border-color: var(--k-warn-border) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is(.bg-red-500\/20, .bg-red-500\/10, .bg-rose-500\/20) {
+  background-color: var(--k-neg-bg) !important;
+  color: var(--k-neg) !important;
+  border-color: var(--k-neg-border) !important;
+}
+
+/* Giriş alanları */
+[data-design-style="pusula"] .pos-terminal-wrapper :is(input, select):not(.pos-number-input) {
+  background-color: #ffffff !important;
+  color: var(--k-text) !important;
+  border-color: var(--k-border-strong) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper input::placeholder {
+  color: #9aa6b8 !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper .pos-number-input {
+  color: var(--k-text) !important;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Satır içi arka plan renkleri */
+[data-design-style="pusula"] .pos-terminal-wrapper [style*="background-color: rgb(15, 23, 42)"] {
+  background-color: #ffffff !important;
+  border-color: var(--k-border) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper [style*="background-color: rgb(2, 6, 23)"] {
+  background-color: var(--k-surface-2) !important;
+  border-color: var(--k-border) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper [style*="background-color: rgb(30, 41, 59)"] {
+  background-color: var(--k-surface-2) !important;
+  border-color: var(--k-border) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper [style*="background-color: rgb(6, 95, 70)"] {
+  background-color: var(--k-pos-bg) !important;
+  border-color: var(--k-border) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper [style*="background-color: rgb(30, 64, 175)"] {
+  background-color: var(--k-info-bg) !important;
+  border-color: var(--k-border) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper [style*="background-color: rgb(107, 33, 168)"] {
+  background-color: #f6efff !important;
+  border-color: var(--k-border) !important;
+}
+
+/* Satır içi yazı renkleri (yalnızca 'color:' ile başlayan ya da '; color:' içeren) */
+[data-design-style="pusula"] .pos-terminal-wrapper :is([style^="color: rgb(255, 255, 255)"], [style*="; color: rgb(255, 255, 255)"]) {
+  color: var(--k-text) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is([style^="color: rgb(45, 212, 191)"], [style*="; color: rgb(45, 212, 191)"]) {
+  color: var(--k-accent-text) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is([style^="color: rgb(94, 234, 212)"], [style*="; color: rgb(94, 234, 212)"]) {
+  color: var(--k-accent-text) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is([style^="color: rgb(252, 211, 77)"], [style*="; color: rgb(252, 211, 77)"]) {
+  color: var(--k-warn) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is([style^="color: rgb(251, 191, 36)"], [style*="; color: rgb(251, 191, 36)"]) {
+  color: var(--k-warn) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is([style^="color: rgb(248, 113, 113)"], [style*="; color: rgb(248, 113, 113)"]) {
+  color: var(--k-neg) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is([style^="color: rgb(167, 243, 208)"], [style*="; color: rgb(167, 243, 208)"]) {
+  color: var(--k-pos) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is([style^="color: rgb(191, 219, 254)"], [style*="; color: rgb(191, 219, 254)"]) {
+  color: var(--k-info) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is([style^="color: rgb(233, 213, 255)"], [style*="; color: rgb(233, 213, 255)"]) {
+  color: #7e22ce !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is([style^="color: rgb(203, 213, 225)"], [style*="; color: rgb(203, 213, 225)"]) {
+  color: var(--k-text-3) !important;
+}
+
+/* Dolu renkli öğeler (ör. turuncu "Bölüm Ekle", tema renginde düğmeler) beyaz/koyu yazısını korur */
+[data-design-style="pusula"] .pos-terminal-wrapper :is([style*="background-color: rgb(245, 158, 11)"], [style*="background-color: rgb(45, 212, 191)"]),
+[data-design-style="pusula"] .pos-terminal-wrapper :is([style*="background-color: rgb(245, 158, 11)"], [style*="background-color: rgb(45, 212, 191)"]) * {
+  color: #ffffff !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper [style*="background-color: rgb(45, 212, 191)"] {
+  background: var(--k-grad) !important;
+  border-color: transparent !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper :is([class~="bg-teal-500"], [class~="bg-teal-600"], [class~="bg-emerald-500"], [class~="bg-emerald-600"], [class~="bg-rose-500"], [class~="bg-rose-600"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-amber-500"], [class~="bg-orange-500"], [class~="bg-blue-600"], [class~="bg-indigo-600"]),
+[data-design-style="pusula"] .pos-terminal-wrapper :is([class~="bg-teal-500"], [class~="bg-teal-600"], [class~="bg-emerald-500"], [class~="bg-emerald-600"], [class~="bg-rose-500"], [class~="bg-rose-600"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-amber-500"], [class~="bg-orange-500"], [class~="bg-blue-600"], [class~="bg-indigo-600"]) * {
+  color: #ffffff !important;
+}
+
+/* Ürün kartlarındaki görsel alanı */
+[data-design-style="pusula"] .pos-terminal-wrapper .grid > * :is(.aspect-square, [class*="aspect-"]) {
+  background-color: var(--k-surface-2) !important;
+}
+
+/* Başlık bandındaki kısayol çipleri cam görünümde */
+[data-design-style="pusula"] .pos-terminal-wrapper > div:first-child :is(span, button)[style] {
+  background-color: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper > div:first-child :is(span, button)[style] * ,
+[data-design-style="pusula"] .pos-terminal-wrapper > div:first-child :is(span, button)[style] {
+  color: #ffffff !important;
+}
+
+[data-design-style="pusula"] .pos-terminal-wrapper > div:first-child :is(span, button)[style] > span:first-child {
+  background-color: #ffffff !important;
+  color: var(--accent-700) !important;
+}
+
+/* Ürün görselinin üstündeki yarı saydam koyu etiketler (kategori vb.) */
+[data-design-style="pusula"] .pos-terminal-wrapper :is([class*="bg-slate-950/"], [class*="bg-slate-900/"], [class*="bg-black/"]) {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  border-color: var(--k-border) !important;
+  color: var(--k-text-2) !important;
+  backdrop-filter: none !important;
+}
+
+/* Menünün altındaki profil harfi */
+[data-design-style="pusula"] aside :is(.bg-teal-500\/20, [style*="background-color: rgba(45, 212, 191"]) {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
 }
