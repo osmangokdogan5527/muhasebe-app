@@ -76,7 +76,7 @@ export const FieldApp: React.FC<FieldAppProps> = ({
 
   return (
     <div
-      className="fixed inset-0 flex flex-col text-white"
+      className="field-app fixed inset-0 flex flex-col text-white"
       style={{
         background: 'radial-gradient(120% 60% at 50% -10%, color-mix(in oklab, var(--accent-800, #075985) 45%, #070817) 0%, #05060d 65%)',
       }}

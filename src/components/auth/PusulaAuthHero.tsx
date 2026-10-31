@@ -16,12 +16,13 @@ const FEATURES = [
 ];
 
 /**
- * Pusula tasarım stilinde giriş ekranının solundaki marka paneli.
- * Yalnızca geniş ekranlarda görünür (lg ve üstü); formlar sağ tarafta kalır.
+ * Pusula tasarım stilinde giriş ekranının marka paneli.
+ * Geniş ekranda solda tam boy panel (formlar sağda); telefonda formun üstünde
+ * kompakt bir bant (özellik listesi gizlenir).
  */
 export const PusulaAuthHero: React.FC<PusulaAuthHeroProps> = ({ activeLogoTheme, activeTheme, designStyle }) => {
   return (
-    <div className="pusula-auth-hero hidden lg:flex" aria-hidden="false">
+    <div className="pusula-auth-hero">
       <div className="pusula-auth-hero-inner">
         <div className="pusula-auth-hero-brand">
           <div className="pusula-auth-hero-logo">
