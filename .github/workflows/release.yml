@@ -26,6 +26,22 @@ jobs:
           rm -f package-lock.json
           npm install
 
+      # Taslak sürüm derlemeden önce açılır: electron-builder dosyaları aynı anda yüklerken
+      # iki ayrı sürüm açabiliyor (kurulum dosyası birinde, latest.yml diğerinde kalıyordu).
+      # Taslak hazırsa bütün dosyalar ona yüklenir.
+      - name: Taslak Sürümü Hazırla
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          VERSION="v$(node -p "require('./package.json').version")"
+          if gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "$VERSION sürümü zaten var; yeni taslak açılmadı."
+          else
+            gh release create "$VERSION" --repo "$GITHUB_REPOSITORY" --draft --title "$VERSION" --notes "Storm Ön Muhasebe $VERSION" --target "$GITHUB_SHA"
+            echo "$VERSION taslağı açıldı."
+          fi
+
       - name: Uygulamayı Derle ve GitHub'a Yükle
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
