@@ -99,6 +99,9 @@ const CALISAN_ISLEMLER_COLL = 'calisanIslemler';
 const KREDILER_COLL = 'krediler';
 const HESAPLAR_COLL = 'hesaplar';
 const HESAP_ISLEMLER_COLL = 'hesapIslemleri';
+const AYARLAR_COLL = 'ayarlar';
+// Firmanın belgelerde (PDF) kullanılan görünüm ayarları: tüm cihazlarda ortak
+const DOCUMENT_BRANDING_DOC_ID = 'belgeGorunumu';
 const TEKRARLAYAN_COLL = 'tekrarlayanIslemler';
 
 let currentUserId: string | null = null;
@@ -896,6 +899,33 @@ export async function deleteCredit(id: string) {
   }
 }
 
+// FİRMA AYARLARI (users/{firma}/ayarlar/{ayarId}) - firmanın tüm cihazlarında ortak
+// Kullanılanlar: belgeGorunumu (PDF logo, firma bilgileri, renk), etiketTasarimi (etiket ölçü/içerik)
+export function subscribeSettingDoc(settingId: string, callback: (data: Record<string, any> | null) => void) {
+  const ref = doc(db, getPath(AYARLAR_COLL), settingId);
+  return onSnapshot(ref, (snapshot) => {
+    callback(snapshot.exists() ? (snapshot.data() as Record<string, any>) : null);
+  }, (error) => handleFirestoreError(error, OperationType.GET, `${getPath(AYARLAR_COLL)}/${settingId}`));
+}
+
+export async function saveSettingDoc(settingId: string, data: Record<string, any>) {
+  try {
+    const ref = doc(db, getPath(AYARLAR_COLL), settingId);
+    await commitWrite(setDoc(ref, cleanUndefined({ ...data, id: settingId, updatedAt: new Date().toISOString() })), `saveSettingDoc:${settingId}`);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `${getPath(AYARLAR_COLL)}/${settingId}`);
+    throw error;
+  }
+}
+
+export function subscribeDocumentBranding(callback: (data: Record<string, any> | null) => void) {
+  return subscribeSettingDoc(DOCUMENT_BRANDING_DOC_ID, callback);
+}
+
+export async function saveDocumentBranding(data: Record<string, any>) {
+  return saveSettingDoc(DOCUMENT_BRANDING_DOC_ID, data);
+}
+
 // BANK ACCOUNTS & ACCOUNT TRANSACTIONS
 export function subscribeBankAccounts(callback: (accounts: any[]) => void) {
   const q = query(collection(db, getPath(HESAPLAR_COLL)), orderBy('createdAt', 'desc'));
@@ -979,7 +1009,8 @@ export async function clearAllDatabaseData() {
   }
 }
 
-const ALL_COLLECTIONS: { name: string; backupKey: string }[] = [
+// optional: eski yedeklerde bulunmayan koleksiyonlar; yedekte yoksa geri yüklemede dokunulmaz
+const ALL_COLLECTIONS: { name: string; backupKey: string; optional?: boolean }[] = [
   { name: CARILER_COLL, backupKey: 'cariler' },
   { name: STOKLAR_COLL, backupKey: 'stoklar' },
   { name: ISLEMLER_COLL, backupKey: 'islemler' },
@@ -991,6 +1022,7 @@ const ALL_COLLECTIONS: { name: string; backupKey: string }[] = [
   { name: HESAPLAR_COLL, backupKey: 'hesaplar' },
   { name: HESAP_ISLEMLER_COLL, backupKey: 'hesapIslemleri' },
   { name: TEKRARLAYAN_COLL, backupKey: 'tekrarlayanIslemler' },
+  { name: AYARLAR_COLL, backupKey: 'ayarlar', optional: true },
 ];
 
 // Yedek için tüm koleksiyonları ekrandaki listelerden bağımsız olarak doğrudan veritabanından okur
@@ -1013,8 +1045,9 @@ export async function exportAllDatabaseData(): Promise<{ [backupKey: string]: an
 export async function importAllDatabaseData(backupJson: any) {
   try {
     const BATCH_LIMIT = 450;
-    for (const { name, backupKey } of ALL_COLLECTIONS) {
+    for (const { name, backupKey, optional } of ALL_COLLECTIONS) {
       const rawItems = backupJson ? backupJson[backupKey] : undefined;
+      if (optional && !Array.isArray(rawItems)) continue;
       const items: any[] = Array.isArray(rawItems) ? rawItems.filter(item => item && item.id) : [];
       const backupIds = new Set(items.map(item => String(item.id)));
 

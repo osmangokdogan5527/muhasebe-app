@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Stock, Cari, BankAccount, Transaction } from '../../types';
 import { PosCartItem, PosPaymentSplit, PosParkedSale, PosSaleSummary } from '../../types/pos';
 import { PosProductCatalog } from './PosProductCatalog';
 import { PosCartTable } from './PosCartTable';
 import { PosSplitPaymentModal } from './PosSplitPaymentModal';
-import { PosReceiptModal } from './PosReceiptModal';
+import { ReceiptPdfModal } from '../pdf/ReceiptPdfModal';
+import { receiptDataFromPosSummary } from '../../pdf/posReceiptPdf';
 import { PosParkedSalesModal } from './PosParkedSalesModal';
 import { findStockByBarcodeOrSearch, calculateLineTotal, calculateCartSummary, generateReceiptNo } from '../../utils/posUtils';
 import { ShoppingCart, Zap, DollarSign, CreditCard, User, Clock, CheckCircle2, RotateCcw, Search, Plus, Sparkles, HelpCircle, Percent } from 'lucide-react';
@@ -75,6 +76,8 @@ export const PosView: React.FC<PosViewProps> = ({
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
   const [isParkedModalOpen, setIsParkedModalOpen] = useState<boolean>(false);
   const [completedSaleSummary, setCompletedSaleSummary] = useState<PosSaleSummary | null>(null);
+  // Fiş PDF'i için veri bir kez hazırlanır (POS ekranı yeniden çizildikçe PDF yeniden üretilmesin)
+  const completedReceiptData = useMemo(() => (completedSaleSummary ? receiptDataFromPosSummary(completedSaleSummary) : null), [completedSaleSummary]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
   // PARKED SALES LOCALSTORAGE KAYIT
@@ -912,12 +915,14 @@ export const PosView: React.FC<PosViewProps> = ({
         onConfirmPayment={executeSale}
       />
 
-      {/* FİŞ / FİŞ YAZDIRMA MODALI */}
-      <PosReceiptModal
-        isOpen={isReceiptModalOpen}
-        onClose={() => setIsReceiptModalOpen(false)}
-        saleSummary={completedSaleSummary}
-      />
+      {/* SATIŞ FİŞİ (PDF: 80 / 58 mm) */}
+      {isReceiptModalOpen && completedReceiptData && (
+        <ReceiptPdfModal
+          data={completedReceiptData}
+          title="Satış Tamamlandı · Fiş"
+          onClose={() => setIsReceiptModalOpen(false)}
+        />
+      )}
 
       {/* ASKIDAKİ SATIŞLAR MODALI */}
       <PosParkedSalesModal

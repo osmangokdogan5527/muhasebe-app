@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { StatementPdfModal } from '../pdf/StatementPdfModal';
 import { Cari, Transaction, Stock } from '../../types';
 import { X, Printer, Download, Plus, ArrowRight, ArrowLeft, RotateCcw, AlertTriangle } from 'lucide-react';
 
@@ -472,28 +473,8 @@ export function LedgerDrawer({
   };
 
 
-  // PDF Export
-  const exportPDF = async () => {
-    const element = document.getElementById("printable-invoice-content");
-    if (!element) return;
-
-    try {
-      // PDF kütüphaneleri büyük olduğu için yalnızca PDF istendiğinde indirilir
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
-      const canvas = await html2canvas(element, { scale: 2 });
-      const imgData = canvas.toDataURL("image/png");
-
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`cari_ekstre_${currentCari.name.replace(/\s+/g, '_')}.pdf`);
-    } catch (err) {
-      console.error("PDF oluşturulurken hata:", err);
-      alertDialog("PDF oluşturulurken bir hata oluştu.");
-    }
-  };
+  // PDF ekstre penceresi (seçili tarih aralığıyla)
+  const [isStatementPdfOpen, setIsStatementPdfOpen] = useState(false);
 
 
   if (!isOpen) return null;
@@ -596,10 +577,10 @@ export function LedgerDrawer({
                 )}
               </div>
               <button
-                onClick={exportPDF}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold uppercase tracking-wider rounded transition"
+                onClick={() => setIsStatementPdfOpen(true)}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold uppercase tracking-wider rounded transition cursor-pointer"
               >
-                Yazdır / PDF
+                PDF Ekstre
               </button>
             </div>
 
@@ -1105,6 +1086,15 @@ export function LedgerDrawer({
           </div>
         </div>
       </div>
+      {isStatementPdfOpen && (
+        <StatementPdfModal
+          cari={currentCari}
+          islemler={islemler}
+          startDate={startDate || undefined}
+          endDate={endDate || undefined}
+          onClose={() => setIsStatementPdfOpen(false)}
+        />
+      )}
     </>
   );
 }

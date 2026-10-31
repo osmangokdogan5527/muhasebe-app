@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { 
   Palette, 
   User, 
-  Printer, 
+  FileText,
   Bot, 
   Lock, 
   Unlock, 
@@ -30,7 +30,7 @@ import {
   Keyboard,
   Sparkles
 } from 'lucide-react';
-import TemplateDesignerView from './TemplateDesignerView';
+import { DocumentSettings } from './settings/DocumentSettings';
 import { logError } from '../utils/errorLogger';
 import { KeyboardShortcut } from '../types';
 import { 
@@ -67,18 +67,6 @@ export interface AyarlarViewProps {
   moveTab: (index: number, direction: 'up' | 'down') => void;
   handleDownloadLogoPng: () => void;
   handleDownloadLogoSvg: () => void;
-  companyName: string;
-  setCompanyName: (name: string) => void;
-  companyPhone: string;
-  setCompanyPhone: (phone: string) => void;
-  companyAddress: string;
-  setCompanyAddress: (address: string) => void;
-  logoType: 'text' | 'image';
-  setLogoType: (type: 'text' | 'image') => void;
-  logoImageUrl: string;
-  setLogoImageUrl: (url: string) => void;
-  handleSavePrintSettings: () => void;
-  printSettingsSuccess: string | null;
   profileName: string;
   setProfileName: (name: string) => void;
   profilePhoto: string;
@@ -149,18 +137,6 @@ export default function AyarlarView({
   moveTab,
   handleDownloadLogoPng,
   handleDownloadLogoSvg,
-  companyName,
-  setCompanyName,
-  companyPhone,
-  setCompanyPhone,
-  companyAddress,
-  setCompanyAddress,
-  logoType,
-  setLogoType,
-  logoImageUrl,
-  setLogoImageUrl,
-  handleSavePrintSettings,
-  printSettingsSuccess,
   profileName,
   setProfileName,
   profilePhoto,
@@ -199,7 +175,7 @@ export default function AyarlarView({
 }: AyarlarViewProps) {
   
   // Local-only states for setting sub-tabs and forms
-  const [settingsSubTab, setSettingsSubTab] = useState<'general' | 'profile' | 'template-designer' | 'ai' | 'permissions' | 'shortcuts'>('general');
+  const [settingsSubTab, setSettingsSubTab] = useState<'general' | 'profile' | 'documents' | 'ai' | 'permissions' | 'shortcuts'>('general');
   const [aiInfoModalOpen, setAiInfoModalOpen] = useState(false);
   const [initialPinInput, setInitialPinInput] = useState('');
   const [setupError, setSetupError] = useState<string | null>(null);
@@ -420,15 +396,15 @@ export default function AyarlarView({
             <span>Profil & Güvenlik</span>
           </button>
           <button
-            onClick={() => setSettingsSubTab('template-designer')}
-            className={`hidden md:flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
-              settingsSubTab === 'template-designer'
+            onClick={() => setSettingsSubTab('documents')}
+            className={`flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+              settingsSubTab === 'documents'
                 ? 'border-teal-600 text-teal-600 font-extrabold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Printer size={15} />
-            <span>Baskı & Şablon Tasarımcısı</span>
+            <FileText size={15} />
+            <span>Belge Görünümü</span>
           </button>
           <button
             onClick={() => setSettingsSubTab('ai')}
@@ -491,22 +467,10 @@ export default function AyarlarView({
             setHiddenTabs={setHiddenTabs}
             toggleTabVisibility={toggleTabVisibility}
             moveTab={moveTab}
-            companyName={companyName}
-            setCompanyName={setCompanyName}
-            companyPhone={companyPhone}
-            setCompanyPhone={setCompanyPhone}
-            companyAddress={companyAddress}
-            setCompanyAddress={setCompanyAddress}
-            logoType={logoType}
-            setLogoType={setLogoType}
-            logoImageUrl={logoImageUrl}
-            setLogoImageUrl={setLogoImageUrl}
             handleDownloadLogoPng={handleDownloadLogoPng}
             handleDownloadLogoSvg={handleDownloadLogoSvg}
             currentThemeData={currentThemeData}
             showToast={showToast}
-            handleSavePrintSettings={handleSavePrintSettings}
-            printSettingsSuccess={printSettingsSuccess}
           />
         )}
         {settingsSubTab === 'profile' && (
@@ -531,18 +495,7 @@ export default function AyarlarView({
             onOpenBackupWizard={onOpenBackupWizard}
           />
         )}
-        {settingsSubTab === 'template-designer' && (
-          <div className="animate-fade-in">
-            <div className="md:hidden p-8 text-center bg-slate-50 rounded-2xl border border-slate-200">
-              <Printer className="mx-auto mb-3 text-slate-400" size={32} />
-              <p className="text-sm font-bold text-slate-700">Baskı ve şablon tasarımcısı mobil cihazlarda desteklenmemektedir.</p>
-              <p className="text-xs text-slate-500 mt-1">Lütfen bilgisayar üzerinden tasarladığınız şablonları kullanın.</p>
-            </div>
-            <div className="hidden md:block">
-              <TemplateDesignerView />
-            </div>
-          </div>
-        )}
+        {settingsSubTab === 'documents' && <DocumentSettings />}
 
         {settingsSubTab === 'ai' && (
           <AiSettings

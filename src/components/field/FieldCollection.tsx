@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { User, ChevronRight, Wallet, Landmark, CreditCard, CheckCircle2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { User, ChevronRight, Wallet, Landmark, CreditCard, CheckCircle2, ArrowDownLeft, ArrowUpRight, FileText } from 'lucide-react';
 import { Cari, BankAccount, Transaction } from '../../types';
 import { createTransaction } from '../../firebase';
 import { getTodayISO } from '../../utils/dateUtils';
 import { roundMoney } from '../../utils/invoiceMath';
 import { logError } from '../../utils/errorLogger';
+import { TransactionPdfModal } from '../pdf/TransactionPdfModal';
 import { Card, SectionTitle, PrimaryButton, SegmentedControl, CariPickerSheet, BalanceText, balanceLabel, formatMoney, parseAmount } from './fieldUi';
 
 interface FieldCollectionProps {
   cariler: Cari[];
+  islemler: Transaction[];
   bankAccounts: BankAccount[];
   presetCari: Cari | null;
   onPresetConsumed: () => void;
@@ -20,7 +22,7 @@ type AccountType = 'cash' | 'bank' | 'pos';
 
 const ACCOUNT_TYPE_MAP: Record<AccountType, BankAccount['type']> = { cash: 'kasa', bank: 'banka', pos: 'pos' };
 
-export const FieldCollection: React.FC<FieldCollectionProps> = ({ cariler, bankAccounts, presetCari, onPresetConsumed, showToast }) => {
+export const FieldCollection: React.FC<FieldCollectionProps> = ({ cariler, islemler, bankAccounts, presetCari, onPresetConsumed, showToast }) => {
   const [type, setType] = useState<ReceiptType>('collection');
   const [cariId, setCariId] = useState<string | null>(null);
   const [amountText, setAmountText] = useState('');
@@ -29,7 +31,8 @@ export const FieldCollection: React.FC<FieldCollectionProps> = ({ cariler, bankA
   const [description, setDescription] = useState('');
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<{ text: string } | null>(null);
+  const [lastSaved, setLastSaved] = useState<{ text: string; transaction: Transaction } | null>(null);
+  const [receiptTransaction, setReceiptTransaction] = useState<Transaction | null>(null);
 
   // Güncel bakiye için cari her zaman canlı listeden okunur
   const cari = cariler.find(c => c.id === cariId) || null;
@@ -68,9 +71,9 @@ export const FieldCollection: React.FC<FieldCollectionProps> = ({ cariler, bankA
         createdAt: new Date().toISOString(),
         currency: cari.currency || 'TRY',
       };
-      await createTransaction(islem);
+      const savedId = await createTransaction(islem);
       const text = `${cari.name} — ${formatMoney(amount, cari.currency)} ${type === 'collection' ? 'tahsil edildi' : 'ödendi'}`;
-      setLastSaved({ text });
+      setLastSaved({ text, transaction: { ...islem, id: savedId } });
       showToast(text, 'success');
       setAmountText('');
       setDescription('');
@@ -169,8 +172,25 @@ export const FieldCollection: React.FC<FieldCollectionProps> = ({ cariler, bankA
       {lastSaved && (
         <Card className="!border-emerald-500/30 !bg-emerald-500/10 flex items-center gap-3 !p-3">
           <CheckCircle2 size={22} className="text-emerald-400 shrink-0" />
-          <span className="text-sm text-white">{lastSaved.text}</span>
+          <span className="text-sm text-white flex-1 min-w-0">{lastSaved.text}</span>
+          <button
+            type="button"
+            onClick={() => setReceiptTransaction(islemler.find(t => t.id === lastSaved.transaction.id) || lastSaved.transaction)}
+            className="shrink-0 flex items-center gap-1.5 rounded-xl bg-white/10 border border-white/15 px-3 py-2 text-xs font-bold text-white cursor-pointer"
+          >
+            <FileText size={15} /> Makbuz
+          </button>
         </Card>
+      )}
+
+      {receiptTransaction && (
+        <TransactionPdfModal
+          transaction={receiptTransaction}
+          cariler={cariler}
+          islemler={islemler}
+          bankAccounts={bankAccounts}
+          onClose={() => setReceiptTransaction(null)}
+        />
       )}
 
       <CariPickerSheet isOpen={isPickerOpen} cariler={cariler} onSelect={(c) => setCariId(c ? c.id : null)} onClose={() => setIsPickerOpen(false)} />

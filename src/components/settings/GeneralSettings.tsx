@@ -1,5 +1,5 @@
 import React from 'react';
-import { Palette, Eye, EyeOff, ChevronUp, ChevronDown, Download, Sparkles, Check, Printer, Save, Menu } from 'lucide-react';
+import { Palette, Eye, EyeOff, ChevronUp, ChevronDown, Download, Sparkles, Check, Menu } from 'lucide-react';
 import { COLOR_PRESETS, TAB_DEFS } from '../../constants';
 
 export interface GeneralSettingsProps {
@@ -25,22 +25,10 @@ export interface GeneralSettingsProps {
   setHiddenTabs: (tabs: string[]) => void;
   toggleTabVisibility: (tabId: string) => void;
   moveTab: (index: number, direction: 'up' | 'down') => void;
-  companyName: string;
-  setCompanyName: (name: string) => void;
-  companyPhone: string;
-  setCompanyPhone: (phone: string) => void;
-  companyAddress: string;
-  setCompanyAddress: (address: string) => void;
-  logoType: 'text' | 'image';
-  setLogoType: (type: 'text' | 'image') => void;
-  logoImageUrl: string;
-  setLogoImageUrl: (url: string) => void;
   handleDownloadLogoPng: () => void;
   handleDownloadLogoSvg: () => void;
   currentThemeData: any;
   showToast: (text: string, type?: 'success' | 'error' | 'info') => void;
-  handleSavePrintSettings: () => void;
-  printSettingsSuccess: string | null;
 }
 
 export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
@@ -58,22 +46,10 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
   setHiddenTabs,
   toggleTabVisibility,
   moveTab,
-  companyName,
-  setCompanyName,
-  companyPhone,
-  setCompanyPhone,
-  companyAddress,
-  setCompanyAddress,
-  logoType,
-  setLogoType,
-  logoImageUrl,
-  setLogoImageUrl,
   handleDownloadLogoPng,
   handleDownloadLogoSvg,
   currentThemeData,
   showToast,
-  handleSavePrintSettings,
-  printSettingsSuccess,
   sidebarBg,
   setSidebarBg,
   sidebarPattern,
@@ -253,76 +229,6 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                     })}
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Card 3: Firma ve Görünüm Ayarları */}
-            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 shadow-sm hidden md:flex flex-col justify-between md:col-span-2">
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-orange-500/10 text-orange-600 flex items-center justify-center">
-                    <Printer size={18} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">Firma ve Görünüm Ayarları</h3>
-                    <p className="text-xs text-white/50 mt-0.5 leading-tight">Basılı evrakların üst kısmında yer alacak firma bilgileri ve logo seçenekleri.</p>
-                  </div>
-                </div>
-
-                {printSettingsSuccess && (
-                  <div className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg flex items-center gap-2 mb-4">
-                    <Check size={14} />
-                    {printSettingsSuccess}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Logo Tipi</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button type="button" onClick={() => setLogoType('text')} className={`py-1.5 px-3 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${logoType === 'text' ? 'bg-orange-50 border-orange-500 text-orange-700' : 'bg-white border-white/10 text-white/50 hover:border-white/20'}`}>✍️ Metin</button>
-                        <button type="button" onClick={() => setLogoType('image')} className={`py-1.5 px-3 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${logoType === 'image' ? 'bg-orange-50 border-orange-500 text-orange-700' : 'bg-white border-white/10 text-white/50 hover:border-white/20'}`}>🖼️ Resim</button>
-                      </div>
-                    </div>
-
-                    {logoType === 'image' && (
-                      <div className="space-y-1.5 animate-fade-in">
-                        <label className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Logo Görseli</label>
-                        <div className="flex gap-2">
-                          <input type="text" value={logoImageUrl} onChange={(e) => setLogoImageUrl(e.target.value)} className="flex-1 px-3 py-1.5 bg-white/5 border border-white/10 text-white rounded-lg text-xs focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500" placeholder="Resim linki (https://...)" />
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Firma İsmi</label>
-                      <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full px-3 py-1.5 bg-white/5 border border-white/10 text-white rounded-lg text-xs focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500" placeholder="Firma Adı" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Telefon</label>
-                      <input type="text" value={companyPhone} onChange={(e) => setCompanyPhone(e.target.value)} className="w-full px-3 py-1.5 bg-white/5 border border-white/10 text-white rounded-lg text-xs focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500" placeholder="05XX XXX XX XX" />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Adres</label>
-                      <textarea value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} rows={3} className="w-full px-3 py-1.5 bg-white/5 border border-white/10 text-white rounded-lg text-xs focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 resize-none" placeholder="Adres" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-6 pt-4 border-t border-white/5 flex justify-end">
-                <button
-                  onClick={handleSavePrintSettings}
-                  className="flex items-center justify-center gap-2 px-4 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-sm hover:shadow-md"
-                >
-                  <Save size={14} />
-                  <span>Kaydet</span>
-                </button>
               </div>
             </div>
 

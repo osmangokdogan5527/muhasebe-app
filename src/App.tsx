@@ -4,7 +4,6 @@ import { useAppSettings } from './hooks/useAppSettings';
 import { useAppData } from './hooks/useAppData';
 import { useAppAuth } from './hooks/useAppAuth';
 import { useAppShortcuts } from './hooks/useAppShortcuts';
-import { usePrintSettings } from './hooks/usePrintSettings';
 import { useBackupActions } from './hooks/useBackupActions';
 import { useLogoActions } from './hooks/useLogoActions';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -410,14 +409,6 @@ export default function App() {
     taxNo?: string;
   } | null>(null);
 
-  const {
-    companyName, setCompanyName,
-    companyAddress, setCompanyAddress,
-    companyPhone, setCompanyPhone,
-    logoType, setLogoType,
-    logoImageUrl, setLogoImageUrl,
-    printSettingsSuccess, handleSavePrintSettings
-  } = usePrintSettings();
 
 
   useEffect(() => {
@@ -678,18 +669,6 @@ export default function App() {
       moveTab={moveTab}
       handleDownloadLogoPng={handleDownloadLogoPng}
       handleDownloadLogoSvg={handleDownloadLogoSvg}
-      companyName={companyName}
-      setCompanyName={setCompanyName}
-      companyPhone={companyPhone}
-      setCompanyPhone={setCompanyPhone}
-      companyAddress={companyAddress}
-      setCompanyAddress={setCompanyAddress}
-      logoType={logoType}
-      setLogoType={setLogoType}
-      logoImageUrl={logoImageUrl}
-      setLogoImageUrl={setLogoImageUrl}
-      handleSavePrintSettings={handleSavePrintSettings}
-      printSettingsSuccess={printSettingsSuccess}
       profileName={profileName}
       setProfileName={setProfileName}
       profilePhoto={profilePhoto}

@@ -2,9 +2,6 @@ import { StoklarExtraModals } from './stoklar/StoklarExtraModals';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { VirtualTableBody } from './VirtualTableBody';
 import { motion } from 'motion/react';
-import Barcode from 'react-barcode';
-import * as QRCode from 'qrcode';
-import { toPng } from 'html-to-image';
 import { Stock, Transaction, Cari } from '../types';
 import { saveStock, deleteStock } from '../firebase';
 import { compressImage } from '../utils/imageCompressor';
@@ -23,11 +20,12 @@ import {
   Download,
   Scan,
   QrCode,
-  ShieldAlert
+  ShieldAlert,
+  Tag
 } from 'lucide-react';
 import BarcodeScannerModal from './BarcodeScannerModal';
 import { StockModal } from './stoklar/StockModal';
-import { PrintBarcodeModal } from './stoklar/PrintBarcodeModal';
+import { LabelDesignerModal } from './labels/LabelDesignerModal';
 import { confirmDialog, alertDialog } from '../utils/dialogs';
 
 interface StoklarViewProps {
@@ -161,45 +159,8 @@ function StoklarView({
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStock, setEditingStock] = useState<Stock | null>(null);
-  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-  const [printingStock, setPrintingStock] = useState<Stock | null>(null);
-
-  // QR Code State
-  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
-  const [qrStock, setQrStock] = useState<Stock | null>(null);
-  const [qrContentMode, setQrContentMode] = useState<'all' | 'barcode' | 'custom'>('all');
-  const [qrCustomText, setQrCustomText] = useState('');
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
-  const [isQrPrinting, setIsQrPrinting] = useState(false);
-
-  // Generate QR Code base64 data URL dynamically
-  useEffect(() => {
-    if (qrStock) {
-      let textToEncode = '';
-      if (qrContentMode === 'all') {
-        textToEncode = `Ürün: ${qrStock.name}\nKod: ${qrStock.code}\nBarkod: ${qrStock.barcode || '-'}\nFiyat: ${qrStock.salesPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL\nKDV: %${qrStock.taxRate}`;
-      } else if (qrContentMode === 'barcode') {
-        textToEncode = qrStock.barcode || qrStock.code;
-      } else {
-        textToEncode = qrCustomText || `https://storm.onmuhasebe.app/urun/${qrStock.id}`;
-      }
-
-      QRCode.toDataURL(textToEncode, {
-        width: 350,
-        margin: 1,
-        color: {
-          dark: '#000000',
-          light: '#ffffff',
-        },
-      })
-      .then(url => {
-        setQrCodeDataUrl(url);
-      })
-      .catch(err => {
-        console.error('QR Kod oluşturma hatası:', err);
-      });
-    }
-  }, [qrStock, qrContentMode, qrCustomText]);
+  // Etiket tasarla penceresi: null = kapalı, [] = toplu (ürün seçilerek), [stok] = tek ürün
+  const [labelStocks, setLabelStocks] = useState<Stock[] | null>(null);
 
   // Handle physical barcode scanner input globally in StoklarView
   useEffect(() => {
@@ -424,20 +385,12 @@ function StoklarView({
         <td className="p-4">
           <div className="flex items-center justify-center gap-2">
             <button 
-              id={`btn-qr-stok-${stok.id}`}
-              onClick={() => { setQrStock(stok); setQrContentMode('all'); setQrCustomText(''); setIsQrModalOpen(true); }}
-              title="QR Kod Oluştur"
-              className="p-2 text-teal-400 hover:bg-white/5 rounded transition"
+              id={`btn-label-stok-${stok.id}`}
+              onClick={() => setLabelStocks([stok])}
+              title="Etiket (barkod / QR) PDF"
+              className="p-2 text-teal-400 hover:bg-white/5 rounded transition cursor-pointer"
             >
-              <QrCode size={16} />
-            </button>
-            <button 
-              id={`btn-print-stok-${stok.id}`}
-              onClick={() => { setPrintingStock(stok); setIsPrintModalOpen(true); }}
-              title="Barkod Yazdır"
-              className="p-2 text-blue-400 hover:bg-white/5 rounded transition"
-            >
-              <Printer size={16} />
+              <Tag size={16} />
             </button>
             <button 
               id={`btn-edit-stok-${stok.id}`}
@@ -470,6 +423,15 @@ function StoklarView({
           <h1 id="stoklar-heading" className="text-sm font-semibold uppercase tracking-[0.2em] text-white/90">Ürün ve Stok Takibi</h1>
           <p className="text-white/40 text-xs mt-1">Sattığınız ürünlerin, sunduğunuz hizmetlerin stok miktarlarını ve maliyetlerini anlık izleyin.</p>
         </div>
+        <div className="flex items-center gap-2 flex-wrap">
+        <button 
+          id="btn-bulk-labels"
+          onClick={() => setLabelStocks([])}
+          className="flex items-center gap-2 border border-white/15 hover:bg-white/10 text-white text-xs font-semibold uppercase tracking-wider px-4 py-3 rounded-lg transition duration-150 cursor-pointer"
+        >
+          <Tag size={16} />
+          <span>Toplu Etiket</span>
+        </button>
         <button 
           id="btn-add-stock"
           onClick={handleOpenCreateModal}
@@ -478,6 +440,7 @@ function StoklarView({
           <Plus size={16} />
           <span>Yeni Stok Kartı Ekle</span>
         </button>
+        </div>
       </div>
 
       {/* Bento-Grid Stats and Dynamic Filters */}
@@ -901,19 +864,13 @@ function StoklarView({
                       </div>
                       <div className="flex gap-1">
                         <button 
-                          id={`btn-mob-qr-stok-${stok.id}`}
-                          onClick={() => { setQrStock(stok); setQrContentMode('all'); setQrCustomText(''); setIsQrModalOpen(true); }}
-                          title="QR Kod Oluştur"
+                          id={`btn-mob-label-stok-${stok.id}`}
+                          onClick={() => setLabelStocks([stok])}
+                          title="Etiket (barkod / QR) PDF"
+                          aria-label={`${stok.name} etiketi`}
                           className="p-2 text-teal-400 bg-white/5 hover:bg-white/10 rounded"
                         >
-                          <QrCode size={15} />
-                        </button>
-                        <button 
-                          id={`btn-mob-print-stok-${stok.id}`}
-                          onClick={() => { setPrintingStock(stok); setIsPrintModalOpen(true); }}
-                          className="p-2 text-blue-400 bg-white/5 hover:bg-white/10 rounded"
-                        >
-                          <Printer size={15} />
+                          <Tag size={15} />
                         </button>
                         <button 
                           id={`btn-mob-edit-stok-${stok.id}`}
@@ -949,24 +906,11 @@ function StoklarView({
         onClearAiPrefilledData={onClearAiPrefilledData}
       />
       
-{/* Print Barcode Modal */}
-      <PrintBarcodeModal
-        isOpen={isPrintModalOpen}
-        onClose={() => setIsPrintModalOpen(false)}
-        printingStock={printingStock}
-      />
-      
+      {labelStocks && (
+        <LabelDesignerModal initialStocks={labelStocks} allStocks={stoklar} onClose={() => setLabelStocks(null)} />
+      )}
+
       <StoklarExtraModals 
-        isQrModalOpen={isQrModalOpen}
-        qrStock={qrStock}
-        setIsQrModalOpen={setIsQrModalOpen}
-        qrContentMode={qrContentMode}
-        setQrContentMode={setQrContentMode}
-        qrCustomText={qrCustomText}
-        setQrCustomText={setQrCustomText}
-        qrCodeDataUrl={qrCodeDataUrl}
-        isQrPrinting={isQrPrinting}
-        setIsQrPrinting={setIsQrPrinting}
         isPinModalOpen={isPinModalOpen}
         pinInput={pinInput}
         setPinInput={setPinInput}
@@ -982,9 +926,6 @@ function StoklarView({
         formatCurrency={formatCurrency}
         expandedCariId={expandedCariId}
         setExpandedCariId={setExpandedCariId}
-        isPrintModalOpen={isPrintModalOpen}
-        setIsPrintModalOpen={setIsPrintModalOpen}
-        printingStock={printingStock}
       />
     </div>
   );

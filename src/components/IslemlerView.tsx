@@ -26,7 +26,7 @@ import {
   Download
 } from 'lucide-react';
 import { IslemModal } from './islemler/IslemModal';
-import { PdfPrintModal } from './islemler/PdfPrintModal';
+import { TransactionPdfModal } from './pdf/TransactionPdfModal';
 import { parseScannedQrCode } from '../utils/formatters';
 import { formatDateISO } from '../utils/dateUtils';
 import { alertDialog } from '../utils/dialogs';
@@ -310,7 +310,7 @@ function IslemlerView({
               id={`btn-print-islem-${islem.id}`}
               onClick={() => handleOpenPrintModal(islem)}
               className="p-1.5 text-white/30 hover:text-teal-400 hover:bg-white/5 rounded transition cursor-pointer"
-              title="Yazdır / PDF Al"
+              title="PDF Belge"
             >
               <Printer size={15} />
             </button>
@@ -645,7 +645,7 @@ function IslemlerView({
                           id={`btn-mob-print-islem-${islem.id}`}
                           onClick={() => handleOpenPrintModal(islem)}
                           className="p-2 text-teal-400 bg-white/5 hover:bg-white/10 rounded transition cursor-pointer"
-                          title="Yazdır / PDF Al"
+                          title="PDF Belge"
                         >
                           <Printer size={15} />
                         </button>
@@ -697,10 +697,11 @@ function IslemlerView({
       />
       {/* PDF Print Preview & Settings Modal */}
       {selectedPrintTransaction && (
-        <PdfPrintModal
+        <TransactionPdfModal
           transaction={selectedPrintTransaction}
           cariler={cariler}
-          stoklar={stoklar}
+          islemler={islemler}
+          bankAccounts={bankAccounts}
           onClose={() => setSelectedPrintTransaction(null)}
         />
       )}

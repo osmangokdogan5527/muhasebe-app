@@ -78,7 +78,9 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      // Belge (PDF) önizlemesi için yerleşik PDF görüntüleyici
+      plugins: true
     },
     autoHideMenuBar: true,
     title: "Storm Ön Muhasebe"

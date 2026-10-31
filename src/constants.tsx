@@ -430,21 +430,27 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.8.4';
+export const APP_VERSION = '1.8.5';
 
 export const CHANGELOG = {
-  version: '1.8.4',
+  version: '1.8.5',
   features: [
-    "Daha Hızlı Açılış: Program açılırken yalnızca görünen ekranı yükler; diğer ekranlar ilk açıldıklarında gelir. Açılışta indirilen kod yaklaşık yarıdan fazla azaldı, özellikle telefonda daha çabuk açılır.",
-    "Akıllı Güncelleme İndirmesi: Yeni sürümde yalnızca değişen dosyalar indirilir; Firebase ve React gibi büyük parçalar önbellekte kalır.",
-    "Excel ve PDF İsteğe Bağlı: Excel/PDF dışa aktarma ve barkod kamerası yalnızca kullanıldığında yüklenir.",
-    "Sayfa İçi Onay Pencereleri: Silme, iptal ve sıfırlama gibi işlemlerin onayları ile bilgi/uyarı mesajları artık programın içinde, okunaklı pencerelerde gösterilir; Esc tuşuyla kapatılabilir.",
+    "Yeni PDF Belgeler: Fatura, tahsilat/ödeme makbuzu, cari hesap ekstresi, POS fişi, etiketler ve raporlar artık gerçek PDF olarak hazırlanır; yazılar net, Türkçe karakterler eksiksiz, uzun belgeler sayfalara bölünür. Yazdırmak için PDF kendi programınızda açılır.",
+    "Paylaş: Her belge penceresinde önizleme, PDF İndir ve telefonda WhatsApp / e-posta ile Paylaş düğmesi vardır.",
+    "Cari Hesap Durumu: Fatura ve makbuzda carinin önceki bakiyesi, belgenin etkisi, belge sonrası ve güncel bakiyesi gösterilir.",
+    "Cari Ekstre PDF'i: Devreden bakiye, borç / alacak / bakiye tablosu, toplamlar ve mutabakat notuyla; telefonda cari kartından da alınır.",
+    "POS Fişi: 80 mm ve 58 mm termal rulo fiş; satıştan sonra, İşlemler'den (Fiş / A4 Fatura seçimi) ve telefondan alınabilir.",
+    "Etiket Tasarla: Rulo ve A4 (21/24/40/65'li) etiketler ya da özel ölçü; ürün adı, fiyat, kod, barkod, QR kod, firma adı seçilebilir; canlı önizleme, toplu etiket ve kopya sayısı, yarım A4 sayfaya başlangıç konumu.",
+    "Belge Görünümü: Ayarlar'da logo, firma ve vergi bilgileri, renk, alt not (IBAN vb.) ve belge seçenekleri tek yerden ayarlanır; tüm cihazlarda ortaktır.",
+    "Yeni Rapor PDF'leri: Kâr-zarar, KDV, stok, cari bakiye ve gider raporları özet kartları ve tüm satırlarıyla.",
   ],
   fixes: [
-    "AI Studio önizlemesi gibi gömülü ekranlarda silme onaylarının çalışmaması ve hata/uyarı mesajlarının hiç görünmemesi düzeltildi.",
-    "Telefon uygulaması tüm ekranları önceden önbelleğe alır; internetsiz açılışta da her sekme çalışır.",
-    "Yeni sürüm yayınlandığında açık kalan eski sayfada bir ekran açılamazsa sayfa kendiliğinden yenilenir.",
-    "GitHub'da masaüstü sürümünün yayınlanmasını engelleyen 'etiket yok' hatası düzeltildi; sürüm derlendikten sonra otomatik yayınlanır.",
+    "Rapor PDF'leri her tablonun yalnızca ilk 25 satırını basıyordu; artık tüm kayıtlar yer alır.",
+    "PDF'lerde Türkçe karakterlerin silinmesi ('Isbu hesap dokumu') düzeltildi.",
+    "Uzun cari ekstresinin PDF'te tek sayfaya sığdırılıp kesilmesi düzeltildi.",
+    "Telefonda ve önizleme ekranlarında yazdırma pencerelerinin açılmaması sorunu PDF ile ortadan kalktı.",
+    "Stok kartında satış fiyatının kasada ve faturada nasıl kullanıldığı açıklandı.",
+    "GitHub'da masaüstü sürümünün iki ayrı sürüm olarak yüklenip otomatik güncellemenin görememesi düzeltildi.",
   ]
 };
 
@@ -686,6 +692,26 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.8.5",
+    date: "31.10.2026",
+    changes: [
+      "Yeni PDF Belgeler: Fatura, tahsilat/ödeme makbuzu, cari hesap ekstresi, POS fişi, etiketler ve raporlar artık gerçek PDF olarak hazırlanır; yazılar net, Türkçe karakterler eksiksiz, uzun belgeler sayfalara bölünür. Yazdırmak için PDF kendi programınızda açılır.",
+      "Paylaş: Her belge penceresinde önizleme, PDF İndir ve telefonda WhatsApp / e-posta ile Paylaş düğmesi vardır.",
+      "Cari Hesap Durumu: Fatura ve makbuzda carinin önceki bakiyesi, belgenin etkisi, belge sonrası ve güncel bakiyesi gösterilir.",
+      "Cari Ekstre PDF'i: Devreden bakiye, borç / alacak / bakiye tablosu, toplamlar ve mutabakat notuyla; telefonda cari kartından da alınır.",
+      "POS Fişi: 80 mm ve 58 mm termal rulo fiş; satıştan sonra, İşlemler'den (Fiş / A4 Fatura seçimi) ve telefondan alınabilir.",
+      "Etiket Tasarla: Rulo ve A4 (21/24/40/65'li) etiketler ya da özel ölçü; ürün adı, fiyat, kod, barkod, QR kod, firma adı seçilebilir; canlı önizleme, toplu etiket ve kopya sayısı, yarım A4 sayfaya başlangıç konumu.",
+      "Belge Görünümü: Ayarlar'da logo, firma ve vergi bilgileri, renk, alt not (IBAN vb.) ve belge seçenekleri tek yerden ayarlanır; tüm cihazlarda ortaktır.",
+      "Yeni Rapor PDF'leri: Kâr-zarar, KDV, stok, cari bakiye ve gider raporları özet kartları ve tüm satırlarıyla.",
+      "Rapor PDF'leri her tablonun yalnızca ilk 25 satırını basıyordu; artık tüm kayıtlar yer alır.",
+      "PDF'lerde Türkçe karakterlerin silinmesi ('Isbu hesap dokumu') düzeltildi.",
+      "Uzun cari ekstresinin PDF'te tek sayfaya sığdırılıp kesilmesi düzeltildi.",
+      "Telefonda ve önizleme ekranlarında yazdırma pencerelerinin açılmaması sorunu PDF ile ortadan kalktı.",
+      "Stok kartında satış fiyatının kasada ve faturada nasıl kullanıldığı açıklandı.",
+      "GitHub'da masaüstü sürümünün iki ayrı sürüm olarak yüklenip otomatik güncellemenin görememesi düzeltildi.",
+    ]
+  },
   {
     version: "1.8.4",
     date: "31.10.2026",

@@ -145,6 +145,7 @@ export const FieldApp: React.FC<FieldAppProps> = ({
         {activeTab === 'tahsilat' && allowed('tahsilat') && (
           <FieldCollection
             cariler={cariler}
+            islemler={islemler}
             bankAccounts={bankAccounts}
             presetCari={presetCollectionCari}
             onPresetConsumed={clearCollectionPreset}
