@@ -200,6 +200,7 @@ export default function App() {
   const {
     activeTheme, setActiveTheme,
     designStyle, setDesignStyle,
+    navPosition, setNavPosition,
     activeLogoTheme, setActiveLogoTheme,
     appFontSize, setAppFontSize,
     sidebarBg, setSidebarBg,
@@ -620,14 +621,13 @@ export default function App() {
     return rules;
   }, [currentThemeData]);
   const activePatternObj = SIDEBAR_PATTERNS.find(p => p.id === sidebarPattern) || SIDEBAR_PATTERNS[0];
-  const bodyPatternSvg = (activePatternObj.svg && designStyle !== 'clean-light' && designStyle !== 'pro-solid' && designStyle !== 'kristal')
+  const bodyPatternSvg = (activePatternObj.svg && designStyle !== 'clean-light' && designStyle !== 'pro-solid' && designStyle !== 'pusula')
     ? activePatternObj.svg
         .replace(/PATTERNCOLOR/g, sidebarPatternColor === 'white' ? '%23ffffff' : '%23000000')
         .replace(/OPACITY/g, (sidebarPatternOpacity * 0.5).toString()) // Slightly lower opacity for body
     : '';
-  // Kristal stilinde kenar menü her zaman açık renklidir
-  const isLightSidebar = sidebarBg === '#ffffff' || designStyle === 'kristal';
-    const sidebarPatternStyle = (sidebarPattern !== 'none' && sidebarPatternOpacity > 0 && designStyle !== 'clean-light' && designStyle !== 'pro-solid' && designStyle !== 'kristal') ? {
+  const isLightSidebar = sidebarBg === '#ffffff' && designStyle !== 'pusula';
+    const sidebarPatternStyle = (sidebarPattern !== 'none' && sidebarPatternOpacity > 0 && designStyle !== 'clean-light' && designStyle !== 'pro-solid' && designStyle !== 'pusula') ? {
     backgroundImage: activePatternObj.svg
       ?.replace(/PATTERNCOLOR/g, sidebarPatternColor === 'white' ? '%23ffffff' : '%23000000')
       ?.replace(/OPACITY/g, sidebarPatternOpacity.toString()),
@@ -650,6 +650,8 @@ export default function App() {
       setActiveTheme={setActiveTheme}
       designStyle={designStyle}
       setDesignStyle={setDesignStyle}
+      navPosition={navPosition}
+      setNavPosition={setNavPosition}
       activeLogoTheme={activeLogoTheme}
       setActiveLogoTheme={setActiveLogoTheme}
       appFontSize={appFontSize}
@@ -914,7 +916,7 @@ export default function App() {
   }
 
   return (
-    <div data-design-style={designStyle} className={`min-h-screen relative ${(currentThemeData as any).bgClass || 'bg-[#050505]'} text-[#e0e0e0] flex flex-col md:flex-row font-sans overflow-x-hidden`}>
+    <div data-design-style={designStyle} data-nav-position={navPosition} className={`min-h-screen relative ${(currentThemeData as any).bgClass || 'bg-[#050505]'} text-[#e0e0e0] flex flex-col md:flex-row font-sans overflow-x-hidden`}>
       <GlobalStyles themeCssRules={themeCssRules} bodyPatternSvg={bodyPatternSvg} activePattern={activePatternObj} />
 
       {designStyle === 'fluid-mesh' && <FluidMeshBackground />}

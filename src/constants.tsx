@@ -217,7 +217,7 @@ export const StormLogo = ({
           <clipPath id={`logo-clip-${uId}`}>
             <rect width="200" height="200" rx="48" />
           </clipPath>
-          {patternContent && !isFluidMesh && currentDesignStyle !== 'clean-light' && currentDesignStyle !== 'kristal' && (
+          {patternContent && !isFluidMesh && currentDesignStyle !== 'clean-light' && currentDesignStyle !== 'pusula' && (
             <pattern 
               id={patternId} 
               width={patternWidth} 
@@ -315,7 +315,7 @@ export const StormLogo = ({
         )}
 
         {/* Textured overlay pattern inside the logo background */}
-        {patternContent && !isFluidMesh && currentDesignStyle !== 'clean-light' && currentDesignStyle !== 'pro-solid' && currentDesignStyle !== 'kristal' && (
+        {patternContent && !isFluidMesh && currentDesignStyle !== 'clean-light' && currentDesignStyle !== 'pro-solid' && currentDesignStyle !== 'pusula' && (
           <rect width="200" height="200" rx="48" fill={`url(#${patternId})`} />
         )}
 

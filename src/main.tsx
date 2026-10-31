@@ -4,7 +4,8 @@ import App from './App.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { DialogHost } from './components/common/DialogHost';
 import './index.css';
-import './styles/kristal.css';
+import './styles/pusula.css';
+import './styles/layout.css';
 import { registerServiceWorker } from './utils/pwa';
 
 registerServiceWorker();

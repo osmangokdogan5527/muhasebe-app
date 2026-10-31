@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
+import { logError } from '../utils/errorLogger';
 
 /** Ayarlarda seçilebilen arayüz tasarım stilleri */
-export const SUPPORTED_DESIGN_STYLES = ['kristal', 'fluid-mesh', 'clean-light', 'pro-solid'];
+export const SUPPORTED_DESIGN_STYLES = ['pusula', 'fluid-mesh', 'clean-light', 'pro-solid'];
+
+/** Menünün ekrandaki yeri (masaüstü) */
+export type NavPosition = 'left' | 'right' | 'top';
+export const NAV_POSITIONS: NavPosition[] = ['left', 'right', 'top'];
 
 /** Masaüstünde varsayılan tasarım stili */
-export const DEFAULT_DESIGN_STYLE = 'kristal';
+export const DEFAULT_DESIGN_STYLE = 'pusula';
 
 export function useAppSettings() {
   const isMobileInitial = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -30,7 +35,7 @@ export function useAppSettings() {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       return 'fluid-mesh';
     }
-    // 1.8.6: yeni varsayılan Kristal stili herkese bir kez uygulanır; sonra kullanıcı seçimi korunur
+    // 1.8.6: yeni varsayılan Pusula stili herkese bir kez uygulanır; sonra kullanıcı seçimi korunur
     if (!localStorage.getItem('storm_default_setup_v5')) {
       localStorage.setItem('storm_default_setup_v5', 'true');
       localStorage.setItem('storm_muhasebe_design_style', DEFAULT_DESIGN_STYLE);
@@ -56,6 +61,26 @@ export function useAppSettings() {
     window.addEventListener('resize', applyMobileTheme);
     return () => window.removeEventListener('resize', applyMobileTheme);
   }, [designStyle]);
+
+  // Menü konumu: sol, sağ ya da üstte yatay çubuk
+  const [navPosition, setNavPositionState] = useState<NavPosition>(() => {
+    const saved = localStorage.getItem('storm_muhasebe_nav_position') as NavPosition | null;
+    return saved && NAV_POSITIONS.includes(saved) ? saved : 'left';
+  });
+
+  const setNavPosition = (position: NavPosition) => {
+    if (!NAV_POSITIONS.includes(position)) return;
+    setNavPositionState(position);
+    try {
+      localStorage.setItem('storm_muhasebe_nav_position', position);
+    } catch (err) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'useAppSettings.setNavPosition');
+    }
+  };
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-nav-position', navPosition);
+  }, [navPosition]);
 
   const [activeLogoTheme, setActiveLogoTheme] = useState<string>(() => {
     return localStorage.getItem('storm_muhasebe_logo_theme') || 'theme';
@@ -166,6 +191,7 @@ export function useAppSettings() {
   return {
     activeTheme, setActiveTheme,
     designStyle, setDesignStyle,
+    navPosition, setNavPosition,
     activeLogoTheme, setActiveLogoTheme,
     appFontSize, setAppFontSize,
     sidebarBg, setSidebarBg,

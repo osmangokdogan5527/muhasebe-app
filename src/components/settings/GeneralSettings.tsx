@@ -1,5 +1,7 @@
+import { logError } from '../../utils/errorLogger';
+import type { NavPosition } from '../../hooks/useAppSettings';
 import React from 'react';
-import { Palette, Eye, EyeOff, ChevronUp, ChevronDown, Download, Sparkles, Check, Menu } from 'lucide-react';
+import { Palette, Eye, EyeOff, ChevronUp, ChevronDown, Download, Sparkles, Check, Menu, PanelLeft, PanelRight, PanelTop } from 'lucide-react';
 import { COLOR_PRESETS, TAB_DEFS } from '../../constants';
 
 export interface GeneralSettingsProps {
@@ -7,6 +9,8 @@ export interface GeneralSettingsProps {
   setActiveTheme: (theme: string) => void;
   designStyle: string;
   setDesignStyle: (style: string) => void;
+  navPosition: NavPosition;
+  setNavPosition: (position: NavPosition) => void;
   activeLogoTheme: string;
   setActiveLogoTheme: (theme: string) => void;
   appFontSize: 'small' | 'medium' | 'large';
@@ -36,6 +40,8 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
   setActiveTheme,
   designStyle,
   setDesignStyle,
+  navPosition,
+  setNavPosition,
   activeLogoTheme,
   setActiveLogoTheme,
   appFontSize,
@@ -155,7 +161,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {[
-                      { id: 'kristal', name: 'Kristal (Açık)', badge: 'Varsayılan', dot: 'bg-gradient-to-r from-slate-200 to-sky-400' },
+                      { id: 'pusula', name: 'Pusula (Canlı)', badge: 'Varsayılan', dot: 'bg-gradient-to-br from-sky-400 via-indigo-500 to-fuchsia-500' },
                       { id: 'fluid-mesh', name: 'Sıvı Mesh Gradient', badge: 'Seçkin & Canlı', dot: 'bg-gradient-to-r from-teal-400 to-indigo-500' },
                       { id: 'clean-light', name: 'Temiz Işık (Pure)', badge: 'Mikro Hız', dot: 'bg-emerald-400' },
                       { id: 'pro-solid', name: 'MuhasebePro (Solid)', badge: 'Pro Stil', dot: 'bg-rose-500' },
@@ -183,6 +189,56 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                             </div>
                           </div>
                           {isSelected && <Check size={14} className="text-indigo-400 shrink-0 ml-1 stroke-[3px]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Section A2: Menü Konumu */}
+                <div className="pt-4 border-t border-white/10">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center">
+                      <PanelLeft size={18} />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">Menü Konumu</h3>
+                      <p className="text-[11px] text-white/50 mt-0.5">
+                        {designStyle === 'pro-solid'
+                          ? 'MuhasebePro stili kendi daralan sol menüsünü kullanır; konum diğer stillerde geçerlidir'
+                          : 'Menüyü solda, sağda ya da üstte yatay çubuk olarak kullanın'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Menü konumu">
+                    {([
+                      { id: 'left', name: 'Sol', icon: <PanelLeft size={16} /> },
+                      { id: 'top', name: 'Üst', icon: <PanelTop size={16} /> },
+                      { id: 'right', name: 'Sağ', icon: <PanelRight size={16} /> },
+                    ] as { id: NavPosition; name: string; icon: React.ReactNode }[]).map((opt) => {
+                      const isSelected = navPosition === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          id={`nav-position-${opt.id}`}
+                          role="radio"
+                          aria-checked={isSelected}
+                          onClick={() => {
+                            try {
+                              setNavPosition(opt.id);
+                              showToast(`Menü ${opt.name.toLocaleLowerCase('tr-TR')} tarafa taşındı.`, 'success');
+                            } catch (err: any) {
+                              logError(err instanceof Error ? err : new Error(String(err)), 'GeneralSettings.setNavPosition');
+                            }
+                          }}
+                          className={`flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer ${
+                            isSelected
+                              ? 'border-indigo-500 bg-indigo-500/15 text-white shadow-[0_2px_10px_rgba(99,102,241,0.2)]'
+                              : 'border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white'
+                          }`}
+                        >
+                          {opt.icon}
+                          <span>{opt.name}</span>
                         </button>
                       );
                     })}
@@ -341,8 +397,8 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                       setActiveTheme('sky');
                       localStorage.setItem('kolay_hesap_accent_theme', 'sky');
                       
-                      setDesignStyle('kristal');
-                      localStorage.setItem('storm_muhasebe_design_style', 'kristal');
+                      setDesignStyle('pusula');
+                      localStorage.setItem('storm_muhasebe_design_style', 'pusula');
                       
                       setActiveLogoTheme('theme');
                       localStorage.setItem('storm_muhasebe_logo_theme', 'theme');
