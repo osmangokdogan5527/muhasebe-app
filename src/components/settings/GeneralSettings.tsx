@@ -156,8 +156,6 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {[
                       { id: 'fluid-mesh', name: 'Sıvı Mesh Gradient', badge: 'Seçkin & Canlı', dot: 'bg-gradient-to-r from-teal-400 to-indigo-500' },
-                      { id: 'glass', name: 'Cam Arayüz (Glass)', badge: 'Sanat Eseri', dot: 'bg-purple-400' },
-                      { id: 'navy-perf', name: 'Lacivert Performans', badge: 'Navy Hız', dot: 'bg-blue-500' },
                       { id: 'clean-light', name: 'Temiz Işık (Pure)', badge: 'Mikro Hız', dot: 'bg-emerald-400' },
                       { id: 'pro-solid', name: 'MuhasebePro (Solid)', badge: 'Pro Stil', dot: 'bg-rose-500' },
                     ].map((styleOpt) => {

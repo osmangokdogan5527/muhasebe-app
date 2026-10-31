@@ -28,8 +28,7 @@ export const StormLogo = ({
   sidebarBg?: string;
   onlySvg?: boolean;
 }) => {
-  const currentDesignStyle = designStyle || (typeof document !== 'undefined' && document.documentElement.getAttribute('data-design-style')) || localStorage.getItem('storm_muhasebe_design_style') || 'glass';
-  const isGlass = currentDesignStyle === 'glass';
+  const currentDesignStyle = designStyle || (typeof document !== 'undefined' && document.documentElement.getAttribute('data-design-style')) || localStorage.getItem('storm_muhasebe_design_style') || 'fluid-mesh';
   const isFluidMesh = currentDesignStyle === 'fluid-mesh';
 
   // Strip any shadow filters and transition effects to keep the logo perfectly flat and net
@@ -54,7 +53,7 @@ export const StormLogo = ({
 
   // Get active sidebar pattern details
   let currentPattern = sidebarPattern || localStorage.getItem('storm_muhasebe_sidebar_pattern') || 'crystal';
-  if (designStyle === 'pro-solid' || designStyle === 'navy-perf' || currentDesignStyle === 'navy-perf') currentPattern = 'none';
+  if (designStyle === 'pro-solid') currentPattern = 'none';
   if (currentPattern === 'circles') currentPattern = 'flame';
   if (currentPattern === 'waves') currentPattern = 'chain';
   const savedOpacity = sidebarPatternOpacity !== undefined ? sidebarPatternOpacity : parseFloat(localStorage.getItem('storm_muhasebe_sidebar_pattern_opacity') || '0.75');
@@ -213,12 +212,12 @@ export const StormLogo = ({
   }
 
   const svgElement = (
-    <svg className={isGlass ? 'storm-logo-glass' : (isFluidMesh ? 'storm-logo-fluid-mesh' : '')} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={width} height={height}>
+    <svg className={isFluidMesh ? 'storm-logo-fluid-mesh' : ''} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={width} height={height}>
         <defs>
           <clipPath id={`logo-clip-${uId}`}>
             <rect width="200" height="200" rx="48" />
           </clipPath>
-          {patternContent && !isGlass && !isFluidMesh && currentDesignStyle !== 'clean-light' && (
+          {patternContent && !isFluidMesh && currentDesignStyle !== 'clean-light' && (
             <pattern 
               id={patternId} 
               width={patternWidth} 
@@ -232,39 +231,12 @@ export const StormLogo = ({
             </pattern>
           )}
           
-          {/* Glass Theme Gradients */}
+          {/* Logo parlama gradyanı (Sıvı Mesh) */}
           <linearGradient id={`glass-logo-grad-${uId}`} x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
             <stop offset="45%" stopColor="#ffffff" stopOpacity="0.18" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
           </linearGradient>
-          <linearGradient id={`glass-border-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
-            <stop offset="30%" stopColor="#ffffff" stopOpacity="0.4" />
-            <stop offset="70%" stopColor="#ffffff" stopOpacity="0.15" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.5" />
-          </linearGradient>
-          <linearGradient id={`glass-back-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.15" />
-            <stop offset="35%" stopColor={fillCol} stopOpacity="0.1" />
-            <stop offset="70%" stopColor={fillCol} stopOpacity="0.05" />
-            <stop offset="100%" stopColor="#000000" stopOpacity="0.35" />
-          </linearGradient>
-          <linearGradient id={`accent-bolt-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
-            <stop offset="50%" stopColor={fillCol} stopOpacity="0.85" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.95" />
-          </linearGradient>
-          <linearGradient id={`glass-shimmer-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
-            <stop offset="30%" stopColor="#ffffff" stopOpacity="0" />
-            <stop offset="50%" stopColor="#ffffff" stopOpacity="0.5" />
-            <stop offset="70%" stopColor="#ffffff" stopOpacity="0" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-          </linearGradient>
-          <filter id={`logo-text-shadow-${uId}`} x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" floodColor="#000000" floodOpacity="0.35" />
-          </filter>
 
           {/* Fluid Mesh Theme Gradients */}
           <linearGradient id={`fluid-border-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -298,19 +270,6 @@ export const StormLogo = ({
           </filter>
           {!downloadMode && (
             <style>{`
-              @keyframes storm-glass-shimmer {
-                0% { transform: translate3d(0, 0, 0) skewX(-25deg); opacity: 0; }
-                8% { opacity: 0.7; }
-                32% { transform: translate3d(420px, 0, 0) skewX(-25deg); opacity: 0.7; }
-                35%, 100% { transform: translate3d(420px, 0, 0) skewX(-25deg); opacity: 0; }
-              }
-              .storm-logo-shimmer {
-                animation: storm-glass-shimmer 5s infinite cubic-bezier(0.4, 0, 0.2, 1);
-                pointer-events: none;
-                transform-origin: center;
-                mix-blend-mode: overlay;
-                will-change: transform;
-              }
               @keyframes mesh-logo-blob-1 {
                 0% { transform: translate3d(0, 0, 0) scale3d(1, 1, 1); }
                 50% { transform: translate3d(15px, -15px, 0) scale3d(1.15, 1.15, 1); }
@@ -351,29 +310,12 @@ export const StormLogo = ({
             {/* Futuristic glowing multi-stop colorful border line */}
             <rect width="194" height="194" x="3" y="3" rx="45" fill="none" stroke={`url(#fluid-border-grad-${uId})`} strokeWidth="4.5" />
           </g>
-        ) : isGlass ? (
-          <g clipPath={`url(#logo-clip-${uId})`}>
-            {/* Always render a solid premium dark/black background so it is a perfect "siyah logo" */}
-            <rect width="200" height="200" fill="#0c0b14" />
-            {/* Base tinted dark glass backing */}
-            <rect width="200" height="200" fill={`url(#glass-back-grad-${uId})`} />
-            {/* Main 3D curved gloss reflection block */}
-            <path d="M 0,0 L 200,0 L 200,95 Q 100,125 0,95 Z" fill={`url(#glass-logo-grad-${uId})`} />
-            {/* Ambient inner soft glowing light beam */}
-            <circle cx="100" cy="50" r="70" fill="#ffffff" opacity="0.03" />
-            {/* Moving glass shimmer light beam */}
-            {!downloadMode && (
-              <rect className="storm-logo-shimmer" x="-150" y="0" width="120" height="200" fill={`url(#glass-shimmer-grad-${uId})`} />
-            )}
-            {/* Beveled edge stroke with linear gradient */}
-            <rect width="196" height="196" x="2" y="2" rx="46" fill="none" stroke={`url(#glass-border-grad-${uId})`} strokeWidth="3.5" />
-          </g>
         ) : (
           <rect width="200" height="200" rx="48" fill={fillCol} />
         )}
 
         {/* Textured overlay pattern inside the logo background */}
-        {patternContent && !isGlass && !isFluidMesh && currentDesignStyle !== 'clean-light' && currentDesignStyle !== 'pro-solid' && currentDesignStyle !== 'navy-perf' && (
+        {patternContent && !isFluidMesh && currentDesignStyle !== 'clean-light' && currentDesignStyle !== 'pro-solid' && (
           <rect width="200" height="200" rx="48" fill={`url(#${patternId})`} />
         )}
 
@@ -381,7 +323,7 @@ export const StormLogo = ({
         <g transform="translate(63.75, 12) scale(1.45)">
           <path 
             d="M28 2 L8 38 L23 38 L15 66 L42 28 L28 28 Z" 
-            fill={isFluidMesh ? `url(#fluid-bolt-grad-${uId})` : (isGlass ? `url(#accent-bolt-grad-${uId})` : "#ffffff")} 
+            fill={isFluidMesh ? `url(#fluid-bolt-grad-${uId})` : "#ffffff"} 
             filter={isFluidMesh ? `url(#fluid-bolt-glow-${uId})` : undefined}
           />
         </g>
@@ -397,7 +339,7 @@ export const StormLogo = ({
           fontSize="33" 
           fill="#ffffff" 
           letterSpacing="3.5" 
-          filter={isFluidMesh ? `url(#fluid-logo-text-glow-${uId})` : (isGlass ? `url(#logo-text-shadow-${uId})` : undefined)}
+          filter={isFluidMesh ? `url(#fluid-logo-text-glow-${uId})` : undefined}
         >
           STORM
         </text>
@@ -412,7 +354,7 @@ export const StormLogo = ({
           fill="#ffffff" 
           letterSpacing="2.5" 
           opacity="0.95" 
-          filter={isFluidMesh ? `url(#fluid-logo-text-glow-${uId})` : (isGlass ? `url(#logo-text-shadow-${uId})` : undefined)}
+          filter={isFluidMesh ? `url(#fluid-logo-text-glow-${uId})` : undefined}
         >
           MUHASEBE
         </text>

@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 
+/** Ayarlarda seçilebilen arayüz tasarım stilleri */
+export const SUPPORTED_DESIGN_STYLES = ['fluid-mesh', 'clean-light', 'pro-solid'];
+
 export function useAppSettings() {
   const isMobileInitial = typeof window !== 'undefined' && window.innerWidth < 768;
 
@@ -24,7 +27,9 @@ export function useAppSettings() {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       return 'fluid-mesh';
     }
-    return localStorage.getItem('storm_muhasebe_design_style') || 'fluid-mesh';
+    const saved = localStorage.getItem('storm_muhasebe_design_style');
+    // Kaldırılan stiller (Cam Arayüz, Lacivert Performans) varsayılan Sıvı Mesh'e döner
+    return saved && SUPPORTED_DESIGN_STYLES.includes(saved) ? saved : 'fluid-mesh';
   });
 
   useEffect(() => {
