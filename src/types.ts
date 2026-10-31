@@ -31,6 +31,8 @@ export interface Cari {
   taxNo?: string;
   imageUrl?: string; // Profil/Logo resmi
   notes?: string;
+  /** Veresiye (açık hesap) limiti; 0 ya da tanımsız = sınırsız. Carinin para biriminde. */
+  creditLimit?: number;
 }
 
 export interface Stock {

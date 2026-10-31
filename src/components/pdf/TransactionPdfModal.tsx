@@ -68,12 +68,16 @@ export const TransactionPdfModal: React.FC<TransactionPdfModalProps> = ({ transa
 
   const generate = useCallback(() => {
     if (isPosSale && format === 'receipt') {
-      return createPosReceiptPdf(receiptDataFromTransaction(transaction, !cari || cari.id === RETAIL_CARI_ID), branding);
+      const isRetail = !cari || cari.id === RETAIL_CARI_ID;
+      return createPosReceiptPdf(receiptDataFromTransaction(transaction, isRetail, {
+        linkedReceipts: islemler.filter((t) => t.linkedInvoiceId === transaction.id),
+        balanceBefore: balance ? balance.before : undefined,
+      }), branding);
     }
     return isInvoice
       ? createInvoicePdf(transaction, cari, branding, { balance })
       : createReceiptPdf(transaction, cari, branding, { balance, accountName, linkedInvoiceNo });
-  }, [isPosSale, format, isInvoice, transaction, cari, branding, balance, accountName, linkedInvoiceNo]);
+  }, [isPosSale, format, isInvoice, transaction, cari, branding, balance, accountName, linkedInvoiceNo, islemler]);
 
   const subtitle = [number, transaction.cariName, formatDate(transaction.date)].filter(Boolean).join('  ·  ');
   const shareText = `${branding.firmName || 'Firmamız'} - ${title}${number ? ` ${number}` : ''}`;

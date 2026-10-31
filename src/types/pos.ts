@@ -48,4 +48,6 @@ export interface PosSaleSummary {
   totalTax: number;
   grandTotal: number;
   note?: string;
+  /** Açık hesaba (veresiye) yazılan kısım ve carinin satış öncesi / sonrası bakiyesi */
+  credit?: { amount: number; balanceBefore: number; balanceAfter: number };
 }

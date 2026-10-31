@@ -8,7 +8,9 @@ import { ReceiptPdfModal } from '../pdf/ReceiptPdfModal';
 import { receiptDataFromPosSummary } from '../../pdf/posReceiptPdf';
 import { PosParkedSalesModal } from './PosParkedSalesModal';
 import { findStockByBarcodeOrSearch, calculateLineTotal, calculateCartSummary, generateReceiptNo } from '../../utils/posUtils';
-import { ShoppingCart, Zap, DollarSign, CreditCard, User, Clock, CheckCircle2, RotateCcw, Search, Plus, Sparkles, HelpCircle, Percent } from 'lucide-react';
+import { ShoppingCart, Zap, DollarSign, CreditCard, User, Clock, CheckCircle2, RotateCcw, Search, Plus, Sparkles, HelpCircle, Percent, BookOpen, UserPlus } from 'lucide-react';
+import { QuickCariModal } from '../common/QuickCariModal';
+import { checkCreditLimit, confirmCreditLimit } from '../../utils/creditLimit';
 import { logError } from '../../utils/errorLogger';
 import { formatDateISO } from '../../utils/dateUtils';
 import { APP_VERSION } from '../../constants';
@@ -39,11 +41,16 @@ export const PosView: React.FC<PosViewProps> = ({
   bankAccounts,
   onCompletePosSale,
 }) => {
+  // Hızlı müşteri kartı penceresi (veresiye için); null = kapalı
+  const [quickCariName, setQuickCariName] = useState<string | null>(null);
+  const customerInputRef = useRef<HTMLInputElement>(null);
   // SEPET & MÜŞTERİ STATE'LERİ
   const [cartItems, setCartItems] = useState<PosCartItem[]>([]);
   const [selectedCari, setSelectedCari] = useState<Cari | null>(null);
   const [cariSearchTerm, setCariSearchTerm] = useState<string>('');
   const [isCariDropdownOpen, setIsCariDropdownOpen] = useState<boolean>(false);
+  // Seçili carinin güncel hâli (bakiye satış sırasında başka cihazdan değişmiş olabilir)
+  const liveCari = useMemo(() => (selectedCari ? cariler.find((c) => c.id === selectedCari.id) || selectedCari : null), [selectedCari, cariler]);
 
   // ÜRÜN ARAMA & BARKOD
   const [productSearchTerm, setProductSearchTerm] = useState<string>('');
@@ -170,7 +177,7 @@ export const PosView: React.FC<PosViewProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       try {
         // Eğer modal açıksa kısayolları engelle
-        if (isSplitModalOpen || isReceiptModalOpen || isParkedModalOpen) return;
+        if (isSplitModalOpen || isReceiptModalOpen || isParkedModalOpen || quickCariName !== null) return;
 
         // F1: Arama Kutusuna Odaklan
         if (e.key === 'F1') {
@@ -200,6 +207,13 @@ export const PosView: React.FC<PosViewProps> = ({
           return;
         }
 
+        // F5: Veresiye (tamamı açık hesaba)
+        if (e.key === 'F5') {
+          e.preventDefault();
+          handleCreditSale();
+          return;
+        }
+
         // F8: Askıya Al
         if (e.key === 'F8') {
           e.preventDefault();
@@ -218,7 +232,7 @@ export const PosView: React.FC<PosViewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cartItems, isSplitModalOpen, isReceiptModalOpen, isParkedModalOpen]);
+  }, [cartItems, isSplitModalOpen, isReceiptModalOpen, isParkedModalOpen, quickCariName, liveCari, summary.grandTotal, isProcessing]);
 
   // ARAMA METNİ DEĞİŞTİĞİNDE TAM EŞLEŞEN BARKOD VARSA SEPETE AT
   useEffect(() => {
@@ -367,6 +381,25 @@ export const PosView: React.FC<PosViewProps> = ({
     await executeSale(split);
   };
 
+  // VERESİYE SATIŞ (F5): tutarın tamamı seçili müşterinin açık hesabına yazılır
+  const handleCreditSale = async () => {
+    if (cartItems.length === 0 || isProcessing) return;
+    if (!liveCari) {
+      await alertDialog({ title: 'Müşteri seçin', message: 'Veresiye satış için önce müşteriyi seçin. Listede yoksa adını yazıp "Yeni müşteri" ile hızlıca ekleyebilirsiniz.' });
+      setIsCariDropdownOpen(true);
+      setTimeout(() => customerInputRef.current?.focus(), 50);
+      return;
+    }
+    const split: PosPaymentSplit = {
+      cashAmount: 0,
+      cashReceived: 0,
+      changeGiven: 0,
+      posAmount: 0,
+      openAccountAmount: summary.grandTotal,
+    };
+    await executeSale(split);
+  };
+
   // ASKIYA AL (F8)
   const handleParkSale = () => {
     try {
@@ -413,6 +446,14 @@ export const PosView: React.FC<PosViewProps> = ({
   // SATIŞI GERÇEKLEŞTİR
   const executeSale = async (paymentSplit: PosPaymentSplit) => {
     try {
+      const openAmount = Number(paymentSplit.openAccountAmount) || 0;
+      if (openAmount > 0.004) {
+        if (!liveCari) {
+          await alertDialog('Açık hesap (veresiye) için müşteri seçilmelidir.');
+          return;
+        }
+        if (!(await confirmCreditLimit(liveCari, openAmount))) return;
+      }
       setIsProcessing(true);
       const receiptNo = generateReceiptNo();
       const now = new Date();
@@ -453,6 +494,13 @@ export const PosView: React.FC<PosViewProps> = ({
           totalDiscount: summary.totalDiscount,
           totalTax: summary.totalTax,
           grandTotal: summary.grandTotal,
+          credit: openAmount > 0.004 && liveCari
+            ? {
+                amount: openAmount,
+                balanceBefore: Number(liveCari.balance) || 0,
+                balanceAfter: Math.round(((Number(liveCari.balance) || 0) + openAmount) * 100) / 100,
+              }
+            : undefined,
         };
 
         setCompletedSaleSummary(saleSummary);
@@ -539,6 +587,16 @@ export const PosView: React.FC<PosViewProps> = ({
               F4
             </span>
             <span style={{ color: '#ffffff' }}>Parçalı Ödeme</span>
+          </span>
+
+          <span
+            className="px-3 py-1.5 rounded-lg font-black shadow-md flex items-center gap-1.5 border"
+            style={{ backgroundColor: '#9f1239', color: '#ffffff', borderColor: '#f43f5e' }}
+          >
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-black" style={{ color: '#fecdd3', backgroundColor: 'rgba(244,63,94,0.25)' }}>
+              F5
+            </span>
+            <span style={{ color: '#ffffff' }}>Veresiye</span>
           </span>
 
           <button
@@ -765,8 +823,8 @@ export const PosView: React.FC<PosViewProps> = ({
               </div>
             </div>
 
-            {/* HIZLI AKSİYON ÖDEME BUTONLARI (TEK SATIR 4 BUTON) */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {/* HIZLI AKSİYON ÖDEME BUTONLARI (TEK SATIR 5 BUTON) */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               <button
                 disabled={cartItems.length === 0 || isProcessing}
                 onClick={handleQuickCashSale}
@@ -792,6 +850,17 @@ export const PosView: React.FC<PosViewProps> = ({
               >
                 <Zap size={15} />
                 PARÇALI [F4]
+              </button>
+
+              <button
+                id="pos-btn-credit"
+                disabled={cartItems.length === 0 || isProcessing}
+                onClick={handleCreditSale}
+                title={liveCari ? `${liveCari.name} hesabına veresiye yaz` : 'Veresiye için önce müşteri seçin'}
+                className="py-3 px-2 bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white font-black rounded-xl text-xs shadow-lg shadow-rose-600/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <BookOpen size={15} />
+                VERESİYE [F5]
               </button>
 
               <button
@@ -830,24 +899,47 @@ export const PosView: React.FC<PosViewProps> = ({
               )}
             </div>
 
-            {selectedCari ? (
-              <div className="p-2.5 bg-teal-500/10 border border-teal-400/40 rounded-xl flex items-center justify-between">
-                <div>
-                  <h5 className="text-xs font-black text-white" style={{ color: '#ffffff' }}>{selectedCari.name}</h5>
-                  <span className="text-[11px] text-slate-300 font-mono">
-                    {selectedCari.code} • Bakiye:{' '}
-                    <strong className={selectedCari.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                      ₺{selectedCari.balance.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                    </strong>
-                  </span>
+            {liveCari ? (() => {
+              const credit = checkCreditLimit(liveCari, summary.grandTotal);
+              const cur = liveCari.currency || 'TRY';
+              const money = (v: number) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: cur }).format(v);
+              return (
+                <div className="p-2.5 bg-teal-500/10 border border-teal-400/40 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <h5 className="text-xs font-black text-white truncate" style={{ color: '#ffffff' }}>{liveCari.name}</h5>
+                      <span className="text-[11px] text-slate-300 font-mono">{liveCari.code}{liveCari.phone ? ` • ${liveCari.phone}` : ''}</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-teal-500/20 text-teal-200 border border-teal-400/50 shrink-0">
+                      Seçili Cari
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="rounded-lg bg-slate-950/60 border border-slate-700 px-2 py-1.5">
+                      <div className="text-slate-400 font-bold">Mevcut bakiye</div>
+                      <div className={`font-black font-mono ${credit.balanceBefore > 0 ? 'text-red-400' : credit.balanceBefore < 0 ? 'text-emerald-400' : 'text-slate-300'}`}>
+                        {money(Math.abs(credit.balanceBefore))} {credit.balanceBefore > 0.004 ? 'Borç' : credit.balanceBefore < -0.004 ? 'Alacak' : ''}
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-slate-950/60 border border-slate-700 px-2 py-1.5">
+                      <div className="text-slate-400 font-bold">Veresiye limiti</div>
+                      <div className="font-black font-mono text-white">
+                        {credit.limit === null ? 'Sınırsız' : money(credit.limit)}
+                      </div>
+                    </div>
+                  </div>
+                  {cartItems.length > 0 && (
+                    <div className={`rounded-lg px-2 py-1.5 text-[11px] font-bold border ${credit.exceeded ? 'bg-red-500/20 border-red-400/50 text-red-400' : 'bg-slate-950/60 border-slate-700 text-slate-300'}`}>
+                      Veresiye yazılırsa yeni bakiye: <span className="font-black font-mono">{money(credit.balanceAfter)}</span>
+                      {credit.exceeded && <span className="block">Limit {money(credit.overBy)} aşılıyor — satışta uyarı çıkar.</span>}
+                    </div>
+                  )}
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-teal-500/20 text-teal-200 border border-teal-400/50">
-                  Seçili Cari
-                </span>
-              </div>
-            ) : (
+              );
+            })() : (
               <div className="relative">
                 <input
+                  ref={customerInputRef}
                   type="text"
                   value={cariSearchTerm}
                   onFocus={() => setIsCariDropdownOpen(true)}
@@ -870,6 +962,17 @@ export const PosView: React.FC<PosViewProps> = ({
                       className="w-full text-left p-2.5 hover:bg-slate-800 text-xs font-black text-teal-300 border-b border-slate-700 cursor-pointer"
                     >
                       🛒 Perakende Müşteri (Kasasız Anında Satış)
+                    </button>
+                    <button
+                      id="pos-quick-cari"
+                      onClick={() => {
+                        setIsCariDropdownOpen(false);
+                        setQuickCariName(cariSearchTerm.trim());
+                      }}
+                      className="w-full text-left p-2.5 hover:bg-slate-800 text-xs font-black text-amber-300 border-b border-slate-700 cursor-pointer flex items-center gap-1.5"
+                    >
+                      <UserPlus size={14} />
+                      {cariSearchTerm.trim() ? `"${cariSearchTerm.trim()}" adıyla yeni müşteri ekle` : 'Yeni müşteri ekle'}
                     </button>
                     {filteredCariler.map((c) => (
                       <button
@@ -912,7 +1015,7 @@ export const PosView: React.FC<PosViewProps> = ({
         onClose={() => setIsSplitModalOpen(false)}
         grandTotal={summary.grandTotal}
         bankAccounts={bankAccounts}
-        selectedCari={selectedCari}
+        selectedCari={liveCari}
         onConfirmPayment={executeSale}
       />
 
@@ -933,6 +1036,20 @@ export const PosView: React.FC<PosViewProps> = ({
         onRestoreSale={handleRestoreParkedSale}
         onDeleteSale={(id) => setParkedSales((prev) => prev.filter((p) => p.id !== id))}
       />
+
+      {/* VERESİYE İÇİN HIZLI MÜŞTERİ KARTI */}
+      {quickCariName !== null && (
+        <QuickCariModal
+          initialName={quickCariName}
+          existingCount={cariler.length}
+          onClose={() => setQuickCariName(null)}
+          onCreated={(cari) => {
+            setSelectedCari(cari);
+            setCariSearchTerm('');
+            setQuickCariName(null);
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -1801,3 +1801,79 @@ html[data-design-style="pusula"] .storm-doc-modal > div:first-child > div:first-
 [data-design-style="pusula"] .fixed.inset-0.bg-black\/85 {
   background-color: rgba(15, 23, 42, 0.32) !important;
 }
+
+/* Onay / bilgi pencereleri (DialogHost uygulama kökünün dışında çizilir) */
+html[data-design-style="pusula"] .fixed.inset-0.z-\[10000\] {
+  background-color: rgba(15, 23, 42, 0.32) !important;
+}
+
+html[data-design-style="pusula"] .fixed.inset-0.z-\[10000\] > div {
+  background-color: #ffffff !important;
+  border-color: var(--k-border) !important;
+  box-shadow: var(--k-shadow-xl) !important;
+  border-radius: 22px !important;
+}
+
+html[data-design-style="pusula"] .fixed.inset-0.z-\[10000\] h3 {
+  color: var(--k-text) !important;
+}
+
+html[data-design-style="pusula"] .fixed.inset-0.z-\[10000\] [style*="color: rgb(203, 213, 225)"] {
+  color: var(--k-text-2) !important;
+}
+
+html[data-design-style="pusula"] .fixed.inset-0.z-\[10000\] button[style*="color: rgb(226, 232, 240)"] {
+  color: var(--k-text-2) !important;
+  background-color: #ffffff !important;
+  border-color: var(--k-border-strong) !important;
+}
+
+/* Kasa ve sahadaki veresiye / müşteri pencereleri */
+html[data-design-style="pusula"] .fixed.inset-0.z-\[135\] {
+  background-color: rgba(15, 23, 42, 0.32) !important;
+}
+
+html[data-design-style="pusula"] :is(.fixed.inset-0.z-\[135\]) > div {
+  background-color: #ffffff !important;
+  color: var(--k-text-2) !important;
+  border-color: var(--k-border) !important;
+  box-shadow: var(--k-shadow-xl) !important;
+}
+
+html[data-design-style="pusula"] :is(.fixed.inset-0.z-\[135\]) > div > div:first-child {
+  background: var(--k-grad) !important;
+  border: none !important;
+}
+
+html[data-design-style="pusula"] :is(.fixed.inset-0.z-\[135\]) > div > div:first-child :is(h3, p, span, svg, button) {
+  color: #ffffff !important;
+}
+
+html[data-design-style="pusula"] :is(.fixed.inset-0.z-\[135\]) > div > div:first-child span:has(> svg) {
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+html[data-design-style="pusula"] :is(.fixed.inset-0.z-\[135\]) :is(.text-white, .text-white\/70, .text-white\/60, .text-white\/50) {
+  color: var(--k-text-2) !important;
+}
+
+html[data-design-style="pusula"] :is(.fixed.inset-0.z-\[135\]) strong.text-white {
+  color: var(--k-text) !important;
+}
+
+html[data-design-style="pusula"] :is(.fixed.inset-0.z-\[135\]) input {
+  background-color: #ffffff !important;
+  color: var(--k-text) !important;
+  border-color: var(--k-border-strong) !important;
+}
+
+html[data-design-style="pusula"] :is(.fixed.inset-0.z-\[135\]) button.bg-white\/5 {
+  background-color: #ffffff !important;
+  color: var(--k-text-2) !important;
+  border-color: var(--k-border-strong) !important;
+}
+
+html[data-design-style="pusula"] :is(.fixed.inset-0.z-\[135\]) button.bg-teal-600 {
+  background: var(--k-grad) !important;
+  color: #ffffff !important;
+}
