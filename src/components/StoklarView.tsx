@@ -2,9 +2,6 @@ import { StoklarExtraModals } from './stoklar/StoklarExtraModals';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { VirtualTableBody } from './VirtualTableBody';
 import { motion } from 'motion/react';
-import Barcode from 'react-barcode';
-import * as QRCode from 'qrcode';
-import { toPng } from 'html-to-image';
 import { Stock, Transaction, Cari } from '../types';
 import { saveStock, deleteStock } from '../firebase';
 import { compressImage } from '../utils/imageCompressor';
@@ -28,7 +25,6 @@ import {
 } from 'lucide-react';
 import BarcodeScannerModal from './BarcodeScannerModal';
 import { StockModal } from './stoklar/StockModal';
-import { PrintBarcodeModal } from './stoklar/PrintBarcodeModal';
 import { LabelDesignerModal } from './labels/LabelDesignerModal';
 import { confirmDialog, alertDialog } from '../utils/dialogs';
 
@@ -163,47 +159,8 @@ function StoklarView({
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStock, setEditingStock] = useState<Stock | null>(null);
-  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-  const [printingStock, setPrintingStock] = useState<Stock | null>(null);
   // Etiket tasarla penceresi: null = kapalı, [] = toplu (ürün seçilerek), [stok] = tek ürün
   const [labelStocks, setLabelStocks] = useState<Stock[] | null>(null);
-
-  // QR Code State
-  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
-  const [qrStock, setQrStock] = useState<Stock | null>(null);
-  const [qrContentMode, setQrContentMode] = useState<'all' | 'barcode' | 'custom'>('all');
-  const [qrCustomText, setQrCustomText] = useState('');
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
-  const [isQrPrinting, setIsQrPrinting] = useState(false);
-
-  // Generate QR Code base64 data URL dynamically
-  useEffect(() => {
-    if (qrStock) {
-      let textToEncode = '';
-      if (qrContentMode === 'all') {
-        textToEncode = `Ürün: ${qrStock.name}\nKod: ${qrStock.code}\nBarkod: ${qrStock.barcode || '-'}\nFiyat: ${qrStock.salesPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL\nKDV: %${qrStock.taxRate}`;
-      } else if (qrContentMode === 'barcode') {
-        textToEncode = qrStock.barcode || qrStock.code;
-      } else {
-        textToEncode = qrCustomText || `https://storm.onmuhasebe.app/urun/${qrStock.id}`;
-      }
-
-      QRCode.toDataURL(textToEncode, {
-        width: 350,
-        margin: 1,
-        color: {
-          dark: '#000000',
-          light: '#ffffff',
-        },
-      })
-      .then(url => {
-        setQrCodeDataUrl(url);
-      })
-      .catch(err => {
-        console.error('QR Kod oluşturma hatası:', err);
-      });
-    }
-  }, [qrStock, qrContentMode, qrCustomText]);
 
   // Handle physical barcode scanner input globally in StoklarView
   useEffect(() => {
@@ -953,24 +910,7 @@ function StoklarView({
         <LabelDesignerModal initialStocks={labelStocks} allStocks={stoklar} onClose={() => setLabelStocks(null)} />
       )}
 
-{/* Print Barcode Modal */}
-      <PrintBarcodeModal
-        isOpen={isPrintModalOpen}
-        onClose={() => setIsPrintModalOpen(false)}
-        printingStock={printingStock}
-      />
-      
       <StoklarExtraModals 
-        isQrModalOpen={isQrModalOpen}
-        qrStock={qrStock}
-        setIsQrModalOpen={setIsQrModalOpen}
-        qrContentMode={qrContentMode}
-        setQrContentMode={setQrContentMode}
-        qrCustomText={qrCustomText}
-        setQrCustomText={setQrCustomText}
-        qrCodeDataUrl={qrCodeDataUrl}
-        isQrPrinting={isQrPrinting}
-        setIsQrPrinting={setIsQrPrinting}
         isPinModalOpen={isPinModalOpen}
         pinInput={pinInput}
         setPinInput={setPinInput}
@@ -986,9 +926,6 @@ function StoklarView({
         formatCurrency={formatCurrency}
         expandedCariId={expandedCariId}
         setExpandedCariId={setExpandedCariId}
-        isPrintModalOpen={isPrintModalOpen}
-        setIsPrintModalOpen={setIsPrintModalOpen}
-        printingStock={printingStock}
       />
     </div>
   );
