@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { User, Phone, X, ArrowDownLeft, ShoppingCart } from 'lucide-react';
+import { User, Phone, X, ArrowDownLeft, ShoppingCart, FileText } from 'lucide-react';
 import { Cari, Transaction } from '../../types';
+import { StatementPdfModal } from '../pdf/StatementPdfModal';
 import { Card, SectionTitle, SegmentedControl, SearchBox, EmptyState, BalanceText, balanceLabel, formatMoney, norm } from './fieldUi';
 
 interface FieldCariProps {
@@ -22,6 +23,7 @@ export const FieldCari: React.FC<FieldCariProps> = ({ cariler, islemler, canColl
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<CariFilter>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [statementCari, setStatementCari] = useState<Cari | null>(null);
 
   const list = useMemo(() => {
     const q = norm(query);
@@ -84,7 +86,7 @@ export const FieldCari: React.FC<FieldCariProps> = ({ cariler, islemler, canColl
             <div className="text-[10px] uppercase tracking-wider text-slate-400">{balanceLabel(selected.balance || 0)}</div>
             <BalanceText value={selected.balance || 0} currency={selected.currency} className="text-2xl" />
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {selected.phone ? (
               <a href={`tel:${selected.phone.replace(/[^0-9+]/g, '')}`} className="flex flex-col items-center gap-1 rounded-xl bg-black/30 border border-white/10 py-2.5 text-[11px] font-bold text-white">
                 <Phone size={17} /> Ara
@@ -97,6 +99,9 @@ export const FieldCari: React.FC<FieldCariProps> = ({ cariler, islemler, canColl
             </button>
             <button type="button" disabled={!canSell} onClick={() => onSell(selected)} className="flex flex-col items-center gap-1 rounded-xl bg-black/30 border border-white/10 py-2.5 text-[11px] font-bold text-white disabled:opacity-30 cursor-pointer">
               <ShoppingCart size={17} /> Satış
+            </button>
+            <button type="button" onClick={() => setStatementCari(selected)} className="flex flex-col items-center gap-1 rounded-xl bg-black/30 border border-white/10 py-2.5 text-[11px] font-bold text-white cursor-pointer">
+              <FileText size={17} /> Ekstre
             </button>
           </div>
           <div>
@@ -140,6 +145,9 @@ export const FieldCari: React.FC<FieldCariProps> = ({ cariler, islemler, canColl
         ))}
         {list.length === 0 && <EmptyState icon={<User size={28} />} text="Cari bulunamadı." />}
       </div>
+      {statementCari && (
+        <StatementPdfModal cari={statementCari} islemler={islemler} onClose={() => setStatementCari(null)} />
+      )}
     </div>
   );
 };

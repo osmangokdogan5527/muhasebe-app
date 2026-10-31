@@ -6,6 +6,7 @@
  * arasındaki fark "İskonto" olarak gösterilir; böylece matrah + KDV her zaman genel toplama eşittir.
  */
 import { Cari, Transaction } from '../types';
+import type { DocumentBalance } from '../utils/cariLedger';
 import { calculateInvoiceLine, roundMoney, splitInvoiceVat } from '../utils/invoiceMath';
 import { DocumentBranding } from './branding';
 import { registerPdfFonts, PDF_FONT, PDF_FONT_SEMIBOLD } from './fonts';
@@ -17,6 +18,7 @@ import {
   drawContinuationHeader,
   drawDocumentHeader,
   drawFooters,
+  drawBalanceBox,
   drawInfoBox,
   hexToRgb,
   setText,
@@ -50,6 +52,11 @@ const PAYMENT_LABELS: Record<string, string> = {
   pos: 'Kredi Kartı (POS)',
   '': 'Açık Hesap (Vadeli)',
 };
+
+export interface InvoicePdfOptions {
+  /** Cari bakiye özeti (ayarlarda kapalıysa ya da perakende satışsa verilmez) */
+  balance?: DocumentBalance | null;
+}
 
 export interface GeneratedPdf {
   blob: Blob;
@@ -113,7 +120,7 @@ function partyRows(islem: Transaction, cari: Cari | undefined) {
   ];
 }
 
-export async function createInvoicePdf(islem: Transaction, cari: Cari | undefined, branding: DocumentBranding): Promise<GeneratedPdf> {
+export async function createInvoicePdf(islem: Transaction, cari: Cari | undefined, branding: DocumentBranding, options: InvoicePdfOptions = {}): Promise<GeneratedPdf> {
   const [{ jsPDF }, { autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
   await registerPdfFonts(doc);
@@ -234,14 +241,21 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
   const lineHeight = 6;
   const grandHeight = 11;
   const totalsHeight = totalLines.length * lineHeight + grandHeight + 2;
-  const wordsText = amountToTurkishWords(grandTotal, currency);
   const leftWidth = contentWidth - totalsWidth - 8;
   setText(doc, 8.5, COLORS.text);
-  const wordLines = doc.splitTextToSize(wordsText, leftWidth) as string[];
+  const wordLines = branding.showAmountInWords
+    ? (doc.splitTextToSize(amountToTurkishWords(grandTotal, currency), leftWidth) as string[])
+    : [];
   const noteLines = islem.description && (islem.items || []).length > 0
     ? (doc.splitTextToSize(islem.description, leftWidth) as string[]).slice(0, 6)
     : [];
-  const leftHeight = 6 + wordLines.length * 4.2 + (noteLines.length ? 8 + noteLines.length * 4 : 0);
+  const balance = branding.showBalance ? options.balance || null : null;
+  const balanceCurrency = normalizeCurrency(cari?.currency || islem.currency);
+  const balanceLabel = islem.type === 'sale' ? 'Bu Fatura' : islem.type === 'purchase' ? 'Bu Fatura (Alış)' : 'Bu İade';
+  const balanceHeight = balance ? drawBalanceBox(doc, branding, 0, 0, leftWidth, balance, balanceCurrency, balanceLabel, true) : 0;
+  const leftHeight = (wordLines.length ? 8 + wordLines.length * 4.2 + 4 : 0)
+    + (noteLines.length ? 4.5 + noteLines.length * 4 + 4 : 0)
+    + (balance ? balanceHeight + 2 : 0);
   const blockHeight = Math.max(totalsHeight, leftHeight);
   const signatureHeight = branding.showSignatureArea ? 24 : 0;
 
@@ -271,20 +285,26 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
   setText(doc, 12, COLORS.white, 'bold');
   doc.text(formatMoney(grandTotal, currency), pageWidth - PAGE_MARGIN - 4, ty + 7.4, { align: 'right' });
 
-  // Yazıyla tutar ve açıklama
+  // Yazıyla tutar, açıklama ve cari hesap durumu
   let ly = y;
-  setText(doc, 7.5, accent, 'bold');
-  doc.text('TUTAR (YAZIYLA)', PAGE_MARGIN, ly + 4);
-  ly += 8;
-  setText(doc, 8.5, COLORS.text);
-  doc.text(wordLines, PAGE_MARGIN, ly);
-  ly += wordLines.length * 4.2 + 4;
+  if (wordLines.length) {
+    setText(doc, 7.5, accent, 'bold');
+    doc.text('TUTAR (YAZIYLA)', PAGE_MARGIN, ly + 4);
+    ly += 8;
+    setText(doc, 8.5, COLORS.text);
+    doc.text(wordLines, PAGE_MARGIN, ly);
+    ly += wordLines.length * 4.2 + 4;
+  }
   if (noteLines.length) {
     setText(doc, 7.5, accent, 'bold');
-    doc.text('AÇIKLAMA', PAGE_MARGIN, ly);
-    ly += 4.5;
+    doc.text('AÇIKLAMA', PAGE_MARGIN, ly + (wordLines.length ? 0 : 4));
+    ly += wordLines.length ? 4.5 : 8.5;
     setText(doc, 8.5, COLORS.text);
     doc.text(noteLines, PAGE_MARGIN, ly);
+    ly += noteLines.length * 4 + 4;
+  }
+  if (balance) {
+    drawBalanceBox(doc, branding, PAGE_MARGIN, ly, leftWidth, balance, balanceCurrency, balanceLabel);
   }
 
   // İmza alanı

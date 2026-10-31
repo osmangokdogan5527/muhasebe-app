@@ -5,6 +5,8 @@
 import type { jsPDF } from 'jspdf';
 import { DocumentBranding } from './branding';
 import { PDF_FONT, PDF_FONT_SEMIBOLD } from './fonts';
+import { DocumentCurrency, formatBalance, formatDate, formatSignedMoney } from './format';
+import type { DocumentBalance } from '../utils/cariLedger';
 
 export const PAGE_MARGIN = 14;
 export const FOOTER_HEIGHT = 16;
@@ -203,6 +205,51 @@ export function drawInfoBox(
     setText(doc, row.bold ? 10 : 8.5, COLORS.text, row.bold ? 'bold' : row.label ? 'semibold' : 'normal');
     doc.text(lines, x + padding + (row.label ? labelWidth : 0), cursor);
     cursor += lines.length * (row.bold ? 4.8 : lineHeight);
+  });
+  return height;
+}
+
+export const BALANCE_BOX_HEIGHT_BASE = 31;
+
+/**
+ * Cari hesap durumu kutusu: önceki bakiye, bu belgenin etkisi, belge sonrası bakiye ve
+ * (farklıysa) bugünkü güncel bakiye. Yüksekliğini döndürür; measureOnly ise çizmez.
+ */
+export function drawBalanceBox(
+  doc: jsPDF,
+  branding: DocumentBranding,
+  x: number,
+  y: number,
+  width: number,
+  balance: DocumentBalance,
+  currency: DocumentCurrency,
+  documentLabel: string,
+  measureOnly = false,
+): number {
+  const showCurrent = Math.abs(balance.current - balance.after) >= 0.005;
+  const rows: [string, string, boolean][] = [
+    ['Önceki Bakiye', formatBalance(balance.before, currency), false],
+    [documentLabel, formatSignedMoney(balance.effect, currency), false],
+    ['Belge Sonrası Bakiye', formatBalance(balance.after, currency), true],
+  ];
+  if (showCurrent) rows.push([`Güncel Bakiye (${formatDate(new Date().toISOString().slice(0, 10))})`, formatBalance(balance.current, currency), true]);
+  const rowHeight = 5;
+  const height = 10 + rows.length * rowHeight + 2;
+  if (measureOnly) return height;
+
+  const accent = hexToRgb(branding.accentColor);
+  doc.setDrawColor(tint(accent, 0.7)[0], tint(accent, 0.7)[1], tint(accent, 0.7)[2]);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(x, y, width, height, 1.8, 1.8, 'S');
+  setText(doc, 7.5, accent, 'bold');
+  doc.text('CARİ HESAP DURUMU', x + 3.5, y + 5.5);
+  let cy = y + 11;
+  rows.forEach(([label, value, strong]) => {
+    setText(doc, 8, COLORS.muted);
+    doc.text(label, x + 3.5, cy);
+    setText(doc, strong ? 9 : 8.5, COLORS.text, strong ? 'bold' : 'semibold');
+    doc.text(value, x + width - 3.5, cy, { align: 'right' });
+    cy += rowHeight;
   });
   return height;
 }

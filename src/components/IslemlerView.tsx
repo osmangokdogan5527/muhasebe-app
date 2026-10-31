@@ -26,9 +26,7 @@ import {
   Download
 } from 'lucide-react';
 import { IslemModal } from './islemler/IslemModal';
-import { PdfPrintModal } from './islemler/PdfPrintModal';
 import { TransactionPdfModal } from './pdf/TransactionPdfModal';
-import { isInvoiceTransaction } from '../pdf/invoicePdf';
 import { parseScannedQrCode } from '../utils/formatters';
 import { formatDateISO } from '../utils/dateUtils';
 import { alertDialog } from '../utils/dialogs';
@@ -698,19 +696,12 @@ function IslemlerView({
         onClearAiData={onClearPendingIslemModal}
       />
       {/* PDF Print Preview & Settings Modal */}
-      {selectedPrintTransaction && isInvoiceTransaction(selectedPrintTransaction) && (
+      {selectedPrintTransaction && (
         <TransactionPdfModal
           transaction={selectedPrintTransaction}
           cariler={cariler}
-          onClose={() => setSelectedPrintTransaction(null)}
-        />
-      )}
-      {/* Tahsilat/ödeme makbuzu 1.8.5'in 2. adımında yeni PDF'e geçecek */}
-      {selectedPrintTransaction && !isInvoiceTransaction(selectedPrintTransaction) && (
-        <PdfPrintModal
-          transaction={selectedPrintTransaction}
-          cariler={cariler}
-          stoklar={stoklar}
+          islemler={islemler}
+          bankAccounts={bankAccounts}
           onClose={() => setSelectedPrintTransaction(null)}
         />
       )}

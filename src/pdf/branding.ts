@@ -23,8 +23,12 @@ export interface DocumentBranding {
   accentColor: string;
   /** Belgelerin altında görünen not (ör. banka/IBAN bilgisi, teşekkür notu) */
   footerNote: string;
-  /** Faturada "Teslim Eden / Teslim Alan" imza alanı */
+  /** Faturada/makbuzda imza alanı (Teslim Eden / Teslim Alan) */
   showSignatureArea: boolean;
+  /** Fatura ve makbuzda carinin önceki / sonraki / güncel bakiyesi */
+  showBalance: boolean;
+  /** "Yalnız: ..." yazıyla tutar */
+  showAmountInWords: boolean;
   /** POS fişi kağıt genişliği (mm) */
   receiptWidth: ReceiptWidth;
 }
@@ -43,6 +47,8 @@ export const DEFAULT_BRANDING: DocumentBranding = {
   accentColor: DEFAULT_ACCENT_COLOR,
   footerNote: '',
   showSignatureArea: true,
+  showBalance: true,
+  showAmountInWords: true,
   receiptWidth: 80,
 };
 
@@ -69,6 +75,8 @@ export function normalizeBranding(raw: Partial<DocumentBranding> | Record<string
     accentColor: HEX_COLOR.test(accent) ? accent : DEFAULT_ACCENT_COLOR,
     footerNote: text(source.footerNote, 400),
     showSignatureArea: source.showSignatureArea !== false,
+    showBalance: source.showBalance !== false,
+    showAmountInWords: source.showAmountInWords !== false,
     receiptWidth: Number(source.receiptWidth) === 58 ? 58 : 80,
   };
 }

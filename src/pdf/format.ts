@@ -17,6 +17,23 @@ export function formatMoney(value: number, currency: DocumentCurrency = 'TRY'): 
   return `${formatted} ${CURRENCY_SYMBOL[currency]}`;
 }
 
+/**
+ * Cari bakiyesi: pozitif = cari borçlu ("Borç"), negatif = biz borçluyuz ("Alacak").
+ * 1250 -> "1.250,00 ₺ Borç", -300 -> "300,00 ₺ Alacak", 0 -> "0,00 ₺"
+ */
+export function formatBalance(value: number, currency: DocumentCurrency = 'TRY'): string {
+  const amount = Number.isFinite(value) ? value : 0;
+  if (Math.abs(amount) < 0.005) return formatMoney(0, currency);
+  return `${formatMoney(Math.abs(amount), currency)} ${amount > 0 ? 'Borç' : 'Alacak'}`;
+}
+
+/** Bakiyeye etki: +500 -> "+ 500,00 ₺", -500 -> "− 500,00 ₺" */
+export function formatSignedMoney(value: number, currency: DocumentCurrency = 'TRY'): string {
+  const amount = Number.isFinite(value) ? value : 0;
+  if (Math.abs(amount) < 0.005) return formatMoney(0, currency);
+  return `${amount > 0 ? '+' : '−'} ${formatMoney(Math.abs(amount), currency)}`;
+}
+
 /** Sayı (para birimi olmadan): 1234.5 -> "1.234,50" */
 export function formatNumber(value: number, fractionDigits = 2): string {
   const amount = Number.isFinite(value) ? value : 0;
