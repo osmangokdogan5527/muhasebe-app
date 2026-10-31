@@ -1,6 +1,6 @@
 import React, { useMemo, useState, Suspense } from 'react';
 import { lazyWithReload } from '../../utils/lazyWithReload';
-import { Package, AlertTriangle, X } from 'lucide-react';
+import { Package, AlertTriangle, X, Tag } from 'lucide-react';
 import { Stock } from '../../types';
 import { findStockByBarcodeOrSearch } from '../../utils/posUtils';
 import { parseScannedQrCode } from '../../utils/formatters';
@@ -8,6 +8,8 @@ import { Card, SectionTitle, SegmentedControl, SearchBox, EmptyState, formatMone
 
 // Kamera/barkod kütüphanesi büyük olduğu için tarayıcı ilk açıldığında indirilir
 const BarcodeScannerModal = lazyWithReload(() => import('../BarcodeScannerModal'));
+// Etiket tasarımı yalnızca açıldığında indirilir
+const LabelDesignerModal = lazyWithReload(() => import('../labels/LabelDesignerModal').then((m) => ({ default: m.LabelDesignerModal })));
 
 interface FieldStockProps {
   stoklar: Stock[];
@@ -20,6 +22,7 @@ export const FieldStock: React.FC<FieldStockProps> = ({ stoklar, showToast }) =>
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<StockFilter>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [labelStock, setLabelStock] = useState<Stock | null>(null);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const list = useMemo(() => {
@@ -72,6 +75,13 @@ export const FieldStock: React.FC<FieldStockProps> = ({ stoklar, showToast }) =>
               <div className="text-[10px] text-slate-500">Alış: {formatMoney(selected.purchasePrice)}{selected.taxRate ? ` • KDV %${selected.taxRate}` : ''}</div>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setLabelStock(selected)}
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-black/30 border border-white/10 py-2.5 text-xs font-bold text-white cursor-pointer"
+          >
+            <Tag size={15} /> Etiket (barkod / QR) PDF
+          </button>
           {(selected.category || selected.brand) && (
             <div className="text-[11px] text-slate-400">{[selected.category, selected.brand].filter(Boolean).join(' • ')}</div>
           )}
@@ -98,6 +108,12 @@ export const FieldStock: React.FC<FieldStockProps> = ({ stoklar, showToast }) =>
           {list.length === 0 && <EmptyState icon={<Package size={28} />} text={filter === 'critical' ? 'Kritik seviyede ürün yok.' : 'Ürün bulunamadı.'} />}
         </div>
       </div>
+
+      {labelStock && (
+        <Suspense fallback={null}>
+          <LabelDesignerModal initialStocks={[labelStock]} allStocks={stoklar} onClose={() => setLabelStock(null)} />
+        </Suspense>
+      )}
 
       {isScannerOpen && (
         <Suspense fallback={null}>

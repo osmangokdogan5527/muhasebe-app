@@ -2,15 +2,17 @@
  * İşlem PDF penceresi: faturalar (satış, alış, iade) ve tahsilat/ödeme makbuzları.
  * Firmanın belge ayarlarını okur, carinin belge öncesi/sonrası bakiyesini hesaplar.
  */
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { BankAccount, Cari, Transaction } from '../../types';
 import { createInvoicePdf, isInvoiceTransaction } from '../../pdf/invoicePdf';
 import { createReceiptPdf, receiptNumber, receiptTitle } from '../../pdf/receiptPdf';
+import { createPosReceiptPdf, receiptDataFromTransaction } from '../../pdf/posReceiptPdf';
 import { useDocumentBranding } from '../../pdf/useDocumentBranding';
 import { formatDate } from '../../pdf/format';
 import { documentBalance } from '../../utils/cariLedger';
 import { RETAIL_CARI_ID } from '../../firebase';
 import { PdfPreviewModal } from './PdfPreviewModal';
+import { PdfOptionTabs } from './PdfOptionTabs';
 
 const INVOICE_TITLES: Record<string, string> = {
   sale: 'Satış Faturası',
@@ -37,6 +39,9 @@ export const TransactionPdfModal: React.FC<TransactionPdfModalProps> = ({ transa
   const { branding, isLoaded } = useDocumentBranding();
   const cari = cariler.find((c) => c.id === transaction.cariId);
   const isInvoice = isInvoiceTransaction(transaction);
+  // Kasadan (POS) yapılan satışlar fiş olarak da alınabilir
+  const isPosSale = transaction.type === 'sale' && /^POS-/i.test(transaction.invoiceNo || '');
+  const [format, setFormat] = useState<'a4' | 'receipt'>(isPosSale ? 'receipt' : 'a4');
   const title = isInvoice ? INVOICE_TITLES[transaction.type] || 'Fatura' : titleCase(receiptTitle(transaction));
   const number = isInvoice ? transaction.invoiceNo || '' : receiptNumber(transaction);
 
@@ -61,12 +66,14 @@ export const TransactionPdfModal: React.FC<TransactionPdfModalProps> = ({ transa
     return islemler.find((t) => t.id === transaction.linkedInvoiceId)?.invoiceNo || '';
   }, [transaction.linkedInvoiceId, islemler]);
 
-  const generate = useCallback(
-    () => (isInvoice
+  const generate = useCallback(() => {
+    if (isPosSale && format === 'receipt') {
+      return createPosReceiptPdf(receiptDataFromTransaction(transaction, !cari || cari.id === RETAIL_CARI_ID), branding);
+    }
+    return isInvoice
       ? createInvoicePdf(transaction, cari, branding, { balance })
-      : createReceiptPdf(transaction, cari, branding, { balance, accountName, linkedInvoiceNo })),
-    [isInvoice, transaction, cari, branding, balance, accountName, linkedInvoiceNo],
-  );
+      : createReceiptPdf(transaction, cari, branding, { balance, accountName, linkedInvoiceNo });
+  }, [isPosSale, format, isInvoice, transaction, cari, branding, balance, accountName, linkedInvoiceNo]);
 
   const subtitle = [number, transaction.cariName, formatDate(transaction.date)].filter(Boolean).join('  ·  ');
   const shareText = `${branding.firmName || 'Firmamız'} - ${title}${number ? ` ${number}` : ''}`;
@@ -79,6 +86,14 @@ export const TransactionPdfModal: React.FC<TransactionPdfModalProps> = ({ transa
       shareText={shareText}
       ready={isLoaded}
       generate={generate}
+      toolbar={isPosSale ? (
+        <PdfOptionTabs<'receipt' | 'a4'>
+          label="Belge"
+          value={format}
+          options={[{ value: 'receipt', label: `Fiş (${branding.receiptWidth} mm)` }, { value: 'a4', label: 'A4 Fatura' }]}
+          onChange={setFormat}
+        />
+      ) : undefined}
       onClose={onClose}
     />
   );

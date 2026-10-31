@@ -899,22 +899,31 @@ export async function deleteCredit(id: string) {
   }
 }
 
-// BELGE GÖRÜNÜMÜ (PDF logo, firma bilgileri, renk) - firmanın tüm cihazlarında ortak
-export function subscribeDocumentBranding(callback: (data: Record<string, any> | null) => void) {
-  const ref = doc(db, getPath(AYARLAR_COLL), DOCUMENT_BRANDING_DOC_ID);
+// FİRMA AYARLARI (users/{firma}/ayarlar/{ayarId}) - firmanın tüm cihazlarında ortak
+// Kullanılanlar: belgeGorunumu (PDF logo, firma bilgileri, renk), etiketTasarimi (etiket ölçü/içerik)
+export function subscribeSettingDoc(settingId: string, callback: (data: Record<string, any> | null) => void) {
+  const ref = doc(db, getPath(AYARLAR_COLL), settingId);
   return onSnapshot(ref, (snapshot) => {
     callback(snapshot.exists() ? (snapshot.data() as Record<string, any>) : null);
-  }, (error) => handleFirestoreError(error, OperationType.GET, `${getPath(AYARLAR_COLL)}/${DOCUMENT_BRANDING_DOC_ID}`));
+  }, (error) => handleFirestoreError(error, OperationType.GET, `${getPath(AYARLAR_COLL)}/${settingId}`));
+}
+
+export async function saveSettingDoc(settingId: string, data: Record<string, any>) {
+  try {
+    const ref = doc(db, getPath(AYARLAR_COLL), settingId);
+    await commitWrite(setDoc(ref, cleanUndefined({ ...data, id: settingId, updatedAt: new Date().toISOString() })), `saveSettingDoc:${settingId}`);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `${getPath(AYARLAR_COLL)}/${settingId}`);
+    throw error;
+  }
+}
+
+export function subscribeDocumentBranding(callback: (data: Record<string, any> | null) => void) {
+  return subscribeSettingDoc(DOCUMENT_BRANDING_DOC_ID, callback);
 }
 
 export async function saveDocumentBranding(data: Record<string, any>) {
-  try {
-    const ref = doc(db, getPath(AYARLAR_COLL), DOCUMENT_BRANDING_DOC_ID);
-    await commitWrite(setDoc(ref, cleanUndefined({ ...data, id: DOCUMENT_BRANDING_DOC_ID, updatedAt: new Date().toISOString() })), 'saveDocumentBranding');
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, `${getPath(AYARLAR_COLL)}/${DOCUMENT_BRANDING_DOC_ID}`);
-    throw error;
-  }
+  return saveSettingDoc(DOCUMENT_BRANDING_DOC_ID, data);
 }
 
 // BANK ACCOUNTS & ACCOUNT TRANSACTIONS

@@ -25,6 +25,8 @@ export interface PdfPreviewModalProps {
   ready?: boolean;
   /** PDF'i üretir. Girdiler değişince yeniden çağrılması için useCallback ile verilmelidir. */
   generate: () => Promise<GeneratedPdf>;
+  /** Başlığın altında gösterilen seçenekler (ör. fiş genişliği 80/58 mm) */
+  toolbar?: React.ReactNode;
   onClose: () => void;
 }
 
@@ -36,7 +38,7 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({ isOpen, title, subtitle, shareText, ready = true, generate, onClose }) => {
+export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({ isOpen, title, subtitle, shareText, ready = true, generate, toolbar, onClose }) => {
   const [status, setStatus] = useState<Status>('loading');
   const [pdf, setPdf] = useState<GeneratedPdf | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
@@ -171,6 +173,8 @@ export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({ isOpen, title,
             <X size={20} />
           </button>
         </div>
+
+        {toolbar && <div className="shrink-0 px-5 py-3 border-b border-white/10">{toolbar}</div>}
 
         {/* İçerik */}
         <div className={`flex-1 min-h-0 ${inlinePreview && status === 'ready' ? 'bg-[#525659]' : ''}`}>

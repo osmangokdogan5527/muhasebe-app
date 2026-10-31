@@ -1,12 +1,14 @@
 import React, { useMemo, useState, Suspense } from 'react';
 import { lazyWithReload } from '../../utils/lazyWithReload';
-import { Minus, Plus, Trash2, Package, User, Banknote, CreditCard, BookOpen, CheckCircle2, ShoppingCart, ChevronRight } from 'lucide-react';
+import { Minus, Plus, Trash2, Package, User, Banknote, CreditCard, BookOpen, CheckCircle2, ShoppingCart, ChevronRight, FileText } from 'lucide-react';
 import { Cari, Stock, BankAccount } from '../../types';
 import { PosCartItem, PosPaymentSplit } from '../../types/pos';
 import { calculateLineTotal, calculateCartSummary, findStockByBarcodeOrSearch, generateReceiptNo } from '../../utils/posUtils';
 import { parseScannedQrCode } from '../../utils/formatters';
 import { getTodayISO } from '../../utils/dateUtils';
 import { logError } from '../../utils/errorLogger';
+import { ReceiptPdfModal } from '../pdf/ReceiptPdfModal';
+import { ReceiptSaleData, receiptDataFromPosSummary } from '../../pdf/posReceiptPdf';
 import { Card, SectionTitle, PrimaryButton, SegmentedControl, SearchBox, EmptyState, CariPickerSheet, formatMoney, norm } from './fieldUi';
 
 // Kamera/barkod kütüphanesi büyük olduğu için tarayıcı ilk açıldığında indirilir
@@ -45,7 +47,8 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isCariPickerOpen, setIsCariPickerOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [lastSale, setLastSale] = useState<{ receiptNo: string; total: number; cariName: string } | null>(null);
+  const [lastSale, setLastSale] = useState<{ receiptNo: string; total: number; cariName: string; receipt: ReceiptSaleData } | null>(null);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   // Cari ekranından "Satış Yap" ile gelindiyse cariyi seç
   React.useEffect(() => {
@@ -148,7 +151,7 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
     try {
       const receiptNo = generateReceiptNo();
       const cariName = cari ? cari.name : 'Perakende Müşteri';
-      const ok = await onCompleteSale({
+      const saleData: FieldSaleData = {
         receiptNo,
         cariId: cari?.id,
         cariName,
@@ -159,9 +162,14 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
         totalTax: summary.totalTax,
         totalDiscount: summary.totalDiscount,
         date: getTodayISO(),
-      });
+      };
+      const ok = await onCompleteSale(saleData);
       if (ok) {
-        setLastSale({ receiptNo, total, cariName });
+        const receipt = receiptDataFromPosSummary({
+          ...saleData,
+          time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+        });
+        setLastSale({ receiptNo, total, cariName, receipt });
         setCart([]);
         setCari(null);
         setPayMethod('cash');
@@ -201,11 +209,21 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
       {lastSale && cart.length === 0 && (
         <Card className="!border-emerald-500/30 !bg-emerald-500/10 flex items-center gap-3">
           <CheckCircle2 size={28} className="text-emerald-400 shrink-0" />
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="text-sm font-bold text-white">Satış tamamlandı — {formatMoney(lastSale.total)}</div>
-            <div className="text-[11px] text-emerald-200/80">{lastSale.cariName} • Fiş {lastSale.receiptNo}</div>
+            <div className="text-[11px] text-emerald-200/80 truncate">{lastSale.cariName} • Fiş {lastSale.receiptNo}</div>
           </div>
+          <button
+            type="button"
+            onClick={() => setIsReceiptOpen(true)}
+            className="shrink-0 flex items-center gap-1.5 rounded-xl bg-white/10 border border-white/15 px-3 py-2 text-xs font-bold text-white cursor-pointer"
+          >
+            <FileText size={15} /> Fiş
+          </button>
         </Card>
+      )}
+      {lastSale && isReceiptOpen && (
+        <ReceiptPdfModal data={lastSale.receipt} onClose={() => setIsReceiptOpen(false)} />
       )}
 
       <div>
