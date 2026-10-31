@@ -40,6 +40,7 @@ import {
   SIDEBAR_PATTERNS,
   DEFAULT_SHORTCUTS
 } from '../constants';
+import { confirmDialog } from '../utils/dialogs';
 
 export interface AyarlarViewProps {
   activeTheme: string;
@@ -254,8 +255,8 @@ export default function AyarlarView({
     showToast('Kısayol başarıyla güncellendi.', 'success');
   };
 
-  const handleResetShortcuts = () => {
-    const confirmReset = window.confirm('Tüm kısayolları varsayılan değerlerine döndürmek istediğinizden emin misiniz?');
+  const handleResetShortcuts = async () => {
+    const confirmReset = await confirmDialog('Tüm kısayolları varsayılan değerlerine döndürmek istediğinizden emin misiniz?');
     if (confirmReset) {
       setShortcuts(DEFAULT_SHORTCUTS);
       localStorage.setItem('storm_muhasebe_shortcuts', JSON.stringify(DEFAULT_SHORTCUTS));

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { lazyWithReload } from './utils/lazyWithReload';
 import { useAppSettings } from './hooks/useAppSettings';
 import { useAppData } from './hooks/useAppData';
 import { useAppAuth } from './hooks/useAppAuth';
@@ -35,25 +36,13 @@ import {
 } from './firebase';
 import { logError } from './utils/errorLogger';
 import { PosCartItem, PosPaymentSplit } from './types/pos';
-import { PosView } from './components/pos/PosView';
+
 import { enableNetwork, disableNetwork } from 'firebase/firestore';
 import { BackupWizardModal } from './components/backup/BackupWizardModal';
 import { FluidMeshBackground } from './components/FluidMeshBackground';
-import { FieldApp } from './components/field/FieldApp';
 import { isStandaloneApp } from './utils/pwa';
-import DashboardView from './components/DashboardView';
-import CarilerView from './components/CarilerView';
-import StoklarView from './components/StoklarView';
-import IslemlerView from './components/IslemlerView';
-import CekSenetView from './components/CekSenetView';
-import MasraflarView from './components/MasraflarView';
-import CalisanlarView from './components/CalisanlarView';
-import KasaView from './components/KasaView';
-import KredilerView from './components/KredilerView';
-import RaporlarView from './components/RaporlarView';
 import { GlobalStyles } from "./components/GlobalStyles";
 import YetkisizErisimView from './components/YetkisizErisimView';
-import AyarlarView from './components/AyarlarView';
 import { DesktopSidebar } from "./components/DesktopSidebar";
 import { MobileHeader } from "./components/MobileHeader";
 import { MobileMenuView } from "./components/MobileMenuView";
@@ -96,11 +85,42 @@ import { compressImage } from './utils/imageCompressor';
 import { StormLogo, APP_VERSION, CHANGELOG, COLOR_PRESETS, TAB_DEFS, SIDEBAR_PATTERNS, changelogData, DEFAULT_SHORTCUTS } from "./constants";
 import { DeviceAccount, loadDeviceAccounts, upsertDeviceAccount } from "./utils/accountStore";
 import { changeTenantPassword } from "./utils/tenantAuth";
+import { alertDialog } from './utils/dialogs';
+// Ekranlar ilk açıldıklarında indirilir (açılış hızı): program yalnızca görünen ekranın
+// kodunu yükler; Excel, PDF, grafik ve kamera kütüphaneleri de ilgili ekranla birlikte gelir.
+const DashboardView = lazyWithReload(() => import('./components/DashboardView'));
+const PosView = lazyWithReload(() => import('./components/pos/PosView').then((m) => ({ default: m.PosView })));
+const CarilerView = lazyWithReload(() => import('./components/CarilerView'));
+const StoklarView = lazyWithReload(() => import('./components/StoklarView'));
+const IslemlerView = lazyWithReload(() => import('./components/IslemlerView'));
+const CekSenetView = lazyWithReload(() => import('./components/CekSenetView'));
+const MasraflarView = lazyWithReload(() => import('./components/MasraflarView'));
+const CalisanlarView = lazyWithReload(() => import('./components/CalisanlarView'));
+const KasaView = lazyWithReload(() => import('./components/KasaView'));
+const KredilerView = lazyWithReload(() => import('./components/KredilerView'));
+const RaporlarView = lazyWithReload(() => import('./components/RaporlarView'));
+const AyarlarView = lazyWithReload(() => import('./components/AyarlarView'));
+const FieldApp = lazyWithReload(() => import('./components/field/FieldApp').then((m) => ({ default: m.FieldApp })));
+
+/** Ekran kodu indirilirken gösterilen küçük yükleniyor göstergesi. */
+const TabLoading: React.FC = () => (
+  <div className="flex items-center justify-center py-24" role="status" aria-live="polite">
+    <div className="w-8 h-8 rounded-full border-2 border-white/15 border-t-[color:var(--accent-500,#0ea5e9)] animate-spin" />
+    <span className="sr-only">Yükleniyor...</span>
+  </div>
+);
+
 export default function App() {
   const [isBackupWizardOpen, setIsBackupWizardOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(() => {
     return window.innerWidth < 768 ? 'menu' : 'dashboard';
   });
+  // Bir ekran ilk açıldığında oluşturulur, sonra açık kalır (sekme değişince yeri/girdiler korunur).
+  // Önceden tüm ekranlar açılışta gizli olarak oluşturuluyordu; bu, açılışı yavaşlatıyordu.
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    setVisitedTabs((prev) => (prev.has(activeTab) ? prev : new Set(prev).add(activeTab)));
+  }, [activeTab]);
   const [userRole, setUserRole] = useState<'admin' | 'employee'>('employee');
   const [isAdminPinModalOpen, setIsAdminPinModalOpen] = useState(false);
   const [adminPinInput, setAdminPinInput] = useState('');
@@ -530,7 +550,7 @@ export default function App() {
             }
           }
           
-          alert(`Güncelleme indirilirken hata oluştu:\n${friendlyError}`);
+          alertDialog(`Güncelleme indirilirken hata oluştu:\n${friendlyError}`);
         });
       }
     }
@@ -623,11 +643,14 @@ export default function App() {
   } : {};
   
 
-  const renderWorkspaceView = (id: string, content: any) => (
-    <div className={`w-full max-w-7xl mx-auto ${isLightSidebar ? 'text-gray-800' : 'text-gray-100'} transition-colors duration-300`}>
-      {content}
-    </div>
-  );
+  const renderWorkspaceView = (id: string, content: any) => {
+    if (id !== activeTab && !visitedTabs.has(id)) return null;
+    return (
+      <div className={`w-full max-w-7xl mx-auto ${isLightSidebar ? 'text-gray-800' : 'text-gray-100'} transition-colors duration-300`}>
+        <Suspense fallback={<TabLoading />}>{content}</Suspense>
+      </div>
+    );
+  };
 
   const renderSettingsView = () => (
     <AyarlarView
@@ -869,6 +892,7 @@ export default function App() {
     return (
       <>
         <style>{`:root { ${themeCssRules} }`}</style>
+        <Suspense fallback={<LoadingScreen currentThemeData={currentThemeData} themeCssRules={themeCssRules} />}>
         <FieldApp
           firmName={user.displayName || 'Storm'}
           cariler={cariler}
@@ -904,6 +928,7 @@ export default function App() {
             financialData: { cariler, stoklar, islemler, ceksenet, expenses, bankAccounts, employees, employeeTransactions, accountTransactions },
           }}
         />
+        </Suspense>
       </>
     );
   }

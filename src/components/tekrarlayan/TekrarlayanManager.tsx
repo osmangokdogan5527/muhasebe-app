@@ -33,6 +33,7 @@ import {
   TrendingDown,
   Building
 } from 'lucide-react';
+import { confirmDialog, alertDialog } from '../../utils/dialogs';
 
 interface TekrarlayanManagerProps {
   recurringTransactions: RecurringTransaction[];
@@ -121,20 +122,20 @@ export default function TekrarlayanManager({
       await saveRecurringTransaction(updated, item.id);
     } catch (err: any) {
       logError(err, 'TekrarlayanManager.handleToggleStatus');
-      alert(`Durum değiştirilirken hata oluştu: ${err.message || ''}`);
+      alertDialog(`Durum değiştirilirken hata oluştu: ${err.message || ''}`);
     }
   };
 
   // Delete template
   const handleDelete = async (item: RecurringTransaction) => {
-    if (!window.confirm(`"${item.title}" şablonunu silmek istediğinize emin misiniz?`)) {
+    if (!(await confirmDialog(`"${item.title}" şablonunu silmek istediğinize emin misiniz?`))) {
       return;
     }
     try {
       await deleteRecurringTransaction(item.id);
     } catch (err: any) {
       logError(err, 'TekrarlayanManager.handleDelete');
-      alert(`Silinirken hata oluştu: ${err.message || ''}`);
+      alertDialog(`Silinirken hata oluştu: ${err.message || ''}`);
     }
   };
 

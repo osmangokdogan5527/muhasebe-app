@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 
 export interface ParsedCari {
   name: string;
@@ -24,6 +23,8 @@ export const parseExcelWithAI = async (file: File): Promise<ExcelParseResult> =>
     reader.onload = async (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        // Excel kütüphanesi büyük olduğu için yalnızca dosya okunurken indirilir
+        const XLSX = await import('xlsx');
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];

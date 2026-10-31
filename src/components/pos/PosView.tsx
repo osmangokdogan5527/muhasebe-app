@@ -11,6 +11,7 @@ import { ShoppingCart, Zap, DollarSign, CreditCard, User, Clock, CheckCircle2, R
 import { logError } from '../../utils/errorLogger';
 import { formatDateISO } from '../../utils/dateUtils';
 import { APP_VERSION } from '../../constants';
+import { confirmDialog, alertDialog } from '../../utils/dialogs';
 
 interface PosViewProps {
   stocks: Stock[];
@@ -320,9 +321,9 @@ export const PosView: React.FC<PosViewProps> = ({
     setCartItems((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const handleClearCart = () => {
+  const handleClearCart = async () => {
     if (cartItems.length === 0) return;
-    if (window.confirm('Sepetteki tüm ürünler silinecek. Onaylıyor musunuz?')) {
+    if (await confirmDialog('Sepetteki tüm ürünler silinecek. Onaylıyor musunuz?')) {
       setCartItems([]);
       setSelectedCari(null);
       setDiscountVal('');
@@ -366,7 +367,7 @@ export const PosView: React.FC<PosViewProps> = ({
   const handleParkSale = () => {
     try {
       if (cartItems.length === 0) {
-        alert('Askıya almak için sepete en az bir ürün eklemelisiniz.');
+        alertDialog('Askıya almak için sepete en az bir ürün eklemelisiniz.');
         return;
       }
 
@@ -382,7 +383,7 @@ export const PosView: React.FC<PosViewProps> = ({
       setParkedSales((prev) => [newParked, ...prev]);
       setCartItems([]);
       setSelectedCari(null);
-      alert('Satış başarıyla askıya alındı.');
+      alertDialog('Satış başarıyla askıya alındı.');
     } catch (err: any) {
       logError(err, 'PosView:handleParkSale');
     }
@@ -461,7 +462,7 @@ export const PosView: React.FC<PosViewProps> = ({
       }
     } catch (err: any) {
       logError(err, 'PosView:executeSale');
-      alert('Satış kaydı sırasında bir hata oluştu: ' + (err.message || err));
+      alertDialog('Satış kaydı sırasında bir hata oluştu: ' + (err.message || err));
     } finally {
       setIsProcessing(false);
     }

@@ -45,8 +45,6 @@ import {
   PieChart, 
   Pie 
 } from 'recharts';
-import * as XLSX from 'xlsx';
-import { jsPDF } from 'jspdf';
 import { formatDateISO } from '../utils/dateUtils';
 import { useFxRates } from '../hooks/useFxRates';
 

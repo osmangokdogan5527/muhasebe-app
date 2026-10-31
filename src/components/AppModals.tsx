@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { RotateCcw, CloudLightning, Check, MessageSquare, ImageIcon, ShieldCheck, X, Download, ShieldAlert, Info } from 'lucide-react';
 import { StormLogo, } from '../constants';
 import AiAssistant from "./AiAssistant";
+import { alertDialog } from '../utils/dialogs';
 
 interface AppModalsProps {
   resetModalOpen: boolean;
@@ -487,7 +488,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
                             const compressed = await compressImage(file, 800, 800, 0.7);
                             setFeedbackImage(compressed);
                           } catch (err: any) {
-                            alert(err.message || "Resim sıkıştırılırken bir hata oluştu.");
+                            alertDialog(err.message || "Resim sıkıştırılırken bir hata oluştu.");
                           } finally {
                             setFeedbackImageLoading(false);
                           }
@@ -515,7 +516,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
                 type="button"
                 onClick={() => {
                   if (!feedbackText.trim()) {
-                    alert("Lütfen detaylar kısmını doldurun.");
+                    alertDialog("Lütfen detaylar kısmını doldurun.");
                     return;
                   }
                   const newFeedback = {
@@ -538,7 +539,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
                   setFeedbackImage(null);
                   setFeedbackType('error');
                   
-                  alert("Bildiriminiz başarıyla iletildi. Teşekkür ederiz!");
+                  alertDialog("Bildiriminiz başarıyla iletildi. Teşekkür ederiz!");
                 }}
                 disabled={feedbackImageLoading}
                 className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm uppercase tracking-widest rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"

@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, Suspense } from 'react';
+import { lazyWithReload } from '../../utils/lazyWithReload';
 import { Minus, Plus, Trash2, Package, User, Banknote, CreditCard, BookOpen, CheckCircle2, ShoppingCart, ChevronRight } from 'lucide-react';
 import { Cari, Stock, BankAccount } from '../../types';
 import { PosCartItem, PosPaymentSplit } from '../../types/pos';
@@ -6,8 +7,10 @@ import { calculateLineTotal, calculateCartSummary, findStockByBarcodeOrSearch, g
 import { parseScannedQrCode } from '../../utils/formatters';
 import { getTodayISO } from '../../utils/dateUtils';
 import { logError } from '../../utils/errorLogger';
-import BarcodeScannerModal from '../BarcodeScannerModal';
 import { Card, SectionTitle, PrimaryButton, SegmentedControl, SearchBox, EmptyState, CariPickerSheet, formatMoney, norm } from './fieldUi';
+
+// Kamera/barkod kütüphanesi büyük olduğu için tarayıcı ilk açıldığında indirilir
+const BarcodeScannerModal = lazyWithReload(() => import('../BarcodeScannerModal'));
 
 export interface FieldSaleData {
   receiptNo: string;
@@ -275,7 +278,11 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
         </div>
       )}
 
-      <BarcodeScannerModal isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={handleScan} title="Ürün Barkodu Okut" multiScan />
+      {isScannerOpen && (
+        <Suspense fallback={null}>
+        <BarcodeScannerModal isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={handleScan} title="Ürün Barkodu Okut" multiScan />
+        </Suspense>
+      )}
       <CariPickerSheet
         isOpen={isCariPickerOpen}
         cariler={cariler}

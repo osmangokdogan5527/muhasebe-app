@@ -6,11 +6,11 @@ import { ClassicTemplate } from './print-templates/ClassicTemplate';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Transaction, Cari } from '../../types';
 import { X, Search, FileText, CreditCard, Wallet, AlertCircle, Check, Printer, Download, Settings, RefreshCcw, Maximize2, ZoomIn, ZoomOut, Sparkles } from 'lucide-react';
-import { jsPDF } from 'jspdf';
 import { toPng } from 'html-to-image';
 
 import Barcode from 'react-barcode';
 import { Stock } from '../../types';
+import { alertDialog } from '../../utils/dialogs';
 
 export interface PdfPrintModalProps {
   transaction: Transaction | null;
@@ -550,7 +550,8 @@ export function PdfPrintModal({ transaction, cariler, stoklar, onClose }: PdfPri
                           // Reset original transform immediately
                           printContent.style.transform = originalTransform;
 
-                          // Create jsPDF document
+                          // Create jsPDF document (kütüphane yalnızca PDF istendiğinde indirilir)
+                          const { jsPDF } = await import('jspdf');
                           const doc = new jsPDF({
                             orientation: isLandscape ? 'landscape' : 'portrait',
                             unit: 'mm',
@@ -578,7 +579,7 @@ export function PdfPrintModal({ transaction, cariler, stoklar, onClose }: PdfPri
                             console.error('Hata günlüğü yazılamadı:', logErr);
                           }
 
-                          alert('PDF oluşturulurken bir hata meydana geldi.');
+                          alertDialog('PDF oluşturulurken bir hata meydana geldi.');
                         } finally {
                           setIsPdfDownloading(false);
                         }

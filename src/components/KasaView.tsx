@@ -35,6 +35,7 @@ import {
 import { getTodayISO } from '../utils/dateUtils';
 import { computeAccountBalances, createCashCurrencyConverters } from '../utils/cashBalances';
 import { useFxRates } from '../hooks/useFxRates';
+import { confirmDialog } from '../utils/dialogs';
 interface KasaViewProps {
   islemler: Transaction[];
   cariler?: Cari[];
@@ -543,9 +544,9 @@ export default function KasaView({ islemler, cariler = [], expenses, employeeTra
                               </span>
                             ) : (
                               <button
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                   e.stopPropagation();
-                                  if (window.confirm('Bu hesabı silmek istediğinize emin misiniz?')) {
+                                  if (await confirmDialog('Bu hesabı silmek istediğinize emin misiniz?')) {
                                     deleteBankAccount(acc.id);
                                   }
                                 }}
@@ -627,9 +628,9 @@ export default function KasaView({ islemler, cariler = [], expenses, employeeTra
                               </span>
                             ) : (
                               <button
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                   e.stopPropagation();
-                                  if (window.confirm('Bu hesabı silmek istediğinize emin misiniz?')) {
+                                  if (await confirmDialog('Bu hesabı silmek istediğinize emin misiniz?')) {
                                     deleteBankAccount(acc.id);
                                   }
                                 }}
@@ -711,9 +712,9 @@ export default function KasaView({ islemler, cariler = [], expenses, employeeTra
                               </span>
                             ) : (
                               <button
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                   e.stopPropagation();
-                                  if (window.confirm('Bu hesabı silmek istediğinize emin misiniz?')) {
+                                  if (await confirmDialog('Bu hesabı silmek istediğinize emin misiniz?')) {
                                     deleteBankAccount(acc.id);
                                   }
                                 }}

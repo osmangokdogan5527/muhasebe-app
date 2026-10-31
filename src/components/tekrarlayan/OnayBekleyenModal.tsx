@@ -4,6 +4,7 @@ import { saveExpense, saveRecurringTransaction } from '../../firebase';
 import { logError } from '../../utils/errorLogger';
 import { calculateNextDueDate, getTodayISO } from '../../utils/recurringUtils';
 import { X, CheckCircle, SkipForward, Edit3, Calendar, DollarSign, AlertCircle, Building, Wallet, Tag } from 'lucide-react';
+import { confirmDialog } from '../../utils/dialogs';
 
 interface OnayBekleyenModalProps {
   isOpen: boolean;
@@ -132,7 +133,7 @@ export default function OnayBekleyenModal({
 
   // Skip this period
   const handleSkipPeriod = async () => {
-    if (!window.confirm(`"${pendingItem.title}" işleminin bu dönemini (${pendingItem.nextDueDate}) pas geçmek istediğinize emin misiniz? Gider kaydı oluşturulmayacak, bir sonraki vadeye aktarılacaktır.`)) {
+    if (!await confirmDialog(`"${pendingItem.title}" işleminin bu dönemini (${pendingItem.nextDueDate}) pas geçmek istediğinize emin misiniz? Gider kaydı oluşturulmayacak, bir sonraki vadeye aktarılacaktır.`)) {
       return;
     }
 

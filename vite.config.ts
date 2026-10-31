@@ -7,6 +7,22 @@ export default defineConfig(() => {
   return {
     base: './',
     plugins: [react(), tailwindcss()],
+    build: {
+      // Derlenen tüm dosyaların listesi: telefon uygulaması (sw.js) internetsiz açılabilmek için
+      // ekranları ilk açılışta bu listeden önbelleğe alır.
+      manifest: 'asset-manifest.json',
+      rollupOptions: {
+        output: {
+          // Sık değişmeyen büyük kütüphaneler ayrı dosyada: yeni sürümde yeniden indirilmez
+          manualChunks(id: string) {
+            if (!id.includes('node_modules')) return undefined;
+            if (/node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return 'vendor-react';
+            if (/node_modules[\\/](@firebase|firebase)[\\/]/.test(id)) return 'vendor-firebase';
+            return undefined;
+          },
+        },
+      },
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

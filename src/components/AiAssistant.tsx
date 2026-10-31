@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Loader2, Paperclip, File, FileText, FileSpreadsheet, Sparkles, AlertCircle, Settings, Bot, Mic, HelpCircle, Sliders, BookOpen, ChevronRight, Check } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -219,6 +218,8 @@ export default function AiAssistant({
       if (extension === 'xlsx' || extension === 'xls') {
         fileType = 'excel';
         const data = await file.arrayBuffer();
+        // Excel kütüphanesi büyük olduğu için yalnızca Excel dosyası eklendiğinde indirilir
+        const XLSX = await import('xlsx');
         const workbook = XLSX.read(data);
         // Sadece ilk sayfayı alalım
         const firstSheetName = workbook.SheetNames[0];

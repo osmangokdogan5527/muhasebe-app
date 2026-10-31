@@ -5,9 +5,8 @@ import { X, Printer, Download, Plus, ArrowRight, ArrowLeft, RotateCcw, AlertTria
 
 import { createTransaction, saveCari } from '../../firebase';
 import { calculateInvoiceLine } from '../../utils/invoiceMath';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import { getTodayISO } from '../../utils/dateUtils';
+import { alertDialog } from '../../utils/dialogs';
 
 export interface LedgerDrawerProps {
   isOpen: boolean;
@@ -479,6 +478,8 @@ export function LedgerDrawer({
     if (!element) return;
 
     try {
+      // PDF kütüphaneleri büyük olduğu için yalnızca PDF istendiğinde indirilir
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
       const canvas = await html2canvas(element, { scale: 2 });
       const imgData = canvas.toDataURL("image/png");
 
@@ -490,7 +491,7 @@ export function LedgerDrawer({
       pdf.save(`cari_ekstre_${currentCari.name.replace(/\s+/g, '_')}.pdf`);
     } catch (err) {
       console.error("PDF oluşturulurken hata:", err);
-      alert("PDF oluşturulurken bir hata oluştu.");
+      alertDialog("PDF oluşturulurken bir hata oluştu.");
     }
   };
 

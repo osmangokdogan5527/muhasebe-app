@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Stock } from '../../types';
 import { Search, Package, Check, Tag, Filter, Zap, Barcode, Plus, FolderPlus, Layers, LayoutGrid, ListFilter, X, Edit2 } from 'lucide-react';
 import { logError } from '../../utils/errorLogger';
+import { confirmDialog } from '../../utils/dialogs';
 
 interface PosProductCatalogProps {
   stocks: Stock[];
@@ -378,8 +379,8 @@ export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
                   <h4 className="text-xs font-black text-slate-200">Tanımlı Bölümler ({allCategories.length})</h4>
                   {customDepartments.length > 0 && (
                     <button
-                      onClick={() => {
-                        if (confirm('Tüm özel tanımlı bölümleri silmek istediğinize emin misiniz?')) {
+                      onClick={async () => {
+                        if (await confirmDialog('Tüm özel tanımlı bölümleri silmek istediğinize emin misiniz?')) {
                           setCustomDepartments([]);
                           localStorage.removeItem('storm_pos_custom_departments');
                         }

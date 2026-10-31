@@ -26,6 +26,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { getTodayISO } from '../utils/dateUtils';
+import { confirmDialog, alertDialog } from '../utils/dialogs';
 interface CalisanlarViewProps {
   employees: Employee[];
   transactions: EmployeeTransaction[];
@@ -256,15 +257,15 @@ export default function CalisanlarView({
   ) => {
     e.stopPropagation();
     if (
-      !window.confirm(
+      !(await confirmDialog(
         `"${name}" adlı çalışanı silmek istediğinize emin misiniz? Bu işlem çalışanın cari geçmişini silmez.`,
-      )
+      ))
     )
       return;
     try {
       await deleteEmployee(id);
     } catch (err: any) {
-      alert("Çalışan silinirken hata oluştu: " + err.message);
+      alertDialog("Çalışan silinirken hata oluştu: " + err.message);
     }
   };
   const handleOpenCreateTx = (empId?: string) => {
@@ -304,12 +305,12 @@ export default function CalisanlarView({
     setIsTxModalOpen(true);
   };
   const handleDeleteTx = async (id: string) => {
-    if (!window.confirm("Bu hareketi silmek istediğinize emin misiniz?"))
+    if (!(await confirmDialog("Bu hareketi silmek istediğinize emin misiniz?")))
       return;
     try {
       await deleteEmployeeTransaction(id);
     } catch (err: any) {
-      alert("İşlem silinirken hata oluştu: " + err.message);
+      alertDialog("İşlem silinirken hata oluştu: " + err.message);
     }
   };
   const handleEmployeeSubmit = async (e: React.FormEvent) => {

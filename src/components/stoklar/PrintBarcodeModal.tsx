@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Stock } from '../../types';
 import { X, Printer, Settings, Layers, Download } from 'lucide-react';
 import Barcode from 'react-barcode';
-import { jsPDF } from 'jspdf';
 import { toPng } from 'html-to-image';
 import { QrCodeImage } from '../templatedesigner/QrCodeImage';
+import { alertDialog } from '../../utils/dialogs';
 
 export interface PrintBarcodeModalProps {
   isOpen: boolean;
@@ -328,7 +328,7 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
                         link.click();
                       } catch (err) {
                         console.error('Resim kaydetme hatası:', err);
-                        alert('Görsel oluşturulurken bir hata oluştu.');
+                        alertDialog('Görsel oluşturulurken bir hata oluştu.');
                       }
                     }
                   }}
@@ -438,7 +438,7 @@ export function PrintBarcodeModal({ isOpen, onClose, printingStock }: PrintBarco
                       }
                     } catch (err) {
                       console.error('Yazdırma hazırlama hatası:', err);
-                      alert('Yazdırma işlemi hazırlanırken bir hata oluştu. Lütfen tekrar deneyin.');
+                      alertDialog('Yazdırma işlemi hazırlanırken bir hata oluştu. Lütfen tekrar deneyin.');
                     }
                   } else {
                     window.print();

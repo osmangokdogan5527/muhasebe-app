@@ -1,6 +1,7 @@
 import React from 'react';
 import { QrCode, Download, FileText, CheckCircle, AlertCircle, X, Package, Hash, Tag, Activity, Users, Truck, Printer, ShieldAlert } from 'lucide-react';
 import { toPng } from 'html-to-image';
+import { alertDialog } from '../../utils/dialogs';
 export function StoklarExtraModals({ isQrModalOpen, qrStock, setIsQrModalOpen, qrContentMode, setQrContentMode, qrCustomText, setQrCustomText, qrCodeDataUrl, isQrPrinting, setIsQrPrinting, isPinModalOpen, pinInput, setPinInput, pinError, setPinError, escalationPin, pinVerificationAction, setPinVerificationAction, setIsPinModalOpen, selectedStockForDetails, setSelectedStockForDetails, salesDetails, formatCurrency, expandedCariId, setExpandedCariId, isPrintModalOpen, setIsPrintModalOpen, printingStock }: any) {
   return (
     <>
@@ -160,7 +161,7 @@ export function StoklarExtraModals({ isQrModalOpen, qrStock, setIsQrModalOpen, q
                         link.click();
                       } catch (err) {
                         console.error('QR etiket indirme hatası:', err);
-                        alert('QR etiket resmi indirilirken bir hata oluştu.');
+                        alertDialog('QR etiket resmi indirilirken bir hata oluştu.');
                       }
                     }
                   }}
@@ -259,7 +260,7 @@ export function StoklarExtraModals({ isQrModalOpen, qrStock, setIsQrModalOpen, q
                         }
                       } catch (err) {
                         console.error('QR yazdırma hatası:', err);
-                        alert('Yazdırma işlemi hazırlanırken bir hata oluştu.');
+                        alertDialog('Yazdırma işlemi hazırlanırken bir hata oluştu.');
                       } finally {
                         setIsQrPrinting(false);
                       }
