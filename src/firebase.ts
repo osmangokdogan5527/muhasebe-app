@@ -528,7 +528,9 @@ async function planRemoveTransaction(islem: Transaction): Promise<TransactionWri
   if (!islemSnap.exists()) {
     throw new Error("İşlem bulunamadı.");
   }
-  const storedIslem = islemSnap.data() as Transaction;
+  // Geri alma, ekrandaki kopyaya değil veritabanındaki kayda göre yapılır
+  const storedIslem = { ...(islemSnap.data() as Transaction), id: islem.id };
+  islem = storedIslem;
 
   // Faturaya bağlı otomatik tahsilat/ödeme tek başına silinemez; fatura ile birlikte yönetilir
   if (storedIslem.linkedInvoiceId) {
@@ -1001,6 +1003,15 @@ export async function saveAccountTransaction(transaction: any, id?: string) {
     return newId;
   } catch (error) {
     handleFirestoreError(error, id ? OperationType.UPDATE : OperationType.CREATE, `${getPath(HESAP_ISLEMLER_COLL)}/${id || 'new'}`);
+    throw error;
+  }
+}
+
+export async function deleteAccountTransaction(id: string) {
+  try {
+    await deleteDoc(doc(db, getPath(HESAP_ISLEMLER_COLL), id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `${getPath(HESAP_ISLEMLER_COLL)}/${id}`);
     throw error;
   }
 }

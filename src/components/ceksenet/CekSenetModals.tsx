@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, FileText, ArrowRightLeft, CreditCard, User, Tag, Calendar, AlertCircle, RefreshCw, Upload, Download } from 'lucide-react';
-export function CekSenetModals({ isModalOpen, setIsModalOpen, formError, type, setType, docType, setDocType, portfolioNo, setPortfolioNo, serialNo, setSerialNo, debtor, setDebtor, selectedCariId, setSelectedCariId, amount, setAmount, currency, setCurrency, issueDate, setIssueDate, dueDate, setDueDate, bankName, setBankName, bankBranch, setBankBranch, accountNo, setAccountNo, status, setStatus, description, setDescription, affectCariBalance, setAffectCariBalance, exchangeRate, setExchangeRate, tcmbLoading, handleForceTcmbRate, customConvertedAmount, setCustomConvertedAmount, isMultiCurrency, setIsMultiCurrency, isConvertedAmountEdited, setIsConvertedAmountEdited, isActionModalOpen, setIsActionModalOpen, selectedItem, setSelectedItem, actionType, setActionType, endorseCariId, setEndorseCariId, endorseExchangeRate, setEndorseExchangeRate, actionAccount, setActionAccount, cariler, activeCariCurrency, handleSubmit, handleExecuteAction }: any) {
+export function CekSenetModals({ isModalOpen, setIsModalOpen, formError, type, setType, docType, setDocType, portfolioNo, setPortfolioNo, serialNo, setSerialNo, debtor, setDebtor, selectedCariId, setSelectedCariId, amount, setAmount, currency, setCurrency, issueDate, setIssueDate, dueDate, setDueDate, bankName, setBankName, bankBranch, setBankBranch, accountNo, setAccountNo, status, setStatus, description, setDescription, affectCariBalance, setAffectCariBalance, exchangeRate, setExchangeRate, tcmbLoading, handleForceTcmbRate, customConvertedAmount, setCustomConvertedAmount, isMultiCurrency, setIsMultiCurrency, isConvertedAmountEdited, setIsConvertedAmountEdited, isActionModalOpen, setIsActionModalOpen, selectedItem, setSelectedItem, actionType, setActionType, endorseCariId, setEndorseCariId, endorseExchangeRate, setEndorseExchangeRate, actionAccount, setActionAccount, reinstateOnUnpaid, setReinstateOnUnpaid, canReinstateDebt, cariler, activeCariCurrency, handleSubmit, handleExecuteAction }: any) {
   return (
     <>
       {/* 1. ADD NEW CHEQUE / PROMISSORY NOTE MODAL */}
@@ -519,14 +519,44 @@ export function CekSenetModals({ isModalOpen, setIsModalOpen, formError, type, s
               )}
 
               {actionType === 'mark_unpaid' && (
-                <div className="p-3 bg-red-950/20 border border-red-500/20 rounded-xl text-xs text-red-400">
-                  ⚠️ Dikkat! Bu çeki <strong>Ödenmedi / Karşılıksız</strong> olarak işaretliyorsunuz. Bu durum yasal takip gerektirebilir ve protesto işlemlerini başlatabilir.
+                <div className="space-y-3">
+                  <div className="p-3 bg-red-950/20 border border-red-500/20 rounded-xl text-xs text-red-400">
+                    ⚠️ Dikkat! Bu çeki <strong>Ödenmedi / Karşılıksız</strong> olarak işaretliyorsunuz. Bu durum yasal takip gerektirebilir ve protesto işlemlerini başlatabilir.
+                  </div>
+                  {canReinstateDebt ? (
+                    <label className="flex items-start gap-2.5 p-3 bg-white/[0.02] border border-white/10 rounded-xl cursor-pointer">
+                      <input
+                        id="ceksenet-reinstate-debt"
+                        type="checkbox"
+                        checked={!!reinstateOnUnpaid}
+                        onChange={(e) => setReinstateOnUnpaid(e.target.checked)}
+                        className="mt-0.5 accent-teal-500"
+                      />
+                      <span className="text-xs text-white/80 leading-snug">
+                        {selectedItem.type === 'receivable'
+                          ? <><strong className="text-white">{selectedItem.cariName}</strong> carisini çek tutarı kadar yeniden borçlandır</>
+                          : <><strong className="text-white">{selectedItem.cariName}</strong> carisine olan borcumuzu çek tutarı kadar geri yaz</>}
+                        <span className="block text-[10px] text-white/40 mt-0.5">
+                          Çek girişinde cari bakiyesinden düşülen tutar geri eklenir ({selectedItem.amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {selectedItem.currency}). Çek portföye geri alınırsa bu kayıt da geri alınır.
+                        </span>
+                      </span>
+                    </label>
+                  ) : (
+                    <div className="p-3 bg-white/[0.02] border border-white/10 rounded-xl text-[11px] text-white/50">
+                      Bu çek girişte cari bakiyesine işlenmediği için cari bakiyesi değişmeyecek.
+                    </div>
+                  )}
                 </div>
               )}
 
               {actionType === 'return_portfolio' && (
-                <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl text-xs text-amber-300">
-                  🔄 Çekin durumunu tekrar <strong>Portföyde / Beklemede</strong> aşamasına geri almak istiyorsunuz.
+                <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl text-xs text-amber-300 space-y-1.5">
+                  <div>🔄 Çekin durumunu tekrar <strong>Portföyde / Beklemede</strong> aşamasına geri almak istiyorsunuz.</div>
+                  {selectedItem.settlementTransactionId || selectedItem.settlementAccountTxId ? (
+                    <div className="text-[11px] text-amber-200/80">Önceki durum değişikliğiyle oluşan kasa/banka ve cari hareketleri otomatik olarak geri alınacak.</div>
+                  ) : selectedItem.status !== 'unpaid' ? (
+                    <div className="text-[11px] text-amber-200/80">Bu çek eski sürümde işlendiği için o sırada oluşan kasa/banka veya cari hareketi otomatik geri alınamaz; gerekiyorsa Kasa / İşlemler ekranından elle silin.</div>
+                  ) : null}
                 </div>
               )}
 

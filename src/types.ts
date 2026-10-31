@@ -136,6 +136,10 @@ export interface CekSenet {
    * Alan yoksa (eski kayıt) işlendi kabul edilir; giriş formunda bu seçenek varsayılan olarak açıktı.
    */
   cariBalanceApplied?: boolean;
+  /** Durum değişikliğinde oluşan cari işleminin id'si (ciro, karşılıksız borç dekontu, cariye işlenen tahsilat) */
+  settlementTransactionId?: string;
+  /** Durum değişikliğinde oluşan kasa/banka hareketinin id'si (tahsil / banka ödemesi) */
+  settlementAccountTxId?: string;
   convertedAmount?: number; // Amount after applying exchange rate to modify Cari's native balance
 }
 

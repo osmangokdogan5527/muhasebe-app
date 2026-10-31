@@ -1,7 +1,7 @@
 import { CekSenetModals } from './ceksenet/CekSenetModals';
 import React, { useMemo, useState, useEffect } from 'react';
 import { Cari, CekSenet, Transaction, BankAccount } from '../types';
-import { saveCekSenet, deleteCekSenet, createTransaction, saveAccountTransaction } from '../firebase';
+import { saveCekSenet, deleteCekSenet, createTransaction, saveAccountTransaction, deleteAccountTransaction, removeTransaction } from '../firebase';
 import { useFxRates } from '../hooks/useFxRates';
 import { convertWithRates } from '../utils/currencyUtils';
 import { roundMoney } from '../utils/invoiceMath';
@@ -34,7 +34,7 @@ interface CekSenetViewProps {
   bankAccounts?: BankAccount[];
 }
 
-export default function CekSenetView({ ceksenet, cariler, islemler: _islemler, bankAccounts = [] }: CekSenetViewProps) {
+export default function CekSenetView({ ceksenet, cariler, islemler, bankAccounts = [] }: CekSenetViewProps) {
   const fxRates = useFxRates();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'receivable' | 'payable'>('all');
@@ -152,6 +152,8 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler, b
   const [endorseCariId, setEndorseCariId] = useState('');
   const [endorseExchangeRate, setEndorseExchangeRate] = useState<number>(1);
   const [actionAccount, setActionAccount] = useState<'cash' | 'bank'>('bank');
+  // Karşılıksız işaretlenen çekte cariyi yeniden borçlandır / alacaklandır (varsayılan açık)
+  const [reinstateOnUnpaid, setReinstateOnUnpaid] = useState(true);
 
   // Stats
   const stats = useMemo(() => {
@@ -318,10 +320,15 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler, b
     setActionType(act);
     setEndorseCariId('');
     setEndorseExchangeRate(1);
+    setReinstateOnUnpaid(true);
     // "Kasaya tahsil" penceresi kasa hesabıyla açılır; kullanıcı isterse bankayı seçer
     setActionAccount(act === 'collect_cash' ? 'cash' : 'bank');
     setIsActionModalOpen(true);
   };
+
+  // Karşılıksızda geri yazma yalnızca girişte cariye işlenmiş ve carisi duran çeklerde yapılabilir
+  const canReinstateDebt = (item: CekSenet | null): boolean =>
+    !!item && item.cariBalanceApplied !== false && cariler.some((c) => c.id === item.cariId);
 
   // Tahsil/ödeme için hesap: aynı para birimindeki hesap, yoksa merkez hesap, yoksa ilk uygun hesap
   const pickCashAccount = (kind: BankAccount['type'], currency: string): BankAccount | undefined => {
@@ -333,64 +340,73 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler, b
       || ofKind[0];
   };
 
+  // Çekin durum değişikliğiyle oluşmuş kasa/cari hareketlerini geri alır (portföye geri alma)
+  const reverseSettlement = async (item: CekSenet) => {
+    if (item.settlementAccountTxId) {
+      await deleteAccountTransaction(item.settlementAccountTxId);
+    }
+    if (item.settlementTransactionId) {
+      // Kayıt elle silinmişse geri alınacak bir şey kalmamıştır
+      if (islemler.some((t) => t.id === item.settlementTransactionId)) {
+        await removeTransaction({ id: item.settlementTransactionId } as Transaction);
+      }
+    }
+  };
+
   // Execute State Transition
   const handleExecuteAction = async () => {
     if (!selectedItem) return;
 
     try {
-      const updatedItem = { ...selectedItem };
       const docLabel = selectedItem.docType === 'cheque' ? 'Çek' : 'Senet';
+      const itemCurrency = selectedItem.currency || 'TRY';
+      let nextStatus: CekSenet['status'] = selectedItem.status;
+      let nextDescription = selectedItem.description;
+      // Bu durum değişikliğinde oluşturulan hareketler; çek kaydı yazılamazsa geri alınır
+      let createdTransactionId: string | undefined;
+      let createdAccountTxId: string | undefined;
 
       if (actionType === 'collect_cash' || actionType === 'collect_bank' || actionType === 'pay_bank') {
         const isPayment = actionType === 'pay_bank';
         const accountKind: BankAccount['type'] = actionType === 'collect_cash' && actionAccount === 'cash' ? 'kasa' : 'banka';
-        const targetAccount = pickCashAccount(accountKind, selectedItem.currency || 'TRY');
+        const targetAccount = pickCashAccount(accountKind, itemCurrency);
         if (!targetAccount) {
           alertDialog(`İşlem için bir ${accountKind === 'kasa' ? 'kasa' : 'banka'} hesabı bulunamadı. Önce Kasa ekranından hesap ekleyin.`);
           return;
         }
+        nextStatus = isPayment ? 'paid' : 'collected';
+        const label = isPayment ? `Kendi ${docLabel} Ödememiz` : `${docLabel} Tahsilatı`;
 
-        updatedItem.status = isPayment ? 'paid' : 'collected';
-        await saveCekSenet(updatedItem, selectedItem.id);
-
-        try {
-          if (selectedItem.cariBalanceApplied !== false) {
-            // Cari, çek girişinde zaten alacaklandırıldı / borcumuz düşüldü: burada yalnızca para
-            // portföyden kasaya/bankaya (ya da bankadan dışarı) geçer, cari ikinci kez etkilenmez.
-            const accountCurrency = targetAccount.currency || 'TRY';
-            const itemCurrency = selectedItem.currency || 'TRY';
-            const amountInAccount = roundMoney(convertWithRates(selectedItem.amount, itemCurrency, accountCurrency, fxRates));
-            const original = itemCurrency !== accountCurrency
-              ? ` (Orijinal: ${selectedItem.amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ${itemCurrency})`
-              : '';
-            await saveAccountTransaction({
-              accountId: targetAccount.id,
-              type: isPayment ? 'cikis' : 'giris',
-              amount: amountInAccount,
-              date: getTodayISO(),
-              description: `${isPayment ? `Kendi ${docLabel} Ödememiz` : `${docLabel} Tahsilatı`} — ${selectedItem.cariName} (Seri: ${selectedItem.serialNo})${original}`,
-              createdAt: new Date().toISOString()
-            });
-          } else {
-            // Girişte cariye işlenmediyse tahsilat/ödeme cariyi de kapatır
-            await createTransaction({
-              type: isPayment ? 'payment' : 'collection',
-              cariId: selectedItem.cariId,
-              cariName: selectedItem.cariName,
-              date: getTodayISO(),
-              amount: selectedItem.amount,
-              currency: selectedItem.currency,
-              account: accountKind === 'kasa' ? 'cash' : 'bank',
-              bankAccountId: targetAccount.id,
-              description: `${isPayment ? `Kendi ${docLabel} Ödememiz` : `${docLabel} Tahsilatı`} (Seri: ${selectedItem.serialNo})`,
-              createdAt: new Date().toISOString()
-            });
-          }
-        } catch (moveErr) {
-          // Para hareketi yazılamadıysa çek eski durumuna döner; kullanıcı yeniden deneyebilir
-          await saveCekSenet(selectedItem, selectedItem.id).catch((revertErr) =>
-            logError(revertErr instanceof Error ? revertErr : new Error(String(revertErr)), 'CekSenetView: durum geri alınamadı'));
-          throw moveErr;
+        if (selectedItem.cariBalanceApplied !== false) {
+          // Cari, çek girişinde zaten alacaklandırıldı / borcumuz düşüldü: burada yalnızca para
+          // portföyden kasaya/bankaya (ya da bankadan dışarı) geçer, cari ikinci kez etkilenmez.
+          const accountCurrency = targetAccount.currency || 'TRY';
+          const amountInAccount = roundMoney(convertWithRates(selectedItem.amount, itemCurrency, accountCurrency, fxRates));
+          const original = itemCurrency !== accountCurrency
+            ? ` (Orijinal: ${selectedItem.amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ${itemCurrency})`
+            : '';
+          createdAccountTxId = await saveAccountTransaction({
+            accountId: targetAccount.id,
+            type: isPayment ? 'cikis' : 'giris',
+            amount: amountInAccount,
+            date: getTodayISO(),
+            description: `${label} — ${selectedItem.cariName} (Seri: ${selectedItem.serialNo})${original}`,
+            createdAt: new Date().toISOString()
+          });
+        } else {
+          // Girişte cariye işlenmediyse tahsilat/ödeme cariyi de kapatır
+          createdTransactionId = await createTransaction({
+            type: isPayment ? 'payment' : 'collection',
+            cariId: selectedItem.cariId,
+            cariName: selectedItem.cariName,
+            date: getTodayISO(),
+            amount: selectedItem.amount,
+            currency: selectedItem.currency,
+            account: accountKind === 'kasa' ? 'cash' : 'bank',
+            bankAccountId: targetAccount.id,
+            description: `${label} (Seri: ${selectedItem.serialNo})`,
+            createdAt: new Date().toISOString()
+          });
         }
 
       } else if (actionType === 'endorse') {
@@ -401,12 +417,11 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler, b
         const targetCari = cariler.find(c => c.id === endorseCariId);
         if (!targetCari) return;
 
-        updatedItem.status = 'endorsed';
-        updatedItem.description = `${updatedItem.description || ''} (Ciro Edildi: ${targetCari.name})`.trim();
-        await saveCekSenet(updatedItem, selectedItem.id);
+        nextStatus = 'endorsed';
+        nextDescription = `${selectedItem.description || ''} (Ciro Edildi: ${targetCari.name})`.trim();
 
-        // Since we pay the supplier with this cheque, it decreases our debt to them (makes a payment transaction)
-        await createTransaction({
+        // Tedarikçiye çekle ödeme yapıldığı için ona olan borcumuz düşer
+        createdTransactionId = await createTransaction({
           type: 'payment',
           cariId: targetCari.id,
           cariName: targetCari.name,
@@ -421,12 +436,50 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler, b
         });
 
       } else if (actionType === 'mark_unpaid') {
-        updatedItem.status = 'unpaid';
-        await saveCekSenet(updatedItem, selectedItem.id);
+        nextStatus = 'unpaid';
+        if (reinstateOnUnpaid && canReinstateDebt(selectedItem)) {
+          // Karşılıksız çek: girişte cariden düşülen tutar geri yazılır (borç/alacak dekontu)
+          const isReceivable = selectedItem.type === 'receivable';
+          createdTransactionId = await createTransaction({
+            type: isReceivable ? 'payment' : 'collection',
+            cariId: selectedItem.cariId,
+            cariName: selectedItem.cariName,
+            date: getTodayISO(),
+            amount: selectedItem.amount,
+            currency: selectedItem.currency,
+            exchangeRate: selectedItem.exchangeRate,
+            convertedAmount: selectedItem.convertedAmount,
+            account: '',
+            description: `Karşılıksız ${docLabel} — ${isReceivable ? 'Borç' : 'Alacak'} Dekontu (Seri: ${selectedItem.serialNo}, Portföy: ${selectedItem.portfolioNo})`,
+            createdAt: new Date().toISOString()
+          });
+        }
 
       } else if (actionType === 'return_portfolio') {
-        updatedItem.status = 'portfolio';
-        await saveCekSenet(updatedItem, selectedItem.id);
+        // Tahsil/ödeme/ciro/karşılıksız ile oluşan hareketler geri alınır; çek yeniden portföye döner
+        await reverseSettlement(selectedItem);
+        nextStatus = 'portfolio';
+        nextDescription = (selectedItem.description || '').replace(/\s*\(Ciro Edildi: [^)]*\)\s*$/, '').trim();
+      }
+
+      const updatedItem: CekSenet = {
+        ...selectedItem,
+        status: nextStatus,
+        description: nextDescription,
+        settlementTransactionId: actionType === 'return_portfolio' ? undefined : (createdTransactionId ?? selectedItem.settlementTransactionId),
+        settlementAccountTxId: actionType === 'return_portfolio' ? undefined : (createdAccountTxId ?? selectedItem.settlementAccountTxId),
+      };
+      const { id: _id, ...itemData } = updatedItem;
+      try {
+        await saveCekSenet(itemData, selectedItem.id);
+      } catch (saveErr) {
+        // Çek kaydı güncellenemediyse yeni hareketler geri alınır; kullanıcı yeniden deneyebilir
+        if (createdAccountTxId) await deleteAccountTransaction(createdAccountTxId).catch((e) => logError(e instanceof Error ? e : new Error(String(e)), 'CekSenetView: kasa hareketi geri alınamadı'));
+        if (createdTransactionId) {
+          const created = { id: createdTransactionId } as Transaction;
+          await removeTransaction(created).catch((e) => logError(e instanceof Error ? e : new Error(String(e)), 'CekSenetView: cari işlemi geri alınamadı'));
+        }
+        throw saveErr;
       }
 
       setIsActionModalOpen(false);
@@ -975,6 +1028,9 @@ export default function CekSenetView({ ceksenet, cariler, islemler: _islemler, b
         setEndorseExchangeRate={setEndorseExchangeRate}
         actionAccount={actionAccount}
         setActionAccount={setActionAccount}
+        reinstateOnUnpaid={reinstateOnUnpaid}
+        setReinstateOnUnpaid={setReinstateOnUnpaid}
+        canReinstateDebt={canReinstateDebt(selectedItem)}
         cariler={cariler}
         activeCariCurrency={activeCariCurrency}
         handleSubmit={handleSubmit}
