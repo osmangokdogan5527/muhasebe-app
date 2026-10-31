@@ -381,7 +381,7 @@ export function StockModal({
                 </div>
 
                 <div>
-                  <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">Satış Fiyatı (KDV Hariç)</label>
+                  <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">Satış Fiyatı</label>
                   <div className="relative">
                     <input 
                       id="form-stock-sales-price"
@@ -394,6 +394,10 @@ export function StockModal({
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-white/30 font-mono">TL</span>
                   </div>
+                  {/* Aynı fiyat iki yerde farklı kullanılır; kullanıcı bilsin diye açıklanır */}
+                  <p className="mt-1 text-[10px] leading-snug text-white/45">
+                    Hızlı Satış'ta (kasa) ve etikette bu fiyat aynen alınır, KDV içinden ayrılır. Faturada KDV hariç birim fiyat olarak gelir, KDV üstüne eklenir.
+                  </p>
                 </div>
 
                 <div>
