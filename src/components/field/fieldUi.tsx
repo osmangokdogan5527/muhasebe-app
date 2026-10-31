@@ -3,7 +3,7 @@
  * Büyük dokunma alanları, koyu zemin, vurgu rengi temadan (--accent-*) gelir.
  */
 import React, { useMemo, useState } from 'react';
-import { Search, X, ScanLine, User, Check } from 'lucide-react';
+import { Search, X, ScanLine, User, Check, UserPlus } from 'lucide-react';
 import { Cari } from '../../types';
 
 export const formatMoney = (value: number, currency: string = 'TRY') =>
@@ -131,7 +131,9 @@ export const CariPickerSheet: React.FC<{
   onClose: () => void;
   allowNone?: boolean;
   title?: string;
-}> = ({ isOpen, cariler, onSelect, onClose, allowNone = false, title = 'Cari Seçin' }) => {
+  /** Verilirse listede "Yeni müşteri ekle" seçeneği çıkar (arama metniyle çağrılır) */
+  onCreateNew?: (name: string) => void;
+}> = ({ isOpen, cariler, onSelect, onClose, allowNone = false, title = 'Cari Seçin', onCreateNew }) => {
   const [query, setQuery] = useState('');
   const list = useMemo(() => {
     const q = norm(query);
@@ -153,6 +155,16 @@ export const CariPickerSheet: React.FC<{
         </div>
         <SearchBox value={query} onChange={setQuery} placeholder="Ad, kod veya telefon..." autoFocus />
         <div className="mt-3 overflow-y-auto flex-1 -mx-1 px-1 space-y-2">
+          {onCreateNew && (
+            <button
+              type="button"
+              id="field-quick-cari"
+              onClick={() => { const name = query.trim(); setQuery(''); onClose(); onCreateNew(name); }}
+              className="w-full flex items-center gap-2 rounded-2xl border border-dashed border-white/15 p-3.5 text-sm font-semibold text-[color:var(--accent-400,#38bdf8)] cursor-pointer"
+            >
+              <UserPlus size={17} /> {query.trim() ? `"${query.trim()}" adıyla yeni müşteri ekle` : 'Yeni müşteri ekle'}
+            </button>
+          )}
           {allowNone && (
             <button type="button" onClick={() => { onSelect(null); onClose(); }} className="w-full text-left rounded-2xl border border-dashed border-white/15 p-3.5 text-sm text-slate-300 cursor-pointer">
               Perakende Müşteri (cari seçmeden)

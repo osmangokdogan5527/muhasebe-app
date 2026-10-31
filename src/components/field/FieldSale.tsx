@@ -9,8 +9,11 @@ import { getTodayISO } from '../../utils/dateUtils';
 import { logError } from '../../utils/errorLogger';
 import { ReceiptPdfModal } from '../pdf/ReceiptPdfModal';
 import { ReceiptSaleData, receiptDataFromPosSummary } from '../../pdf/posReceiptPdf';
-import { Card, SectionTitle, PrimaryButton, SegmentedControl, SearchBox, EmptyState, CariPickerSheet, formatMoney, norm } from './fieldUi';
+import { Card, SectionTitle, PrimaryButton, SegmentedControl, SearchBox, EmptyState, CariPickerSheet, formatMoney, norm, parseAmount } from './fieldUi';
 import { grossSalesPrice } from '../../utils/stockPricing';
+import { checkCreditLimit, confirmCreditLimit } from '../../utils/creditLimit';
+import { QuickCariModal } from '../common/QuickCariModal';
+import { roundMoney } from '../../utils/invoiceMath';
 
 // Kamera/barkod kütüphanesi büyük olduğu için tarayıcı ilk açıldığında indirilir
 const BarcodeScannerModal = lazyWithReload(() => import('../BarcodeScannerModal'));
@@ -50,6 +53,11 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastSale, setLastSale] = useState<{ receiptNo: string; total: number; cariName: string; receipt: ReceiptSaleData } | null>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  // Veresiyede peşin alınan (nakit) kısım; kalanı açık hesaba yazılır
+  const [downPaymentText, setDownPaymentText] = useState('');
+  const [quickCariName, setQuickCariName] = useState<string | null>(null);
+  // Seçili carinin güncel hâli (bakiye başka cihazdan değişmiş olabilir)
+  const liveCari = useMemo(() => (cari ? cariler.find(c => c.id === cari.id) || cari : null), [cari, cariler]);
 
   // Cari ekranından "Satış Yap" ile gelindiyse cariyi seç
   React.useEffect(() => {
@@ -131,7 +139,7 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
 
   const handleComplete = async () => {
     if (cart.length === 0 || isProcessing) return;
-    if (payMethod === 'credit' && !cari) {
+    if (payMethod === 'credit' && !liveCari) {
       setIsCariPickerOpen(true);
       return;
     }
@@ -140,21 +148,25 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
       return;
     }
     const total = summary.grandTotal;
+    const downPayment = payMethod === 'credit' ? Math.min(total, Math.max(0, roundMoney(parseAmount(downPaymentText)))) : 0;
+    const openAmount = payMethod === 'credit' ? roundMoney(total - downPayment) : 0;
     const split: PosPaymentSplit = {
-      cashAmount: payMethod === 'cash' ? total : 0,
-      cashReceived: payMethod === 'cash' ? total : 0,
+      cashAmount: payMethod === 'cash' ? total : downPayment,
+      cashReceived: payMethod === 'cash' ? total : downPayment,
       changeGiven: 0,
       posAmount: payMethod === 'card' ? total : 0,
       posAccountId: payMethod === 'card' ? cardAccount?.id : undefined,
-      openAccountAmount: payMethod === 'credit' ? total : 0,
+      openAccountAmount: openAmount,
     };
+    if (openAmount > 0.004 && !(await confirmCreditLimit(liveCari, openAmount))) return;
+    const balanceBefore = Number(liveCari?.balance) || 0;
     setIsProcessing(true);
     try {
       const receiptNo = generateReceiptNo();
-      const cariName = cari ? cari.name : 'Perakende Müşteri';
+      const cariName = liveCari ? liveCari.name : 'Perakende Müşteri';
       const saleData: FieldSaleData = {
         receiptNo,
-        cariId: cari?.id,
+        cariId: liveCari?.id,
         cariName,
         items: cart,
         paymentSplit: split,
@@ -169,11 +181,15 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
         const receipt = receiptDataFromPosSummary({
           ...saleData,
           time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+          credit: openAmount > 0.004 && liveCari
+            ? { amount: openAmount, balanceBefore, balanceAfter: roundMoney(balanceBefore + openAmount) }
+            : undefined,
         });
         setLastSale({ receiptNo, total, cariName, receipt });
         setCart([]);
         setCari(null);
         setPayMethod('cash');
+        setDownPaymentText('');
       }
     } catch (err: any) {
       logError(err instanceof Error ? err : new Error(String(err)), 'FieldSale.handleComplete');
@@ -270,7 +286,7 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
               <User size={18} className="text-slate-400" />
               <div>
                 <div className="text-[11px] text-slate-500">Müşteri</div>
-                <div className="text-sm font-semibold text-white">{cari ? cari.name : 'Perakende Müşteri'}</div>
+                <div className="text-sm font-semibold text-white">{liveCari ? liveCari.name : 'Perakende Müşteri'}</div>
               </div>
             </div>
             <ChevronRight size={18} className="text-slate-500" />
@@ -285,7 +301,49 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
               { value: 'credit', label: 'Veresiye', icon: <BookOpen size={15} /> },
             ]}
           />
-          {payMethod === 'credit' && !cari && <p className="text-[11px] text-amber-400 -mt-1">Veresiye satış için müşteri seçin.</p>}
+          {payMethod === 'credit' && !liveCari && <p className="text-[11px] text-amber-400 -mt-1">Veresiye satış için müşteri seçin ya da yeni müşteri ekleyin.</p>}
+
+          {liveCari && (() => {
+            const downPayment = payMethod === 'credit' ? Math.min(summary.grandTotal, Math.max(0, parseAmount(downPaymentText))) : 0;
+            const openAmount = payMethod === 'credit' ? roundMoney(summary.grandTotal - downPayment) : 0;
+            const credit = checkCreditLimit(liveCari, openAmount);
+            const cur = liveCari.currency;
+            return (
+              <Card className="!p-3 space-y-2" >
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div>
+                    <div className="text-slate-500">Mevcut bakiye</div>
+                    <div className={`text-sm font-bold tabular-nums ${credit.balanceBefore > 0.004 ? 'text-rose-400' : credit.balanceBefore < -0.004 ? 'text-emerald-400' : 'text-slate-300'}`}>
+                      {formatMoney(Math.abs(credit.balanceBefore), cur)} {credit.balanceBefore > 0.004 ? 'Borç' : credit.balanceBefore < -0.004 ? 'Alacak' : ''}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Veresiye limiti</div>
+                    <div className="text-sm font-bold text-white tabular-nums">{credit.limit === null ? 'Sınırsız' : formatMoney(credit.limit, cur)}</div>
+                  </div>
+                </div>
+                {payMethod === 'credit' && (
+                  <>
+                    <label className="block">
+                      <span className="block text-[11px] text-slate-500 mb-1">Peşin alınan (nakit, isteğe bağlı)</span>
+                      <input
+                        id="field-down-payment"
+                        inputMode="decimal"
+                        value={downPaymentText}
+                        onChange={(e) => setDownPaymentText(e.target.value)}
+                        placeholder="0,00"
+                        className="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2.5 text-base font-bold text-white tabular-nums outline-none"
+                      />
+                    </label>
+                    <div className={`rounded-xl px-3 py-2 text-[12px] font-semibold ${credit.exceeded ? 'bg-rose-500/15 text-rose-300' : 'bg-white/[0.04] text-slate-300'}`}>
+                      Veresiye: <span className="font-bold tabular-nums">{formatMoney(openAmount, cur)}</span> • Yeni bakiye: <span className="font-bold tabular-nums">{formatMoney(credit.balanceAfter, cur)}</span>
+                      {credit.exceeded && <span className="block">Limit {formatMoney(credit.overBy, cur)} aşılıyor — onay istenecek.</span>}
+                    </div>
+                  </>
+                )}
+              </Card>
+            );
+          })()}
 
           <div className="flex items-end justify-between px-1">
             <span className="text-sm text-slate-400">Toplam</span>
@@ -309,7 +367,20 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
         onSelect={setCari}
         onClose={() => setIsCariPickerOpen(false)}
         title="Müşteri Seçin"
+        onCreateNew={(name) => setQuickCariName(name)}
       />
+      {quickCariName !== null && (
+        <QuickCariModal
+          initialName={quickCariName}
+          existingCount={cariler.length}
+          onClose={() => setQuickCariName(null)}
+          onCreated={(created) => {
+            setCari(created);
+            setQuickCariName(null);
+            showToast(`${created.name} eklendi ve seçildi.`, 'success');
+          }}
+        />
+      )}
     </div>
   );
 };
