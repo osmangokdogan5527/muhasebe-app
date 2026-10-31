@@ -47,6 +47,10 @@ import {
 } from 'recharts';
 import { formatDateISO } from '../utils/dateUtils';
 import { useFxRates } from '../hooks/useFxRates';
+import type { ReportDocument } from '../pdf/reportPdf';
+import { ReportTabId, buildReportDocument } from './raporlar/reportDocuments';
+import { ReportPdfModal } from './pdf/ReportPdfModal';
+import { StatementPdfModal } from './pdf/StatementPdfModal';
 
 interface RaporlarViewProps {
   cariler: Cari[];
@@ -132,20 +136,6 @@ export default function RaporlarView({
     }
   }, [datePreset, startDate, endDate]);
 
-  // Translate Turkish characters to Latin equivalents for standard PDF export
-  const turkishToPdf = (text: string): string => {
-    if (!text) return '';
-    const map: Record<string, string> = {
-      'ğ': 'g', 'Ğ': 'G',
-      'ü': 'u', 'Ü': 'U',
-      'ş': 's', 'Ş': 'S',
-      'ı': 'i', 'İ': 'I',
-      'ö': 'o', 'Ö': 'O',
-      'ç': 'c', 'Ç': 'C'
-    };
-    return text.replace(/[ğĞüÜşŞıİöÖçÇ]/g, (char) => map[char] || char);
-  };
-
   // Döviz kurları (günlük önbellek, ardından güncel kur)
   const fxRates = useFxRates();
 
@@ -158,7 +148,32 @@ export default function RaporlarView({
   const COLORS = ['#f43f5e', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1', '#64748b'];
 
   // EXCEL DOWNLOAD IMPLEMENTATION
-  const { downloadExcel, downloadPDF, exportAllToExcel, downloadCariEkstrePDF, downloadKdvPdf } = getExportFunctions({ activeTab, summaryStats, selectedCurrency, stockStats, cariStats, filteredExpenses, kdvStats, selectedCari, resolvedDates, cariEkstreStats, formatMoney, turkishToPdf, cariler, incomeExpenseStats, stoklar, islemler, expenses });
+  const { downloadExcel, exportAllToExcel } = getExportFunctions({ activeTab, summaryStats, selectedCurrency, stockStats, cariStats, filteredExpenses, kdvStats, selectedCari, resolvedDates, cariEkstreStats, formatMoney, cariler, incomeExpenseStats, stoklar, islemler, expenses });
+
+  // PDF: rapor içeriği düğmeye basıldığı anda alınır (pencere açıkken ekran değişse de PDF sabit kalır)
+  const [reportDocument, setReportDocument] = useState<ReportDocument | null>(null);
+  const [isStatementPdfOpen, setIsStatementPdfOpen] = useState(false);
+  const openReportPdf = () => {
+    if (activeTab === 'cariekstre') {
+      if (selectedCari) setIsStatementPdfOpen(true);
+      return;
+    }
+    setReportDocument(buildReportDocument({
+      activeTab: activeTab as ReportTabId,
+      selectedCurrency,
+      resolvedDates,
+      summaryStats,
+      stockStats,
+      cariStats,
+      kdvStats,
+      incomeExpenseStats,
+      filteredExpenses,
+      stockValuationType,
+      cariTypeFilter,
+      stockSearch,
+      cariSearch,
+    }));
+  };
 
   return (
     <div 
@@ -197,11 +212,11 @@ export default function RaporlarView({
             Excel İndir (.xlsx)
           </button>
           <button
-            onClick={downloadPDF}
+            onClick={openReportPdf}
             className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition duration-200 shadow-md shadow-rose-900/20"
           >
             <Download size={14} />
-            PDF İndir (.pdf)
+            PDF / Paylaş
           </button>
         </div>
       </div>
@@ -400,7 +415,7 @@ export default function RaporlarView({
           kdvStats={kdvStats}
           summaryStats={summaryStats}
           formatMoney={formatMoney}
-          downloadKdvPdf={downloadKdvPdf}
+          downloadKdvPdf={openReportPdf}
         />
       )}
 
@@ -431,10 +446,10 @@ export default function RaporlarView({
               {selectedCari && (
                 <div className="flex flex-wrap gap-2">
                   <button
-                    onClick={downloadCariEkstrePDF}
+                    onClick={() => setIsStatementPdfOpen(true)}
                     className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-xs font-semibold px-4 py-2 rounded-lg transition"
                   >
-                    <Download size={14} /> PDF Ekstre İndir
+                    <Download size={14} /> PDF Ekstre
                   </button>
                   
                   {/* WhatsApp Share Link */}
@@ -646,6 +661,16 @@ export default function RaporlarView({
             </div>
           )}
         </div>
+      )}
+      {reportDocument && <ReportPdfModal report={reportDocument} onClose={() => setReportDocument(null)} />}
+      {isStatementPdfOpen && selectedCari && (
+        <StatementPdfModal
+          cari={selectedCari}
+          islemler={islemler}
+          startDate={resolvedDates.start}
+          endDate={resolvedDates.end}
+          onClose={() => setIsStatementPdfOpen(false)}
+        />
       )}
     </div>
   );
