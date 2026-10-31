@@ -3,6 +3,7 @@ import { Stock } from '../../types';
 import { Search, Package, Check, Tag, Filter, Zap, Barcode, Plus, FolderPlus, Layers, LayoutGrid, ListFilter, X, Edit2 } from 'lucide-react';
 import { logError } from '../../utils/errorLogger';
 import { confirmDialog } from '../../utils/dialogs';
+import { grossSalesPrice } from '../../utils/stockPricing';
 
 interface PosProductCatalogProps {
   stocks: Stock[];
@@ -578,7 +579,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       <div className="mt-2.5 pt-2 border-t border-slate-700/80 flex items-center justify-between w-full">
         <div>
           <span className="text-xs sm:text-sm font-black text-teal-300 tracking-tight block font-mono">
-            ₺{stock.salesPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+            ₺{grossSalesPrice(stock).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
           </span>
           <span className="text-[9px] text-slate-300 block font-mono font-bold">
             Etiket Fiyatı

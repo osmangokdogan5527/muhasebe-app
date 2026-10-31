@@ -13,6 +13,7 @@ import { logError } from '../../utils/errorLogger';
 import { formatDateISO } from '../../utils/dateUtils';
 import { APP_VERSION } from '../../constants';
 import { confirmDialog, alertDialog } from '../../utils/dialogs';
+import { grossSalesPrice } from '../../utils/stockPricing';
 
 interface PosViewProps {
   stocks: Stock[];
@@ -135,7 +136,7 @@ export const PosView: React.FC<PosViewProps> = ({
           };
           return updated;
         } else {
-          const unitPrice = stock.salesPrice || 0;
+          const unitPrice = grossSalesPrice(stock);
           const { discountAmount, totalLine } = calculateLineTotal(unitPrice, 1, 0);
           const newItem: PosCartItem = {
             id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),

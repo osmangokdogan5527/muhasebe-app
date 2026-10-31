@@ -40,6 +40,8 @@ export interface Stock {
   unit: "Adet" | "KG" | "Litre" | "Metre" | "Kutu" | "Hizmet";
   purchasePrice: number;
   salesPrice: number;
+  /** Satış fiyatı KDV dahil mi? Alan yoksa (eski kayıt) dahil kabul edilir — bkz. utils/stockPricing */
+  salesPriceIncludesTax?: boolean;
   taxRate: number; // e.g., 0, 1, 10, 20 (%)
   quantity: number;
   minQuantity: number;

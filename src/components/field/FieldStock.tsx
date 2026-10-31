@@ -5,6 +5,7 @@ import { Stock } from '../../types';
 import { findStockByBarcodeOrSearch } from '../../utils/posUtils';
 import { parseScannedQrCode } from '../../utils/formatters';
 import { Card, SectionTitle, SegmentedControl, SearchBox, EmptyState, formatMoney, norm } from './fieldUi';
+import { grossSalesPrice } from '../../utils/stockPricing';
 
 // Kamera/barkod kütüphanesi büyük olduğu için tarayıcı ilk açıldığında indirilir
 const BarcodeScannerModal = lazyWithReload(() => import('../BarcodeScannerModal'));
@@ -71,7 +72,7 @@ export const FieldStock: React.FC<FieldStockProps> = ({ stoklar, showToast }) =>
             </div>
             <div className="rounded-xl p-3 bg-black/30 border border-white/10">
               <div className="text-[10px] uppercase tracking-wider text-slate-400">Satış Fiyatı</div>
-              <div className="text-xl font-black text-white tabular-nums">{formatMoney(selected.salesPrice)}</div>
+              <div className="text-xl font-black text-white tabular-nums">{formatMoney(grossSalesPrice(selected))}</div>
               <div className="text-[10px] text-slate-500">Alış: {formatMoney(selected.purchasePrice)}{selected.taxRate ? ` • KDV %${selected.taxRate}` : ''}</div>
             </div>
           </div>
@@ -97,7 +98,7 @@ export const FieldStock: React.FC<FieldStockProps> = ({ stoklar, showToast }) =>
               <Card key={stock.id} onClick={() => setSelectedId(stock.id)} className="!p-3 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-white truncate">{stock.name}</div>
-                  <div className="text-[11px] text-slate-500">{stock.code} • {formatMoney(stock.salesPrice)}</div>
+                  <div className="text-[11px] text-slate-500">{stock.code} • {formatMoney(grossSalesPrice(stock))}</div>
                 </div>
                 <span className={`text-sm font-bold tabular-nums shrink-0 ${critical ? 'text-amber-400' : 'text-slate-200'}`}>
                   {stock.quantity} {stock.unit}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Transaction, Cari, Stock, BankAccount, InvoiceItem, LinkedReceiptInput } from '../../types';
 import { calculateInvoiceLine, calculateInvoiceTotals } from '../../utils/invoiceMath';
+import { netSalesPrice } from '../../utils/stockPricing';
 import { createTransaction, removeTransaction } from '../../firebase';
 import { Plus, Trash2, X, Search, FileText, CreditCard, Wallet, AlertCircle, Check, ScanBarcode, ArrowRightLeft, DollarSign, FileCheck, Scan, PlusCircle, MinusCircle, RefreshCw } from 'lucide-react';
 import BarcodeScannerModal from '../BarcodeScannerModal';
@@ -233,7 +234,7 @@ const activeCariCurrency = useMemo(() => {
             setInvoiceItems(updatedItems);
           } else {
             const price = modalType === 'sale' || modalType === 'sale_return' 
-              ? scannedStock.salesPrice 
+              ? netSalesPrice(scannedStock) 
               : scannedStock.purchasePrice;
             const emptyRowIndex = invoiceItems.findIndex(item => !item.stockId);
             const newItem = {
@@ -355,7 +356,7 @@ const activeCariCurrency = useMemo(() => {
            if (matchedStok) {
              stockId = matchedStok.id;
              matchedStockName = matchedStok.name;
-             matchedPrice = ['sale', 'sale_return'].includes(modalType) ? matchedStok.salesPrice : matchedStok.purchasePrice;
+             matchedPrice = ['sale', 'sale_return'].includes(modalType) ? netSalesPrice(matchedStok) : matchedStok.purchasePrice;
              matchedUnit = matchedStok.unit || 'Adet';
            }
         }
@@ -435,8 +436,8 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
         item.stockId = selectedStock.id;
         item.stockName = selectedStock.name;
         item.unit = selectedStock.unit;
-        // set default price: sale invoice uses salesPrice, purchase invoice uses purchasePrice
-        item.price = ['sale', 'sale_return'].includes(modalType) ? selectedStock.salesPrice : selectedStock.purchasePrice;
+        // Varsayılan fiyat: satış faturası KDV hariç satış fiyatı, alış faturası alış fiyatı
+        item.price = ['sale', 'sale_return'].includes(modalType) ? netSalesPrice(selectedStock) : selectedStock.purchasePrice;
         item.taxRate = selectedStock.taxRate;
       } else {
         item.stockId = '';
@@ -488,7 +489,7 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
         setInvoiceItems(updatedItems);
       } else {
         // Add new line item
-        const price = ['sale', 'sale_return'].includes(modalType) ? scannedStock.salesPrice : scannedStock.purchasePrice;
+        const price = ['sale', 'sale_return'].includes(modalType) ? netSalesPrice(scannedStock) : scannedStock.purchasePrice;
         
         // Check if there is an empty row we can fill
         const emptyRowIndex = invoiceItems.findIndex(item => !item.stockId);
@@ -1194,7 +1195,7 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
               };
               setInvoiceItems(updatedItems);
             } else {
-              const price = ['sale', 'sale_return'].includes(modalType) ? scannedStock.salesPrice : scannedStock.purchasePrice;
+              const price = ['sale', 'sale_return'].includes(modalType) ? netSalesPrice(scannedStock) : scannedStock.purchasePrice;
               const emptyRowIndex = invoiceItems.findIndex(item => !item.stockId);
               const newItem = {
                 stockId: scannedStock.id,

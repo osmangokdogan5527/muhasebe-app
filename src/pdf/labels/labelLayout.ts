@@ -7,6 +7,7 @@ import { Stock } from '../../types';
 import { formatMoney, formatNumber } from '../format';
 import { LabelSettings } from './labelSettings';
 import { EncodedBarcode, EncodedQr, barcodeRuns, encodeBarcode, encodeQr } from './barcodes';
+import { grossSalesPrice, netSalesPrice } from '../../utils/stockPricing';
 
 export type TextWeight = 'normal' | 'semibold' | 'bold';
 
@@ -28,10 +29,9 @@ export interface LabelProduct {
 }
 
 export function productFromStock(stock: Stock, settings: LabelSettings): LabelProduct {
-  const rate = Number(stock.taxRate) || 0;
-  const salesPrice = Number(stock.salesPrice) || 0;
-  // Kasada (POS) satış fiyatı olduğu gibi tahsil edilir; "KDV hariç" seçilirse içinden ayrılır
-  const price = settings.priceMode === 'withoutTax' ? salesPrice / (1 + rate / 100) : salesPrice;
+  // Etikette kasadaki (KDV dahil) fiyat ya da faturadaki (KDV hariç) fiyat gösterilir;
+  // stok kartındaki "KDV dahil / hariç" seçimine göre doğru değer stockPricing'den gelir
+  const price = settings.priceMode === 'withoutTax' ? netSalesPrice(stock) : grossSalesPrice(stock);
   return {
     name: stock.name || '',
     code: stock.code || '',

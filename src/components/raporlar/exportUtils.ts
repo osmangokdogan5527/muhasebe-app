@@ -1,6 +1,7 @@
 import { getTodayISO } from '../../utils/dateUtils';
 import { logError } from '../../utils/errorLogger';
 import { alertDialog } from '../../utils/dialogs';
+import { salesPriceTaxLabel } from '../../utils/stockPricing';
 
 // Excel kütüphanesi büyük olduğu için yalnızca dışa aktarma istendiğinde indirilir (PDF: src/pdf/reportPdf.ts)
 const reportLoadError = (err: unknown, what: string): never => {
@@ -156,6 +157,7 @@ export const getExportFunctions = (deps: any) => {
         'Birim': s.unit || 'Adet',
         'Alış Fiyatı (KDV Hariç)': s.purchasePrice || 0,
         'Satış Fiyatı': s.salesPrice || 0,
+        'Satış Fiyatı Türü': salesPriceTaxLabel(s),
         'KDV Oranı (%)': s.taxRate || 0,
         'Kritik Seviye': s.minQuantity || 0
       }));

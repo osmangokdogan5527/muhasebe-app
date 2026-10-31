@@ -17,6 +17,7 @@ import {
   saveEmployeeTransaction, saveCekSenet, saveAccountTransaction
 } from '../firebase';
 import { calculateInvoiceLine, calculateInvoiceTotals, roundMoney } from '../utils/invoiceMath';
+import { grossSalesPrice, netSalesPrice, salesPriceIncludesTax, salesPriceTaxLabel } from '../utils/stockPricing';
 import { getTodayISO, parseDateISO } from '../utils/dateUtils';
 import { computeRaporlarStats } from '../components/raporlar/useRaporlarStats';
 import { computeAccountBalances, createCashCurrencyConverters } from '../utils/cashBalances';
@@ -234,7 +235,7 @@ const readTools: AiTool[] = [
       if (args.sadece_kritik) list = list.filter(s => (s.quantity || 0) <= (s.minQuantity || 0));
       return {
         toplam: list.length,
-        urunler: list.slice(0, 30).map(s => ({ id: s.id, ad: s.name, kod: s.code, birim: s.unit, miktar: s.quantity, kritik_seviye: s.minQuantity, alis_fiyati: s.purchasePrice, satis_fiyati: s.salesPrice, kdv: s.taxRate ?? 0, barkod: s.barcode || '' })),
+        urunler: list.slice(0, 30).map(s => ({ id: s.id, ad: s.name, kod: s.code, birim: s.unit, miktar: s.quantity, kritik_seviye: s.minQuantity, alis_fiyati: s.purchasePrice, satis_fiyati_kdv_haric: netSalesPrice(s), satis_fiyati_kdv_dahil: grossSalesPrice(s), kdv: s.taxRate ?? 0, barkod: s.barcode || '' })),
       };
     },
   },
@@ -432,7 +433,7 @@ const writeTools: AiTool[] = [
         const stock = stockRes.item;
         const quantity = Number(kalem.miktar);
         if (!(quantity > 0)) return { error: `"${stock.name}" için miktar sıfırdan büyük olmalı.` };
-        const defaultPrice = type === 'sale' || type === 'sale_return' ? stock.salesPrice : stock.purchasePrice;
+        const defaultPrice = type === 'sale' || type === 'sale_return' ? netSalesPrice(stock) : stock.purchasePrice;
         const price = kalem.birim_fiyat !== undefined && kalem.birim_fiyat !== null ? Number(kalem.birim_fiyat) : defaultPrice;
         if (!(price >= 0)) return { error: `"${stock.name}" için birim fiyat geçersiz.` };
         const taxRate = kalem.kdv_orani !== undefined && kalem.kdv_orani !== null ? Number(kalem.kdv_orani) : (stock.taxRate ?? 0);
@@ -702,14 +703,14 @@ const writeTools: AiTool[] = [
       const code = (args.kod || '').trim() || nextCode('STK', ctx.data.stoklar.length);
       const stock: Omit<Stock, 'id'> = {
         name, code, unit: (args.birim || 'Adet') as Stock['unit'],
-        purchasePrice: Number(args.alis_fiyati) || 0, salesPrice: Number(args.satis_fiyati) || 0, taxRate: Number(args.kdv_orani) || 0,
+        purchasePrice: Number(args.alis_fiyati) || 0, salesPrice: Number(args.satis_fiyati) || 0, salesPriceIncludesTax: false, taxRate: Number(args.kdv_orani) || 0,
         quantity: Number(args.miktar) || 0, minQuantity: args.kritik_miktar !== undefined ? Number(args.kritik_miktar) || 0 : 5,
         barcode: args.barkod || undefined, category: args.kategori || undefined, brand: args.marka || undefined, createdAt: new Date().toISOString(),
       };
       return {
         summary: [
           `Yeni ürün: ${name} (${code})`,
-          `Alış: ${money(stock.purchasePrice)}  Satış: ${money(stock.salesPrice)}  KDV: %${stock.taxRate}`,
+          `Alış: ${money(stock.purchasePrice)}  Satış: ${money(stock.salesPrice)} (${salesPriceTaxLabel(stock)})  KDV: %${stock.taxRate}`,
           `Stok: ${stock.quantity} ${stock.unit}  Kritik seviye: ${stock.minQuantity}`,
         ],
         execute: async () => {
@@ -745,6 +746,11 @@ const writeTools: AiTool[] = [
       };
       numField('alis_fiyati', 'purchasePrice', 'Alış fiyatı', v => money(v));
       numField('satis_fiyati', 'salesPrice', 'Satış fiyatı', v => money(v));
+      // Asistan satış fiyatını KDV hariç verir; kart KDV dahil ise bundan sonra KDV hariç sayılır
+      if (changes.salesPrice !== undefined && salesPriceIncludesTax(stock)) {
+        changes.salesPriceIncludesTax = false;
+        lines.push('Satış fiyatı türü: KDV dahil → KDV hariç');
+      }
       numField('kdv_orani', 'taxRate', 'KDV', v => `%${v}`);
       numField('miktar', 'quantity', 'Stok miktarı', v => `${v} ${stock.unit}`);
       numField('kritik_miktar', 'minQuantity', 'Kritik seviye', v => String(v));

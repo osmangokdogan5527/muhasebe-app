@@ -4,6 +4,8 @@ import { saveStock } from '../../firebase';
 import { compressImage } from '../../utils/imageCompressor';
 import { X, Package, ScanLine, AlertCircle, ImageIcon, Scan } from 'lucide-react';
 import BarcodeScannerModal from '../BarcodeScannerModal';
+import { logError } from '../../utils/errorLogger';
+import { NEW_STOCK_SALES_PRICE_INCLUDES_TAX, grossSalesPrice, netSalesPrice, salesPriceIncludesTax } from '../../utils/stockPricing';
 
 export interface StockModalProps {
   aiPrefilledData?: any;
@@ -13,6 +15,10 @@ export interface StockModalProps {
   editingStock: Stock | null;
   stoklar: Stock[];
   checkPermissionAndExecute: (actionKey: 'delete_stock' | 'decrease_stock' | 'edit_stock', executeAction: () => void) => void;
+}
+
+function formatPriceHint(value: number): string {
+  return `${(Number(value) || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺`;
 }
 
 export function StockModal({
@@ -32,6 +38,7 @@ export function StockModal({
     unit: 'Adet' as 'Adet' | 'KG' | 'Litre' | 'Metre' | 'Kutu' | 'Hizmet',
     purchasePrice: 0,
     salesPrice: 0,
+    salesPriceIncludesTax: NEW_STOCK_SALES_PRICE_INCLUDES_TAX,
     taxRate: 0,
     quantity: 0,
     minQuantity: 5,
@@ -53,6 +60,7 @@ export function StockModal({
           unit: editingStock.unit,
           purchasePrice: editingStock.purchasePrice,
           salesPrice: editingStock.salesPrice,
+          salesPriceIncludesTax: salesPriceIncludesTax(editingStock),
           taxRate: editingStock.taxRate,
           quantity: editingStock.quantity,
           minQuantity: editingStock.minQuantity,
@@ -68,6 +76,7 @@ export function StockModal({
           unit: aiPrefilledData.unit || 'Adet',
           purchasePrice: aiPrefilledData.purchasePrice || 0,
           salesPrice: aiPrefilledData.salesPrice || 0,
+          salesPriceIncludesTax: NEW_STOCK_SALES_PRICE_INCLUDES_TAX,
           taxRate: aiPrefilledData.kdv !== undefined ? aiPrefilledData.kdv : 0,
           quantity: aiPrefilledData.miktar || 0,
           minQuantity: aiPrefilledData.minQuantity || 5,
@@ -83,6 +92,7 @@ export function StockModal({
           unit: 'Adet',
           purchasePrice: 0,
           salesPrice: 0,
+          salesPriceIncludesTax: NEW_STOCK_SALES_PRICE_INCLUDES_TAX,
           taxRate: 0,
           quantity: 0,
           minQuantity: 5,
@@ -155,6 +165,7 @@ export function StockModal({
           unit: formData.unit,
           purchasePrice: formData.purchasePrice,
           salesPrice: formData.salesPrice,
+          salesPriceIncludesTax: formData.salesPriceIncludesTax,
           taxRate: formData.taxRate,
           quantity: formData.quantity,
           minQuantity: formData.minQuantity,
@@ -172,6 +183,7 @@ export function StockModal({
           unit: formData.unit,
           purchasePrice: formData.purchasePrice,
           salesPrice: formData.salesPrice,
+          salesPriceIncludesTax: formData.salesPriceIncludesTax,
           taxRate: formData.taxRate,
           quantity: formData.quantity,
           minQuantity: formData.minQuantity,
@@ -183,7 +195,7 @@ export function StockModal({
       }
       onClose();
     } catch (err: any) {
-      console.error(err);
+      logError(err instanceof Error ? err : new Error(String(err)), 'StockModal.proceedWithSave');
       setFormError('Stok kartı kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.');
     } finally {
       setIsSubmitting(false);
@@ -394,9 +406,36 @@ export function StockModal({
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-white/30 font-mono">TL</span>
                   </div>
-                  {/* Aynı fiyat iki yerde farklı kullanılır; kullanıcı bilsin diye açıklanır */}
+                  {/* Fiyatın KDV durumu: kasa/etiket KDV dahil, fatura KDV hariç fiyatı bundan hesaplar */}
+                  <div className="mt-1.5 grid grid-cols-2 gap-1 p-0.5 rounded bg-white/5 border border-white/10" role="radiogroup" aria-label="Satış fiyatının KDV durumu">
+                    {[
+                      { value: true, label: 'KDV Dahil' },
+                      { value: false, label: 'KDV Hariç' },
+                    ].map((option) => {
+                      const active = formData.salesPriceIncludesTax === option.value;
+                      return (
+                        <button
+                          key={option.label}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          id={option.value ? 'form-stock-price-incl-tax' : 'form-stock-price-excl-tax'}
+                          onClick={() => setFormData({ ...formData, salesPriceIncludesTax: option.value })}
+                          className={`py-1 rounded text-[10px] font-bold transition-colors ${active ? 'bg-teal-500 text-slate-950' : 'text-white/55 hover:text-white'}`}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                   <p className="mt-1 text-[10px] leading-snug text-white/45">
-                    Hızlı Satış'ta (kasa) ve etikette bu fiyat aynen alınır, KDV içinden ayrılır. Faturada KDV hariç birim fiyat olarak gelir, KDV üstüne eklenir.
+                    {formData.salesPrice > 0 && formData.taxRate > 0
+                      ? (formData.salesPriceIncludesTax
+                          ? `Kasada ve etikette ${formatPriceHint(formData.salesPrice)}, faturada KDV hariç ${formatPriceHint(netSalesPrice(formData))} + %${formData.taxRate} KDV.`
+                          : `Faturada ${formatPriceHint(formData.salesPrice)} + %${formData.taxRate} KDV, kasada ve etikette ${formatPriceHint(grossSalesPrice(formData))}.`)
+                      : (formData.salesPriceIncludesTax
+                          ? 'Etiket / raf fiyatı gibi KDV içinde. Faturada KDV ayrılarak gelir.'
+                          : 'Net fiyat. Faturada üstüne KDV eklenir; kasada ve etikette KDV dahil fiyat kullanılır.')}
                   </p>
                 </div>
 

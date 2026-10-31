@@ -6,6 +6,7 @@ import { X, Printer, Download, Plus, ArrowRight, ArrowLeft, RotateCcw, AlertTria
 
 import { createTransaction, saveCari } from '../../firebase';
 import { calculateInvoiceLine } from '../../utils/invoiceMath';
+import { netSalesPrice } from '../../utils/stockPricing';
 import { getTodayISO } from '../../utils/dateUtils';
 import { alertDialog } from '../../utils/dialogs';
 
@@ -58,7 +59,7 @@ export function LedgerDrawer({
     if (quickTxType === "sale_return" || quickTxType === "purchase_return") {
       const selectedStock = stoklar.find(s => s.id === quickTxStockId);
       if (selectedStock) {
-        const price = quickTxType === "sale_return" ? selectedStock.salesPrice : selectedStock.purchasePrice;
+        const price = quickTxType === "sale_return" ? netSalesPrice(selectedStock) : selectedStock.purchasePrice;
         setQuickTxUnitPrice(price.toString());
         const qty = parseFloat(quickTxQuantity) || 1;
         setQuickTxAmount(calculateInvoiceLine(qty, price, selectedStock.taxRate).total.toFixed(2));

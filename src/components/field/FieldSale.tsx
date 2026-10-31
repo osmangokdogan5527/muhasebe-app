@@ -10,6 +10,7 @@ import { logError } from '../../utils/errorLogger';
 import { ReceiptPdfModal } from '../pdf/ReceiptPdfModal';
 import { ReceiptSaleData, receiptDataFromPosSummary } from '../../pdf/posReceiptPdf';
 import { Card, SectionTitle, PrimaryButton, SegmentedControl, SearchBox, EmptyState, CariPickerSheet, formatMoney, norm } from './fieldUi';
+import { grossSalesPrice } from '../../utils/stockPricing';
 
 // Kamera/barkod kütüphanesi büyük olduğu için tarayıcı ilk açıldığında indirilir
 const BarcodeScannerModal = lazyWithReload(() => import('../BarcodeScannerModal'));
@@ -83,7 +84,7 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
             return { ...item, quantity, discountAmount, totalLine };
           });
         }
-        const unitPrice = stock.salesPrice || 0;
+        const unitPrice = grossSalesPrice(stock);
         const { discountAmount, totalLine } = calculateLineTotal(unitPrice, 1, 0);
         return [...prev, {
           id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -197,7 +198,7 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-sm font-bold text-white tabular-nums">{formatMoney(stock.salesPrice)}</span>
+                <span className="text-sm font-bold text-white tabular-nums">{formatMoney(grossSalesPrice(stock))}</span>
                 <Plus size={18} className="text-[color:var(--accent-400,#38bdf8)]" />
               </div>
             </Card>
