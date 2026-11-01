@@ -39,16 +39,34 @@ export function canSharePdf(file: File): boolean {
 
 export type ShareResult = 'shared' | 'cancelled' | 'unsupported';
 
+/**
+ * PDF'i telefonun paylaşım menüsüyle paylaşır (WhatsApp, e-posta...).
+ * Android'de WhatsApp, dosyayla birlikte başlık/metin gönderildiğinde paylaşımı sıklıkla reddeder;
+ * bu yüzden önce yalnızca dosya denenir, olmazsa başlık ve metinle tekrar denenir.
+ * Kullanıcının kendisi kapattığında 'cancelled', paylaşım yapılamadığında hata fırlatılır.
+ */
 export async function sharePdf(file: File, title: string, text?: string): Promise<ShareResult> {
   if (!canSharePdf(file)) return 'unsupported';
-  try {
-    await navigator.share({ files: [file], title, text });
-    return 'shared';
-  } catch (err: any) {
-    // Kullanıcı paylaşım penceresini kapattı
-    if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) return 'cancelled';
-    throw err;
+  const attempts: ShareData[] = [
+    { files: [file] },
+    { files: [file], title },
+    ...(text ? [{ files: [file], title, text }] : []),
+  ];
+  let lastError: unknown = null;
+  for (const data of attempts) {
+    try {
+      if (typeof navigator.canShare === 'function' && !navigator.canShare(data)) continue;
+      await navigator.share(data);
+      return 'shared';
+    } catch (err: any) {
+      // Kullanıcı paylaşım penceresini kendisi kapattı
+      if (err && err.name === 'AbortError') return 'cancelled';
+      lastError = err;
+      // İzin/etkileşim hatası: yeni bir dokunuş olmadan tekrar denenemez
+      if (err && err.name === 'NotAllowedError') break;
+    }
   }
+  throw lastError instanceof Error ? lastError : new Error('Paylaşım yapılamadı');
 }
 
 /** Telefonun ya da bilgisayarın kendi PDF görüntüleyicisinde açmayı dener; olmazsa indirir. */

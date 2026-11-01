@@ -566,7 +566,9 @@ body:has([data-design-style="pusula"]),
 }
 
 /* Bileşenin bilerek saydam bıraktığı iç alanlar (ör. etiket tasarımcısı) */
-[data-design-style="pusula"] input.bg-transparent:not(:focus) {
+/* Kutu içindeki saydam giriş alanı: dış kutu çerçeveyi çizer (genel giriş kuralından güçlü) */
+[data-design-style="pusula"] input.bg-transparent.bg-transparent:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+[data-design-style="pusula"] input.bg-transparent.bg-transparent:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):focus {
   background-color: transparent !important;
   border-color: transparent !important;
   box-shadow: none !important;

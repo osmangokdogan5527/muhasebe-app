@@ -19,7 +19,9 @@ export const A5_FONT_SCALE = 0.86;
 const A4_CONTENT_WIDTH = 210 - PAGE_MARGIN * 2;
 
 export function isA5(doc: jsPDF): boolean {
-  return doc.internal.pageSize.getWidth() < 160;
+  // A5 dikey 148 mm, yatay 210 x 148 mm: kısa kenarı 160 mm'den küçükse A5
+  const { pageSize } = doc.internal;
+  return Math.min(pageSize.getWidth(), pageSize.getHeight()) < 160;
 }
 
 /** Sayfa kenar boşluğu (mm): A4'te 14, A5'te 10 */
@@ -27,9 +29,12 @@ export function pageMargin(doc: jsPDF): number {
   return isA5(doc) ? 10 : PAGE_MARGIN;
 }
 
-/** A4 için yazılmış sabit genişlikleri sayfaya ölçekleme oranı (A4 = 1) */
+/** A4 için yazılmış sabit genişlikleri sayfaya ölçekleme oranı (aynı yöndeki A4 = 1) */
 export function sizeK(doc: jsPDF): number {
-  return (doc.internal.pageSize.getWidth() - pageMargin(doc) * 2) / A4_CONTENT_WIDTH;
+  const width = doc.internal.pageSize.getWidth();
+  const landscape = width > doc.internal.pageSize.getHeight();
+  const a4ContentWidth = landscape ? 297 - PAGE_MARGIN * 2 : A4_CONTENT_WIDTH;
+  return (width - pageMargin(doc) * 2) / a4ContentWidth;
 }
 
 /** A5 belgede tüm yazı boyutlarını (tablolar dahil) orantılı küçültür */
@@ -146,7 +151,12 @@ export function drawDocumentHeader(doc: jsPDF, branding: DocumentBranding, optio
   setText(doc, 17, accent, 'bold');
   doc.text(options.title, right, rightY + 6, { align: 'right' });
   rightY += 11;
-  const metaLabelX = right - 62 * sizeK(doc);
+  // Etiket sütunu, en uzun değerin soluna yerleşir (uzun belge numaraları etiketin üstüne binmesin)
+  setText(doc, 9, COLORS.text, 'semibold');
+  const maxValueWidth = Math.max(0, ...options.meta.map(({ value }) => doc.getTextWidth(value || '-')));
+  setText(doc, 8, COLORS.muted);
+  const maxLabelWidth = Math.max(0, ...options.meta.map(({ label }) => doc.getTextWidth(label)));
+  const metaLabelX = Math.max(left + 60 * sizeK(doc), Math.min(right - 62 * sizeK(doc), right - maxValueWidth - maxLabelWidth - 4));
   options.meta.forEach(({ label, value }) => {
     setText(doc, 8, COLORS.muted);
     doc.text(label, metaLabelX, rightY + 3.5);

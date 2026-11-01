@@ -50,6 +50,17 @@ const PARTY_HEADINGS: Record<string, string> = {
   purchase_return: 'Sayın',
 };
 
+/** Ödeme satırı: fatura hesabı ya da (kasadan satışta) bağlı tahsilatlar ve kalan açık hesap */
+export function paymentLabelFor(islem: Transaction, linkedReceipts: Transaction[] = []): string {
+  if (islem.account) return PAYMENT_LABELS[islem.account] || PAYMENT_LABELS[''];
+  const linked = linkedReceipts.filter((r) => r && r.linkedInvoiceId === islem.id);
+  if (!linked.length) return PAYMENT_LABELS[''];
+  const labels = [...new Set(linked.map((r) => PAYMENT_LABELS[r.account || ''] || PAYMENT_LABELS['']))];
+  const paid = linked.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  if ((Number(islem.amount) || 0) - paid > 0.004) labels.push('Açık Hesap');
+  return labels.join(' + ');
+}
+
 const PAYMENT_LABELS: Record<string, string> = {
   cash: 'Peşin (Nakit)',
   bank: 'Banka / Havale',
@@ -62,6 +73,8 @@ export interface InvoicePdfOptions {
   balance?: DocumentBalance | null;
   /** Kağıt boyutu (varsayılan A4) */
   paper?: PaperSize;
+  /** Bağlı tahsilatlar (kasadan yapılan satışta nakit/kart kısmı); ödeme satırı bunlardan yazılır */
+  linkedReceipts?: Transaction[];
 }
 
 export interface GeneratedPdf {
@@ -158,7 +171,7 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
   const gap = 6;
   const boxWidth = (contentWidth - gap) / 2;
   const documentRows = [
-    { label: 'Ödeme', value: PAYMENT_LABELS[islem.account || ''] || PAYMENT_LABELS[''] },
+    { label: 'Ödeme', value: paymentLabelFor(islem, options.linkedReceipts) },
     { label: 'Para Birimi', value: currency === 'TRY' ? 'Türk Lirası (TRY)' : currency },
     { label: 'Kur', value: currency !== 'TRY' && islem.exchangeRate ? `1 ${currency} = ${formatNumber(islem.exchangeRate, 4)} TL` : '' },
     { label: 'Cari Kodu', value: cari?.code || '' },
@@ -209,7 +222,7 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
     alternateRowStyles: { fillColor: zebra },
     // KDV sütunu yoksa Tutar sütunu bir öne kayar
     columnStyles: {
-      0: { cellWidth: 9 * k, halign: 'center', textColor: COLORS.muted },
+      0: { cellWidth: Math.max(9 * k, 8), halign: 'center', textColor: COLORS.muted },
       1: { cellWidth: 'auto' },
       2: { cellWidth: 26 * k, halign: 'right' },
       3: { cellWidth: 30 * k, halign: 'right' },
@@ -267,7 +280,8 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
   // Fatura türünün varsayılan açıklaması ('Satış Faturası' vb.) başlıkta zaten yazdığı için basılmaz
   const DEFAULT_DESCRIPTIONS = ['satış faturası', 'alış faturası', 'satıştan iade faturası', 'alıştan iade faturası'];
   const description = (islem.description || '').trim();
-  const noteLines = description && !DEFAULT_DESCRIPTIONS.includes(description.toLocaleLowerCase('tr-TR')) && (islem.items || []).length > 0
+  const isDefaultDescription = DEFAULT_DESCRIPTIONS.includes(description.toLocaleLowerCase('tr-TR')) || /^POS Hızlı Satış Fişi No/i.test(description);
+  const noteLines = description && !isDefaultDescription && (islem.items || []).length > 0
     ? (doc.splitTextToSize(description, leftWidth) as string[]).slice(0, 6)
     : [];
   const balance = branding.showBalance ? options.balance || null : null;

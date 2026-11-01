@@ -129,7 +129,12 @@ export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({ isOpen, title,
       if (result === 'unsupported') handleDownload();
     } catch (err) {
       logError(err instanceof Error ? err : new Error(String(err)), 'PdfPreviewModal.share');
-      alertDialog('Paylaşılamadı. PDF\'i indirip kendiniz gönderebilirsiniz.');
+      // Paylaşım açılamadıysa PDF indirilir; kullanıcı WhatsApp'tan ek olarak gönderebilir
+      handleDownload();
+      alertDialog({
+        title: 'Paylaşım açılamadı',
+        message: 'PDF telefonunuza indirildi. WhatsApp\'ta sohbeti açıp ataç (📎) > Belge ile "İndirilenler" klasöründen gönderebilirsiniz.',
+      });
     } finally {
       setIsSharing(false);
     }

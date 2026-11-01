@@ -14,6 +14,7 @@ import { RETAIL_CARI_ID } from '../../firebase';
 import { PdfPreviewModal } from './PdfPreviewModal';
 import { PdfOptionTabs } from './PdfOptionTabs';
 import { usePaperSize, PAPER_OPTIONS } from './usePaperSize';
+import { DocumentFormat, SALE_FORMAT_OPTIONS, isReceiptFormat, paperOf, receiptFormatFor, receiptWidthOf } from './documentFormat';
 
 const INVOICE_TITLES: Record<string, string> = {
   sale: 'Satış Faturası',
@@ -40,10 +41,16 @@ export const TransactionPdfModal: React.FC<TransactionPdfModalProps> = ({ transa
   const { branding, isLoaded } = useDocumentBranding();
   const cari = cariler.find((c) => c.id === transaction.cariId);
   const isInvoice = isInvoiceTransaction(transaction);
-  // Kasadan (POS) yapılan satışlar fiş olarak da alınabilir
-  const isPosSale = transaction.type === 'sale' && /^POS-/i.test(transaction.invoiceNo || '');
-  const [format, setFormat] = useState<'a4' | 'receipt'>(isPosSale ? 'receipt' : 'a4');
+  // Satışlar fiş (80 / 58 mm) ya da fatura (A4 / A5) olarak alınabilir; kasadan yapılan satış fişle açılır
+  const isSale = transaction.type === 'sale';
+  const isPosSale = isSale && /^POS-/i.test(transaction.invoiceNo || '');
   const [paper, setPaper] = usePaperSize();
+  const [format, setFormatState] = useState<DocumentFormat>(isPosSale ? receiptFormatFor(branding.receiptWidth) : paper);
+  const setFormat = (next: DocumentFormat) => {
+    setFormatState(next);
+    if (!isReceiptFormat(next)) setPaper(paperOf(next));
+  };
+  const linkedReceipts = useMemo(() => islemler.filter((t) => t.linkedInvoiceId === transaction.id), [islemler, transaction.id]);
   const title = isInvoice ? INVOICE_TITLES[transaction.type] || 'Fatura' : titleCase(receiptTitle(transaction));
   const number = isInvoice ? transaction.invoiceNo || '' : receiptNumber(transaction);
 
@@ -69,17 +76,18 @@ export const TransactionPdfModal: React.FC<TransactionPdfModalProps> = ({ transa
   }, [transaction.linkedInvoiceId, islemler]);
 
   const generate = useCallback(() => {
-    if (isPosSale && format === 'receipt') {
+    if (isSale && isReceiptFormat(format)) {
       const isRetail = !cari || cari.id === RETAIL_CARI_ID;
       return createPosReceiptPdf(receiptDataFromTransaction(transaction, isRetail, {
-        linkedReceipts: islemler.filter((t) => t.linkedInvoiceId === transaction.id),
+        linkedReceipts,
         balanceBefore: balance ? balance.before : undefined,
-      }), branding);
+      }), branding, receiptWidthOf(format));
     }
+    const pagePaper = isSale ? paperOf(format) : paper;
     return isInvoice
-      ? createInvoicePdf(transaction, cari, branding, { balance, paper })
-      : createReceiptPdf(transaction, cari, branding, { balance, accountName, linkedInvoiceNo, paper });
-  }, [isPosSale, format, isInvoice, transaction, cari, branding, balance, accountName, linkedInvoiceNo, islemler, paper]);
+      ? createInvoicePdf(transaction, cari, branding, { balance, paper: pagePaper, linkedReceipts })
+      : createReceiptPdf(transaction, cari, branding, { balance, accountName, linkedInvoiceNo, paper: pagePaper });
+  }, [isSale, format, isInvoice, transaction, cari, branding, balance, accountName, linkedInvoiceNo, linkedReceipts, paper]);
 
   const subtitle = [number, transaction.cariName, formatDate(transaction.date)].filter(Boolean).join('  ·  ');
   const shareText = `${branding.firmName || 'Firmamız'} - ${title}${number ? ` ${number}` : ''}`;
@@ -92,20 +100,10 @@ export const TransactionPdfModal: React.FC<TransactionPdfModalProps> = ({ transa
       shareText={shareText}
       ready={isLoaded}
       generate={generate}
-      toolbar={(
-        <div className="flex items-center gap-4 flex-wrap">
-          {isPosSale && (
-            <PdfOptionTabs<'receipt' | 'a4'>
-              label="Belge"
-              value={format}
-              options={[{ value: 'receipt', label: `Fiş (${branding.receiptWidth} mm)` }, { value: 'a4', label: 'Fatura' }]}
-              onChange={setFormat}
-            />
-          )}
-          {(!isPosSale || format === 'a4') && (
-            <PdfOptionTabs label="Kağıt" value={paper} options={PAPER_OPTIONS} onChange={setPaper} />
-          )}
-        </div>
+      toolbar={isSale ? (
+        <PdfOptionTabs<DocumentFormat> label="Belge" value={format} options={SALE_FORMAT_OPTIONS} onChange={setFormat} />
+      ) : (
+        <PdfOptionTabs label="Kağıt" value={paper} options={PAPER_OPTIONS} onChange={setPaper} />
       )}
       onClose={onClose}
     />
