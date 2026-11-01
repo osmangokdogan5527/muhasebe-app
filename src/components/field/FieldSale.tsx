@@ -229,7 +229,10 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
           <CheckCircle2 size={28} className="text-emerald-400 shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-bold text-white">Satış tamamlandı — {formatMoney(lastSale.total)}</div>
-            <div className="text-[11px] text-emerald-200/80 truncate">{lastSale.cariName} • Fiş {lastSale.receiptNo}</div>
+            <div className="sale-done-meta mt-1 space-y-0.5 text-xs">
+              <div className="text-white/80 font-semibold truncate">{lastSale.cariName}</div>
+              <div className="text-white/70 tabular-nums break-words">Fiş No: <span className="font-semibold text-white/80">{lastSale.receiptNo}</span></div>
+            </div>
           </div>
           <button
             type="button"
