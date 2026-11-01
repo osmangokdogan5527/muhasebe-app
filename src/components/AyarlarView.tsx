@@ -294,7 +294,7 @@ export default function AyarlarView({
       }
 
       // Verify current PIN matches (saved custom pin or defaults)
-      const isCurrentValid = currentAdminPinInput === escalationPin || ['1923', '1234', '9999'].includes(currentAdminPinInput);
+      const isCurrentValid = currentAdminPinInput === escalationPin;
       if (!isCurrentValid) {
         setAdminPinChangeError('Mevcut Yönetici PIN kodu hatalı!');
         return;

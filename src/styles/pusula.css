@@ -1877,3 +1877,8 @@ html[data-design-style="pusula"] :is(.fixed.inset-0.z-\[135\]) button.bg-teal-60
   background: var(--k-grad) !important;
   color: #ffffff !important;
 }
+
+/* Kasa başlık bandındaki kısayol ipucu */
+[data-design-style="pusula"] .pos-terminal-wrapper .pos-shortcut-hint {
+  color: rgba(255, 255, 255, 0.82) !important;
+}

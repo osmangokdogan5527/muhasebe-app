@@ -61,14 +61,6 @@ export const PosView: React.FC<PosViewProps> = ({
   const [discountMode, setDiscountMode] = useState<'percent' | 'amount' | 'target'>('percent');
   const [discountVal, setDiscountVal] = useState<number | string>('');
 
-  // PARA BİRİMİ SEÇİMİ (TRY, USD, EUR)
-  const [selectedCurrency, setSelectedCurrency] = useState<'TRY' | 'USD' | 'EUR'>('TRY');
-  const [exchangeRates] = useState<{ USD: number; EUR: number }>({
-    USD: 38.50,
-    EUR: 41.20,
-  });
-  const [customRate, setCustomRate] = useState<string>('');
-
   // ASKIDAKİ SATIŞLAR (PARKED SALES)
   const [parkedSales, setParkedSales] = useState<PosParkedSale[]>(() => {
     try {
@@ -104,22 +96,6 @@ export const PosView: React.FC<PosViewProps> = ({
     discountMode,
     globalTaxRate
   );
-
-  // KUR VE DÖVİZLİ TUTAR HESAPLAMASI
-  const currentRate =
-    selectedCurrency === 'TRY'
-      ? 1
-      : customRate !== ''
-      ? Math.max(0.0001, Number(customRate))
-      : exchangeRates[selectedCurrency] || 1;
-
-  const convertedTotal = summary.grandTotal / currentRate;
-  const currencySymbol =
-    selectedCurrency === 'TRY'
-      ? '₺'
-      : selectedCurrency === 'USD'
-      ? '$'
-      : '€';
 
   // SEPETE ÜRÜN EKLE VEYA MİKTAR ARTTIR
   const handleAddToCart = useCallback((stock: Stock) => {
@@ -547,56 +523,10 @@ export const PosView: React.FC<PosViewProps> = ({
           </div>
         </div>
 
-        {/* KISAYOL TUŞLARI - YÜKSEK KONTRAST BİLİŞİM/SATIŞ BUTONLARI */}
-        <div className="flex items-center gap-2 overflow-x-auto text-[11px] font-mono font-bold">
-          <span
-            className="px-3 py-1.5 rounded-lg font-black shadow-md flex items-center gap-1.5 border"
-            style={{ backgroundColor: '#1e293b', color: '#ffffff', borderColor: '#334155' }}
-          >
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-black" style={{ color: '#2dd4bf', backgroundColor: 'rgba(20,184,166,0.25)' }}>
-              F1
-            </span>
-            <span style={{ color: '#ffffff' }}>Barkod</span>
-          </span>
-
-          <span
-            className="px-3 py-1.5 rounded-lg font-black shadow-md flex items-center gap-1.5 border"
-            style={{ backgroundColor: '#065f46', color: '#ffffff', borderColor: '#10b981' }}
-          >
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-black" style={{ color: '#a7f3d0', backgroundColor: 'rgba(16,185,129,0.25)' }}>
-              F2
-            </span>
-            <span style={{ color: '#ffffff' }}>Hızlı Nakit</span>
-          </span>
-
-          <span
-            className="px-3 py-1.5 rounded-lg font-black shadow-md flex items-center gap-1.5 border"
-            style={{ backgroundColor: '#1e40af', color: '#ffffff', borderColor: '#3b82f6' }}
-          >
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-black" style={{ color: '#bfdbfe', backgroundColor: 'rgba(59,130,246,0.25)' }}>
-              F3
-            </span>
-            <span style={{ color: '#ffffff' }}>Hızlı POS</span>
-          </span>
-
-          <span
-            className="px-3 py-1.5 rounded-lg font-black shadow-md flex items-center gap-1.5 border"
-            style={{ backgroundColor: '#6b21a8', color: '#ffffff', borderColor: '#a855f7' }}
-          >
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-black" style={{ color: '#e9d5ff', backgroundColor: 'rgba(168,85,247,0.25)' }}>
-              F4
-            </span>
-            <span style={{ color: '#ffffff' }}>Parçalı Ödeme</span>
-          </span>
-
-          <span
-            className="px-3 py-1.5 rounded-lg font-black shadow-md flex items-center gap-1.5 border"
-            style={{ backgroundColor: '#9f1239', color: '#ffffff', borderColor: '#f43f5e' }}
-          >
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-black" style={{ color: '#fecdd3', backgroundColor: 'rgba(244,63,94,0.25)' }}>
-              F5
-            </span>
-            <span style={{ color: '#ffffff' }}>Veresiye</span>
+        {/* KISAYOLLAR: tek satırlık ipucu + askıdaki satışlar */}
+        <div className="flex items-center gap-3 flex-wrap justify-end">
+          <span className="pos-shortcut-hint text-[11px] font-semibold text-slate-400 whitespace-nowrap" title="Klavye kısayolları">
+            F1 Barkod · F2 Nakit · F3 POS · F4 Parçalı · F5 Veresiye · F8 Askı
           </span>
 
           <button
@@ -628,10 +558,10 @@ export const PosView: React.FC<PosViewProps> = ({
           {/* KASA GÖSTERGESİ VE ÖDEME PANELİ (GÖSTERGE SOL PANEL ALTINA ALINDI) */}
           <div className="p-4 bg-slate-900 rounded-2xl border-2 border-slate-700 shadow-2xl space-y-3.5 shrink-0" style={{ backgroundColor: '#0f172a' }}>
             
-            {/* KDV ORANI, İSKONTO VE PARA BİRİMİ PANELİ */}
+            {/* KDV ORANI VE İSKONTO PANELİ */}
             <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 grid grid-cols-1 md:grid-cols-12 gap-3 items-center" style={{ backgroundColor: '#020617' }}>
               {/* 1. KDV SEÇİMİ (VARSAYILAN %0) */}
-              <div className="md:col-span-3 space-y-1.5">
+              <div className="md:col-span-5 space-y-1.5">
                 <span className="text-[11px] font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5" style={{ color: '#cbd5e1' }}>
                   <Percent size={13} className="text-teal-400" style={{ color: '#2dd4bf' }} />
                   KDV Oranı:
@@ -656,7 +586,7 @@ export const PosView: React.FC<PosViewProps> = ({
               </div>
 
               {/* 2. İSKONTO SEÇİMİ (% YÜZDE, ₺ İSKONTO, 🎯 NET ALINACAK TUTAR) */}
-              <div className="md:col-span-5 space-y-1.5">
+              <div className="md:col-span-7 space-y-1.5">
                 <div className="flex items-center justify-between gap-1">
                   <span className="text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1" style={{ color: '#fcd34d' }}>
                     <Sparkles size={14} />
@@ -720,61 +650,6 @@ export const PosView: React.FC<PosViewProps> = ({
                 </div>
               </div>
 
-              {/* 3. ÖDENECEK PARA BİRİMİ SEÇİMİ (SAĞA YANAŞTIRILMIŞ) */}
-              <div className="md:col-span-4 space-y-1.5 flex flex-col items-end text-right">
-                <div className="flex items-center justify-end gap-2 w-full">
-                  <span className="text-[11px] font-black text-teal-300 uppercase tracking-wider flex items-center gap-1" style={{ color: '#5eead4' }}>
-                    <DollarSign size={13} />
-                    Para Birimi:
-                  </span>
-                  <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-700">
-                    {[
-                      { code: 'TRY', label: '₺ TRY' },
-                      { code: 'USD', label: '$ USD' },
-                      { code: 'EUR', label: '€ EUR' },
-                    ].map((c) => (
-                      <button
-                        key={c.code}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCurrency(c.code as any);
-                          setCustomRate('');
-                        }}
-                        className={`px-2 py-0.5 rounded text-[10px] font-black transition-all cursor-pointer ${
-                          selectedCurrency === c.code
-                            ? 'bg-teal-400 text-slate-950 shadow'
-                            : 'text-slate-400 hover:text-white'
-                        }`}
-                        style={selectedCurrency === c.code ? { backgroundColor: '#2dd4bf', color: '#020617', fontWeight: 900 } : {}}
-                      >
-                        {c.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {selectedCurrency !== 'TRY' ? (
-                  <div className="flex items-center justify-end gap-1.5 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 self-end">
-                    <span className="text-[10px] font-bold text-slate-300">
-                      1 {selectedCurrency} Kur:
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        value={customRate !== '' ? customRate : exchangeRates[selectedCurrency as keyof typeof exchangeRates]}
-                        onChange={(e) => setCustomRate(e.target.value)}
-                        className="w-16 py-0.5 bg-slate-950 border border-slate-700 rounded text-right text-xs font-mono font-black text-teal-300"
-                        style={{ backgroundColor: '#020617', color: '#2dd4bf' }}
-                      />
-                      <span className="text-[10px] font-mono text-slate-400">₺</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-[10px] text-slate-500 font-mono text-right pt-0.5">Türk Lirası (Standart)</div>
-                )}
-              </div>
             </div>
 
             {/* HESAPLAMA ÖZETİ & EKRAN GÖSTERGESİ (2 KOLONLU DÜZEN) */}
@@ -815,11 +690,6 @@ export const PosView: React.FC<PosViewProps> = ({
                   ₺{summary.grandTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
 
-                {selectedCurrency !== 'TRY' && (
-                  <div className="text-amber-300 font-mono text-base font-black pt-1 border-t border-slate-800 w-full text-right" style={{ color: '#fcd34d' }}>
-                    Ödenecek: {currencySymbol}{convertedTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {selectedCurrency}
-                  </div>
-                )}
               </div>
             </div>
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, Lock, ChevronDown, MessageSquare, ShieldCheck, Pin, PanelLeft } from 'lucide-react';
+import { LogOut, Lock, ChevronDown, MessageSquare, ShieldCheck } from 'lucide-react';
 import { StormLogo, StormIconWrapper, TAB_DEFS, SIDEBAR_BG_PRESETS } from '../constants';
 
 interface DesktopSidebarProps {
@@ -63,39 +63,13 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   setUserRole,
   setActiveTab,
 }) => {
-  const isProSolid = designStyle === 'pro-solid';
   const isPusula = designStyle === 'pusula';
-
-  const [isHovered, setIsHovered] = React.useState(false);
-  const [isPinned, setIsPinned] = React.useState(() => {
-    return localStorage.getItem('storm_sidebar_pinned') === 'true';
-  });
-
-  const togglePin = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const next = !isPinned;
-    setIsPinned(next);
-    localStorage.setItem('storm_sidebar_pinned', String(next));
-  };
-
-  const isExpanded = !isProSolid || isHovered || isPinned;
 
   return (
     <>
-      {/* Invisible flex placeholder to keep main content stable when sidebar expands on hover */}
-      {isProSolid && (
-        <div className={`hidden md:block shrink-0 transition-all duration-500 ease-in-out ${isPinned ? 'w-72' : 'w-[72px]'}`} />
-      )}
-
       {/* 1. DESKTOP SIDEBAR */}
       <aside 
-        onMouseEnter={() => isProSolid && setIsHovered(true)}
-        onMouseLeave={() => isProSolid && setIsHovered(false)}
-        className={`hidden md:flex flex-col text-white shrink-0 transition-all duration-500 ease-in-out z-40 border shadow-[0_12px_40px_-6px_rgba(0,0,0,0.5)] ${
-          isProSolid 
-            ? 'fixed left-0 top-0 bottom-0 h-screen my-0 ml-0 border-l-0 rounded-none rounded-r-2xl border-y-0' 
-            : 'relative my-4 ml-4 rounded-3xl'
-        } ${isExpanded ? 'w-72' : 'w-[72px]'} ${isLightSidebar ? 'sidebar-light' : ''}`}
+        className={`hidden md:flex flex-col text-white shrink-0 transition-all duration-500 ease-in-out z-40 border shadow-[0_12px_40px_-6px_rgba(0,0,0,0.5)] relative my-4 ml-4 rounded-3xl w-72 ${isLightSidebar ? 'sidebar-light' : ''}`}
         style={{ 
           backgroundColor: sidebarBg,
           ...sidebarPatternStyle,
@@ -103,9 +77,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         }}
       >
         {/* Sidebar Brand Logo Header */}
-        <div className={`pt-5 pb-4 transition-all duration-500 ease-in-out flex items-center justify-between relative z-10 ${isExpanded ? 'px-6' : 'px-2'}`}>
+        <div className={`pt-5 pb-4 transition-all duration-500 ease-in-out flex items-center justify-between relative z-10 px-6`}>
           <div className="flex items-center justify-center min-w-0 flex-1">
-            {isExpanded && isPusula ? (
+            {isPusula ? (
               // Pusula: büyük kare logo yerine yatay marka satırı (simge + yazı)
               <div className="pusula-brand flex items-center gap-3 w-full min-w-0">
                 <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 shadow-[0_6px_16px_-6px_var(--accent-500)]">
@@ -116,27 +90,14 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                   <div className="pusula-brand-sub text-[10.5px] font-medium">Ön Muhasebe</div>
                 </div>
               </div>
-            ) : isExpanded ? (
-              <StormLogo className="w-36 h-auto mx-auto" logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern={sidebarPattern} sidebarPatternOpacity={sidebarPatternOpacity} designStyle={designStyle} sidebarBg={sidebarBg} />
             ) : (
-              <div className="w-10 h-10 flex items-center justify-center rounded-xl overflow-hidden cursor-pointer" title="Storm Muhasebe">
-                <StormLogo className="w-full h-full" logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern="none" sidebarPatternOpacity={0} designStyle={designStyle} sidebarBg={sidebarBg} onlySvg={true} />
-              </div>
+              <StormLogo className="w-36 h-auto mx-auto" logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern={sidebarPattern} sidebarPatternOpacity={sidebarPatternOpacity} designStyle={designStyle} sidebarBg={sidebarBg} />
             )}
           </div>
-          {isProSolid && isExpanded && (
-            <button
-              onClick={togglePin}
-              className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-all cursor-pointer shrink-0 ml-2"
-              title={isPinned ? "Menüyü Otomatik Daralt (Hover Modu)" : "Menüyü Sabitle"}
-            >
-              <Pin size={14} className={isPinned ? "text-teal-400 rotate-45" : ""} />
-            </button>
-          )}
         </div>
 
         {/* Navigation Items */}
-        <nav className={`flex-1 py-2 overflow-y-auto sidebar-nav-left-scroll custom-scrollbar overflow-x-hidden transition-all duration-500 ease-in-out ${isExpanded ? 'px-4' : 'px-2'}`}>
+        <nav className={`flex-1 py-2 overflow-y-auto sidebar-nav-left-scroll custom-scrollbar overflow-x-hidden transition-all duration-500 ease-in-out px-4`}>
           <div className="space-y-1 w-full" style={{ direction: 'ltr' }}>
             {tabOrder
               .filter((tabId) => !hiddenTabs.includes(tabId))
@@ -153,25 +114,23 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                             id={`tab-btn-${tabId}`}
                             onClick={() => {
                               handleNavigate('islemler');
-                              if (isExpanded) {
-                                setIsIslemlerSubMenuOpen(!isIslemlerSubMenuOpen);
-                              }
+                              setIsIslemlerSubMenuOpen(!isIslemlerSubMenuOpen);
                             }}
                             title={def.label}
-                            className={`w-full flex items-center ${isExpanded ? 'justify-between px-3' : 'justify-center px-0'} py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer group ${
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer group ${
                               isActive 
                                 ? 'text-white font-semibold' 
                                 : 'text-white hover:bg-white/5'
                             }`}
-                            style={isActive ? (designStyle === 'pro-solid' ? { backgroundColor: 'var(--accent-500)', boxShadow: '0 4px 12px color-mix(in srgb, var(--accent-500) 40%, transparent)' } : { backgroundColor: 'color-mix(in srgb, var(--accent-500) 15%, transparent)' }) : {}}
+                            style={isActive ? { backgroundColor: 'color-mix(in srgb, var(--accent-500) 15%, transparent)' } : {}}
                           >
-                            <div className={`flex items-center ${isExpanded ? 'gap-3 min-w-0' : 'justify-center'}`}>
+                            <div className={`flex items-center gap-3 min-w-0`}>
                               <StormIconWrapper iconElement={def.icon} isActive={isActive} designStyle={designStyle} />
-                              {isExpanded && (
+                              {(
                                 <span className="whitespace-nowrap truncate capitalize">{def.label}</span>
                               )}
                             </div>
-                            {isExpanded && (
+                            {(
                               <div 
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -185,7 +144,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                           </button>
                         </div>
                         
-                        {isExpanded && isIslemlerSubMenuOpen && (
+                        {isIslemlerSubMenuOpen && (
                           <div className="pl-3 pr-1 py-1 space-y-1 bg-black/15 rounded-xl border border-white/5 animate-fade-in my-1 mx-1">
                             <button
                               onClick={() => {
@@ -235,20 +194,20 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                         id={`tab-btn-${tabId}`}
                         onClick={() => handleNavigate(tabId as any)}
                         title={def.label}
-                        className={`w-full flex items-center ${isExpanded ? 'justify-between px-3' : 'justify-center px-0'} py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer group ${
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer group ${
                           isActive 
                             ? 'text-white font-semibold' 
                             : 'text-white hover:bg-white/5'
                         }`}
-                        style={isActive ? (designStyle === 'pro-solid' ? { backgroundColor: 'var(--accent-500)', boxShadow: '0 4px 12px color-mix(in srgb, var(--accent-500) 40%, transparent)' } : { backgroundColor: 'color-mix(in srgb, var(--accent-500) 15%, transparent)' }) : {}}
+                        style={isActive ? { backgroundColor: 'color-mix(in srgb, var(--accent-500) 15%, transparent)' } : {}}
                       >
-                        <div className={`flex items-center ${isExpanded ? 'gap-3 min-w-0' : 'justify-center'}`}>
+                        <div className={`flex items-center gap-3 min-w-0`}>
                           <StormIconWrapper iconElement={def.icon} isActive={isActive} designStyle={designStyle} />
-                          {isExpanded && (
+                          {(
                             <span className="whitespace-nowrap truncate capitalize">{def.label}</span>
                           )}
                         </div>
-                        {isExpanded && isSecurityActive && userRole === 'employee' && sensitiveTabs.includes(tabId) && (
+                        {isSecurityActive && userRole === 'employee' && sensitiveTabs.includes(tabId) && (
                           <Lock size={12} className="text-zinc-400 group-hover:text-red-400 transition-colors shrink-0" />
                         )}
                       </button>
@@ -260,9 +219,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         </nav>
 
         {/* Sidebar User & Cloud Sync Info Footer */}
-        <div className={`p-3 mt-auto space-y-2 transition-all duration-500 ease-in-out ${isExpanded ? 'px-3' : 'px-1.5'}`}>
-          <div className={`rounded-2xl border border-white/5 bg-black/20 shadow-lg relative z-10 transition-all duration-500 ease-in-out ${isExpanded ? 'p-3 space-y-2.5' : 'p-2 flex flex-col items-center gap-2'}`}>
-            {isExpanded ? (
+        <div className={`p-3 mt-auto space-y-2 transition-all duration-500 ease-in-out px-3`}>
+          <div className={`rounded-2xl border border-white/5 bg-black/20 shadow-lg relative z-10 transition-all duration-500 ease-in-out p-3 space-y-2.5`}>
+            {(
               <>
                 <div className="flex items-center justify-between text-[8px] font-mono tracking-widest uppercase px-1">
                   <span className="text-zinc-400">CLOUD STATUS</span>
@@ -338,23 +297,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                   </button>
                 ))}
               </>
-            ) : (
-              /* Collapsed Footer representation */
-              <div className="flex flex-col items-center gap-2 py-1">
-                <div className="relative cursor-pointer" title={`${user?.displayName || 'Kullanıcı'} (${isOnline ? 'Çevrimiçi' : 'Çevrimdışı'})`}>
-                  <div className="w-8 h-8 rounded-lg bg-teal-500/20 text-teal-400 flex items-center justify-center font-bold text-xs shrink-0 uppercase" style={{ backgroundColor: 'rgba(45, 212, 191, 0.15)', color: '#2dd4bf' }}>
-                    {user?.displayName ? user.displayName.charAt(0) : 'K'}
-                  </div>
-                  <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-900 ${isOnline ? 'bg-teal-400' : 'bg-rose-500'}`} />
-                </div>
-                <button
-                  onClick={handleSignOut}
-                  className="p-1.5 text-zinc-400 hover:text-white rounded-lg transition cursor-pointer"
-                  title="Çıkış Yap"
-                >
-                  <LogOut size={14} />
-                </button>
-              </div>
             )}
           </div>
         </div>

@@ -53,7 +53,6 @@ export const StormLogo = ({
 
   // Get active sidebar pattern details
   let currentPattern = sidebarPattern || localStorage.getItem('storm_muhasebe_sidebar_pattern') || 'crystal';
-  if (designStyle === 'pro-solid') currentPattern = 'none';
   if (currentPattern === 'circles') currentPattern = 'flame';
   if (currentPattern === 'waves') currentPattern = 'chain';
   const savedOpacity = sidebarPatternOpacity !== undefined ? sidebarPatternOpacity : parseFloat(localStorage.getItem('storm_muhasebe_sidebar_pattern_opacity') || '0.75');
@@ -217,7 +216,7 @@ export const StormLogo = ({
           <clipPath id={`logo-clip-${uId}`}>
             <rect width="200" height="200" rx="48" />
           </clipPath>
-          {patternContent && !isFluidMesh && currentDesignStyle !== 'clean-light' && currentDesignStyle !== 'pusula' && (
+          {patternContent && !isFluidMesh && currentDesignStyle !== 'pusula' && (
             <pattern 
               id={patternId} 
               width={patternWidth} 
@@ -315,7 +314,7 @@ export const StormLogo = ({
         )}
 
         {/* Textured overlay pattern inside the logo background */}
-        {patternContent && !isFluidMesh && currentDesignStyle !== 'clean-light' && currentDesignStyle !== 'pro-solid' && currentDesignStyle !== 'pusula' && (
+        {patternContent && !isFluidMesh && currentDesignStyle !== 'pusula' && (
           <rect width="200" height="200" rx="48" fill={`url(#${patternId})`} />
         )}
 
@@ -580,13 +579,12 @@ export const COLOR_PRESETS = [
 ];
 
 export const StormIconWrapper = ({ iconElement, isActive, designStyle }: { iconElement: React.ReactNode, isActive?: boolean, designStyle?: string }) => {
-  const isProSolid = designStyle === 'pro-solid';
   return (
     <div 
-      className={`storm-icon-wrapper ${isActive ? 'active-icon' : ''} relative flex items-center justify-center shrink-0 rounded-lg transition-all duration-200 w-8 h-8 ${isProSolid && isActive ? 'text-white' : 'text-white'} group-hover:scale-110`}
+      className={`storm-icon-wrapper ${isActive ? 'active-icon' : ''} relative flex items-center justify-center shrink-0 rounded-lg transition-all duration-200 w-8 h-8 text-white group-hover:scale-110`}
       style={{
-        backgroundColor: isProSolid ? 'transparent' : (isActive ? 'var(--accent-600)' : 'color-mix(in srgb, var(--accent-900) 40%, transparent)'),
-        boxShadow: (isActive && !isProSolid) ? '0 0 10px color-mix(in srgb, var(--accent-500) 40%, transparent)' : 'none'
+        backgroundColor: isActive ? 'var(--accent-600)' : 'color-mix(in srgb, var(--accent-900) 40%, transparent)',
+        boxShadow: isActive ? '0 0 10px color-mix(in srgb, var(--accent-500) 40%, transparent)' : 'none'
       }}
     >
       {/* Actual Icon */}

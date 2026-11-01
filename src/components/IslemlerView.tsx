@@ -821,7 +821,7 @@ function IslemlerView({
                   setPinError('');
                   
                   if (val.length === 4) {
-                    if (val === escalationPin || ['1923', '1234', '9999'].includes(val)) {
+                    if (val === escalationPin) {
                       setIsPinModalOpen(false);
                       if (pinVerificationAction) {
                         pinVerificationAction();

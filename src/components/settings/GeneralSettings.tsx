@@ -163,8 +163,6 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                     {[
                       { id: 'pusula', name: 'Pusula (Canlı)', badge: 'Varsayılan', dot: 'bg-gradient-to-br from-sky-400 via-indigo-500 to-fuchsia-500' },
                       { id: 'fluid-mesh', name: 'Sıvı Mesh Gradient', badge: 'Seçkin & Canlı', dot: 'bg-gradient-to-r from-teal-400 to-indigo-500' },
-                      { id: 'clean-light', name: 'Temiz Işık (Pure)', badge: 'Mikro Hız', dot: 'bg-emerald-400' },
-                      { id: 'pro-solid', name: 'MuhasebePro (Solid)', badge: 'Pro Stil', dot: 'bg-rose-500' },
                     ].map((styleOpt) => {
                       const isSelected = designStyle === styleOpt.id;
                       return (
@@ -203,11 +201,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                     </div>
                     <div>
                       <h3 className="text-xs font-bold text-white uppercase tracking-wider">Menü Konumu</h3>
-                      <p className="text-[11px] text-white/50 mt-0.5">
-                        {designStyle === 'pro-solid'
-                          ? 'MuhasebePro stili kendi daralan sol menüsünü kullanır; konum diğer stillerde geçerlidir'
-                          : 'Menüyü solda, sağda ya da üstte yatay çubuk olarak kullanın'}
-                      </p>
+                      <p className="text-[11px] text-white/50 mt-0.5">Menüyü solda, sağda ya da üstte yatay çubuk olarak kullanın</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Menü konumu">

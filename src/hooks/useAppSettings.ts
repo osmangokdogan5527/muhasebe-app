@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { logError } from '../utils/errorLogger';
 
 /** Ayarlarda seçilebilen arayüz tasarım stilleri */
-export const SUPPORTED_DESIGN_STYLES = ['pusula', 'fluid-mesh', 'clean-light', 'pro-solid'];
+export const SUPPORTED_DESIGN_STYLES = ['pusula', 'fluid-mesh'];
 
 /** Menünün ekrandaki yeri (masaüstü) */
 export type NavPosition = 'left' | 'right' | 'top';
@@ -43,8 +43,10 @@ export function useAppSettings() {
       return DEFAULT_DESIGN_STYLE;
     }
     const saved = localStorage.getItem('storm_muhasebe_design_style');
-    // Kaldırılan stiller (Cam Arayüz, Lacivert Performans) varsayılana döner
-    return saved && SUPPORTED_DESIGN_STYLES.includes(saved) ? saved : DEFAULT_DESIGN_STYLE;
+    // Kaldırılan stiller (Cam Arayüz, Lacivert Performans, Temiz Işık, MuhasebePro) varsayılana döner
+    if (saved && SUPPORTED_DESIGN_STYLES.includes(saved)) return saved;
+    localStorage.setItem('storm_muhasebe_design_style', DEFAULT_DESIGN_STYLE);
+    return DEFAULT_DESIGN_STYLE;
   });
 
   const [isMobileViewport, setIsMobileViewport] = useState<boolean>(() => typeof window !== 'undefined' && window.innerWidth < 768);
