@@ -1,5 +1,5 @@
 import React from 'react';
-import { Repeat, Lock, LogOut, ShieldCheck, ChevronDown, ShoppingCart, ArrowDownLeft } from 'lucide-react';
+import { Repeat, Lock, LogOut, ShieldCheck, ChevronDown, ShoppingCart, ArrowDownLeft, UserCheck } from 'lucide-react';
 import { TAB_DEFS } from '../constants';
 
 interface MobileMenuViewProps {
@@ -24,6 +24,8 @@ interface MobileMenuViewProps {
   staffUserName?: string | null;
   /** Kullanıcı sistemi açıkken: oturumu kapatıp "Kim kullanıyor?" ekranına döner */
   onSwitchUser?: () => void;
+  /** Yalnızca sahipte: Çalışan Takibi ekranını açar */
+  onOpenStaffActivity?: () => void;
   isSecurityActive: boolean;
 }
 
@@ -47,6 +49,7 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
   setActiveTab,
   staffUserName,
   onSwitchUser,
+  onOpenStaffActivity,
   isSecurityActive,
 }) => {
   return (
@@ -85,6 +88,20 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
               </span>
             </button>
           ))}
+          {onOpenStaffActivity && (
+            <button
+              type="button"
+              id="mobile-quick-takip"
+              onClick={onOpenStaffActivity}
+              className="col-span-2 flex items-center gap-3 p-3.5 rounded-2xl border text-left cursor-pointer active:scale-[0.98] transition bg-sky-500/10 text-sky-300 border-sky-500/30"
+            >
+              <span className="mobile-quick-icon w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center"><UserCheck size={20} /></span>
+              <span>
+                <span className="block text-sm font-extrabold text-white">Çalışan Takibi</span>
+                <span className="block text-[11px] text-slate-400">Bugün kim ne yaptı, gün sonu raporu</span>
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Menu Grid - 3 Columns */}

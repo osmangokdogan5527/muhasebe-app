@@ -45,6 +45,7 @@ import { GlobalStyles } from "./components/GlobalStyles";
 import YetkisizErisimView from './components/YetkisizErisimView';
 // Telefonda pratik satış ve tahsilat ekranları (tam sürümün içinde)
 const FieldSale = lazyWithReload(() => import('./components/field/FieldSale').then((m) => ({ default: m.FieldSale })));
+const StaffActivityView = lazyWithReload(() => import('./users/StaffActivityView').then((m) => ({ default: m.StaffActivityView })));
 const FieldCollection = lazyWithReload(() => import('./components/field/FieldCollection').then((m) => ({ default: m.FieldCollection })));
 import { DesktopSidebar } from "./components/DesktopSidebar";
 import { MobileHeader } from "./components/MobileHeader";
@@ -335,6 +336,8 @@ export default function App() {
     ? (staffUser?.role === 'owner' ? 'admin' : baseUserRole)
     : baseUserRole;
   const isSecurityActive = isStaffSystem ? true : baseSecurityActive;
+  // Çalışan Takibi yalnızca sahiplere açıktır
+  const isStaffOwner = isStaffSystem && staffUser?.role === 'owner';
   // Sistem açıkken eski firma PIN'i geçmez; onaylar sahip PIN'i (ya da sağlayıcı ana kodu) ister
   const escalationPin = isStaffSystem ? '' : baseEscalationPin;
   const sensitiveTabs = useMemo(
@@ -456,11 +459,15 @@ export default function App() {
   };
   // Çalışan izinli olmadığı bir ekranda kaldıysa (giriş, kişi değişimi, yetki değişimi) izinli ekrana geçer
   useEffect(() => {
+    if (activeTab === 'takip' && !isStaffOwner) {
+      setActiveTab(isMobileScreen ? 'menu' : 'dashboard');
+      return;
+    }
     if (!isStaffSystem || !staffUser || userRole !== 'employee' || activeTab === 'menu') return;
     if (!sensitiveTabs.includes(activeTab)) return;
     const allowed = [...tabOrder, 'tahsilat'].find((t) => !sensitiveTabs.includes(t) && !hiddenTabs.includes(t));
     setActiveTab(isMobileScreen ? 'menu' : (allowed || 'menu'));
-  }, [isStaffSystem, staffUser, userRole, activeTab, sensitiveTabs, tabOrder, hiddenTabs, isMobileScreen]);
+  }, [isStaffSystem, isStaffOwner, staffUser, userRole, activeTab, sensitiveTabs, tabOrder, hiddenTabs, isMobileScreen]);
 
   const { shortcuts, setShortcuts } = useAppShortcuts(handleNavigate, setPendingIslemModal, setPendingAddCari, setPendingAddStock);
   const [aiPrefilledData, setAiPrefilledData] = useState<{
@@ -1009,6 +1016,7 @@ export default function App() {
         setUserRole={setUserRole}
         staffUserName={isStaffSystem ? staffUser?.name : null}
         onSwitchUser={isStaffSystem ? staff.logout : undefined}
+        onOpenStaffActivity={isStaffOwner ? () => setActiveTab('takip') : undefined}
       />
       <MobileHeader
         sidebarBg={sidebarBg}
@@ -1066,6 +1074,7 @@ export default function App() {
             isSecurityActive={isSecurityActive && !(isStaffSystem && staffUser?.role === 'owner')}
             staffUserName={isStaffSystem ? staffUser?.name : null}
             onSwitchUser={isStaffSystem ? staff.logout : undefined}
+            onOpenStaffActivity={isStaffOwner ? () => setActiveTab('takip') : undefined}
           />
         </div>
         <div className={activeTab === 'dashboard' ? 'block animate-fade-in' : 'hidden'}>
@@ -1191,6 +1200,11 @@ export default function App() {
             employeeTransactions={employeeTransactions} 
           />)}
         </div>
+        {isStaffOwner && (
+          <div className={activeTab === 'takip' ? 'block animate-fade-in' : 'hidden'}>
+            {renderWorkspaceView('takip', <StaffActivityView users={staff.users} />)}
+          </div>
+        )}
         <div className={activeTab === 'ayarlar' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('ayarlar', renderSettingsView())}
         </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Repeat, LogOut, Lock, ChevronDown, MessageSquare, ShieldCheck } from 'lucide-react';
+import { Repeat, LogOut, Lock, ChevronDown, MessageSquare, ShieldCheck, UserCheck } from 'lucide-react';
 import { StormLogo, StormIconWrapper, TAB_DEFS, SIDEBAR_BG_PRESETS } from '../constants';
 
 interface DesktopSidebarProps {
@@ -35,6 +35,8 @@ interface DesktopSidebarProps {
   staffUserName?: string | null;
   /** Kullanıcı sistemi açıkken: oturumu kapatıp "Kim kullanıyor?" ekranına döner */
   onSwitchUser?: () => void;
+  /** Yalnızca sahipte: Çalışan Takibi ekranını açar */
+  onOpenStaffActivity?: () => void;
 }
 
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
@@ -68,6 +70,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   setActiveTab,
   staffUserName,
   onSwitchUser,
+  onOpenStaffActivity,
 }) => {
   const isPusula = designStyle === 'pusula';
 
@@ -263,6 +266,17 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                   </button>
                 </div>
                 
+                {onOpenStaffActivity && (
+                  <button
+                    id="sidebar-staff-activity"
+                    onClick={onOpenStaffActivity}
+                    className={`w-full flex items-center justify-center gap-2 p-2 rounded-xl border transition cursor-pointer ${activeTab === 'takip' ? 'border-teal-500/40 text-teal-300' : 'border-white/5 text-zinc-300 hover:text-white'}`}
+                    style={{ backgroundColor: activeTab === 'takip' ? 'rgba(45, 212, 191, 0.12)' : 'rgba(255, 255, 255, 0.05)' }}
+                  >
+                    <UserCheck size={12} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Çalışan Takibi</span>
+                  </button>
+                )}
                 <button
                   onClick={() => setShowFeedbackModal(true)}
                   className="w-full flex items-center justify-center gap-2 p-2 rounded-xl border border-white/5 text-zinc-400 hover:text-white transition cursor-pointer"
