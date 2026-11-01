@@ -441,3 +441,9 @@ main:has(.fixed.inset-0[class*="z-"]) {
   background: transparent !important;
   box-shadow: none !important;
 }
+
+/* Storm AI yüzen düğmesi, sayfa içinden açılan bir pencere (tam ekran örtü ya da modal diyalog)
+   açıkken gizlenir: pencerelerin alanlarının (not, kaydet düğmesi) üstüne binmesin */
+body:has(main .fixed.inset-0, [aria-modal="true"]:not(.storm-ai-fab *)) .storm-ai-fab {
+  display: none !important;
+}

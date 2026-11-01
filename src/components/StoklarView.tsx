@@ -21,10 +21,13 @@ import {
   Scan,
   QrCode,
   ShieldAlert,
-  Tag
+  Tag,
+  PackagePlus,
+  ClipboardCheck
 } from 'lucide-react';
 import BarcodeScannerModal from './BarcodeScannerModal';
 import { StockModal } from './stoklar/StockModal';
+import { StockAdjustModal, StockAdjustMode } from './stoklar/StockAdjustModal';
 import { LabelDesignerModal } from './labels/LabelDesignerModal';
 import { confirmDialog, alertDialog } from '../utils/dialogs';
 import { salesPriceTaxLabel } from '../utils/stockPricing';
@@ -158,6 +161,8 @@ function StoklarView({
   const [editingStock, setEditingStock] = useState<Stock | null>(null);
   // Etiket tasarla penceresi: null = kapalı, [] = toplu (ürün seçilerek), [stok] = tek ürün
   const [labelStocks, setLabelStocks] = useState<Stock[] | null>(null);
+  // Manuel stok girişi/çıkışı ya da sayım penceresi
+  const [adjustMode, setAdjustMode] = useState<StockAdjustMode | null>(null);
 
   // Handle physical barcode scanner input globally in StoklarView
   useEffect(() => {
@@ -166,6 +171,8 @@ function StoklarView({
       const code = (customEvent.detail.code || '').trim();
       if (!code) return;
 
+      // Stok girişi/sayım penceresi açıkken okutmayı o pencere işler
+      if (adjustMode) return;
       if (!isModalOpen) {
         setSearchTerm(code);
       }
@@ -190,7 +197,7 @@ function StoklarView({
     return () => {
       window.removeEventListener('global-hardware-barcode-scan', handleHardwareScan);
     };
-  }, [isModalOpen]);
+  }, [isModalOpen, adjustMode]);
   
   // Form state
 
@@ -422,6 +429,22 @@ function StoklarView({
           <p className="text-white/40 text-xs mt-1">Sattığınız ürünlerin, sunduğunuz hizmetlerin stok miktarlarını ve maliyetlerini anlık izleyin.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+        <button
+          id="btn-stock-entry"
+          onClick={() => setAdjustMode('entry')}
+          className="flex items-center gap-2 border border-white/15 hover:bg-white/10 text-white text-xs font-semibold uppercase tracking-wider px-4 py-3 rounded-lg transition duration-150 cursor-pointer"
+        >
+          <PackagePlus size={16} />
+          <span>Stok Girişi</span>
+        </button>
+        <button
+          id="btn-stock-count"
+          onClick={() => setAdjustMode('count')}
+          className="flex items-center gap-2 border border-white/15 hover:bg-white/10 text-white text-xs font-semibold uppercase tracking-wider px-4 py-3 rounded-lg transition duration-150 cursor-pointer"
+        >
+          <ClipboardCheck size={16} />
+          <span>Stok Sayımı</span>
+        </button>
         <button 
           id="btn-bulk-labels"
           onClick={() => setLabelStocks([])}
@@ -908,6 +931,13 @@ function StoklarView({
         <LabelDesignerModal initialStocks={labelStocks} allStocks={stoklar} onClose={() => setLabelStocks(null)} />
       )}
 
+      <StockAdjustModal
+        isOpen={adjustMode !== null}
+        mode={adjustMode || 'entry'}
+        stoklar={stoklar}
+        onClose={() => setAdjustMode(null)}
+        requestDecreaseApproval={(action) => checkPermissionAndExecute('decrease_stock', action)}
+      />
       <StoklarExtraModals 
         isPinModalOpen={isPinModalOpen}
         escalationPin={escalationPin}

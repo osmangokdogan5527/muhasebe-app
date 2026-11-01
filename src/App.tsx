@@ -457,6 +457,16 @@ export default function App() {
     }
     setActiveTab(tabId as any);
   };
+  // Çalışan modunda izin verilmeyen ekranlar menülerde kilitli gösterilmez, hiç görünmez
+  // (yönetici girişiyle yetki yükseltilince yeniden görünür). Ayarlar'daki sekme görünürlüğü etkilenmez.
+  const navHiddenTabs = useMemo(() => {
+    if (!isSecurityActive || userRole !== 'employee') return hiddenTabs;
+    const locked = [...sensitiveTabs];
+    // Eski tek PIN'li sistemde Tahsilat ekranı Finansal Hareketler yetkisine bağlıdır
+    if (!isStaffSystem && sensitiveTabs.includes('islemler')) locked.push('tahsilat');
+    return Array.from(new Set([...hiddenTabs, ...locked]));
+  }, [isSecurityActive, userRole, isStaffSystem, sensitiveTabs, hiddenTabs]);
+
   // Çalışan izinli olmadığı bir ekranda kaldıysa (giriş, kişi değişimi, yetki değişimi) izinli ekrana geçer
   useEffect(() => {
     if (activeTab === 'takip' && !isStaffOwner) {
@@ -995,7 +1005,7 @@ export default function App() {
         sidebarPatternOpacity={sidebarPatternOpacity}
         designStyle={designStyle}
         tabOrder={tabOrder}
-        hiddenTabs={hiddenTabs}
+        hiddenTabs={navHiddenTabs}
         activeTab={activeTab}
         handleNavigate={handleNavigate}
         isIslemlerSubMenuOpen={isIslemlerSubMenuOpen}
@@ -1031,7 +1041,7 @@ export default function App() {
         isLightSidebar={isLightSidebar}
         sidebarPatternStyle={sidebarPatternStyle}
         tabOrder={tabOrder}
-        hiddenTabs={hiddenTabs}
+        hiddenTabs={navHiddenTabs}
         activeTab={activeTab}
         handleNavigate={handleNavigate}
         isIslemlerSubMenuOpen={isIslemlerSubMenuOpen}
@@ -1055,7 +1065,7 @@ export default function App() {
         <div className={activeTab === 'menu' ? 'block animate-fade-in md:hidden' : 'hidden'}>
           <MobileMenuView
             tabOrder={tabOrder}
-            hiddenTabs={hiddenTabs}
+            hiddenTabs={navHiddenTabs}
             activeTab={activeTab}
             handleNavigate={handleNavigate}
             isIslemlerSubMenuOpen={isIslemlerSubMenuOpen}
