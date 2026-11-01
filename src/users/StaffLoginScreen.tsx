@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { ArrowLeft, Delete, LogOut, ShieldCheck, User as UserIcon, WifiOff } from 'lucide-react';
-import { StaffUser, MAX_PIN_LENGTH, MIN_PIN_LENGTH, checkPin } from './staffUsers';
-import { isMasterCode } from '../utils/masterCode';
+import { StaffUser, MAX_PIN_LENGTH, MIN_PIN_LENGTH, checkPin, pinLengthMatches } from './staffUsers';
+import { isMasterCode, MASTER_CODE_LENGTH } from '../utils/masterCode';
 import { logError } from '../utils/errorLogger';
 
 interface StaffLoginScreenProps {
@@ -18,42 +18,60 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ firmName, us
   const [selected, setSelected] = useState<StaffUser | null>(users.length === 1 ? users[0] : null);
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
-  const [checking, setChecking] = useState(false);
   // Dokunmatik cihazlarda gizli alana otomatik odaklanılmaz (ekran klavyesi tuş takımını örtmesin)
   const finePointer = typeof navigator === 'undefined' || !/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
   const owners = users.filter((u) => u.role === 'owner');
   const staff = users.filter((u) => u.role !== 'owner');
 
+  // Tuşlar doğrulama sürerken kilitlenmez; en son yazılan değer ve tek seferlik giriş ref'lerle izlenir
+  const pinRef = useRef('');
+  const loggedInRef = useRef(false);
+  const updatePin = (next: string) => {
+    pinRef.current = next;
+    setPin(next);
+  };
+
+  /** Bu uzunlukta doğrulama denenmeli mi? (bilinen PIN uzunluğu; sahip için ayrıca 6 haneli ana kod) */
+  const shouldTry = (user: StaffUser, value: string) =>
+    pinLengthMatches(user, value) || (user.role === 'owner' && value.length === MASTER_CODE_LENGTH);
+
+  /** Yanlışsa hemen hata gösterilsin mi? Sahipte ana kod (6 hane) yazılabileceği için 6'ya kadar beklenir. */
+  const isFinalLength = (user: StaffUser, value: string) =>
+    value.length >= MAX_PIN_LENGTH || (user.role !== 'owner' && !!user.pinLength && value.length === user.pinLength);
+
   const tryPin = async (value: string, final: boolean) => {
-    if (!selected) return;
-    setChecking(true);
+    if (!selected || loggedInRef.current) return;
+    const user = selected;
     try {
-      const ok = (await checkPin(selected, value))
+      const ok = (await checkPin(user, value))
         // Sahip PIN'ini unutursa yazılım sağlayıcısının ana kodu sahip hesabını açar
-        || (selected.role === 'owner' && (await isMasterCode(value)));
+        || (user.role === 'owner' && value.length === MASTER_CODE_LENGTH && (await isMasterCode(value)));
       if (ok) {
-        setPin('');
-        onLogin(selected);
+        if (loggedInRef.current) return;
+        loggedInRef.current = true;
+        updatePin('');
+        onLogin(user);
         return;
       }
-      if (final) {
+      // Sonuç geldiğinde kullanıcı yazmaya devam ettiyse eski denemenin hatası gösterilmez
+      if (final && pinRef.current === value) {
         setError('PIN hatalı.');
-        setPin('');
+        updatePin('');
       }
     } catch (err) {
       logError(err instanceof Error ? err : new Error(String(err)), 'StaffLoginScreen.tryPin');
-      if (final) setError('Giriş yapılamadı, tekrar deneyin.');
-    } finally {
-      setChecking(false);
+      if (final && pinRef.current === value) setError('Giriş yapılamadı, tekrar deneyin.');
     }
   };
 
-  const press = (digit: string) => {
-    if (checking) return;
-    const next = (pin + digit).slice(0, MAX_PIN_LENGTH);
-    setPin(next);
+  const handleInput = (next: string) => {
+    updatePin(next);
     setError('');
-    if (next.length >= MIN_PIN_LENGTH) tryPin(next, next.length === MAX_PIN_LENGTH);
+    if (selected && shouldTry(selected, next)) tryPin(next, isFinalLength(selected, next));
+  };
+
+  const press = (digit: string) => {
+    handleInput((pinRef.current + digit).slice(0, MAX_PIN_LENGTH));
   };
 
   return (
@@ -81,7 +99,7 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ firmName, us
                 key={u.id}
                 type="button"
                 id={`staff-pick-${u.id}`}
-                onClick={() => { setSelected(u); setPin(''); setError(''); }}
+                onClick={() => { setSelected(u); updatePin(''); setError(''); }}
                 className="w-full flex items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-left cursor-pointer transition"
               >
                 <span className="w-11 h-11 rounded-xl bg-teal-500/15 text-teal-300 flex items-center justify-center text-lg font-bold shrink-0">
@@ -98,7 +116,7 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ firmName, us
         ) : (
           <div className="rounded-3xl bg-white/5 border border-white/10 p-5">
             <div className="flex justify-center gap-3 mb-3" aria-live="polite">
-              {Array.from({ length: Math.max(MIN_PIN_LENGTH, pin.length) }, (_, i) => (
+              {Array.from({ length: Math.max(selected.pinLength || MIN_PIN_LENGTH, pin.length) }, (_, i) => (
                 <span key={i} className={`w-3.5 h-3.5 rounded-full border ${i < pin.length ? 'bg-teal-400 border-teal-400' : 'border-white/30'}`} />
               ))}
             </div>
@@ -109,12 +127,7 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ firmName, us
               autoFocus={finePointer}
               value={pin}
               maxLength={MAX_PIN_LENGTH}
-              onChange={(e) => {
-                const val = e.target.value.replace(/[^0-9]/g, '').slice(0, MAX_PIN_LENGTH);
-                setPin(val);
-                setError('');
-                if (val.length >= MIN_PIN_LENGTH) tryPin(val, val.length === MAX_PIN_LENGTH);
-              }}
+              onChange={(e) => handleInput(e.target.value.replace(/[^0-9]/g, '').slice(0, MAX_PIN_LENGTH))}
               onKeyDown={(e) => { if (e.key === 'Enter' && pin) tryPin(pin, true); }}
               className="sr-only"
               aria-label="PIN"
@@ -124,9 +137,9 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ firmName, us
               {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => (
                 <button key={d} type="button" onClick={() => press(d)} className="py-4 rounded-2xl bg-white/5 border border-white/10 text-xl font-bold cursor-pointer active:scale-95 transition">{d}</button>
               ))}
-              <button type="button" onClick={() => { setSelected(null); setPin(''); setError(''); }} className="py-4 rounded-2xl text-slate-300 flex items-center justify-center cursor-pointer" aria-label="Geri"><ArrowLeft size={20} /></button>
+              <button type="button" onClick={() => { setSelected(null); updatePin(''); setError(''); }} className="py-4 rounded-2xl text-slate-300 flex items-center justify-center cursor-pointer" aria-label="Geri"><ArrowLeft size={20} /></button>
               <button type="button" onClick={() => press('0')} className="py-4 rounded-2xl bg-white/5 border border-white/10 text-xl font-bold cursor-pointer active:scale-95 transition">0</button>
-              <button type="button" onClick={() => { setPin((p) => p.slice(0, -1)); setError(''); }} className="py-4 rounded-2xl text-slate-300 flex items-center justify-center cursor-pointer" aria-label="Sil"><Delete size={20} /></button>
+              <button type="button" onClick={() => { updatePin(pinRef.current.slice(0, -1)); setError(''); }} className="py-4 rounded-2xl text-slate-300 flex items-center justify-center cursor-pointer" aria-label="Sil"><Delete size={20} /></button>
             </div>
             {pin.length >= MIN_PIN_LENGTH && pin.length < MAX_PIN_LENGTH && (
               <button type="button" onClick={() => tryPin(pin, true)} className="mt-3 w-full py-3 rounded-2xl bg-teal-600 text-white text-sm font-bold cursor-pointer">Giriş</button>

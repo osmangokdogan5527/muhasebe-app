@@ -412,29 +412,28 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.8.8';
+export const APP_VERSION = '1.8.9';
 
 export const CHANGELOG = {
-  version: '1.8.8',
+  version: '1.8.9',
   features: [
-    "Kullanıcılar ve Kişiye Özel Giriş: Her çalışan kendi adını seçip kendi PIN'iyle girer ('Kim kullanıyor?' ekranı). Sahip, Ayarlar > Kullanıcılar'dan kullanıcı ekler, PIN sıfırlar, pasif yapar; her çalışana görebileceği ekranları ve yapabileceği işlemleri tek tek verir.",
-    "Otomatik Çıkış: 20 dakika işlem yapılmazsa oturum kapanır; menüde 'Kullanıcı Değiştir' düğmesi.",
-    "Sahip Onayı: Çalışanın yetkisi olmayan işlemler sahibin kendi PIN'iyle onaylanır.",
-    "Kim Yaptı: Satış, tahsilat, cari, stok ve diğer kayıtlara kaydeden ve düzenleyen kişi yazılır; Finansal Hareketler listesinde görünür.",
-    "Hareket Günlüğü: Girişler, çıkışlar, satışlar, tahsilatlar, silme ve düzenlemeler kaydın eski hâliyle birlikte saklanır.",
-    "Çalışan Takibi (yalnızca sahip): Kişi bazında çalışma saatleri, satış ve tahsilat toplamı, silme/düzenleme sayısı; zaman çizelgesi, riskli işlemler kırmızı, önce/sonra karşılaştırması ve gün sonu PDF raporu.",
-    "Telefonda Tek Düzen: Saha modu kaldırıldı; telefon tam sürümü kullanır. Pratik Hızlı Satış ve Tahsilat ekranları ana menüde.",
-    "Belge Türü ve Boyutu Her Yerde: Hızlı satış dahil her yerden Fiş 80 mm / 58 mm ya da Fatura A4 / A5 alınabilir; fatura, makbuz, ekstre ve raporlar A5 olarak da çıkar.",
-    "Veresiye Takibi: Cari Hesaplar'da açık borçların yaşlandırması (kaç gündür ödenmedi), sıralama ve WhatsApp ile hatırlatma.",
-    "KDV'siz Belge: KDV olmayan satışta fiş ve faturada KDV satırı/sütunu gösterilmez; KDV varsa oranıyla yazılır.",
-    "Pusula Logosu ve Pencereler: Logo tema rengine uygun hâle geldi; askıdaki satışlar, yedekleme sihirbazı ve belge pencereleri Pusula'ya uyarlandı.",
-    "Yazılım Sağlayıcısı Ana Kodu: Yönetici Paneli yalnızca sağlayıcı koduyla açılır; PIN'ini unutan firmanın PIN'i sağlayıcı tarafından sıfırlanabilir.",
+    "Miktarı Doğrudan Yazma: Telefonda sepetteki adete dokunup 200 gibi miktarlar tek tek basmadan yazılır; toplam yazdıkça güncellenir.",
+    "Virgüllü Miktar: Kasada ve telefonda 1,80 metre, 1,5 kg gibi ondalık miktar girilebilir; Türkçe yazım geçerli (1.000 = bin). Miktar başlığı ürünün birimini gösterir (Miktar (Metre)).",
+    "Esc ile Vazgeç: Miktarı yazarken Esc'ye basınca önceki miktar geri gelir.",
+    "Satış Sonrası Bilgi: Telefonda 'Satış tamamlandı' kutusunda müşteri adı ve tam fiş numarası okunur şekilde gösterilir.",
+    "Hızlı PIN Girişi: Çalışanın yanlış PIN'i anında 'PIN hatalı' gösterir; PIN doğrulaması daha hızlı.",
   ],
   fixes: [
-    "Android'de WhatsApp ile PDF paylaşımı açılmıyordu; paylaşım düzeltildi, olmazsa dosya indirilip yol gösterilir.",
-    "Kasa kısayolları (F2/F3/F5) KDV ya da iskonto değişince eski tutarla satış yapıyordu.",
-    "Kısa fişler yan dönmüş ve kesik çıkıyordu.",
-    "Çevrimdışı ve kullanıcı listesi henüz inmemiş cihazda uygulama herkese açık başlamaz; bağlantı beklenir.",
+    "Telefonda 6 haneli PIN hızlı tuşlanınca son rakamlar kayboluyordu.",
+    "Eski bir yedeği geri yüklemek kullanıcı listesini silip kullanıcı sistemini kapatabiliyordu; kullanıcılar ve PIN'ler artık korunur.",
+    "Çevrimdışı açılıştan sonra 'Kullanıcı listesi bekleniyor' ekranında takılı kalınabiliyordu.",
+    "Onay penceresinde doğru PIN'den sonra fazladan basılan rakam onayı engelliyordu.",
+    "Miktar kutusuna çok hızlı yazınca ilk rakam kaybolabiliyordu (1,80 yerine 0,80).",
+    "Kasada miktar kutusu yalnızca tam sayı alıyordu; silip yazınca 1200 gibi birleşiyordu.",
+    "Telefonda küsuratlı miktarda '−' düğmesi ürünü sepetten siliyordu.",
+    "Pusula kasada 'Askıdaki Satışlar' yazısının arkasında işaretlenmiş gibi bir kutu görünüyordu.",
+    "Stok miktarları kasada ve telefonda 98.19999 gibi görünebiliyordu; Türkçe biçimde (98,2) gösterilir.",
+    "Kayıt ve silme işlemleri hareket günlüğü yüzünden fazladan internet beklemesi yapıyordu.",
   ]
 };
 
@@ -675,6 +674,27 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.8.9",
+    date: "01.11.2026",
+    changes: [
+      "Miktarı Doğrudan Yazma: Telefonda sepetteki adete dokunup 200 gibi miktarlar tek tek basmadan yazılır; toplam yazdıkça güncellenir.",
+      "Virgüllü Miktar: Kasada ve telefonda 1,80 metre, 1,5 kg gibi ondalık miktar girilebilir; Türkçe yazım geçerli (1.000 = bin). Miktar başlığı ürünün birimini gösterir (Miktar (Metre)).",
+      "Esc ile Vazgeç: Miktarı yazarken Esc'ye basınca önceki miktar geri gelir.",
+      "Satış Sonrası Bilgi: Telefonda 'Satış tamamlandı' kutusunda müşteri adı ve tam fiş numarası okunur şekilde gösterilir.",
+      "Hızlı PIN Girişi: Çalışanın yanlış PIN'i anında 'PIN hatalı' gösterir; PIN doğrulaması daha hızlı.",
+      "Telefonda 6 haneli PIN hızlı tuşlanınca son rakamlar kayboluyordu.",
+      "Eski bir yedeği geri yüklemek kullanıcı listesini silip kullanıcı sistemini kapatabiliyordu; kullanıcılar ve PIN'ler artık korunur.",
+      "Çevrimdışı açılıştan sonra 'Kullanıcı listesi bekleniyor' ekranında takılı kalınabiliyordu.",
+      "Onay penceresinde doğru PIN'den sonra fazladan basılan rakam onayı engelliyordu.",
+      "Miktar kutusuna çok hızlı yazınca ilk rakam kaybolabiliyordu (1,80 yerine 0,80).",
+      "Kasada miktar kutusu yalnızca tam sayı alıyordu; silip yazınca 1200 gibi birleşiyordu.",
+      "Telefonda küsuratlı miktarda '−' düğmesi ürünü sepetten siliyordu.",
+      "Pusula kasada 'Askıdaki Satışlar' yazısının arkasında işaretlenmiş gibi bir kutu görünüyordu.",
+      "Stok miktarları kasada ve telefonda 98.19999 gibi görünebiliyordu; Türkçe biçimde (98,2) gösterilir.",
+      "Kayıt ve silme işlemleri hareket günlüğü yüzünden fazladan internet beklemesi yapıyordu.",
+    ]
+  },
   {
     version: "1.8.8",
     date: "01.11.2026",

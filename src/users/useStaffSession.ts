@@ -127,7 +127,7 @@ export function useStaffSession(tenantId: string | null | undefined) {
           setSystemFlag(false);
         }
         setLoaded(true);
-      });
+      }, true);
     } catch (err) {
       logError(err instanceof Error ? err : new Error(String(err)), 'useStaffSession.subscribe');
       setLoaded(true);

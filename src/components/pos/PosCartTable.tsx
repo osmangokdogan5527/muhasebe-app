@@ -1,6 +1,7 @@
 import React from 'react';
 import { PosCartItem } from '../../types/pos';
 import { Trash2, Plus, Minus } from 'lucide-react';
+import { QuantityInput } from '../common/QuantityInput';
 
 interface PosCartTableProps {
   items: PosCartItem[];
@@ -110,7 +111,7 @@ export const PosCartTable: React.FC<PosCartTableProps> = ({
                 {/* 2. Miktar / Adet Stepper Kutusu */}
                 <div className="flex flex-col gap-1 items-center">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block text-center">
-                    Miktar (Adet)
+                    Miktar ({item.unit || 'Adet'})
                   </span>
                   <div className="flex items-center bg-slate-950 rounded-xl border border-slate-700 overflow-hidden">
                     <button
@@ -120,13 +121,12 @@ export const PosCartTable: React.FC<PosCartTableProps> = ({
                     >
                       <Minus size={14} />
                     </button>
-                    <input
-                      type="number"
-                      min="1"
+                    <QuantityInput
                       value={item.quantity}
-                      onChange={(e) => onSetQuantity(item.id, Math.max(1, Number(e.target.value) || 1))}
-                      className="pos-number-input w-12 text-center text-xs font-black font-mono text-white"
-                      title="Adet"
+                      onCommit={(qty) => onSetQuantity(item.id, qty)}
+                      label={`${item.stockName} miktarı`}
+                      title="Miktar: virgüllü girilebilir (ör. 1,80 metre)"
+                      className="pos-number-input w-14 bg-transparent text-center text-xs font-black font-mono text-white outline-none"
                       style={{ color: '#ffffff' }}
                     />
                     <button

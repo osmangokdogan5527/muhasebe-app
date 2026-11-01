@@ -1,12 +1,14 @@
 import React, { useMemo, useState, Suspense } from 'react';
 import { lazyWithReload } from '../../utils/lazyWithReload';
 import { Minus, Plus, Trash2, Package, User, Banknote, CreditCard, BookOpen, CheckCircle2, ShoppingCart, ChevronRight, FileText } from 'lucide-react';
+import { formatQuantity } from '../../pdf/format';
 import { Cari, Stock, BankAccount } from '../../types';
 import { PosCartItem, PosPaymentSplit, PosSaleSummary } from '../../types/pos';
 import { calculateLineTotal, calculateCartSummary, findStockByBarcodeOrSearch, generateReceiptNo } from '../../utils/posUtils';
 import { parseScannedQrCode } from '../../utils/formatters';
 import { getTodayISO } from '../../utils/dateUtils';
 import { logError } from '../../utils/errorLogger';
+import { QuantityInput } from '../common/QuantityInput';
 import { ReceiptPdfModal, ReceiptInvoiceSource, invoiceSourceFromSummary } from '../pdf/ReceiptPdfModal';
 import { ReceiptSaleData, receiptDataFromPosSummary } from '../../pdf/posReceiptPdf';
 import { Card, SectionTitle, PrimaryButton, SegmentedControl, SearchBox, EmptyState, CariPickerSheet, formatMoney, norm, parseAmount } from './fieldUi';
@@ -116,13 +118,29 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
     }
   };
 
+  /** +/- ile miktar değiştirir; sıfıra/eksiye düşecekse miktar korunur (masaüstü kasa ile aynı). Silmek için removeFromCart. */
   const changeQuantity = (id: string, delta: number) => {
-    setCart(prev => prev.flatMap(item => {
-      if (item.id !== id) return [item];
+    setCart(prev => prev.map(item => {
+      if (item.id !== id) return item;
       const quantity = Math.round((item.quantity + delta) * 1000) / 1000;
-      if (quantity <= 0) return [];
+      if (quantity <= 0) return item;
       const { discountAmount, totalLine } = calculateLineTotal(item.unitPrice, quantity, item.discountRate);
-      return [{ ...item, quantity, discountAmount, totalLine }];
+      return { ...item, quantity, discountAmount, totalLine };
+    }));
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart(prev => prev.filter(item => item.id !== id));
+  };
+
+  /** Adet kutusuna doğrudan yazılan miktar (0 ya da geçersizse değişmez; silmek için çöp kutusu) */
+  const setQuantity = (id: string, value: number) => {
+    if (!Number.isFinite(value) || value <= 0) return;
+    const quantity = Math.round(value * 1000) / 1000;
+    setCart(prev => prev.map(item => {
+      if (item.id !== id) return item;
+      const { discountAmount, totalLine } = calculateLineTotal(item.unitPrice, quantity, item.discountRate);
+      return { ...item, quantity, discountAmount, totalLine };
     }));
   };
 
@@ -211,7 +229,7 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-white truncate">{stock.name}</div>
                 <div className={`text-[11px] ${stock.quantity <= stock.minQuantity ? 'text-amber-400' : 'text-slate-500'}`}>
-                  Stok: {stock.quantity} {stock.unit} • {stock.code}
+                  Stok: {formatQuantity(stock.quantity)} {stock.unit} • {stock.code}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -229,7 +247,10 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
           <CheckCircle2 size={28} className="text-emerald-400 shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-bold text-white">Satış tamamlandı — {formatMoney(lastSale.total)}</div>
-            <div className="text-[11px] text-emerald-200/80 truncate">{lastSale.cariName} • Fiş {lastSale.receiptNo}</div>
+            <div className="sale-done-meta mt-1 space-y-0.5 text-xs">
+              <div className="text-white/80 font-semibold truncate">{lastSale.cariName}</div>
+              <div className="text-white/70 tabular-nums break-words">Fiş No: <span className="font-semibold text-white/80">{lastSale.receiptNo}</span></div>
+            </div>
           </div>
           <button
             type="button"
@@ -261,17 +282,17 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-white truncate">{item.stockName}</div>
                       <div className="text-[11px] text-slate-500">{formatMoney(item.unitPrice)} / {item.unit}</div>
-                      {overStock && <div className="text-[11px] text-amber-400">Stokta {stock!.quantity} {item.unit} var</div>}
+                      {overStock && <div className="text-[11px] text-amber-400">Stokta {formatQuantity(stock!.quantity)} {item.unit} var</div>}
                     </div>
                     <span className="text-sm font-bold text-white tabular-nums shrink-0">{formatMoney(item.totalLine)}</span>
                   </div>
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center gap-1 rounded-xl bg-black/30 border border-white/10">
                       <button type="button" onClick={() => changeQuantity(item.id, -1)} className="p-2.5 text-white cursor-pointer" aria-label="Azalt"><Minus size={16} /></button>
-                      <span className="w-10 text-center text-sm font-bold text-white tabular-nums">{item.quantity}</span>
+                      <QuantityInput value={item.quantity} onCommit={(v) => setQuantity(item.id, v)} label={`${item.stockName} miktarı`} className="qty-input w-16 bg-transparent text-center text-sm font-bold text-white tabular-nums outline-none rounded-lg focus:bg-white/10 py-1.5" />
                       <button type="button" onClick={() => changeQuantity(item.id, 1)} className="p-2.5 text-white cursor-pointer" aria-label="Artır"><Plus size={16} /></button>
                     </div>
-                    <button type="button" onClick={() => changeQuantity(item.id, -item.quantity)} className="p-2.5 text-rose-400 cursor-pointer" aria-label="Kaldır"><Trash2 size={17} /></button>
+                    <button type="button" onClick={() => removeFromCart(item.id)} className="p-2.5 text-rose-400 cursor-pointer" aria-label="Kaldır"><Trash2 size={17} /></button>
                   </div>
                 </Card>
               );

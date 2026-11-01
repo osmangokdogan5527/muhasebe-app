@@ -38,6 +38,11 @@ export interface StaffUser {
   name: string;
   role: StaffRole;
   pin: PasswordVerifier;
+  /**
+   * PIN'in hane sayısı (4-6). Doğrulama yalnızca bu uzunlukta yapılır: her tuşta ağır PBKDF2
+   * hesabı çalışmaz, tuş takımında rakam kaybolmaz. Eski kayıtlarda yoksa 4-6 hanede denenir.
+   */
+  pinLength?: number;
   active: boolean;
   /** Çalışanın girebildiği sekmeler (sahip için kullanılmaz) */
   allowedTabs: string[];
@@ -67,6 +72,7 @@ export function normalizeUsersDoc(data: Record<string, any> | null | undefined):
         name: String(u.name).trim(),
         role: u.role === 'owner' ? 'owner' : 'staff',
         pin: u.pin,
+        pinLength: Number.isInteger(u.pinLength) && u.pinLength >= MIN_PIN_LENGTH && u.pinLength <= MAX_PIN_LENGTH ? u.pinLength : undefined,
         active: u.active !== false,
         allowedTabs: Array.isArray(u.allowedTabs) ? u.allowedTabs.filter((t: any) => typeof t === 'string') : [...DEFAULT_STAFF_TABS],
         actions: { ...emptyActions(), ...(u.actions || {}) },
@@ -90,7 +96,16 @@ export async function hashPin(pin: string): Promise<PasswordVerifier> {
   return createPasswordVerifier(pin);
 }
 
+/** Girilen hane sayısı bu kullanıcının PIN'i olabilir mi? (uzunluk bilinmiyorsa 4-6 hane) */
+export function pinLengthMatches(user: StaffUser, input: string): boolean {
+  const len = (input || '').length;
+  if (user.pinLength) return len === user.pinLength;
+  return len >= MIN_PIN_LENGTH && len <= MAX_PIN_LENGTH;
+}
+
 export async function checkPin(user: StaffUser, pin: string): Promise<boolean> {
+  // Uzunluk tutmuyorsa PBKDF2 hesabına hiç girilmez
+  if (!pinLengthMatches(user, pin)) return false;
   return verifyPassword(pin, user.pin);
 }
 

@@ -1463,6 +1463,12 @@ main[data-design-style="pusula"] > .max-w-md > div:first-child p {
   color: #ffffff !important;
 }
 
+/* Cam çip yalnızca düğmenin kendisine uygulanır; düğme içindeki yazı ("Askıdaki Satışlar") ayrı kutu almaz */
+[data-design-style="pusula"] .pos-terminal-wrapper > div:first-child button[style] span[style]:last-child {
+  background-color: transparent !important;
+  border-color: transparent !important;
+}
+
 [data-design-style="pusula"] .pos-terminal-wrapper > div:first-child :is(span, button)[style] > span:first-child {
   background-color: #ffffff !important;
   color: var(--accent-700) !important;
