@@ -4,7 +4,7 @@ import { PosCartItem, PosPaymentSplit, PosParkedSale, PosSaleSummary } from '../
 import { PosProductCatalog } from './PosProductCatalog';
 import { PosCartTable } from './PosCartTable';
 import { PosSplitPaymentModal } from './PosSplitPaymentModal';
-import { ReceiptPdfModal, ReceiptInvoiceSource } from '../pdf/ReceiptPdfModal';
+import { ReceiptPdfModal, ReceiptInvoiceSource, invoiceSourceFromSummary } from '../pdf/ReceiptPdfModal';
 import { receiptDataFromPosSummary } from '../../pdf/posReceiptPdf';
 import { PosParkedSalesModal } from './PosParkedSalesModal';
 import { findStockByBarcodeOrSearch, calculateLineTotal, calculateCartSummary, generateReceiptNo } from '../../utils/posUtils';
@@ -79,50 +79,10 @@ export const PosView: React.FC<PosViewProps> = ({
   // Fiş PDF'i için veri bir kez hazırlanır (POS ekranı yeniden çizildikçe PDF yeniden üretilmesin)
   const completedReceiptData = useMemo(() => (completedSaleSummary ? receiptDataFromPosSummary(completedSaleSummary) : null), [completedSaleSummary]);
   // Aynı satışın fatura (A4 / A5) olarak da alınabilmesi için kayıt karşılığı
-  const completedInvoiceSource = useMemo<ReceiptInvoiceSource | undefined>(() => {
-    if (!completedSaleSummary) return undefined;
-    try {
-      const sale = completedSaleSummary;
-      const id = sale.receiptNo;
-      const islem: Transaction = {
-        id,
-        invoiceNo: sale.receiptNo,
-        type: 'sale',
-        cariId: sale.cariId || '',
-        cariName: sale.cariName,
-        date: sale.date,
-        amount: sale.grandTotal,
-        account: '',
-        description: '',
-        items: sale.items.map((item) => ({
-          stockId: item.stockId,
-          stockName: item.stockName,
-          quantity: item.quantity,
-          unit: item.unit,
-          price: item.unitPrice,
-          taxRate: item.taxRate,
-          total: item.totalLine,
-        })),
-        createdAt: new Date().toISOString(),
-        currency: 'TRY',
-      };
-      const split = sale.paymentSplit;
-      const linkedReceipts: Transaction[] = [
-        ...(split.cashAmount > 0.004 ? [{ id: `${id}-cash`, type: 'collection' as const, cariId: islem.cariId, cariName: islem.cariName, date: islem.date, amount: split.cashAmount, account: 'cash' as const, description: '', createdAt: islem.createdAt, linkedInvoiceId: id }] : []),
-        ...(split.posAmount > 0.004 ? [{ id: `${id}-pos`, type: 'collection' as const, cariId: islem.cariId, cariName: islem.cariName, date: islem.date, amount: split.posAmount, account: 'pos' as const, description: '', createdAt: islem.createdAt, linkedInvoiceId: id }] : []),
-      ];
-      const credit = sale.credit;
-      return {
-        islem,
-        cari: cariler.find((c) => c.id === sale.cariId),
-        linkedReceipts,
-        balance: credit ? { before: credit.balanceBefore, effect: credit.amount, after: credit.balanceAfter, current: credit.balanceAfter } : null,
-      };
-    } catch (err: any) {
-      logError(err instanceof Error ? err : new Error(String(err)), 'PosView.completedInvoiceSource');
-      return undefined;
-    }
-  }, [completedSaleSummary, cariler]);
+  const completedInvoiceSource = useMemo<ReceiptInvoiceSource | undefined>(
+    () => (completedSaleSummary ? invoiceSourceFromSummary(completedSaleSummary, cariler) : undefined),
+    [completedSaleSummary, cariler],
+  );
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
   // PARKED SALES LOCALSTORAGE KAYIT

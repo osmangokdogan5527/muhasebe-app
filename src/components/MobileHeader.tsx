@@ -44,7 +44,9 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
     return null;
   }
 
-  const currentTabLabel = TAB_DEFS[activeTab]?.label || 'Storm Muhasebe';
+  // Telefona özel ekranların başlıkları (sekme listesinde olmayanlar)
+  const MOBILE_LABELS: Record<string, string> = { tahsilat: 'Tahsilat / Ödeme', menu: 'Ana Menü' };
+  const currentTabLabel = MOBILE_LABELS[activeTab] || TAB_DEFS[activeTab]?.label || 'Storm Muhasebe';
 
   return (
     <div 

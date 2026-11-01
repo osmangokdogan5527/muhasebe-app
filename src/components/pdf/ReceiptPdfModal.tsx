@@ -5,6 +5,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import type { Cari, Transaction } from '../../types';
 import type { DocumentBalance } from '../../utils/cariLedger';
+import type { PosSaleSummary } from '../../types/pos';
+import { logError } from '../../utils/errorLogger';
 import { ReceiptSaleData, createPosReceiptPdf } from '../../pdf/posReceiptPdf';
 import { createInvoicePdf } from '../../pdf/invoicePdf';
 import { useDocumentBranding } from '../../pdf/useDocumentBranding';
@@ -22,6 +24,51 @@ export interface ReceiptInvoiceSource {
   linkedReceipts?: Transaction[];
   /** Cari bakiye özeti (veresiyede) */
   balance?: DocumentBalance | null;
+}
+
+
+/** Kasa / telefon satışının özetinden, aynı satışı fatura olarak basmak için kayıt karşılığı üretir */
+export function invoiceSourceFromSummary(sale: PosSaleSummary, cariler: Cari[]): ReceiptInvoiceSource | undefined {
+  try {
+    const id = sale.receiptNo;
+    const islem: Transaction = {
+      id,
+      invoiceNo: sale.receiptNo,
+      type: 'sale',
+      cariId: sale.cariId || '',
+      cariName: sale.cariName,
+      date: sale.date,
+      amount: sale.grandTotal,
+      account: '',
+      description: '',
+      items: sale.items.map((item) => ({
+        stockId: item.stockId,
+        stockName: item.stockName,
+        quantity: item.quantity,
+        unit: item.unit,
+        price: item.unitPrice,
+        taxRate: item.taxRate,
+        total: item.totalLine,
+      })),
+      createdAt: new Date().toISOString(),
+      currency: 'TRY',
+    };
+    const split = sale.paymentSplit;
+    const linkedReceipts: Transaction[] = [
+      ...(split.cashAmount > 0.004 ? [{ id: `${id}-cash`, type: 'collection' as const, cariId: islem.cariId, cariName: islem.cariName, date: islem.date, amount: split.cashAmount, account: 'cash' as const, description: '', createdAt: islem.createdAt, linkedInvoiceId: id }] : []),
+      ...(split.posAmount > 0.004 ? [{ id: `${id}-pos`, type: 'collection' as const, cariId: islem.cariId, cariName: islem.cariName, date: islem.date, amount: split.posAmount, account: 'pos' as const, description: '', createdAt: islem.createdAt, linkedInvoiceId: id }] : []),
+    ];
+    const credit = sale.credit;
+    return {
+      islem,
+      cari: cariler.find((c) => c.id === sale.cariId),
+      linkedReceipts,
+      balance: credit ? { before: credit.balanceBefore, effect: credit.amount, after: credit.balanceAfter, current: credit.balanceAfter } : null,
+    };
+  } catch (err: any) {
+    logError(err instanceof Error ? err : new Error(String(err)), 'ReceiptPdfModal.invoiceSourceFromSummary');
+    return undefined;
+  }
 }
 
 export interface ReceiptPdfModalProps {

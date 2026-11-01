@@ -41,6 +41,9 @@ import { BackupWizardModal } from './components/backup/BackupWizardModal';
 import { FluidMeshBackground } from './components/FluidMeshBackground';
 import { GlobalStyles } from "./components/GlobalStyles";
 import YetkisizErisimView from './components/YetkisizErisimView';
+// Telefonda pratik satış ve tahsilat ekranları (tam sürümün içinde)
+const FieldSale = lazyWithReload(() => import('./components/field/FieldSale').then((m) => ({ default: m.FieldSale })));
+const FieldCollection = lazyWithReload(() => import('./components/field/FieldCollection').then((m) => ({ default: m.FieldCollection })));
 import { DesktopSidebar } from "./components/DesktopSidebar";
 import { MobileHeader } from "./components/MobileHeader";
 import { MobileMenuView } from "./components/MobileMenuView";
@@ -141,6 +144,13 @@ export default function App() {
     } catch (err) {
       logError(err instanceof Error ? err : new Error(String(err)), 'App.clearFieldMode');
     }
+  }, []);
+  // Telefon genişliğinde kasa yerine pratik satış ekranı ve alt sekme çubuğu kullanılır
+  const [isMobileScreen, setIsMobileScreen] = useState<boolean>(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const onResize = () => setIsMobileScreen(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -366,7 +376,9 @@ export default function App() {
 
 
   const handleNavigate = (tabId: string) => {
-    if (isSecurityActive && userRole === 'employee' && sensitiveTabs.includes(tabId)) {
+    // Tahsilat ekranı Finansal Hareketler yetkisine bağlıdır
+    const permissionTab = tabId === 'tahsilat' ? 'islemler' : tabId;
+    if (isSecurityActive && userRole === 'employee' && sensitiveTabs.includes(permissionTab)) {
       setAdminPinError(null);
       setAdminPinInput('');
       setIsAdminPinModalOpen(true);
@@ -956,12 +968,40 @@ export default function App() {
           {renderWorkspaceView('dashboard', <DashboardView cariler={cariler} stoklar={stoklar} islemler={islemler} ceksenet={ceksenet} expenses={expenses} employeeTransactions={employeeTransactions} recurringTransactions={recurringTransactions} bankAccounts={bankAccounts} accountTransactions={accountTransactions} onNavigate={handleNavigate} />)}
         </div>
         <div className={activeTab === 'pos' ? 'block animate-fade-in' : 'hidden'}>
-          {renderWorkspaceView('pos', <PosView
-            stocks={stoklar}
-            cariler={cariler}
-            bankAccounts={bankAccounts}
-            onCompletePosSale={handleCompletePosSale}
-          />)}
+          {renderWorkspaceView('pos', isMobileScreen ? (
+            <div className="mobile-quick">
+              <FieldSale
+                stoklar={stoklar}
+                cariler={cariler}
+                bankAccounts={bankAccounts}
+                presetCari={null}
+                onPresetConsumed={() => {}}
+                onCompleteSale={handleCompletePosSale}
+                showToast={showToast as any}
+              />
+            </div>
+          ) : (
+            <PosView
+              stocks={stoklar}
+              cariler={cariler}
+              bankAccounts={bankAccounts}
+              onCompletePosSale={handleCompletePosSale}
+            />
+          ))}
+        </div>
+        <div className={activeTab === 'tahsilat' ? 'block animate-fade-in' : 'hidden'}>
+          {renderWorkspaceView('tahsilat', (
+            <div className="mobile-quick max-w-xl mx-auto">
+              <FieldCollection
+                cariler={cariler}
+                islemler={islemler}
+                bankAccounts={bankAccounts}
+                presetCari={null}
+                onPresetConsumed={() => {}}
+                showToast={showToast as any}
+              />
+            </div>
+          ))}
         </div>
         <div className={activeTab === 'cariler' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('cariler', <CarilerView 

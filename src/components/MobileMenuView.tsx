@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lock, LogOut, ShieldCheck, ChevronDown } from 'lucide-react';
+import { Lock, LogOut, ShieldCheck, ChevronDown, ShoppingCart, ArrowDownLeft } from 'lucide-react';
 import { TAB_DEFS } from '../constants';
 
 interface MobileMenuViewProps {
@@ -59,10 +59,32 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
           </span>
         </div>
 
+        {/* Hızlı işlemler: telefonda en sık kullanılan iki ekran */}
+        <div className="mobile-quick-actions grid grid-cols-2 gap-2.5 mb-5">
+          {[
+            { id: 'pos', title: 'Hızlı Satış', hint: 'Nakit, kart, veresiye', icon: <ShoppingCart size={22} />, tone: 'bg-teal-500/15 text-teal-300 border-teal-500/30' },
+            { id: 'tahsilat', title: 'Tahsilat / Ödeme', hint: 'Cariden para al / öde', icon: <ArrowDownLeft size={22} />, tone: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
+          ].map((action) => (
+            <button
+              key={action.id}
+              type="button"
+              id={`mobile-quick-${action.id}`}
+              onClick={() => handleNavigate(action.id)}
+              className={`flex flex-col items-start gap-2 p-4 rounded-2xl border text-left cursor-pointer active:scale-[0.98] transition ${action.tone}`}
+            >
+              <span className="mobile-quick-icon w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">{action.icon}</span>
+              <span>
+                <span className="block text-sm font-extrabold text-white">{action.title}</span>
+                <span className="block text-[11px] text-slate-400">{action.hint}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+
         {/* Menu Grid - 3 Columns */}
         <div className="grid grid-cols-3 gap-2.5 mb-6">
           {tabOrder
-            .filter((tabId) => !hiddenTabs.includes(tabId) && tabId !== 'ceksenet' && tabId !== 'krediler')
+            .filter((tabId) => !hiddenTabs.includes(tabId) && tabId !== 'ceksenet' && tabId !== 'krediler' && tabId !== 'pos')
             .map((tabId) => {
               const def = TAB_DEFS[tabId];
               if (!def) return null;

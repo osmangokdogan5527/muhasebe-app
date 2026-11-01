@@ -1748,3 +1748,49 @@ html[data-design-style="pusula"] :is(.fixed.inset-0.z-\[135\]) button.bg-teal-60
 [data-design-style="pusula"] .pos-terminal-wrapper .pos-shortcut-hint {
   color: rgba(255, 255, 255, 0.82) !important;
 }
+
+/* ---------------------------------------------------------------------
+   23. TELEFON — üst çubuk başlığı ve pratik satış / tahsilat ekranları
+   --------------------------------------------------------------------- */
+[data-design-style="pusula"] .md\:hidden.sticky.top-0 .bg-clip-text {
+  -webkit-text-fill-color: #ffffff !important;
+  color: #ffffff !important;
+}
+
+[data-design-style="pusula"] .md\:hidden.sticky.top-0 :is(.text-zinc-500, .text-zinc-400) {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Barkod düğmesi */
+[data-design-style="pusula"] .mobile-quick button.shrink-0.w-12.rounded-2xl {
+  background: var(--k-grad) !important;
+  border-color: transparent !important;
+  box-shadow: 0 10px 20px -12px color-mix(in srgb, var(--accent-700) 90%, transparent) !important;
+}
+
+[data-design-style="pusula"] .mobile-quick button.shrink-0.w-12.rounded-2xl svg {
+  color: #ffffff !important;
+}
+
+/* Ana düğme (Satışı Tamamla / Tahsilatı Kaydet) */
+[data-design-style="pusula"] .mobile-quick button.w-full.py-3\.5.rounded-2xl {
+  background: var(--k-grad) !important;
+  color: #ffffff !important;
+}
+
+[data-design-style="pusula"] .mobile-quick button.w-full.py-3\.5.rounded-2xl * {
+  color: #ffffff !important;
+}
+
+/* Ana menüdeki hızlı işlem kartları */
+[data-design-style="pusula"] .mobile-quick-actions > button {
+  background: #ffffff !important;
+  border: 1px solid var(--k-border) !important;
+  box-shadow: var(--k-shadow) !important;
+  border-radius: 22px !important;
+}
+
+[data-design-style="pusula"] .mobile-quick-actions .mobile-quick-icon {
+  background: var(--k-grad) !important;
+  color: #ffffff !important;
+}
