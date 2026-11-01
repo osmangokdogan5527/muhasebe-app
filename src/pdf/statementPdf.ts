@@ -10,6 +10,10 @@ import {
   COLORS,
   FOOTER_HEIGHT,
   PAGE_MARGIN,
+  pageMargin,
+  sizeK,
+  preparePaper,
+  PaperSize,
   drawContinuationHeader,
   drawDocumentHeader,
   drawFooters,
@@ -24,6 +28,8 @@ import { getTodayISO } from '../utils/dateUtils';
 export interface StatementPdfOptions {
   startDate?: string;
   endDate?: string;
+  /** Kağıt boyutu (varsayılan A4) */
+  paper?: PaperSize;
 }
 
 const TITLE = 'CARİ HESAP EKSTRESİ';
@@ -37,7 +43,11 @@ export function statementPeriodLabel(startDate?: string, endDate?: string): stri
 
 export async function createStatementPdf(cari: Cari, islemler: Transaction[], branding: DocumentBranding, options: StatementPdfOptions = {}): Promise<GeneratedPdf> {
   const [{ jsPDF }, { autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
-  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+  const paper: PaperSize = options.paper === 'a5' ? 'a5' : 'a4';
+  const doc = new jsPDF({ unit: 'mm', format: paper, orientation: 'portrait', compress: true });
+  preparePaper(doc, paper);
+  // A4 için yazılmış sabit genişlikler sayfaya göre ölçeklenir
+  const k = sizeK(doc);
   await registerPdfFonts(doc);
 
   const ledger = buildCariLedger(cari, islemler, options.startDate || undefined, options.endDate || undefined);
@@ -45,7 +55,7 @@ export async function createStatementPdf(cari: Cari, islemler: Transaction[], br
   const accent = hexToRgb(branding.accentColor);
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const contentWidth = pageWidth - PAGE_MARGIN * 2;
+  const contentWidth = pageWidth - pageMargin(doc) * 2;
   const today = getTodayISO();
   const period = statementPeriodLabel(options.startDate, options.endDate);
 
@@ -80,8 +90,8 @@ export async function createStatementPdf(cari: Cari, islemler: Transaction[], br
     drawInfoBox(doc, branding, 0, 0, boxWidth, 'Sayın', partyRows, undefined, true),
     drawInfoBox(doc, branding, 0, 0, boxWidth, 'Hesap Özeti', summaryRows, undefined, true) + 11,
   );
-  drawInfoBox(doc, branding, PAGE_MARGIN, y, boxWidth, 'Sayın', partyRows, boxHeight);
-  const summaryX = PAGE_MARGIN + boxWidth + gap;
+  drawInfoBox(doc, branding, pageMargin(doc), y, boxWidth, 'Sayın', partyRows, boxHeight);
+  const summaryX = pageMargin(doc) + boxWidth + gap;
   drawInfoBox(doc, branding, summaryX, y, boxWidth, 'Hesap Özeti', summaryRows, boxHeight);
   // Dönem sonu bakiyesi vurgulu
   doc.setFillColor(accent[0], accent[1], accent[2]);
@@ -108,7 +118,7 @@ export async function createStatementPdf(cari: Cari, islemler: Transaction[], br
   const zebra = tint(accent, 0.965);
   autoTable(doc, {
     startY: y,
-    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN, top: PAGE_MARGIN + 11, bottom: FOOTER_HEIGHT + 4 },
+    margin: { left: pageMargin(doc), right: pageMargin(doc), top: pageMargin(doc) + 11, bottom: FOOTER_HEIGHT + 4 },
     head: [['Tarih', 'İşlem / Belge No', 'Açıklama', 'Borç', 'Alacak', 'Bakiye']],
     body,
     foot: [['', 'TOPLAM', '', formatMoney(ledger.totalDebit, currency), formatMoney(ledger.totalCredit, currency), formatBalance(ledger.closingBalance, currency)]],
@@ -127,12 +137,12 @@ export async function createStatementPdf(cari: Cari, islemler: Transaction[], br
     footStyles: { font: PDF_FONT_SEMIBOLD, fontStyle: 'normal', fillColor: tint(accent, 0.88), textColor: COLORS.text, fontSize: 8 },
     alternateRowStyles: { fillColor: zebra },
     columnStyles: {
-      0: { cellWidth: 19 },
-      1: { cellWidth: 32 },
+      0: { cellWidth: 19 * k },
+      1: { cellWidth: 32 * k },
       2: { cellWidth: 'auto' },
-      3: { cellWidth: 25, halign: 'right' },
-      4: { cellWidth: 25, halign: 'right' },
-      5: { cellWidth: 33, halign: 'right', font: PDF_FONT_SEMIBOLD },
+      3: { cellWidth: 25 * k, halign: 'right' },
+      4: { cellWidth: 25 * k, halign: 'right' },
+      5: { cellWidth: 33 * k, halign: 'right', font: PDF_FONT_SEMIBOLD },
     },
     didParseCell: (data) => {
       if (data.column.index >= 3 && (data.section === 'head' || data.section === 'foot')) data.cell.styles.halign = 'right';
@@ -159,14 +169,14 @@ export async function createStatementPdf(cari: Cari, islemler: Transaction[], br
   if (y + blockHeight > pageHeight - FOOTER_HEIGHT - 4) {
     doc.addPage();
     drawContinuationHeader(doc, branding, TITLE, cari.name);
-    y = PAGE_MARGIN + 14;
+    y = pageMargin(doc) + 14;
   }
-  doc.text(noteLines, PAGE_MARGIN, y);
+  doc.text(noteLines, pageMargin(doc), y);
   y += noteLines.length * 4.3 + 8;
 
   if (branding.showSignatureArea) {
-    const sigWidth = 60;
-    [[branding.firmName || 'Firma', PAGE_MARGIN, 'Kaşe / İmza'], [cari.name, pageWidth - PAGE_MARGIN - sigWidth, 'Mutabıkız / Kaşe / İmza']].forEach(([label, x, hint]) => {
+    const sigWidth = 60 * k;
+    [[branding.firmName || 'Firma', pageMargin(doc), 'Kaşe / İmza'], [cari.name, pageWidth - pageMargin(doc) - sigWidth, 'Mutabıkız / Kaşe / İmza']].forEach(([label, x, hint]) => {
       setText(doc, 8, COLORS.muted);
       doc.text((doc.splitTextToSize(String(label), sigWidth) as string[])[0], Number(x) + sigWidth / 2, y, { align: 'center' });
       doc.setDrawColor(COLORS.line[0], COLORS.line[1], COLORS.line[2]);
@@ -181,5 +191,5 @@ export async function createStatementPdf(cari: Cari, islemler: Transaction[], br
 
   const blob = doc.output('blob');
   const fileName = `Cari_Ekstre_${safeFileName(cari.name)}_${safeFileName(options.startDate || 'tum')}_${safeFileName(options.endDate || today)}.pdf`;
-  return { blob, fileName, pageCount: doc.getNumberOfPages() };
+  return { blob, fileName: paper === 'a5' ? fileName.replace(/\.pdf$/, '_A5.pdf') : fileName, pageCount: doc.getNumberOfPages() };
 }

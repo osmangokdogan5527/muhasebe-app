@@ -15,6 +15,10 @@ import {
   COLORS,
   FOOTER_HEIGHT,
   PAGE_MARGIN,
+  pageMargin,
+  sizeK,
+  preparePaper,
+  PaperSize,
   drawContinuationHeader,
   drawDocumentHeader,
   drawFooters,
@@ -56,6 +60,8 @@ const PAYMENT_LABELS: Record<string, string> = {
 export interface InvoicePdfOptions {
   /** Cari bakiye özeti (ayarlarda kapalıysa ya da perakende satışsa verilmez) */
   balance?: DocumentBalance | null;
+  /** Kağıt boyutu (varsayılan A4) */
+  paper?: PaperSize;
 }
 
 export interface GeneratedPdf {
@@ -122,14 +128,18 @@ function partyRows(islem: Transaction, cari: Cari | undefined) {
 
 export async function createInvoicePdf(islem: Transaction, cari: Cari | undefined, branding: DocumentBranding, options: InvoicePdfOptions = {}): Promise<GeneratedPdf> {
   const [{ jsPDF }, { autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
-  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+  const paper: PaperSize = options.paper === 'a5' ? 'a5' : 'a4';
+  const doc = new jsPDF({ unit: 'mm', format: paper, orientation: 'portrait', compress: true });
+  preparePaper(doc, paper);
+  // A4 için yazılmış sabit genişlikler sayfaya göre ölçeklenir
+  const k = sizeK(doc);
   await registerPdfFonts(doc);
 
   const currency = normalizeCurrency(islem.currency);
   const accent = hexToRgb(branding.accentColor);
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const contentWidth = pageWidth - PAGE_MARGIN * 2;
+  const contentWidth = pageWidth - pageMargin(doc) * 2;
   const title = INVOICE_TITLES[islem.type] || 'FATURA';
   const reference = islem.invoiceNo || '';
 
@@ -158,8 +168,8 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
     drawInfoBox(doc, branding, 0, 0, boxWidth, partyHeading, partyRows(islem, cari), undefined, true),
     drawInfoBox(doc, branding, 0, 0, boxWidth, 'Belge Bilgileri', documentRows, undefined, true),
   );
-  drawInfoBox(doc, branding, PAGE_MARGIN, y, boxWidth, partyHeading, partyRows(islem, cari), boxHeight);
-  drawInfoBox(doc, branding, PAGE_MARGIN + boxWidth + gap, y, boxWidth, 'Belge Bilgileri', documentRows, boxHeight);
+  drawInfoBox(doc, branding, pageMargin(doc), y, boxWidth, partyHeading, partyRows(islem, cari), boxHeight);
+  drawInfoBox(doc, branding, pageMargin(doc) + boxWidth + gap, y, boxWidth, 'Belge Bilgileri', documentRows, boxHeight);
   y += boxHeight + 7;
 
   // 3) Kalemler
@@ -169,7 +179,7 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
   const hasTax = rows.some((row) => Number(row.taxRate) > 0);
   autoTable(doc, {
     startY: y,
-    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN, top: PAGE_MARGIN + 11, bottom: FOOTER_HEIGHT + 4 },
+    margin: { left: pageMargin(doc), right: pageMargin(doc), top: pageMargin(doc) + 11, bottom: FOOTER_HEIGHT + 4 },
     head: [hasTax ? ['#', 'Mal / Hizmet', 'Miktar', 'Birim Fiyat', 'KDV', 'Tutar'] : ['#', 'Mal / Hizmet', 'Miktar', 'Birim Fiyat', 'Tutar']],
     body: rows.map((row, index) => [
       String(index + 1),
@@ -197,13 +207,15 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
       fontSize: 8,
     },
     alternateRowStyles: { fillColor: zebra },
+    // KDV sütunu yoksa Tutar sütunu bir öne kayar
     columnStyles: {
-      0: { cellWidth: 9, halign: 'center', textColor: COLORS.muted },
+      0: { cellWidth: 9 * k, halign: 'center', textColor: COLORS.muted },
       1: { cellWidth: 'auto' },
-      2: { cellWidth: 26, halign: 'right' },
-      3: { cellWidth: 30, halign: 'right' },
-      4: { cellWidth: 14, halign: 'center' },
-      5: { cellWidth: 32, halign: 'right', font: PDF_FONT_SEMIBOLD },
+      2: { cellWidth: 26 * k, halign: 'right' },
+      3: { cellWidth: 30 * k, halign: 'right' },
+      ...(hasTax
+        ? { 4: { cellWidth: Math.max(14 * k, 13), halign: 'center' }, 5: { cellWidth: 32 * k, halign: 'right', font: PDF_FONT_SEMIBOLD } }
+        : { 4: { cellWidth: 32 * k, halign: 'right', font: PDF_FONT_SEMIBOLD } }),
     },
     didParseCell: (data) => {
       if (data.section === 'head' && data.column.index >= 2) {
@@ -216,7 +228,7 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
       doc.setDrawColor(accent[0], accent[1], accent[2]);
       doc.setLineWidth(0.4);
       const tableBottom = data.cursor ? data.cursor.y : y;
-      doc.line(PAGE_MARGIN, tableBottom, pageWidth - PAGE_MARGIN, tableBottom);
+      doc.line(pageMargin(doc), tableBottom, pageWidth - pageMargin(doc), tableBottom);
     },
   });
   y = ((doc as any).lastAutoTable?.finalY ?? y) + 6;
@@ -242,8 +254,8 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
       .forEach((g) => totalLines.push({ label: `KDV (%${formatQuantity(g.rate)})`, value: formatMoney(roundMoney(g.tax), currency) }));
   }
 
-  const totalsWidth = 82;
-  const totalsX = pageWidth - PAGE_MARGIN - totalsWidth;
+  const totalsWidth = 82 * k;
+  const totalsX = pageWidth - pageMargin(doc) - totalsWidth;
   const lineHeight = 6;
   const grandHeight = 11;
   const totalsHeight = totalLines.length * lineHeight + grandHeight + 2;
@@ -252,8 +264,11 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
   const wordLines = branding.showAmountInWords
     ? (doc.splitTextToSize(amountToTurkishWords(grandTotal, currency), leftWidth) as string[])
     : [];
-  const noteLines = islem.description && (islem.items || []).length > 0
-    ? (doc.splitTextToSize(islem.description, leftWidth) as string[]).slice(0, 6)
+  // Fatura türünün varsayılan açıklaması ('Satış Faturası' vb.) başlıkta zaten yazdığı için basılmaz
+  const DEFAULT_DESCRIPTIONS = ['satış faturası', 'alış faturası', 'satıştan iade faturası', 'alıştan iade faturası'];
+  const description = (islem.description || '').trim();
+  const noteLines = description && !DEFAULT_DESCRIPTIONS.includes(description.toLocaleLowerCase('tr-TR')) && (islem.items || []).length > 0
+    ? (doc.splitTextToSize(description, leftWidth) as string[]).slice(0, 6)
     : [];
   const balance = branding.showBalance ? options.balance || null : null;
   const balanceCurrency = normalizeCurrency(cari?.currency || islem.currency);
@@ -268,7 +283,7 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
   if (y + blockHeight + signatureHeight > pageHeight - FOOTER_HEIGHT - 4) {
     doc.addPage();
     drawContinuationHeader(doc, branding, title, reference);
-    y = PAGE_MARGIN + 12;
+    y = pageMargin(doc) + 12;
   }
 
   // Toplam satırları
@@ -277,10 +292,10 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
     setText(doc, 8.5, COLORS.muted);
     doc.text(line.label, totalsX + 3, ty + 4);
     setText(doc, 9, COLORS.text, 'semibold');
-    doc.text(line.value, pageWidth - PAGE_MARGIN - 3, ty + 4, { align: 'right' });
+    doc.text(line.value, pageWidth - pageMargin(doc) - 3, ty + 4, { align: 'right' });
     doc.setDrawColor(COLORS.line[0], COLORS.line[1], COLORS.line[2]);
     doc.setLineWidth(0.2);
-    doc.line(totalsX, ty + lineHeight, pageWidth - PAGE_MARGIN, ty + lineHeight);
+    doc.line(totalsX, ty + lineHeight, pageWidth - pageMargin(doc), ty + lineHeight);
     ty += lineHeight;
   });
   ty += 2;
@@ -289,35 +304,35 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
   setText(doc, 9, COLORS.white, 'semibold');
   doc.text('GENEL TOPLAM', totalsX + 4, ty + 7.1);
   setText(doc, 12, COLORS.white, 'bold');
-  doc.text(formatMoney(grandTotal, currency), pageWidth - PAGE_MARGIN - 4, ty + 7.4, { align: 'right' });
+  doc.text(formatMoney(grandTotal, currency), pageWidth - pageMargin(doc) - 4, ty + 7.4, { align: 'right' });
 
   // Yazıyla tutar, açıklama ve cari hesap durumu
   let ly = y;
   if (wordLines.length) {
     setText(doc, 7.5, accent, 'bold');
-    doc.text('TUTAR (YAZIYLA)', PAGE_MARGIN, ly + 4);
+    doc.text('TUTAR (YAZIYLA)', pageMargin(doc), ly + 4);
     ly += 8;
     setText(doc, 8.5, COLORS.text);
-    doc.text(wordLines, PAGE_MARGIN, ly);
+    doc.text(wordLines, pageMargin(doc), ly);
     ly += wordLines.length * 4.2 + 4;
   }
   if (noteLines.length) {
     setText(doc, 7.5, accent, 'bold');
-    doc.text('AÇIKLAMA', PAGE_MARGIN, ly + (wordLines.length ? 0 : 4));
+    doc.text('AÇIKLAMA', pageMargin(doc), ly + (wordLines.length ? 0 : 4));
     ly += wordLines.length ? 4.5 : 8.5;
     setText(doc, 8.5, COLORS.text);
-    doc.text(noteLines, PAGE_MARGIN, ly);
+    doc.text(noteLines, pageMargin(doc), ly);
     ly += noteLines.length * 4 + 4;
   }
   if (balance) {
-    drawBalanceBox(doc, branding, PAGE_MARGIN, ly, leftWidth, balance, balanceCurrency, balanceLabel);
+    drawBalanceBox(doc, branding, pageMargin(doc), ly, leftWidth, balance, balanceCurrency, balanceLabel);
   }
 
   // İmza alanı
   if (branding.showSignatureArea) {
     const sy = y + blockHeight + 8;
-    const sigWidth = 60;
-    [['Teslim Eden', PAGE_MARGIN], ['Teslim Alan', pageWidth - PAGE_MARGIN - sigWidth]].forEach(([label, x]) => {
+    const sigWidth = 60 * k;
+    [['Teslim Eden', pageMargin(doc)], ['Teslim Alan', pageWidth - pageMargin(doc) - sigWidth]].forEach(([label, x]) => {
       setText(doc, 8, COLORS.muted);
       doc.text(String(label), Number(x) + sigWidth / 2, sy, { align: 'center' });
       doc.setDrawColor(COLORS.line[0], COLORS.line[1], COLORS.line[2]);
@@ -332,5 +347,5 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
 
   const blob = doc.output('blob');
   const fileName = `${safeFileName(title.replace('FATURASI', 'Fatura'))}_${safeFileName(reference || islem.date)}_${safeFileName(cari?.name || islem.cariName || '')}.pdf`;
-  return { blob, fileName, pageCount: doc.getNumberOfPages() };
+  return { blob, fileName: paper === 'a5' ? fileName.replace(/\.pdf$/, '_A5.pdf') : fileName, pageCount: doc.getNumberOfPages() };
 }

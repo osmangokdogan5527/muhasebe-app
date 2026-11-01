@@ -12,6 +12,33 @@ import { getTodayISO } from '../utils/dateUtils';
 export const PAGE_MARGIN = 14;
 export const FOOTER_HEIGHT = 16;
 
+/** Belge kağıt boyutu: A4 (varsayılan) ya da A5 */
+export type PaperSize = 'a4' | 'a5';
+/** A5'te yazılar bu oranla küçülür (yerleşim sayfa genişliğine göre ölçeklenir) */
+export const A5_FONT_SCALE = 0.86;
+const A4_CONTENT_WIDTH = 210 - PAGE_MARGIN * 2;
+
+export function isA5(doc: jsPDF): boolean {
+  return doc.internal.pageSize.getWidth() < 160;
+}
+
+/** Sayfa kenar boşluğu (mm): A4'te 14, A5'te 10 */
+export function pageMargin(doc: jsPDF): number {
+  return isA5(doc) ? 10 : PAGE_MARGIN;
+}
+
+/** A4 için yazılmış sabit genişlikleri sayfaya ölçekleme oranı (A4 = 1) */
+export function sizeK(doc: jsPDF): number {
+  return (doc.internal.pageSize.getWidth() - pageMargin(doc) * 2) / A4_CONTENT_WIDTH;
+}
+
+/** A5 belgede tüm yazı boyutlarını (tablolar dahil) orantılı küçültür */
+export function preparePaper(doc: jsPDF, paper: PaperSize): void {
+  if (paper !== 'a5') return;
+  const original = doc.setFontSize.bind(doc);
+  (doc as any).setFontSize = (size: number) => original(size * A5_FONT_SCALE);
+}
+
 export type RGB = [number, number, number];
 
 export const COLORS = {
@@ -67,10 +94,10 @@ function firmDetailLines(branding: DocumentBranding): string[] {
 export function drawDocumentHeader(doc: jsPDF, branding: DocumentBranding, options: HeaderOptions): number {
   const pageWidth = doc.internal.pageSize.getWidth();
   const accent = hexToRgb(branding.accentColor);
-  const left = PAGE_MARGIN;
-  const right = pageWidth - PAGE_MARGIN;
-  const leftWidth = 98;
-  let leftY = PAGE_MARGIN;
+  const left = pageMargin(doc);
+  const right = pageWidth - pageMargin(doc);
+  const leftWidth = 98 * sizeK(doc);
+  let leftY = pageMargin(doc);
 
   // Üst şerit
   doc.setFillColor(accent[0], accent[1], accent[2]);
@@ -82,7 +109,7 @@ export function drawDocumentHeader(doc: jsPDF, branding: DocumentBranding, optio
   if (branding.logoDataUrl) {
     try {
       const props = doc.getImageProperties(branding.logoDataUrl);
-      const maxW = 46;
+      const maxW = 46 * sizeK(doc);
       const maxH = 20;
       const ratio = Math.min(maxW / props.width, maxH / props.height);
       const w = props.width * ratio;
@@ -115,11 +142,11 @@ export function drawDocumentHeader(doc: jsPDF, branding: DocumentBranding, optio
   });
 
   // Sağ: belge başlığı ve bilgileri
-  let rightY = PAGE_MARGIN + 2;
+  let rightY = pageMargin(doc) + 2;
   setText(doc, 17, accent, 'bold');
   doc.text(options.title, right, rightY + 6, { align: 'right' });
   rightY += 11;
-  const metaLabelX = right - 62;
+  const metaLabelX = right - 62 * sizeK(doc);
   options.meta.forEach(({ label, value }) => {
     setText(doc, 8, COLORS.muted);
     doc.text(label, metaLabelX, rightY + 3.5);
@@ -142,12 +169,12 @@ export function drawContinuationHeader(doc: jsPDF, branding: DocumentBranding, t
   doc.setFillColor(accent[0], accent[1], accent[2]);
   doc.rect(0, 0, pageWidth, 3, 'F');
   setText(doc, 9, COLORS.text, 'bold');
-  doc.text(branding.firmName || '', PAGE_MARGIN, PAGE_MARGIN + 3);
+  doc.text(branding.firmName || '', pageMargin(doc), pageMargin(doc) + 3);
   setText(doc, 9, accent, 'bold');
-  doc.text(`${title}${reference ? `  ·  ${reference}` : ''}`, pageWidth - PAGE_MARGIN, PAGE_MARGIN + 3, { align: 'right' });
+  doc.text(`${title}${reference ? `  ·  ${reference}` : ''}`, pageWidth - pageMargin(doc), pageMargin(doc) + 3, { align: 'right' });
   doc.setDrawColor(COLORS.line[0], COLORS.line[1], COLORS.line[2]);
   doc.setLineWidth(0.3);
-  doc.line(PAGE_MARGIN, PAGE_MARGIN + 6, pageWidth - PAGE_MARGIN, PAGE_MARGIN + 6);
+  doc.line(pageMargin(doc), pageMargin(doc) + 6, pageWidth - pageMargin(doc), pageMargin(doc) + 6);
 }
 
 export interface InfoBoxRow {
@@ -266,16 +293,16 @@ export function drawFooters(doc: jsPDF, branding: DocumentBranding): void {
     const top = pageHeight - FOOTER_HEIGHT + 2;
     doc.setDrawColor(COLORS.line[0], COLORS.line[1], COLORS.line[2]);
     doc.setLineWidth(0.3);
-    doc.line(PAGE_MARGIN, top, pageWidth - PAGE_MARGIN, top);
+    doc.line(pageMargin(doc), top, pageWidth - pageMargin(doc), top);
     if (branding.footerNote) {
       setText(doc, 7.5, COLORS.muted);
-      const lines = (doc.splitTextToSize(branding.footerNote, pageWidth - PAGE_MARGIN * 2 - 30) as string[]).slice(0, 2);
-      doc.text(lines, PAGE_MARGIN, top + 4.5);
+      const lines = (doc.splitTextToSize(branding.footerNote, pageWidth - pageMargin(doc) * 2 - 30) as string[]).slice(0, 2);
+      doc.text(lines, pageMargin(doc), top + 4.5);
     }
     setText(doc, 7.5, accent, 'semibold');
-    doc.text(`Sayfa ${page} / ${pageCount}`, pageWidth - PAGE_MARGIN, top + 4.5, { align: 'right' });
+    doc.text(`Sayfa ${page} / ${pageCount}`, pageWidth - pageMargin(doc), top + 4.5, { align: 'right' });
     setText(doc, 6.5, tint(COLORS.muted, 0.3));
-    doc.text('Storm Ön Muhasebe ile hazırlanmıştır.', pageWidth - PAGE_MARGIN, top + 8.5, { align: 'right' });
+    doc.text('Storm Ön Muhasebe ile hazırlanmıştır.', pageWidth - pageMargin(doc), top + 8.5, { align: 'right' });
   }
 }
 
