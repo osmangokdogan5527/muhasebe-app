@@ -1,28 +1,37 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { subscribeSettingDoc, saveSettingDoc } from '../firebase';
+import { subscribeSettingDoc, saveSettingDoc, recordActivity } from '../firebase';
 import { logError } from '../utils/errorLogger';
 import { IDLE_LOGOUT_MINUTES, StaffUser, USERS_SETTING_ID, normalizeUsersDoc } from './staffUsers';
+import type { ActivityActor } from './activityTypes';
 
 interface StoredSession {
   userId: string;
+  userName?: string;
+  role?: 'owner' | 'staff';
   lastActive: number;
 }
 
 const sessionKey = (tenantId: string) => `storm_staff_session_${tenantId}`;
 const IDLE_MS = IDLE_LOGOUT_MINUTES * 60 * 1000;
 
-function readSession(tenantId: string): StoredSession | null {
+function readRawSession(tenantId: string): StoredSession | null {
   try {
     const raw = localStorage.getItem(sessionKey(tenantId));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed.userId !== 'string') return null;
-    if (Date.now() - Number(parsed.lastActive || 0) > IDLE_MS) return null;
-    return { userId: parsed.userId, lastActive: Number(parsed.lastActive) };
+    return {
+      userId: parsed.userId,
+      userName: typeof parsed.userName === 'string' ? parsed.userName : undefined,
+      role: parsed.role === 'owner' ? 'owner' : parsed.role === 'staff' ? 'staff' : undefined,
+      lastActive: Number(parsed.lastActive) || 0,
+    };
   } catch {
     return null;
   }
 }
+
+const isExpired = (session: StoredSession) => Date.now() - session.lastActive > IDLE_MS;
 
 function writeSession(tenantId: string, session: StoredSession | null) {
   try {
@@ -33,9 +42,23 @@ function writeSession(tenantId: string, session: StoredSession | null) {
   }
 }
 
+const actorOf = (user: Pick<StaffUser, 'id' | 'name' | 'role'>): ActivityActor => ({ id: user.id, name: user.name, role: user.role });
+
+/** Süresi dolmuş oturumu günlüğe yazar (kişi adı oturumda saklıdır) */
+function logExpired(session: StoredSession) {
+  if (!session.userName) return;
+  const lastSeen = new Date(session.lastActive);
+  const time = Number.isNaN(lastSeen.getTime()) ? '' : ` · son işlem ${lastSeen.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
+  recordActivity(
+    { category: 'oturum', action: 'auto_logout', title: `Oturum kapandı (${IDLE_LOGOUT_MINUTES} dk işlem yok)${time}` },
+    { id: session.userId, name: session.userName, role: session.role || 'staff' },
+  );
+}
+
 /**
  * Firma kullanıcıları ve oturum: kim giriş yaptı, 20 dakika işlem yapılmazsa çıkış.
  * Kullanıcı listesi boşsa sistem kapalıdır (uygulama eskisi gibi çalışır).
+ * Giriş, çıkış ve otomatik çıkışlar hareket günlüğüne yazılır.
  */
 export function useStaffSession(tenantId: string | null | undefined) {
   const [users, setUsers] = useState<StaffUser[]>([]);
@@ -51,7 +74,15 @@ export function useStaffSession(tenantId: string | null | undefined) {
       setCurrentId(null);
       return;
     }
-    setCurrentId(readSession(tenantId)?.userId || null);
+    const stored = readRawSession(tenantId);
+    if (stored && isExpired(stored)) {
+      // Uygulama kapalıyken süre dolmuş: oturum kapatılır ve günlüğe yazılır
+      logExpired(stored);
+      writeSession(tenantId, null);
+      setCurrentId(null);
+    } else {
+      setCurrentId(stored?.userId || null);
+    }
     let unsub: (() => void) | undefined;
     // Çevrimdışı ve önbellek boşsa liste gelmeyebilir: kilitlenmemek için kısa süre sonra yüklendi say
     const fallback = setTimeout(() => setLoaded(true), 4000);
@@ -76,30 +107,52 @@ export function useStaffSession(tenantId: string | null | undefined) {
 
   const login = useCallback((user: StaffUser) => {
     if (!tenantId) return;
-    writeSession(tenantId, { userId: user.id, lastActive: Date.now() });
+    writeSession(tenantId, { userId: user.id, userName: user.name, role: user.role, lastActive: Date.now() });
+    lastWriteRef.current = Date.now();
     setCurrentId(user.id);
+    try {
+      recordActivity({ category: 'oturum', action: 'login', title: 'Giriş yaptı' }, actorOf(user));
+    } catch (err) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'useStaffSession.login');
+    }
   }, [tenantId]);
 
   const logout = useCallback(() => {
+    try {
+      if (currentUser) recordActivity({ category: 'oturum', action: 'logout', title: 'Çıkış yaptı' }, actorOf(currentUser));
+    } catch (err) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'useStaffSession.logout');
+    }
     if (tenantId) writeSession(tenantId, null);
     setCurrentId(null);
-  }, [tenantId]);
+  }, [tenantId, currentUser]);
 
   // İşlem yapılmazsa otomatik çıkış
   useEffect(() => {
-    if (!tenantId || !systemActive || !currentId) return;
+    if (!tenantId || !systemActive || !currentUser) return;
     const touch = () => {
       const now = Date.now();
       // Her dokunuşta değil, en çok 15 saniyede bir yazılır
       if (now - lastWriteRef.current < 15_000) return;
+      const stored = readRawSession(tenantId);
+      // Başka sekmede çıkış yapılmış ya da süre dolmuşsa dokunuş oturumu geri açmaz
+      if (!stored || stored.userId !== currentUser.id || isExpired(stored)) return;
       lastWriteRef.current = now;
-      writeSession(tenantId, { userId: currentId, lastActive: now });
+      writeSession(tenantId, { userId: currentUser.id, userName: currentUser.name, role: currentUser.role, lastActive: now });
     };
     touch();
     const events: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'wheel', 'touchstart'];
     events.forEach((e) => window.addEventListener(e, touch, { passive: true }));
     const timer = setInterval(() => {
-      if (!readSession(tenantId)) {
+      const stored = readRawSession(tenantId);
+      if (!stored || stored.userId !== currentUser.id) {
+        // Başka sekmede çıkış/kişi değişimi
+        setCurrentId(stored && !isExpired(stored) ? stored.userId : null);
+        return;
+      }
+      if (isExpired(stored)) {
+        logExpired({ ...stored, userName: stored.userName || currentUser.name, role: stored.role || currentUser.role });
+        writeSession(tenantId, null);
         setCurrentId(null);
       }
     }, 30_000);
@@ -107,7 +160,7 @@ export function useStaffSession(tenantId: string | null | undefined) {
       events.forEach((e) => window.removeEventListener(e, touch));
       clearInterval(timer);
     };
-  }, [tenantId, systemActive, currentId]);
+  }, [tenantId, systemActive, currentUser]);
 
   const saveUsers = useCallback(async (next: StaffUser[]) => {
     await saveSettingDoc(USERS_SETTING_ID, { users: next });

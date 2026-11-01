@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ShieldAlert } from 'lucide-react';
 import { logError } from '../../utils/errorLogger';
 import { isValidAdminCode, MASTER_CODE_LENGTH } from '../../utils/masterCode';
+import { recordActivity } from '../../firebase';
 
 interface PinPromptModalProps {
   isOpen: boolean;
@@ -42,10 +43,20 @@ export const PinPromptModal: React.FC<PinPromptModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Çalışanın sahip onayıyla yaptığı işlem günlüğe yazılır (kullanıcı sistemi kapalıyken kayıt yapılmaz)
+  const logApproval = () => {
+    try {
+      recordActivity({ category: 'yetki', action: 'approve', title: title === 'Yönetici Doğrulaması' ? "Sahip PIN'iyle kısıtlı bir işlem onaylandı" : `Sahip onayı: ${title}`, risky: true });
+    } catch (err) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'PinPromptModal.logApproval');
+    }
+  };
+
   const verify = async (val: string, final: boolean) => {
     try {
       if (escalationPin && val === escalationPin) {
         setPin('');
+        logApproval();
         onSuccess();
         return;
       }
@@ -54,6 +65,7 @@ export const PinPromptModal: React.FC<PinPromptModalProps> = ({
       if (latestRef.current !== val && !final) return;
       if (ok) {
         setPin('');
+        logApproval();
         onSuccess();
       } else if (val.length === MASTER_CODE_LENGTH || final) {
         setError('Hatalı Yönetici PIN kodu!');

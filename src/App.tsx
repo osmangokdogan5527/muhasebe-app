@@ -31,7 +31,9 @@ import {
   saveBankAccount,
   createTransaction,
   ensureRetailCari,
-  db
+  db,
+  setActivityActor,
+  recordActivity,
 } from './firebase';
 import { logError } from './utils/errorLogger';
 import { PosCartItem, PosPaymentSplit } from './types/pos';
@@ -350,6 +352,18 @@ export default function App() {
       : [...DEFAULT_STAFF_TABS],
     actions: { ...baseActionPermissions } as StaffActions,
   }), [baseSecurityActive, baseSensitiveTabs, baseActionPermissions]);
+
+  // Hareket günlüğü: giriş yapan kişi firebase katmanına bildirilir (kayıtlara "kim yaptı" yazılır)
+  useEffect(() => {
+    setActivityActor(isStaffSystem && staffUser ? { id: staffUser.id, name: staffUser.name, role: staffUser.role } : null);
+  }, [isStaffSystem, staffUser]);
+
+  // Çalışan sahip PIN'iyle yönetici yetkisi aldığında günlüğe yazılır
+  useEffect(() => {
+    if (isStaffSystem && staffUser?.role === 'staff' && baseUserRole === 'admin') {
+      recordActivity({ category: 'yetki', action: 'elevate', title: "Sahip PIN'iyle yönetici yetkisi açıldı", risky: true });
+    }
+  }, [isStaffSystem, staffUser?.id, staffUser?.role, baseUserRole]);
 
   // Kişi değişince yükseltilmiş yönetici yetkisi düşer
   useEffect(() => {

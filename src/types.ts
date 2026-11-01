@@ -83,6 +83,15 @@ export interface Transaction {
   linkedInvoiceId?: string; // Faturayla birlikte otomatik oluşan tahsilat/ödemede bağlı faturanın id'si
   linkedReceiptIds?: string[]; // Faturada, onunla birlikte oluşturulan tahsilat/ödeme kayıtlarının id'leri
   isOpeningBalance?: boolean; // Excel içe aktarmada açılış bakiyesi için oluşturulan kayıt (gerçek satış/alış değil)
+  createdBy?: RecordActorStamp; // Kullanıcı sistemi açıkken kaydı oluşturan kişi
+  updatedBy?: RecordActorStamp; // Son düzenleyen kişi
+}
+
+/** Kaydı oluşturan/düzenleyen kişi (firma içi kullanıcı sistemi) */
+export interface RecordActorStamp {
+  id: string;
+  name: string;
+  at: string;
 }
 
 // Fatura kaydedilirken aynı anda oluşturulacak tahsilat/ödeme (peşin veya POS satışı)

@@ -290,6 +290,11 @@ function IslemlerView({
         </td>
         <td className="p-4 text-xs text-white/40 max-w-xs truncate" title={islem.description}>
           {islem.description}
+          {islem.createdBy?.name && (
+            <span className="block text-[10px] text-white/35 mt-0.5 not-italic" title={islem.updatedBy?.name ? `Düzenleyen: ${islem.updatedBy.name}` : undefined}>
+              👤 {islem.createdBy.name}{islem.updatedBy?.name && islem.updatedBy.name !== islem.createdBy.name ? ` · düzenleyen ${islem.updatedBy.name}` : ''}
+            </span>
+          )}
         </td>
         <td className="p-4 text-right">
           <div className={`font-semibold text-sm tabular-nums font-sans ${isIncoming ? 'text-teal-400' : 'text-red-400'}`}>
@@ -622,6 +627,7 @@ function IslemlerView({
                       {islem.invoiceNo && <div>Belge No: <strong>{islem.invoiceNo}</strong></div>}
                       <div>Hesap: <strong>{islem.account === 'cash' ? 'Kasa' : islem.account === 'bank' ? 'Banka' : islem.account === 'pos' ? 'POS' : islem.linkedInvoiceId ? 'Peşin (Faturaya Bağlı)' : islem.linkedReceiptIds?.length ? 'Tahsilatlı (POS)' : 'Açık Hesap'}</strong></div>
                       {islem.description && <div className="line-clamp-2 text-white/40 italic mt-0.5">"{islem.description}"</div>}
+                      {islem.createdBy?.name && <div className="text-white/40">Kaydeden: <strong>{islem.createdBy.name}</strong>{islem.updatedBy?.name && islem.updatedBy.name !== islem.createdBy.name ? ` · Düzenleyen: ${islem.updatedBy.name}` : ''}</div>}
                     </div>
 
                     <div className="flex items-center justify-between border-t border-white/5 pt-2 mt-1">

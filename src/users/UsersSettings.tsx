@@ -3,6 +3,7 @@ import { Check, Pencil, Plus, Power, ShieldCheck, Trash2, User as UserIcon, User
 import { TAB_DEFS } from '../constants';
 import { logError } from '../utils/errorLogger';
 import { confirmDialog } from '../utils/dialogs';
+import { recordActivity } from '../firebase';
 import type { StaffSession } from './useStaffSession';
 import {
   IDLE_LOGOUT_MINUTES,
@@ -51,6 +52,24 @@ const textInputClass =
   'w-full bg-white/5 border border-white/10 focus:border-teal-500 rounded-xl px-4 py-2.5 text-sm text-white transition outline-none';
 
 const toErr = (err: unknown) => (err instanceof Error ? err : new Error(String(err)));
+
+/** Günlükte saklanacak kullanıcı özeti (PIN özeti saklanmaz) */
+const userSummary = (u: StaffUser, pinChanged = false) => ({
+  name: u.name,
+  role: u.role === 'owner' ? 'Sahip' : 'Çalışan',
+  active: u.active,
+  screens: u.role === 'owner' ? 'Tümü' : u.allowedTabs.map((t) => STAFF_TAB_OPTIONS.find((o) => o.id === t)?.label || t).join(', '),
+  actions: u.role === 'owner' ? 'Tümü' : STAFF_ACTIONS.filter((a) => u.actions[a.key]).map((a) => a.label).join(', ') || 'Yok',
+  ...(pinChanged ? { pin: 'Değiştirildi' } : {}),
+});
+
+const logUserActivity = (input: Parameters<typeof recordActivity>[0], actor?: Parameters<typeof recordActivity>[1]) => {
+  try {
+    recordActivity(input, actor);
+  } catch (err) {
+    logError(toErr(err), 'UsersSettings.logUserActivity');
+  }
+};
 
 export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefaults, suggestedOwnerName, showToast }) => {
   const { users, currentUser, systemActive } = staff;
@@ -109,6 +128,10 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
       };
       const ok = await persist([owner], 'Kullanıcı sistemi açıldı. Şimdi çalışanlarınızı ekleyebilirsiniz.');
       if (ok) {
+        logUserActivity(
+          { category: 'yetki', action: 'create', title: `Kullanıcı sistemi açıldı · sahip: ${owner.name}`, refId: owner.id, after: userSummary(owner) },
+          { id: owner.id, name: owner.name, role: 'owner' },
+        );
         staff.login(owner);
         setOwnerPin('');
         setOwnerPinConfirm('');
@@ -188,7 +211,18 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
       };
       const next = existing ? users.map((u) => (u.id === existing.id ? saved : u)) : [...users, saved];
       const ok = await persist(next, existing ? `${name} güncellendi.` : `${name} eklendi.`);
-      if (ok) setDraft(null);
+      if (ok) {
+        logUserActivity({
+          category: 'yetki',
+          action: existing ? 'update' : 'create',
+          title: `Kullanıcı: ${name}`,
+          refId: saved.id,
+          risky: existing ? true : undefined,
+          before: existing ? userSummary(existing) : undefined,
+          after: userSummary(saved, !!existing && !!draft.pin),
+        });
+        setDraft(null);
+      }
     } catch (err) {
       logError(toErr(err), 'UsersSettings.handleSaveDraft');
       setError('Kullanıcı kaydedilemedi.');
@@ -210,7 +244,10 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
       });
       if (!ok) return;
       const done = await persist(users.filter((x) => x.id !== u.id), `${u.name} silindi.`);
-      if (done && draft?.id === u.id) setDraft(null);
+      if (done) {
+        logUserActivity({ category: 'yetki', action: 'delete', title: `Kullanıcı: ${u.name}`, refId: u.id, risky: true, before: userSummary(u) });
+        if (draft?.id === u.id) setDraft(null);
+      }
     } catch (err) {
       logError(toErr(err), 'UsersSettings.handleDelete');
     }
@@ -222,10 +259,19 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
       if (u.id === currentUser?.id) return setError('Kendi hesabınızı pasif yapamazsınız.');
       if (u.role === 'owner' && activeOwnerCount <= 1) return setError('En az bir aktif sahip kalmalıdır.');
     }
-    await persist(
+    const done = await persist(
       users.map((x) => (x.id === u.id ? { ...x, active: !x.active } : x)),
       u.active ? `${u.name} pasif yapıldı, giriş yapamaz.` : `${u.name} tekrar aktif.`,
     );
+    if (done) {
+      logUserActivity({
+        category: 'yetki',
+        action: 'update',
+        title: `Kullanıcı: ${u.name} · ${u.active ? 'pasif yapıldı' : 'aktif yapıldı'}`,
+        refId: u.id,
+        risky: true,
+      });
+    }
   };
 
   const handleDisableSystem = async () => {
@@ -237,6 +283,8 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
         danger: true,
       });
       if (!ok) return;
+      // Sistem kapanınca kimse kayıtlı olmayacağı için kayıt önceden düşülür
+      logUserActivity({ category: 'yetki', action: 'delete', title: 'Kullanıcı sistemi kapatıldı (tüm kullanıcılar silindi)', risky: true });
       const done = await persist([], 'Kullanıcı sistemi kapatıldı.');
       if (done) staff.logout();
     } catch (err) {

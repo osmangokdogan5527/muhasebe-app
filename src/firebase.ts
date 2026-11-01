@@ -16,7 +16,8 @@ import {
   runTransaction,
   getDocs,
   setLogLevel,
-  getDoc
+  getDoc,
+  where
 } from 'firebase/firestore';
 import { 
   getAuth,
@@ -37,6 +38,19 @@ import {
 } from 'firebase/auth';
 import { Cari, Stock, Transaction, CekSenet, Expense, Employee, EmployeeTransaction, Credit, RecurringTransaction, LinkedReceiptInput } from './types';
 import { logError } from './utils/errorLogger';
+import {
+  ActivityActor,
+  ActivityCategory,
+  ActivityEntry,
+  ActivityInput,
+  ActorStamp,
+  currentDevice,
+  localDay,
+  summarizePlain,
+  summarizeTransaction,
+  transactionCategory,
+  transactionTitle,
+} from './users/activityTypes';
 
 // Read config from the provisioned project
 const firebaseConfig = {
@@ -103,6 +117,8 @@ const AYARLAR_COLL = 'ayarlar';
 // Firmanın belgelerde (PDF) kullanılan görünüm ayarları: tüm cihazlarda ortak
 const DOCUMENT_BRANDING_DOC_ID = 'belgeGorunumu';
 const TEKRARLAYAN_COLL = 'tekrarlayanIslemler';
+// Kim ne yaptı günlüğü (yedeğe ve geri yüklemeye dahil değildir; eski yedek dönülse de günlük silinmez)
+const HAREKET_COLL = 'hareketGunlugu';
 
 let currentUserId: string | null = null;
 export function setActiveUser(userId: string | null) {
@@ -115,6 +131,124 @@ function getPath(collectionName: string): string {
     throw new Error("Kullanıcı seçilmedi. Lütfen giriş yapın.");
   }
   return `users/${currentUserId}/${collectionName}`;
+}
+
+// ---------------- HAREKET GÜNLÜĞÜ (kim ne yaptı) ----------------
+// Kullanıcı sistemi açıkken giriş yapan kişi buraya bildirilir; kapalıyken null'dır ve hiçbir şey kaydedilmez.
+let activityActor: ActivityActor | null = null;
+let activitySuppressed = 0;
+
+export function setActivityActor(actor: ActivityActor | null) {
+  activityActor = actor;
+}
+
+function actorStamp(): ActorStamp | undefined {
+  return activityActor ? { id: activityActor.id, name: activityActor.name, at: new Date().toISOString() } : undefined;
+}
+
+/** Yeni kayıtlara createdBy, düzenlenenlere updatedBy yazılır */
+function stampFields(isNew: boolean): Record<string, ActorStamp> {
+  const stamp = actorStamp();
+  if (!stamp) return {};
+  return isNew ? { createdBy: stamp } : { updatedBy: stamp };
+}
+
+function activityEnabled(): boolean {
+  return !!activityActor && activitySuppressed === 0;
+}
+
+/**
+ * Günlüğe kayıt ekler. İşi bekletmez: yazma arka planda yapılır (çevrimdışıyken kuyruğa girer).
+ * actorOverride: giriş/çıkış gibi oturum değişirken yapılan kayıtlarda kişi açıkça verilir.
+ */
+export function recordActivity(input: ActivityInput, actorOverride?: ActivityActor | null): void {
+  const actor = actorOverride || activityActor;
+  if (!actor || !currentUserId) return;
+  if (!actorOverride && activitySuppressed > 0) return;
+  try {
+    const ref = doc(collection(db, getPath(HAREKET_COLL)));
+    const now = new Date();
+    const entry: ActivityEntry = cleanUndefined({
+      ...input,
+      id: ref.id,
+      at: now.toISOString(),
+      day: localDay(now),
+      userId: actor.id,
+      userName: actor.name,
+      role: actor.role,
+      device: currentDevice(),
+    });
+    setDoc(ref, entry).catch((err) => logError(err instanceof Error ? err : new Error(String(err)), 'recordActivity'));
+  } catch (err) {
+    logError(err instanceof Error ? err : new Error(String(err)), 'recordActivity');
+  }
+}
+
+/** Toplu işlemlerde (Excel içe aktarma gibi) tek tek kayıt düşmemek için; çağıran tek bir özet kayıt yazar */
+export async function runWithoutActivity<T>(fn: () => Promise<T>): Promise<T> {
+  activitySuppressed++;
+  try {
+    return await fn();
+  } finally {
+    activitySuppressed--;
+  }
+}
+
+/** Silme/düzenleme öncesi kaydın eski hâli (yalnızca günlük açıkken okunur) */
+async function readForLog(collName: string, id: string | undefined): Promise<Record<string, any> | null> {
+  if (!id || !activityEnabled()) return null;
+  try {
+    const snap = await getDoc(doc(db, getPath(collName), id));
+    return snap.exists() ? (snap.data() as Record<string, any>) : null;
+  } catch (err) {
+    logError(err instanceof Error ? err : new Error(String(err)), `readForLog:${collName}`);
+    return null;
+  }
+}
+
+function logRecordSave(category: ActivityCategory, title: string, refId: string, before: Record<string, any> | null, after: Record<string, any>, amount?: number) {
+  if (!activityEnabled()) return;
+  recordActivity({
+    category,
+    action: before ? 'update' : 'create',
+    title,
+    amount,
+    currency: after?.currency,
+    refId,
+    risky: before ? true : undefined,
+    before: before ? summarizePlain(before) : undefined,
+    after: summarizePlain(after),
+  });
+}
+
+function logRecordDelete(category: ActivityCategory, title: string, refId: string, before: Record<string, any> | null, amount?: number) {
+  if (!activityEnabled()) return;
+  recordActivity({
+    category,
+    action: 'delete',
+    title,
+    amount,
+    currency: before?.currency,
+    refId,
+    risky: true,
+    before: summarizePlain(before),
+  });
+}
+
+/** Belirli günler arasındaki günlük kayıtları (en yeni önce) */
+export function subscribeActivity(fromDay: string, toDay: string, callback: (entries: ActivityEntry[]) => void) {
+  const q = query(collection(db, getPath(HAREKET_COLL)), where('day', '>=', fromDay), where('day', '<=', toDay), orderBy('day', 'asc'));
+  return onSnapshot(q, (snapshot) => {
+    const list: ActivityEntry[] = [];
+    snapshot.forEach((docSnap) => {
+      list.push({ ...(docSnap.data() as ActivityEntry), id: docSnap.id });
+    });
+    list.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+    callback(list);
+  }, (error) => {
+    logError(error instanceof Error ? error : new Error(String(error)), 'subscribeActivity');
+    callback([]);
+  });
 }
 
 // Helper to recursively remove undefined properties from objects to prevent Firestore write errors
@@ -234,17 +368,19 @@ export async function saveCari(cari: Omit<Cari, 'id'>, id?: string) {
     if (id) {
       const existingSnap = await getDoc(docRef);
       if (existingSnap.exists()) {
+        const storedForLog = existingSnap.data() as Record<string, any>;
         // Düzenleme: bakiye formdaki (açıldığı andaki) değerle EZİLMEZ; form açıkken eklenen
         // işlemler kaybolmasın diye yalnızca açılış bakiyesi farkı bakiyeye artırımlı eklenir.
         const stored = existingSnap.data() as Cari;
         const { balance: _ignoredBalance, ...fields } = cari;
         const openingDiff = (Number(cari.openingBalance) || 0) - (Number(stored.openingBalance) || 0);
         const batch = writeBatch(db);
-        batch.set(docRef, cleanUndefined({ id: newId, ...fields }), { merge: true });
+        batch.set(docRef, cleanUndefined({ id: newId, ...fields, ...stampFields(false) }), { merge: true });
         if (openingDiff !== 0) {
           batch.update(docRef, { balance: increment(openingDiff) });
         }
         await batch.commit();
+        logRecordSave('cari', `Cari: ${cari.name || stored.name || ''}`, newId, storedForLog, { ...storedForLog, ...fields });
         return newId;
       }
     }
@@ -254,9 +390,11 @@ export async function saveCari(cari: Omit<Cari, 'id'>, id?: string) {
       id: newId,
       ...cari,
       balance: id ? cari.balance : cari.openingBalance,
+      ...stampFields(true),
     });
     
     await setDoc(docRef, finalCari);
+    logRecordSave('cari', `Cari: ${finalCari.name || ''}`, newId, null, finalCari as any);
     return newId;
   } catch (error) {
     handleFirestoreError(error, id ? OperationType.UPDATE : OperationType.CREATE, `${getPath(CARILER_COLL)}/${id || 'new'}`);
@@ -266,7 +404,9 @@ export async function saveCari(cari: Omit<Cari, 'id'>, id?: string) {
 
 export async function deleteCari(id: string) {
   try {
+    const before = await readForLog(CARILER_COLL, id);
     await deleteDoc(doc(db, getPath(CARILER_COLL), id));
+    logRecordDelete('cari', `Cari: ${before?.name || id}`, id, before, Number(before?.balance) || undefined);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getPath(CARILER_COLL)}/${id}`);
     throw error;
@@ -282,23 +422,29 @@ export async function saveStock(stock: Omit<Stock, 'id'>, id?: string, originalQ
     const docRef = id ? doc(db, getPath(STOKLAR_COLL), id) : doc(collection(db, getPath(STOKLAR_COLL)));
     const newId = id || docRef.id;
 
+    const before = await readForLog(STOKLAR_COLL, id);
+
     if (id && originalQuantity !== undefined) {
       const { quantity, ...fields } = stock;
       const quantityDiff = (Number(quantity) || 0) - (Number(originalQuantity) || 0);
       const batch = writeBatch(db);
-      batch.set(docRef, cleanUndefined({ id: newId, ...fields }), { merge: true });
+      batch.set(docRef, cleanUndefined({ id: newId, ...fields, ...stampFields(false) }), { merge: true });
       if (quantityDiff !== 0) {
         batch.update(docRef, { quantity: increment(quantityDiff) });
       }
       await batch.commit();
+      const qtyNote = quantityDiff !== 0 ? ` (miktar ${Number(originalQuantity) || 0} → ${Number(quantity) || 0})` : '';
+      logRecordSave('stok', `Stok: ${stock.name || ''}${qtyNote}`, newId, before, { ...(before || {}), ...stock });
       return newId;
     }
 
     const finalStock: Stock = cleanUndefined({
       id: newId,
-      ...stock
+      ...stock,
+      ...stampFields(!before),
     });
     await setDoc(docRef, finalStock);
+    logRecordSave('stok', `Stok: ${finalStock.name || ''}`, newId, before, finalStock as any);
     return newId;
   } catch (error) {
     handleFirestoreError(error, id ? OperationType.UPDATE : OperationType.CREATE, `${STOKLAR_COLL}/${id || 'new'}`);
@@ -308,7 +454,9 @@ export async function saveStock(stock: Omit<Stock, 'id'>, id?: string, originalQ
 
 export async function deleteStock(id: string) {
   try {
+    const before = await readForLog(STOKLAR_COLL, id);
     await deleteDoc(doc(db, getPath(STOKLAR_COLL), id));
+    logRecordDelete('stok', `Stok: ${before?.name || id}`, id, before);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getPath(STOKLAR_COLL)}/${id}`);
     throw error;
@@ -403,6 +551,10 @@ type BatchLike = ReturnType<typeof writeBatch>;
 interface TransactionWritePlan {
   islemId: string;
   apply: (batch: BatchLike) => void;
+  /** Günlük için: yazılacak ya da geri alınacak kaydın kendisi */
+  record?: Transaction;
+  /** Günlük için: faturayla birlikte alınan peşin tutar */
+  linkedTotal?: number;
 }
 
 function stockQuantityDirection(type: Transaction['type']): number {
@@ -412,12 +564,13 @@ function stockQuantityDirection(type: Transaction['type']): number {
 }
 
 /** Yeni işlem (ve faturaya bağlı peşin tahsilat/ödemeler) için yazma planı */
-async function planCreateTransaction(islemData: Omit<Transaction, 'id'>, linkedReceipts: LinkedReceiptInput[] = []): Promise<TransactionWritePlan> {
+async function planCreateTransaction(islemData: Omit<Transaction, 'id'>, linkedReceipts: LinkedReceiptInput[] = [], stamp: Record<string, ActorStamp> = stampFields(true)): Promise<TransactionWritePlan> {
   const islemRef = doc(collection(db, getPath(ISLEMLER_COLL)));
   const islemId = islemRef.id;
   const islem: Transaction = cleanUndefined({
     id: islemId,
-    ...islemData
+    ...islemData,
+    ...stamp,
   });
 
   const receiptInputs = linkedReceipts.filter(r => r && roundMoney(r.amount || 0) > 0);
@@ -477,7 +630,8 @@ async function planCreateTransaction(islemData: Omit<Transaction, 'id'>, linkedR
       currency: islem.currency,
       exchangeRate: islem.exchangeRate,
       convertedAmount,
-      linkedInvoiceId: islemId
+      linkedInvoiceId: islemId,
+      ...stamp,
     });
     return { ref: receiptRef, data };
   });
@@ -497,6 +651,8 @@ async function planCreateTransaction(islemData: Omit<Transaction, 'id'>, linkedR
 
   return {
     islemId,
+    record: islem,
+    linkedTotal: roundMoney(receipts.reduce((sum, r) => sum + (Number(r.data.amount) || 0), 0)),
     apply: (batch) => {
       batch.set(islemRef, islem);
       for (const receipt of receipts) {
@@ -593,6 +749,7 @@ async function planRemoveTransaction(islem: Transaction): Promise<TransactionWri
 
   return {
     islemId: islem.id,
+    record: storedIslem,
     apply: (batch) => {
       batch.delete(islemRef);
       for (const receipt of linkedReceipts) {
@@ -619,6 +776,19 @@ export async function createTransaction(islemData: Omit<Transaction, 'id'>, link
     const batch = writeBatch(db);
     plan.apply(batch);
     await commitWrite(batch.commit(), 'createTransaction');
+    if (activityEnabled() && plan.record) {
+      const after = summarizeTransaction(plan.record);
+      if (after && plan.linkedTotal) after.paidNow = plan.linkedTotal;
+      recordActivity({
+        category: transactionCategory(plan.record.type),
+        action: 'create',
+        title: transactionTitle(plan.record),
+        amount: Number(plan.record.amount) || 0,
+        currency: plan.record.currency,
+        refId: plan.islemId,
+        after,
+      });
+    }
     return plan.islemId;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, getPath(ISLEMLER_COLL));
@@ -635,6 +805,18 @@ export async function removeTransaction(islem: Transaction) {
     const batch = writeBatch(db);
     plan.apply(batch);
     await commitWrite(batch.commit(), 'removeTransaction');
+    if (activityEnabled() && plan.record) {
+      recordActivity({
+        category: transactionCategory(plan.record.type),
+        action: 'delete',
+        title: transactionTitle(plan.record),
+        amount: Number(plan.record.amount) || 0,
+        currency: plan.record.currency,
+        refId: plan.islemId,
+        risky: true,
+        before: summarizeTransaction(plan.record),
+      });
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getPath(ISLEMLER_COLL)}/${islem.id}`);
     throw error;
@@ -651,11 +833,28 @@ export async function replaceTransaction(oldIslem: Transaction, islemData: Omit<
   }
   try {
     const removePlan = await planRemoveTransaction(oldIslem);
-    const createPlan = await planCreateTransaction(islemData, linkedReceipts);
+    // Düzenlemede ilk kaydı yapan kişi korunur, düzenleyen ayrıca yazılır
+    const original = removePlan.record || oldIslem;
+    const stamp: Record<string, ActorStamp> = { ...stampFields(false) };
+    if ((original as any).createdBy) stamp.createdBy = (original as any).createdBy;
+    const createPlan = await planCreateTransaction(islemData, linkedReceipts, stamp);
     const batch = writeBatch(db);
     removePlan.apply(batch);
     createPlan.apply(batch);
     await commitWrite(batch.commit(), 'replaceTransaction');
+    if (activityEnabled() && createPlan.record) {
+      recordActivity({
+        category: transactionCategory(createPlan.record.type),
+        action: 'update',
+        title: transactionTitle(createPlan.record),
+        amount: Number(createPlan.record.amount) || 0,
+        currency: createPlan.record.currency,
+        refId: createPlan.islemId,
+        risky: true,
+        before: summarizeTransaction(original),
+        after: summarizeTransaction(createPlan.record),
+      });
+    }
     return createPlan.islemId;
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `${getPath(ISLEMLER_COLL)}/${oldIslem.id}`);
@@ -681,11 +880,17 @@ export async function saveCekSenet(item: Omit<CekSenet, 'id'>, id?: string) {
   try {
     const docRef = id ? doc(db, getPath(CEKSENET_COLL), id) : doc(collection(db, getPath(CEKSENET_COLL)));
     const newId = id || docRef.id;
+    const before = await readForLog(CEKSENET_COLL, id);
     const finalItem: CekSenet = cleanUndefined({
       id: newId,
-      ...item
+      ...item,
+      ...stampFields(!before),
     });
     await setDoc(docRef, finalItem);
+    {
+      const x: any = finalItem;
+      logRecordSave('ceksenet', `${x.docType === 'note' ? 'Senet' : 'Çek'} · ${x.cariName || x.debtor || ''}${x.serialNo ? ` (${x.serialNo})` : ''}`, newId, before, x, Number(x.amount) || 0);
+    }
     return newId;
   } catch (error) {
     handleFirestoreError(error, id ? OperationType.UPDATE : OperationType.CREATE, `${getPath(CEKSENET_COLL)}/${id || 'new'}`);
@@ -695,7 +900,12 @@ export async function saveCekSenet(item: Omit<CekSenet, 'id'>, id?: string) {
 
 export async function deleteCekSenet(id: string) {
   try {
+    const before = await readForLog(CEKSENET_COLL, id);
     await deleteDoc(doc(db, getPath(CEKSENET_COLL), id));
+    {
+      const x: any = before || {};
+      logRecordDelete('ceksenet', `${x.docType === 'note' ? 'Senet' : 'Çek'} · ${x.cariName || x.debtor || ''}${x.serialNo ? ` (${x.serialNo})` : ''}`, id, before, Number(x.amount) || 0);
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getPath(CEKSENET_COLL)}/${id}`);
     throw error;
@@ -720,11 +930,17 @@ export async function saveExpense(expense: Omit<Expense, 'id'>, id?: string) {
   try {
     const docRef = id ? doc(db, getPath(GIDERLER_COLL), id) : doc(collection(db, getPath(GIDERLER_COLL)));
     const newId = id || docRef.id;
+    const before = await readForLog(GIDERLER_COLL, id);
     const finalExpense: Expense = cleanUndefined({
       id: newId,
-      ...expense
+      ...expense,
+      ...stampFields(!before),
     });
     await setDoc(docRef, finalExpense);
+    {
+      const x: any = finalExpense;
+      logRecordSave('gider', `Gider: ${x.title || x.category || ''}`, newId, before, x, Number(x.amount) || 0);
+    }
     return newId;
   } catch (error) {
     handleFirestoreError(error, id ? OperationType.UPDATE : OperationType.CREATE, `${getPath(GIDERLER_COLL)}/${id || 'new'}`);
@@ -734,7 +950,12 @@ export async function saveExpense(expense: Omit<Expense, 'id'>, id?: string) {
 
 export async function deleteExpense(id: string) {
   try {
+    const before = await readForLog(GIDERLER_COLL, id);
     await deleteDoc(doc(db, getPath(GIDERLER_COLL), id));
+    {
+      const x: any = before || {};
+      logRecordDelete('gider', `Gider: ${x.title || x.category || ''}`, id, before, Number(x.amount) || 0);
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getPath(GIDERLER_COLL)}/${id}`);
     throw error;
@@ -759,11 +980,17 @@ export async function saveRecurringTransaction(item: Omit<RecurringTransaction, 
   try {
     const docRef = id ? doc(db, getPath(TEKRARLAYAN_COLL), id) : doc(collection(db, getPath(TEKRARLAYAN_COLL)));
     const newId = id || docRef.id;
+    const before = await readForLog(TEKRARLAYAN_COLL, id);
     const finalItem: RecurringTransaction = cleanUndefined({
       id: newId,
-      ...item
+      ...item,
+      ...stampFields(!before),
     });
     await setDoc(docRef, finalItem);
+    {
+      const x: any = finalItem;
+      logRecordSave('gider', `Tekrarlayan işlem: ${x.title || ''}`, newId, before, x, Number(x.amount) || 0);
+    }
     return newId;
   } catch (error) {
     handleFirestoreError(error, id ? OperationType.UPDATE : OperationType.CREATE, `${getPath(TEKRARLAYAN_COLL)}/${id || 'new'}`);
@@ -773,7 +1000,12 @@ export async function saveRecurringTransaction(item: Omit<RecurringTransaction, 
 
 export async function deleteRecurringTransaction(id: string) {
   try {
+    const before = await readForLog(TEKRARLAYAN_COLL, id);
     await deleteDoc(doc(db, getPath(TEKRARLAYAN_COLL), id));
+    {
+      const x: any = before || {};
+      logRecordDelete('gider', `Tekrarlayan işlem: ${x.title || ''}`, id, before, Number(x.amount) || 0);
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getPath(TEKRARLAYAN_COLL)}/${id}`);
     throw error;
@@ -798,11 +1030,17 @@ export async function saveEmployee(employee: Omit<Employee, 'id'>, id?: string) 
   try {
     const docRef = id ? doc(db, getPath(CALISANLAR_COLL), id) : doc(collection(db, getPath(CALISANLAR_COLL)));
     const newId = id || docRef.id;
+    const before = await readForLog(CALISANLAR_COLL, id);
     const finalEmployee: Employee = cleanUndefined({
       id: newId,
-      ...employee
+      ...employee,
+      ...stampFields(!before),
     });
     await setDoc(docRef, finalEmployee);
+    {
+      const x: any = finalEmployee;
+      logRecordSave('personel', `Personel: ${x.name || ''}`, newId, before, x, undefined);
+    }
     return newId;
   } catch (error) {
     handleFirestoreError(error, id ? OperationType.UPDATE : OperationType.CREATE, `${getPath(CALISANLAR_COLL)}/${id || 'new'}`);
@@ -812,7 +1050,12 @@ export async function saveEmployee(employee: Omit<Employee, 'id'>, id?: string) 
 
 export async function deleteEmployee(id: string) {
   try {
+    const before = await readForLog(CALISANLAR_COLL, id);
     await deleteDoc(doc(db, getPath(CALISANLAR_COLL), id));
+    {
+      const x: any = before || {};
+      logRecordDelete('personel', `Personel: ${x.name || ''}`, id, before, undefined);
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getPath(CALISANLAR_COLL)}/${id}`);
     throw error;
@@ -837,11 +1080,17 @@ export async function saveEmployeeTransaction(transaction: Omit<EmployeeTransact
   try {
     const docRef = id ? doc(db, getPath(CALISAN_ISLEMLER_COLL), id) : doc(collection(db, getPath(CALISAN_ISLEMLER_COLL)));
     const newId = id || docRef.id;
+    const before = await readForLog(CALISAN_ISLEMLER_COLL, id);
     const finalTx: EmployeeTransaction = cleanUndefined({
       id: newId,
-      ...transaction
+      ...transaction,
+      ...stampFields(!before),
     });
     await setDoc(docRef, finalTx);
+    {
+      const x: any = finalTx;
+      logRecordSave('personel', `${x.type === 'payment' ? 'Maaş ödemesi' : x.type === 'advance' ? 'Avans' : 'Hak ediş'} · ${x.employeeName || ''}`, newId, before, x, Number(x.amount) || 0);
+    }
 
     // Sync with Expenses (giderler)
     if (finalTx.type === 'payment' || finalTx.type === 'advance') {
@@ -877,7 +1126,12 @@ export async function saveEmployeeTransaction(transaction: Omit<EmployeeTransact
 
 export async function deleteEmployeeTransaction(id: string) {
   try {
+    const before = await readForLog(CALISAN_ISLEMLER_COLL, id);
     await deleteDoc(doc(db, getPath(CALISAN_ISLEMLER_COLL), id));
+    {
+      const x: any = before || {};
+      logRecordDelete('personel', `${x.type === 'payment' ? 'Maaş ödemesi' : x.type === 'advance' ? 'Avans' : 'Hak ediş'} · ${x.employeeName || ''}`, id, before, Number(x.amount) || 0);
+    }
     // Also delete any synced expense with this transaction ID
     const expenseDocRef = doc(db, getPath(GIDERLER_COLL), id);
     await deleteDoc(expenseDocRef).catch(() => {});
@@ -905,11 +1159,17 @@ export async function saveCredit(credit: Omit<Credit, 'id'>, id?: string) {
   try {
     const docRef = id ? doc(db, getPath(KREDILER_COLL), id) : doc(collection(db, getPath(KREDILER_COLL)));
     const newId = id || docRef.id;
+    const before = await readForLog(KREDILER_COLL, id);
     const finalCredit: Credit = cleanUndefined({
       id: newId,
-      ...credit
+      ...credit,
+      ...stampFields(!before),
     });
     await setDoc(docRef, finalCredit);
+    {
+      const x: any = finalCredit;
+      logRecordSave('kredi', `Kredi: ${[x.bank, x.name].filter(Boolean).join(' ')}`, newId, before, x, Number(x.totalAmount) || 0);
+    }
     return newId;
   } catch (error) {
     handleFirestoreError(error, id ? OperationType.UPDATE : OperationType.CREATE, `${getPath(KREDILER_COLL)}/${id || 'new'}`);
@@ -919,7 +1179,12 @@ export async function saveCredit(credit: Omit<Credit, 'id'>, id?: string) {
 
 export async function deleteCredit(id: string) {
   try {
+    const before = await readForLog(KREDILER_COLL, id);
     await deleteDoc(doc(db, getPath(KREDILER_COLL), id));
+    {
+      const x: any = before || {};
+      logRecordDelete('kredi', `Kredi: ${[x.bank, x.name].filter(Boolean).join(' ')}`, id, before, Number(x.totalAmount) || 0);
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getPath(KREDILER_COLL)}/${id}`);
     throw error;
@@ -967,8 +1232,13 @@ export async function saveBankAccount(account: any, id?: string) {
   try {
     const docRef = id ? doc(db, getPath(HESAPLAR_COLL), id) : doc(collection(db, getPath(HESAPLAR_COLL)));
     const newId = id || docRef.id;
-    const finalAccount = cleanUndefined({ id: newId, ...account });
+    const before = await readForLog(HESAPLAR_COLL, id);
+    const finalAccount = cleanUndefined({ id: newId, ...account, ...stampFields(!before) });
     await setDoc(docRef, finalAccount);
+    {
+      const x: any = finalAccount;
+      logRecordSave('kasa', `Hesap: ${x.name || x.bankName || ''}`, newId, before, x, undefined);
+    }
     return newId;
   } catch (error) {
     handleFirestoreError(error, id ? OperationType.UPDATE : OperationType.CREATE, `${getPath(HESAPLAR_COLL)}/${id || 'new'}`);
@@ -978,7 +1248,12 @@ export async function saveBankAccount(account: any, id?: string) {
 
 export async function deleteBankAccount(id: string) {
   try {
+    const before = await readForLog(HESAPLAR_COLL, id);
     await deleteDoc(doc(db, getPath(HESAPLAR_COLL), id));
+    {
+      const x: any = before || {};
+      logRecordDelete('kasa', `Hesap: ${x.name || x.bankName || ''}`, id, before, undefined);
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getPath(HESAPLAR_COLL)}/${id}`);
     throw error;
@@ -998,8 +1273,13 @@ export async function saveAccountTransaction(transaction: any, id?: string) {
   try {
     const docRef = id ? doc(db, getPath(HESAP_ISLEMLER_COLL), id) : doc(collection(db, getPath(HESAP_ISLEMLER_COLL)));
     const newId = id || docRef.id;
-    const finalTx = cleanUndefined({ id: newId, ...transaction });
+    const before = await readForLog(HESAP_ISLEMLER_COLL, id);
+    const finalTx = cleanUndefined({ id: newId, ...transaction, ...stampFields(!before) });
     await setDoc(docRef, finalTx);
+    {
+      const x: any = finalTx;
+      logRecordSave('kasa', `Kasa/Banka hareketi: ${x.description || x.title || ''}`, newId, before, x, Number(x.amount) || 0);
+    }
     return newId;
   } catch (error) {
     handleFirestoreError(error, id ? OperationType.UPDATE : OperationType.CREATE, `${getPath(HESAP_ISLEMLER_COLL)}/${id || 'new'}`);
@@ -1009,7 +1289,12 @@ export async function saveAccountTransaction(transaction: any, id?: string) {
 
 export async function deleteAccountTransaction(id: string) {
   try {
+    const before = await readForLog(HESAP_ISLEMLER_COLL, id);
     await deleteDoc(doc(db, getPath(HESAP_ISLEMLER_COLL), id));
+    {
+      const x: any = before || {};
+      logRecordDelete('kasa', `Kasa/Banka hareketi: ${x.description || x.title || ''}`, id, before, Number(x.amount) || 0);
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getPath(HESAP_ISLEMLER_COLL)}/${id}`);
     throw error;
@@ -1018,6 +1303,7 @@ export async function deleteAccountTransaction(id: string) {
 
 export async function clearAllDatabaseData() {
   try {
+    recordActivity({ category: 'sistem', action: 'reset', title: 'Tüm veriler sıfırlandı', risky: true });
     const collections = [CARILER_COLL, STOKLAR_COLL, ISLEMLER_COLL, CEKSENET_COLL, GIDERLER_COLL, CALISANLAR_COLL, CALISAN_ISLEMLER_COLL, KREDILER_COLL, HESAPLAR_COLL, HESAP_ISLEMLER_COLL, TEKRARLAYAN_COLL];
     for (const colName of collections) {
       const q = collection(db, getPath(colName));
@@ -1080,6 +1366,7 @@ export async function exportAllDatabaseData(): Promise<{ [backupKey: string]: an
 // işlem yarıda kesilirse veritabanı boş kalmaz (yalnızca fazladan kayıtlar kalabilir).
 export async function importAllDatabaseData(backupJson: any) {
   try {
+    recordActivity({ category: 'sistem', action: 'import', title: 'Yedekten geri yükleme yapıldı (mevcut veriler yedektekiyle değiştirildi)', risky: true });
     const BATCH_LIMIT = 450;
     for (const { name, backupKey, optional } of ALL_COLLECTIONS) {
       const rawItems = backupJson ? backupJson[backupKey] : undefined;
