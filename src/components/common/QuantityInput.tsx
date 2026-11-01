@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { logError } from '../../utils/errorLogger';
 
 /**
@@ -17,6 +17,8 @@ export interface QuantityInputProps {
 
 export const QuantityInput: React.FC<QuantityInputProps> = ({ value, onCommit, label, className, style, title }) => {
   const [draft, setDraft] = useState<string | null>(null);
+  // Odaktan sonra yazı yazıldı mı? (gecikmeli yeniden seçim yazılanı seçip ezmesin)
+  const typedRef = useRef(false);
   const shown = draft ?? String(value).replace('.', ',');
   const commit = () => {
     if (draft === null) return;
@@ -38,12 +40,15 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({ value, onCommit, l
       onFocus={(e) => {
         const initial = String(value).replace('.', ',');
         const el = e.target;
+        typedRef.current = false;
         setDraft(initial);
         el.select();
-        // Bazı telefon tarayıcıları seçimi odaktan hemen sonra bozar: henüz yazılmadıysa yeniden seç
-        requestAnimationFrame(() => { if (document.activeElement === el && el.value === initial) el.select(); });
+        // Bazı telefon tarayıcıları seçimi odaktan hemen sonra bozar: henüz hiç yazılmadıysa yeniden seç
+        // (değer kontrolü yetmez: "1" iken "1" yazılırsa değer aynı kalır ve yazılan seçilip ezilirdi)
+        requestAnimationFrame(() => { if (!typedRef.current && document.activeElement === el) el.select(); });
       }}
       onChange={(e) => {
+        typedRef.current = true;
         const next = e.target.value.replace(/[^0-9.,]/g, '').slice(0, 9);
         setDraft(next);
         // Toplam yazdıkça güncellenir; geçersiz/boş ara değerlerde son geçerli miktar kalır
@@ -51,7 +56,9 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({ value, onCommit, l
         if (next && Number.isFinite(parsed) && parsed > 0) onCommit(parsed);
       }}
       onBlur={commit}
-      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') { setDraft(null); (e.target as HTMLInputElement).blur(); } }}
+      // Değer aynı kalsa bile ("1" iken "1") yazmaya başlandığı tuş/giriş olayından anlaşılır
+      onBeforeInput={() => { typedRef.current = true; }}
+      onKeyDown={(e) => { typedRef.current = true; if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') { setDraft(null); (e.target as HTMLInputElement).blur(); } }}
       className={className}
       style={style}
       title={title}
