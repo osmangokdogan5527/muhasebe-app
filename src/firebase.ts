@@ -17,6 +17,7 @@ import {
   getDocs,
   setLogLevel,
   getDoc,
+  getDocFromCache,
   where
 } from 'firebase/firestore';
 import { 
@@ -51,6 +52,7 @@ import {
   transactionCategory,
   transactionTitle,
 } from './users/activityTypes';
+import { USERS_SETTING_ID } from './users/staffUsers';
 
 // Read config from the provisioned project
 const firebaseConfig = {
@@ -194,14 +196,18 @@ export async function runWithoutActivity<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-/** Silme/düzenleme öncesi kaydın eski hâli (yalnızca günlük açıkken okunur) */
+/**
+ * Silme/düzenleme öncesi kaydın eski hâli (yalnızca günlük açıkken).
+ * Ekranlar bu koleksiyonları canlı dinlediği için kayıt yerel önbellektedir: sunucuya gidilmez,
+ * kayıt işlemi beklemez. Önbellekte yoksa eski hâl günlüğe yazılmadan devam edilir.
+ */
 async function readForLog(collName: string, id: string | undefined): Promise<Record<string, any> | null> {
   if (!id || !activityEnabled()) return null;
   try {
-    const snap = await getDoc(doc(db, getPath(collName), id));
+    const snap = await getDocFromCache(doc(db, getPath(collName), id));
     return snap.exists() ? (snap.data() as Record<string, any>) : null;
-  } catch (err) {
-    logError(err instanceof Error ? err : new Error(String(err)), `readForLog:${collName}`);
+  } catch {
+    // Önbellekte yok: günlük eski hâl olmadan yazılır (hata değildir)
     return null;
   }
 }
@@ -1193,9 +1199,14 @@ export async function deleteCredit(id: string) {
 
 // FİRMA AYARLARI (users/{firma}/ayarlar/{ayarId}) - firmanın tüm cihazlarında ortak
 // Kullanılanlar: belgeGorunumu (PDF logo, firma bilgileri, renk), etiketTasarimi (etiket ölçü/içerik)
-export function subscribeSettingDoc(settingId: string, callback: (data: Record<string, any> | null, meta: { fromCache: boolean }) => void) {
+/**
+ * withMetadata: veri değişmese de "önbellekten → sunucudan doğrulandı" geçişi bildirilsin
+ * (Firestore varsayılan olarak yalnızca meta değişikliğini bildirmez). Kullanıcı listesi, çevrimdışı
+ * bekleme ekranından çıkabilmek için buna ihtiyaç duyar.
+ */
+export function subscribeSettingDoc(settingId: string, callback: (data: Record<string, any> | null, meta: { fromCache: boolean }) => void, withMetadata = false) {
   const ref = doc(db, getPath(AYARLAR_COLL), settingId);
-  return onSnapshot(ref, (snapshot) => {
+  return onSnapshot(ref, { includeMetadataChanges: withMetadata }, (snapshot) => {
     // fromCache: veri sunucudan doğrulanmadı (çevrimdışı ya da önbellekten ilk okuma)
     const fromCache = !!(snapshot as any).metadata?.fromCache;
     callback(snapshot.exists() ? (snapshot.data() as Record<string, any>) : null, { fromCache });
@@ -1373,8 +1384,19 @@ export async function importAllDatabaseData(backupJson: any) {
     for (const { name, backupKey, optional } of ALL_COLLECTIONS) {
       const rawItems = backupJson ? backupJson[backupKey] : undefined;
       if (optional && !Array.isArray(rawItems)) continue;
-      const items: any[] = Array.isArray(rawItems) ? rawItems.filter(item => item && item.id) : [];
+      let items: any[] = Array.isArray(rawItems) ? rawItems.filter(item => item && item.id) : [];
       const backupIds = new Set(items.map(item => String(item.id)));
+
+      // Kullanıcılar ve PIN'leri iş verisi değildir: yedek dönmek mevcut kullanıcıları silmemeli
+      // (eski yedekte liste yoksa sistem kapanır, herkes tam yetkiyle girerdi) ya da eski PIN'lerle
+      // ezmemeli. Mevcut liste korunur; yalnızca hiç liste yoksa yedektekinden geri yüklenir.
+      if (name === AYARLAR_COLL) {
+        backupIds.add(USERS_SETTING_ID);
+        const currentUsers = await getDoc(doc(db, getPath(AYARLAR_COLL), USERS_SETTING_ID));
+        if (currentUsers.exists()) {
+          items = items.filter(item => String(item.id) !== USERS_SETTING_ID);
+        }
+      }
 
       // 1. Yedekteki kayıtları yaz
       let batch = writeBatch(db);

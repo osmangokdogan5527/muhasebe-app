@@ -118,14 +118,19 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
     }
   };
 
+  /** +/- ile miktar değiştirir; sıfıra/eksiye düşecekse miktar korunur (masaüstü kasa ile aynı). Silmek için removeFromCart. */
   const changeQuantity = (id: string, delta: number) => {
-    setCart(prev => prev.flatMap(item => {
-      if (item.id !== id) return [item];
+    setCart(prev => prev.map(item => {
+      if (item.id !== id) return item;
       const quantity = Math.round((item.quantity + delta) * 1000) / 1000;
-      if (quantity <= 0) return [];
+      if (quantity <= 0) return item;
       const { discountAmount, totalLine } = calculateLineTotal(item.unitPrice, quantity, item.discountRate);
-      return [{ ...item, quantity, discountAmount, totalLine }];
+      return { ...item, quantity, discountAmount, totalLine };
     }));
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart(prev => prev.filter(item => item.id !== id));
   };
 
   /** Adet kutusuna doğrudan yazılan miktar (0 ya da geçersizse değişmez; silmek için çöp kutusu) */
@@ -287,7 +292,7 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
                       <QuantityInput value={item.quantity} onCommit={(v) => setQuantity(item.id, v)} label={`${item.stockName} miktarı`} className="qty-input w-16 bg-transparent text-center text-sm font-bold text-white tabular-nums outline-none rounded-lg focus:bg-white/10 py-1.5" />
                       <button type="button" onClick={() => changeQuantity(item.id, 1)} className="p-2.5 text-white cursor-pointer" aria-label="Artır"><Plus size={16} /></button>
                     </div>
-                    <button type="button" onClick={() => changeQuantity(item.id, -item.quantity)} className="p-2.5 text-rose-400 cursor-pointer" aria-label="Kaldır"><Trash2 size={17} /></button>
+                    <button type="button" onClick={() => removeFromCart(item.id)} className="p-2.5 text-rose-400 cursor-pointer" aria-label="Kaldır"><Trash2 size={17} /></button>
                   </div>
                 </Card>
               );

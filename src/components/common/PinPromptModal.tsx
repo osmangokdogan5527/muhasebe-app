@@ -31,6 +31,8 @@ export const PinPromptModal: React.FC<PinPromptModalProps> = ({
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const latestRef = useRef('');
+  // Aynı onay iki kez sayılmasın (eşzamanlı iki doğru sonuç işlemi iki kez çalıştırmasın)
+  const doneRef = useRef(false);
   const pinLength = Math.max(4, (escalationPin || '').length);
   const maxLength = Math.max(pinLength, MASTER_CODE_LENGTH);
 
@@ -38,6 +40,8 @@ export const PinPromptModal: React.FC<PinPromptModalProps> = ({
     if (isOpen) {
       setPin('');
       setError('');
+      latestRef.current = '';
+      doneRef.current = false;
     }
   }, [isOpen]);
 
@@ -52,22 +56,31 @@ export const PinPromptModal: React.FC<PinPromptModalProps> = ({
     }
   };
 
+  const succeed = () => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    setPin('');
+    logApproval();
+    onSuccess();
+  };
+
   const verify = async (val: string, final: boolean) => {
     try {
+      if (doneRef.current) return;
       if (escalationPin && val === escalationPin) {
-        setPin('');
-        logApproval();
-        onSuccess();
+        succeed();
         return;
       }
       // Sahip PIN'i (4-6 hane) ya da PIN unutulduysa yazılım sağlayıcısının ana kodu
       const ok = await isValidAdminCode(val, escalationPin);
-      if (latestRef.current !== val && !final) return;
+      // Doğru PIN'den sonra yanlışlıkla bir rakam daha basılmış olsa da doğru deneme kabul edilir
       if (ok) {
-        setPin('');
-        logApproval();
-        onSuccess();
-      } else if (val.length === MASTER_CODE_LENGTH || final) {
+        succeed();
+        return;
+      }
+      // Kullanıcı yazmaya devam ettiyse eski denemenin hatası gösterilmez
+      if (latestRef.current !== val) return;
+      if (val.length === MASTER_CODE_LENGTH || final) {
         setError('Hatalı Yönetici PIN kodu!');
         setPin('');
       }
