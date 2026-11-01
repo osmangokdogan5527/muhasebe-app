@@ -264,6 +264,9 @@ body:has([data-design-style="pusula"]),
 
 /* İç içe ince paneller */
 [data-design-style="pusula"] :is(
+  .bg-slate-800\/80, .bg-slate-800\/60, .bg-slate-900\/80, .bg-zinc-800\/80,
+  .bg-zinc-900\/40, .bg-zinc-900\/30, .bg-zinc-900\/10, .bg-zinc-950\/60, .bg-zinc-950\/30, .bg-zinc-950\/90,
+  .bg-zinc-800\/50, .bg-slate-950\/60,
   .bg-white\/5, .bg-white\/10, .bg-white\/\[0\.01\], .bg-white\/\[0\.02\], .bg-white\/\[0\.03\], .bg-white\/\[0\.035\],
   .bg-white\/\[0\.04\], .bg-white\/\[0\.05\], .bg-white\/\[0\.08\], .bg-black\/10, .bg-black\/15, .bg-black\/20,
   .bg-black\/30, .bg-black\/40, .bg-zinc-900\/20, .bg-zinc-950\/20, .bg-zinc-800\/30, .bg-slate-800\/50,
