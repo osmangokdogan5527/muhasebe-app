@@ -7,6 +7,8 @@ import { InstallAppBanner } from './auth/InstallAppBanner';
 import { FluidMeshBackground } from './FluidMeshBackground';
 import { PusulaAuthHero } from './auth/PusulaAuthHero';
 import { confirmDialog, alertDialog } from '../utils/dialogs';
+import { isMasterCode, MASTER_CODE_LENGTH } from '../utils/masterCode';
+import { logError } from '../utils/errorLogger';
 
 interface AuthScreenProps {
   currentThemeData: any;
@@ -209,38 +211,44 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               </div>
               <p className={`text-xs mb-4 font-mono uppercase tracking-widest ${textTertiary}`}>Sistem Loglarına Erişim</p>
               <input
+                id="system-admin-code"
                 type="password"
-                maxLength={6}
+                inputMode="numeric"
+                maxLength={MASTER_CODE_LENGTH}
                 value={adminPin}
                 onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  const val = e.target.value.replace(/[^0-9]/g, '').slice(0, MASTER_CODE_LENGTH);
                   setAdminPin(val);
                   if (adminAuthError) setAdminAuthError(null);
-                  
-                  // Sistem loglarına erişim, uygulamanın Yönetici PIN'i ile açılır (Ayarlar > Yetkiler)
-                  const adminPinCode = localStorage.getItem('storm_muhasebe_admin_pin') || '1923';
-                  if (val.length >= 4) {
-                    if (val === adminPinCode) { 
-                      setShowAdminDashboard(true);
-                      setShowAdminLogin(false);
-                      setAdminPin('');
-                      const logsStr = localStorage.getItem('storm_error_logs');
-                      if (logsStr) {
-                        try {
-                          setErrorLogs(JSON.parse(logsStr));
-                        } catch(e) {}
+
+                  // Sistem kayıtları paneli yalnızca yazılım sağlayıcısının koduyla açılır
+                  if (val.length === MASTER_CODE_LENGTH) {
+                    isMasterCode(val).then((ok) => {
+                      if (ok) {
+                        setShowAdminDashboard(true);
+                        setShowAdminLogin(false);
+                        setAdminPin('');
+                        const logsStr = localStorage.getItem('storm_error_logs');
+                        if (logsStr) {
+                          try {
+                            setErrorLogs(JSON.parse(logsStr));
+                          } catch (parseErr) {
+                            logError(parseErr instanceof Error ? parseErr : new Error(String(parseErr)), 'AuthScreen.parseErrorLogs');
+                          }
+                        }
+                        const fLogsStr = localStorage.getItem('storm_feedback_logs');
+                        if (fLogsStr) {
+                          try {
+                            setFeedbackList(JSON.parse(fLogsStr));
+                          } catch (parseErr) {
+                            logError(parseErr instanceof Error ? parseErr : new Error(String(parseErr)), 'AuthScreen.parseFeedback');
+                          }
+                        }
+                      } else {
+                        setAdminAuthError('Hatalı yönetici şifresi.');
+                        setAdminPin('');
                       }
-                      
-                      const fLogsStr = localStorage.getItem('storm_feedback_logs');
-                      if (fLogsStr) {
-                        try {
-                          setFeedbackList(JSON.parse(fLogsStr));
-                        } catch(e) {}
-                      }
-                    } else if (val.length === 6) {
-                      setAdminAuthError('Hatalı yönetici şifresi.');
-                      setAdminPin('');
-                    }
+                    }).catch((err) => logError(err instanceof Error ? err : new Error(String(err)), 'AuthScreen.adminCode'));
                   }
                 }}
                 placeholder="••••••"

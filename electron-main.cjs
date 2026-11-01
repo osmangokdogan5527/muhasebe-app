@@ -14,8 +14,15 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 ipcMain.on('open-external', (event, url) => {
-  const { shell } = require('electron');
-  shell.openExternal(url);
+  // Yalnızca web, e-posta, telefon ve WhatsApp bağlantıları sistemde açılır
+  try {
+    const parsed = new URL(String(url));
+    if (!['https:', 'http:', 'mailto:', 'tel:', 'whatsapp:'].includes(parsed.protocol)) return;
+    const { shell } = require('electron');
+    shell.openExternal(parsed.toString());
+  } catch (error) {
+    console.error('Geçersiz dış bağlantı:', error);
+  }
 });
 
 let mainWindow;

@@ -4,7 +4,7 @@ import { PosCartItem, PosPaymentSplit, PosParkedSale, PosSaleSummary } from '../
 import { PosProductCatalog } from './PosProductCatalog';
 import { PosCartTable } from './PosCartTable';
 import { PosSplitPaymentModal } from './PosSplitPaymentModal';
-import { ReceiptPdfModal } from '../pdf/ReceiptPdfModal';
+import { ReceiptPdfModal, ReceiptInvoiceSource, invoiceSourceFromSummary } from '../pdf/ReceiptPdfModal';
 import { receiptDataFromPosSummary } from '../../pdf/posReceiptPdf';
 import { PosParkedSalesModal } from './PosParkedSalesModal';
 import { findStockByBarcodeOrSearch, calculateLineTotal, calculateCartSummary, generateReceiptNo } from '../../utils/posUtils';
@@ -78,6 +78,11 @@ export const PosView: React.FC<PosViewProps> = ({
   const [completedSaleSummary, setCompletedSaleSummary] = useState<PosSaleSummary | null>(null);
   // Fiş PDF'i için veri bir kez hazırlanır (POS ekranı yeniden çizildikçe PDF yeniden üretilmesin)
   const completedReceiptData = useMemo(() => (completedSaleSummary ? receiptDataFromPosSummary(completedSaleSummary) : null), [completedSaleSummary]);
+  // Aynı satışın fatura (A4 / A5) olarak da alınabilmesi için kayıt karşılığı
+  const completedInvoiceSource = useMemo<ReceiptInvoiceSource | undefined>(
+    () => (completedSaleSummary ? invoiceSourceFromSummary(completedSaleSummary, cariler) : undefined),
+    [completedSaleSummary, cariler],
+  );
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
   // PARKED SALES LOCALSTORAGE KAYIT
@@ -145,6 +150,12 @@ export const PosView: React.FC<PosViewProps> = ({
     }
   }, []);
 
+  // Klavye kısayolları her zaman güncel sepet, KDV oranı, iskonto ve müşteriyle çalışsın diye
+  // işleyiciler her çizimde bu ref'e yazılır (dinleyici yalnızca bir kez bağlanır)
+  const shortcutHandlersRef = useRef<{ cash: () => void; pos: () => void; credit: () => void; park: () => void }>({
+    cash: () => {}, pos: () => {}, credit: () => {}, park: () => {},
+  });
+
   // BARKOD OKUYUCU DİNLEYİCİSİ (Arama kutusuna hızlı yazılan barkodları algılar)
   useEffect(() => {
     let barcodeBuffer = '';
@@ -165,14 +176,14 @@ export const PosView: React.FC<PosViewProps> = ({
         // F2: Hızlı Nakit Satış
         if (e.key === 'F2') {
           e.preventDefault();
-          handleQuickCashSale();
+          shortcutHandlersRef.current.cash();
           return;
         }
 
         // F3: Hızlı POS Satış
         if (e.key === 'F3') {
           e.preventDefault();
-          handleQuickPosSale();
+          shortcutHandlersRef.current.pos();
           return;
         }
 
@@ -186,14 +197,14 @@ export const PosView: React.FC<PosViewProps> = ({
         // F5: Veresiye (tamamı açık hesaba)
         if (e.key === 'F5') {
           e.preventDefault();
-          handleCreditSale();
+          shortcutHandlersRef.current.credit();
           return;
         }
 
         // F8: Askıya Al
         if (e.key === 'F8') {
           e.preventDefault();
-          handleParkSale();
+          shortcutHandlersRef.current.park();
           return;
         }
 
@@ -400,6 +411,13 @@ export const PosView: React.FC<PosViewProps> = ({
     } catch (err: any) {
       logError(err, 'PosView:handleParkSale');
     }
+  };
+
+  shortcutHandlersRef.current = {
+    cash: handleQuickCashSale,
+    pos: handleQuickPosSale,
+    credit: handleCreditSale,
+    park: handleParkSale,
   };
 
   // ASKIDAKİ SATIŞI GERİ YÜKLE
@@ -668,10 +686,12 @@ export const PosView: React.FC<PosViewProps> = ({
                   </div>
                 )}
 
-                <div className="flex justify-between text-slate-300 font-bold">
-                  <span>KDV Matrahı (%{globalTaxRate}):</span>
-                  <span className="text-white" style={{ color: '#ffffff' }}>₺{summary.taxBase.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
+                {globalTaxRate > 0 && (
+                  <div className="flex justify-between text-slate-300 font-bold">
+                    <span>KDV Matrahı (%{globalTaxRate}):</span>
+                    <span className="text-white" style={{ color: '#ffffff' }}>₺{summary.taxBase.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                )}
 
                 {globalTaxRate > 0 && (
                   <div className="flex justify-between text-slate-400 font-bold">
@@ -893,7 +913,8 @@ export const PosView: React.FC<PosViewProps> = ({
       {isReceiptModalOpen && completedReceiptData && (
         <ReceiptPdfModal
           data={completedReceiptData}
-          title="Satış Tamamlandı · Fiş"
+          invoice={completedInvoiceSource}
+          title="Satış Tamamlandı"
           onClose={() => setIsReceiptModalOpen(false)}
         />
       )}

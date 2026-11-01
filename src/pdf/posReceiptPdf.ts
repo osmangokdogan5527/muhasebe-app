@@ -21,6 +21,8 @@ export interface ReceiptLine {
   discountRate: number;
   /** KDV dahil, satır iskontosu düşülmüş tutar */
   lineTotal: number;
+  /** KDV oranı (%); bilinmiyorsa tanımsız */
+  taxRate?: number;
 }
 
 export interface ReceiptSaleData {
@@ -64,6 +66,7 @@ export function receiptDataFromPosSummary(summary: PosSaleSummary): ReceiptSaleD
       discountAmount: item.discountAmount || 0,
       discountRate: item.discountRate || 0,
       lineTotal: item.totalLine,
+      taxRate: Number(item.taxRate) || 0,
     })),
     totalTax: summary.totalTax,
     grandTotal: summary.grandTotal,
@@ -104,6 +107,7 @@ export function receiptDataFromTransaction(islem: Transaction, isRetail: boolean
       discountAmount: 0,
       discountRate: 0,
       lineTotal,
+      taxRate: Number(item.taxRate) || 0,
     };
   });
   // Ödeme dağılımı: kasadan yapılan satışta tahsilat faturanın kendisinde değil, bağlı kayıtlardadır
@@ -263,7 +267,11 @@ function drawReceipt(doc: JsPdfType, data: ReceiptSaleData, branding: DocumentBr
     pair('Ara Toplam', money(gross), m.base);
     pair('İskonto', `- ${money(discount)}`, m.base);
   }
-  pair('KDV (dahil)', money(data.totalTax), m.base - 0.4);
+  // KDV'siz satışta KDV satırı yazılmaz; tek oran varsa oranıyla yazılır
+  if (data.totalTax > 0.004) {
+    const rates = [...new Set(data.lines.map((line) => Number(line.taxRate) || 0).filter((rate) => rate > 0))];
+    pair(rates.length === 1 ? `KDV %${formatQuantity(rates[0])} (dahil)` : 'KDV (dahil)', money(data.totalTax), m.base - 0.4);
+  }
   y += 0.8;
   pair('TOPLAM', money(data.grandTotal), m.base + 3.5, 'bold');
   y += 0.6;
@@ -313,7 +321,8 @@ export async function createPosReceiptPdf(data: ReceiptSaleData, branding: Docum
   // 1. geçiş: yüksekliği ölç
   const probe = new jsPDF({ unit: 'mm', format: [m.width, 2000], orientation: 'portrait' });
   await registerPdfFonts(probe);
-  const height = Math.max(60, Math.ceil(drawReceipt(probe, data, branding, m)));
+  // Fiş her zaman genişliğinden uzun olmalı; aksi halde PDF sayfayı yan çevirir ve fişin sağı kesilir
+  const height = Math.max(m.width + 10, Math.ceil(drawReceipt(probe, data, branding, m)));
 
   // 2. geçiş: tam uzunlukta çiz
   const doc = new jsPDF({ unit: 'mm', format: [m.width, height], orientation: 'portrait', compress: true });

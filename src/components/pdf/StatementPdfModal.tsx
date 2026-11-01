@@ -6,6 +6,8 @@ import { Cari, Transaction } from '../../types';
 import { createStatementPdf, statementPeriodLabel } from '../../pdf/statementPdf';
 import { useDocumentBranding } from '../../pdf/useDocumentBranding';
 import { PdfPreviewModal } from './PdfPreviewModal';
+import { PdfOptionTabs } from './PdfOptionTabs';
+import { usePaperSize, PAPER_OPTIONS } from './usePaperSize';
 
 export interface StatementPdfModalProps {
   cari: Cari;
@@ -17,10 +19,11 @@ export interface StatementPdfModalProps {
 
 export const StatementPdfModal: React.FC<StatementPdfModalProps> = ({ cari, islemler, startDate, endDate, onClose }) => {
   const { branding, isLoaded } = useDocumentBranding();
+  const [paper, setPaper] = usePaperSize();
 
   const generate = useCallback(
-    () => createStatementPdf(cari, islemler, branding, { startDate, endDate }),
-    [cari, islemler, branding, startDate, endDate],
+    () => createStatementPdf(cari, islemler, branding, { startDate, endDate, paper }),
+    [cari, islemler, branding, startDate, endDate, paper],
   );
 
   return (
@@ -31,6 +34,7 @@ export const StatementPdfModal: React.FC<StatementPdfModalProps> = ({ cari, isle
       shareText={`${branding.firmName || 'Firmamız'} - ${cari.name} hesap ekstresi`}
       ready={isLoaded}
       generate={generate}
+      toolbar={<PdfOptionTabs label="Kağıt" value={paper} options={PAPER_OPTIONS} onChange={setPaper} />}
       onClose={onClose}
     />
   );

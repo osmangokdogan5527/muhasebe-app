@@ -24,9 +24,11 @@ import {
   Image as ImageIcon,
   Save,
   Calendar,
+  BookOpen,
 } from "lucide-react";
 import { compareTransactions } from '../utils/cariLedger';
 import { formatDateISO } from '../utils/dateUtils';
+import { VeresiyeTakipModal } from './cariler/VeresiyeTakipModal';
 
 interface CarilerViewProps {
   showToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
@@ -61,6 +63,7 @@ function CarilerView({
   showToast,
 }: CarilerViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [isVeresiyeOpen, setIsVeresiyeOpen] = useState(false);
   const [filterType, setFilterType] = useState<
     "all" | "customer" | "supplier" | "receivable" | "payable" | "passive"
   >("all");
@@ -479,7 +482,15 @@ function CarilerView({
             ekstrelerini yönetin.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <button
+            id="btn-veresiye-takip"
+            onClick={() => setIsVeresiyeOpen(true)}
+            className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold uppercase tracking-wider px-4 py-3 rounded-lg transition duration-150 cursor-pointer"
+          >
+            <BookOpen size={16} className="shrink-0" />
+            <span className="inline-block">Veresiye Takibi</span>
+          </button>
           <button
             onClick={() => setIsExcelImportModalOpen(true)}
             className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold uppercase tracking-wider px-4 py-3 rounded-lg transition duration-150 border border-white/10"
@@ -956,6 +967,14 @@ function CarilerView({
           </div>
         );
       })()}
+      {isVeresiyeOpen && (
+        <VeresiyeTakipModal
+          cariler={cariler}
+          islemler={islemler}
+          onClose={() => setIsVeresiyeOpen(false)}
+          onOpenCari={(cari) => setSelectedCariForDetails(cari)}
+        />
+      )}
     </div>
   );
 }

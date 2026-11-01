@@ -30,6 +30,7 @@ export const StormLogo = ({
 }) => {
   const currentDesignStyle = designStyle || (typeof document !== 'undefined' && document.documentElement.getAttribute('data-design-style')) || localStorage.getItem('storm_muhasebe_design_style') || 'fluid-mesh';
   const isFluidMesh = currentDesignStyle === 'fluid-mesh';
+  const isPusula = currentDesignStyle === 'pusula';
 
   // Strip any shadow filters and transition effects to keep the logo perfectly flat and net
   const cleanedStyle = { ...style };
@@ -50,6 +51,16 @@ export const StormLogo = ({
   } else if (preset.id !== 'sky') {
     fillCol = preset.preview || '#0ea5e9';
   }
+
+  // Pusula: logonun zemini tema renginin açık-koyu tonlarından gradyan
+  const presetColors = (preset as any).colors || {};
+  const pusulaColors = {
+    tint: presetColors['--accent-50'] || '#f0f9ff',
+    soft: presetColors['--accent-100'] || '#e0f2fe',
+    light: presetColors['--accent-400'] || fillCol,
+    mid: presetColors['--accent-600'] || fillCol,
+    dark: presetColors['--accent-800'] || fillCol,
+  };
 
   // Get active sidebar pattern details
   let currentPattern = sidebarPattern || localStorage.getItem('storm_muhasebe_sidebar_pattern') || 'crystal';
@@ -267,6 +278,20 @@ export const StormLogo = ({
           <filter id={`fluid-bolt-glow-${uId}`} x="-30%" y="-30%" width="160%" height="160%">
             <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor={fluidColors.dropShadow} floodOpacity="0.5" />
           </filter>
+          {/* Pusula Theme Gradients */}
+          {/* Beyaz zemin üzerinde tema rengi: renkli menü şeridinde ve beyaz sayfada öne çıkar */}
+          <linearGradient id={`pusula-bg-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="100%" stopColor={pusulaColors.soft} />
+          </linearGradient>
+          <linearGradient id={`pusula-ink-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={pusulaColors.light} />
+            <stop offset="55%" stopColor={pusulaColors.mid} />
+            <stop offset="100%" stopColor={pusulaColors.dark} />
+          </linearGradient>
+          <filter id={`pusula-soft-shadow-${uId}`} x="-25%" y="-25%" width="150%" height="150%">
+            <feDropShadow dx="0" dy="3" stdDeviation="3" floodColor={pusulaColors.mid} floodOpacity="0.35" />
+          </filter>
           {!downloadMode && (
             <style>{`
               @keyframes mesh-logo-blob-1 {
@@ -309,6 +334,22 @@ export const StormLogo = ({
             {/* Futuristic glowing multi-stop colorful border line */}
             <rect width="194" height="194" x="3" y="3" rx="45" fill="none" stroke={`url(#fluid-border-grad-${uId})`} strokeWidth="4.5" />
           </g>
+        ) : isPusula ? (
+          <g clipPath={`url(#logo-clip-${uId})`}>
+            {/* Tema renginden gradyan zemin ve sağ üstten gelen ışık */}
+            <rect width="200" height="200" fill={`url(#pusula-bg-grad-${uId})`} />
+            {/* Pusula halkası ve yön çentikleri */}
+            <circle cx="100" cy="100" r="82" fill="none" stroke={pusulaColors.mid} strokeOpacity="0.14" strokeWidth="2" />
+            <circle cx="100" cy="100" r="64" fill="none" stroke={pusulaColors.mid} strokeOpacity="0.07" strokeWidth="1.5" />
+            <g stroke={pusulaColors.mid} strokeOpacity="0.35" strokeWidth="3" strokeLinecap="round">
+              <line x1="100" y1="12" x2="100" y2="24" />
+              <line x1="188" y1="100" x2="176" y2="100" />
+              <line x1="100" y1="188" x2="100" y2="176" />
+              <line x1="12" y1="100" x2="24" y2="100" />
+            </g>
+            {/* İnce iç kenar */}
+            <rect width="194" height="194" x="3" y="3" rx="45" fill="none" stroke={pusulaColors.mid} strokeOpacity="0.18" strokeWidth="2" />
+          </g>
         ) : (
           <rect width="200" height="200" rx="48" fill={fillCol} />
         )}
@@ -322,8 +363,8 @@ export const StormLogo = ({
         <g transform="translate(63.75, 12) scale(1.45)">
           <path 
             d="M28 2 L8 38 L23 38 L15 66 L42 28 L28 28 Z" 
-            fill={isFluidMesh ? `url(#fluid-bolt-grad-${uId})` : "#ffffff"} 
-            filter={isFluidMesh ? `url(#fluid-bolt-glow-${uId})` : undefined}
+            fill={isFluidMesh ? `url(#fluid-bolt-grad-${uId})` : isPusula ? `url(#pusula-ink-grad-${uId})` : "#ffffff"} 
+            filter={isFluidMesh ? `url(#fluid-bolt-glow-${uId})` : isPusula ? `url(#pusula-soft-shadow-${uId})` : undefined}
           />
         </g>
 
@@ -336,7 +377,7 @@ export const StormLogo = ({
           fontFamily="system-ui, -apple-system, sans-serif" 
           fontWeight="950" 
           fontSize="33" 
-          fill="#ffffff" 
+          fill={isPusula ? pusulaColors.dark : "#ffffff"} 
           letterSpacing="3.5" 
           filter={isFluidMesh ? `url(#fluid-logo-text-glow-${uId})` : undefined}
         >
@@ -350,7 +391,7 @@ export const StormLogo = ({
           fontFamily="system-ui, -apple-system, sans-serif" 
           fontWeight="900" 
           fontSize="19" 
-          fill="#ffffff" 
+          fill={isPusula ? pusulaColors.dark : "#ffffff"} 
           letterSpacing="2.5" 
           opacity="0.95" 
           filter={isFluidMesh ? `url(#fluid-logo-text-glow-${uId})` : undefined}
@@ -371,31 +412,29 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.8.6';
+export const APP_VERSION = '1.8.8';
 
 export const CHANGELOG = {
-  version: '1.8.6',
+  version: '1.8.8',
   features: [
-    "Pusula Arayüzü: Yeni varsayılan açık tasarım. Menü tema renginde kavisli bir şerit, sayfa başlıkları gradyan bant, kartlarda renkli üst şerit ve gradyan simge rozetleri; giriş ekranında marka paneli. Telefonda da kullanılır.",
-    "Menü Konumu: Ayarlar > Arayüz & Menü'den menü solda, sağda ya da üstte yatay çubuk olarak kullanılabilir.",
-    "Veresiye Satış: Hızlı Satış'ta VERESİYE [F5] düğmesi; tutar seçili müşterinin açık hesabına yazılır. Müşteri listesinden ad ve telefonla hızlıca yeni müşteri eklenebilir.",
-    "Müşteri Bakiyesi Kasada: Seçili müşterinin güncel borcu, veresiye limiti ve satış sonrası bakiyesi kasa ve telefon satış ekranında görünür; parçalı ödemede 'Kalanı veresiyeye yaz', telefonda peşinat alanı.",
-    "Veresiye Limiti: Cari kartına limit tanımlanabilir; limit aşılacaksa satışta uyarı ve onay sorulur.",
-    "Veresiye Fişi: Fişte açık hesaba yazılan tutar, önceki ve güncel bakiye ile müşteri imza alanı yer alır.",
-    "Satış Fiyatı KDV Dahil / Hariç: Stok kartında seçilir; kasa ve etiket KDV dahil, fatura KDV hariç fiyatı kendiliğinden hesaplar.",
-    "Karşılıksız Çek: Karşılıksız işaretlenen çekte cari otomatik yeniden borçlandırılır (isteğe bağlı); portföye geri almada tahsil, ödeme, ciro ve karşılıksız hareketleri geri alınır.",
+    "Kullanıcılar ve Kişiye Özel Giriş: Her çalışan kendi adını seçip kendi PIN'iyle girer ('Kim kullanıyor?' ekranı). Sahip, Ayarlar > Kullanıcılar'dan kullanıcı ekler, PIN sıfırlar, pasif yapar; her çalışana görebileceği ekranları ve yapabileceği işlemleri tek tek verir.",
+    "Otomatik Çıkış: 20 dakika işlem yapılmazsa oturum kapanır; menüde 'Kullanıcı Değiştir' düğmesi.",
+    "Sahip Onayı: Çalışanın yetkisi olmayan işlemler sahibin kendi PIN'iyle onaylanır.",
+    "Kim Yaptı: Satış, tahsilat, cari, stok ve diğer kayıtlara kaydeden ve düzenleyen kişi yazılır; Finansal Hareketler listesinde görünür.",
+    "Hareket Günlüğü: Girişler, çıkışlar, satışlar, tahsilatlar, silme ve düzenlemeler kaydın eski hâliyle birlikte saklanır.",
+    "Çalışan Takibi (yalnızca sahip): Kişi bazında çalışma saatleri, satış ve tahsilat toplamı, silme/düzenleme sayısı; zaman çizelgesi, riskli işlemler kırmızı, önce/sonra karşılaştırması ve gün sonu PDF raporu.",
+    "Telefonda Tek Düzen: Saha modu kaldırıldı; telefon tam sürümü kullanır. Pratik Hızlı Satış ve Tahsilat ekranları ana menüde.",
+    "Belge Türü ve Boyutu Her Yerde: Hızlı satış dahil her yerden Fiş 80 mm / 58 mm ya da Fatura A4 / A5 alınabilir; fatura, makbuz, ekstre ve raporlar A5 olarak da çıkar.",
+    "Veresiye Takibi: Cari Hesaplar'da açık borçların yaşlandırması (kaç gündür ödenmedi), sıralama ve WhatsApp ile hatırlatma.",
+    "KDV'siz Belge: KDV olmayan satışta fiş ve faturada KDV satırı/sütunu gösterilmez; KDV varsa oranıyla yazılır.",
+    "Pusula Logosu ve Pencereler: Logo tema rengine uygun hâle geldi; askıdaki satışlar, yedekleme sihirbazı ve belge pencereleri Pusula'ya uyarlandı.",
+    "Yazılım Sağlayıcısı Ana Kodu: Yönetici Paneli yalnızca sağlayıcı koduyla açılır; PIN'ini unutan firmanın PIN'i sağlayıcı tarafından sıfırlanabilir.",
   ],
   fixes: [
-    "Kasadan yapılan satış İşlemler'den düzenlenince nakit/kart tahsilatı kayboluyor, satış veresiyeye dönüyordu.",
-    "Fatura düzenleme yarıda kalırsa eski fatura siliniyordu; düzenleme artık tek seferde yazılır.",
-    "Çek/senet tahsil edildiğinde ya da bankadan ödendiğinde cari bakiyesi iki kez etkileniyordu.",
-    "Ana sayfadaki Kasa/Banka/POS tutarları açılış bakiyelerini ve virmanları saymıyordu; Kasa ekranıyla aynı hesaplanır.",
-    "Satış faturasında KDV dahil fiyatlı üründe KDV iki kez biniyordu.",
-    "İşlemler'den alınan POS fişinde nakit/kartla ödenmiş satış 'Açık Hesap' görünüyordu.",
-    "Excel'den cari aktarımında 1.234,56 gibi tutarlar yanlış okunuyordu; yıllık tekrarlayan işlemde 29 Şubat 1 Mart'a kayıyordu; gece 00:00-03:00 arası PDF tarihleri bir önceki günü gösteriyordu.",
-    "Geniş pencereler (ör. satış faturası) sol menünün altında kalıp kesiliyordu.",
-    "Güvenlik: Yönetici PIN'i dışında her zaman kabul edilen sabit kodlar kaldırıldı.",
-    "Sadeleştirme: Tasarım stilleri Pusula (açık) ve Sıvı Mesh (koyu) olarak ikiye indi; kasadaki yanlış kurla çalışan para birimi seçici kaldırıldı.",
+    "Android'de WhatsApp ile PDF paylaşımı açılmıyordu; paylaşım düzeltildi, olmazsa dosya indirilip yol gösterilir.",
+    "Kasa kısayolları (F2/F3/F5) KDV ya da iskonto değişince eski tutarla satış yapıyordu.",
+    "Kısa fişler yan dönmüş ve kesik çıkıyordu.",
+    "Çevrimdışı ve kullanıcı listesi henüz inmemiş cihazda uygulama herkese açık başlamaz; bağlantı beklenir.",
   ]
 };
 
@@ -636,6 +675,28 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.8.8",
+    date: "01.11.2026",
+    changes: [
+      "Kullanıcılar ve Kişiye Özel Giriş: Her çalışan kendi adını seçip kendi PIN'iyle girer ('Kim kullanıyor?' ekranı). Sahip, Ayarlar > Kullanıcılar'dan kullanıcı ekler, PIN sıfırlar, pasif yapar; her çalışana görebileceği ekranları ve yapabileceği işlemleri tek tek verir.",
+      "Otomatik Çıkış: 20 dakika işlem yapılmazsa oturum kapanır; menüde 'Kullanıcı Değiştir' düğmesi.",
+      "Sahip Onayı: Çalışanın yetkisi olmayan işlemler sahibin kendi PIN'iyle onaylanır.",
+      "Kim Yaptı: Satış, tahsilat, cari, stok ve diğer kayıtlara kaydeden ve düzenleyen kişi yazılır; Finansal Hareketler listesinde görünür.",
+      "Hareket Günlüğü: Girişler, çıkışlar, satışlar, tahsilatlar, silme ve düzenlemeler kaydın eski hâliyle birlikte saklanır.",
+      "Çalışan Takibi (yalnızca sahip): Kişi bazında çalışma saatleri, satış ve tahsilat toplamı, silme/düzenleme sayısı; zaman çizelgesi, riskli işlemler kırmızı, önce/sonra karşılaştırması ve gün sonu PDF raporu.",
+      "Telefonda Tek Düzen: Saha modu kaldırıldı; telefon tam sürümü kullanır. Pratik Hızlı Satış ve Tahsilat ekranları ana menüde.",
+      "Belge Türü ve Boyutu Her Yerde: Hızlı satış dahil her yerden Fiş 80 mm / 58 mm ya da Fatura A4 / A5 alınabilir; fatura, makbuz, ekstre ve raporlar A5 olarak da çıkar.",
+      "Veresiye Takibi: Cari Hesaplar'da açık borçların yaşlandırması (kaç gündür ödenmedi), sıralama ve WhatsApp ile hatırlatma.",
+      "KDV'siz Belge: KDV olmayan satışta fiş ve faturada KDV satırı/sütunu gösterilmez; KDV varsa oranıyla yazılır.",
+      "Pusula Logosu ve Pencereler: Logo tema rengine uygun hâle geldi; askıdaki satışlar, yedekleme sihirbazı ve belge pencereleri Pusula'ya uyarlandı.",
+      "Yazılım Sağlayıcısı Ana Kodu: Yönetici Paneli yalnızca sağlayıcı koduyla açılır; PIN'ini unutan firmanın PIN'i sağlayıcı tarafından sıfırlanabilir.",
+      "Android'de WhatsApp ile PDF paylaşımı açılmıyordu; paylaşım düzeltildi, olmazsa dosya indirilip yol gösterilir.",
+      "Kasa kısayolları (F2/F3/F5) KDV ya da iskonto değişince eski tutarla satış yapıyordu.",
+      "Kısa fişler yan dönmüş ve kesik çıkıyordu.",
+      "Çevrimdışı ve kullanıcı listesi henüz inmemiş cihazda uygulama herkese açık başlamaz; bağlantı beklenir.",
+    ]
+  },
   {
     version: "1.8.6",
     date: "01.11.2026",

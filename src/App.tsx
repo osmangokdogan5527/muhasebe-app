@@ -31,7 +31,9 @@ import {
   saveBankAccount,
   createTransaction,
   ensureRetailCari,
-  db
+  db,
+  setActivityActor,
+  recordActivity,
 } from './firebase';
 import { logError } from './utils/errorLogger';
 import { PosCartItem, PosPaymentSplit } from './types/pos';
@@ -39,14 +41,22 @@ import { PosCartItem, PosPaymentSplit } from './types/pos';
 import { enableNetwork, disableNetwork } from 'firebase/firestore';
 import { BackupWizardModal } from './components/backup/BackupWizardModal';
 import { FluidMeshBackground } from './components/FluidMeshBackground';
-import { isStandaloneApp } from './utils/pwa';
 import { GlobalStyles } from "./components/GlobalStyles";
 import YetkisizErisimView from './components/YetkisizErisimView';
+// Telefonda pratik satış ve tahsilat ekranları (tam sürümün içinde)
+const FieldSale = lazyWithReload(() => import('./components/field/FieldSale').then((m) => ({ default: m.FieldSale })));
+const StaffActivityView = lazyWithReload(() => import('./users/StaffActivityView').then((m) => ({ default: m.StaffActivityView })));
+const FieldCollection = lazyWithReload(() => import('./components/field/FieldCollection').then((m) => ({ default: m.FieldCollection })));
 import { DesktopSidebar } from "./components/DesktopSidebar";
 import { MobileHeader } from "./components/MobileHeader";
 import { MobileMenuView } from "./components/MobileMenuView";
 import { MobileBottomNav } from "./components/MobileBottomNav";
 import { AuthScreen } from "./components/AuthScreen";
+import { useStaffSession } from "./users/useStaffSession";
+import { StaffLoginScreen } from "./users/StaffLoginScreen";
+import { ALL_STAFF_TAB_IDS } from "./users/UsersSettings";
+import { DEFAULT_STAFF_TABS, StaffActions, checkPin, restrictedTabsFor } from "./users/staffUsers";
+import { registerAdminVerifier } from "./utils/masterCode";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { AppModals } from "./components/AppModals";
 import { 
@@ -99,7 +109,6 @@ const KasaView = lazyWithReload(() => import('./components/KasaView'));
 const KredilerView = lazyWithReload(() => import('./components/KredilerView'));
 const RaporlarView = lazyWithReload(() => import('./components/RaporlarView'));
 const AyarlarView = lazyWithReload(() => import('./components/AyarlarView'));
-const FieldApp = lazyWithReload(() => import('./components/field/FieldApp').then((m) => ({ default: m.FieldApp })));
 
 /** Ekran kodu indirilirken gösterilen küçük yükleniyor göstergesi. */
 const TabLoading: React.FC = () => (
@@ -120,7 +129,7 @@ export default function App() {
   useEffect(() => {
     setVisitedTabs((prev) => (prev.has(activeTab) ? prev : new Set(prev).add(activeTab)));
   }, [activeTab]);
-  const [userRole, setUserRole] = useState<'admin' | 'employee'>('employee');
+  const [baseUserRole, setUserRole] = useState<'admin' | 'employee'>('employee');
   const [isAdminPinModalOpen, setIsAdminPinModalOpen] = useState(false);
   const [adminPinInput, setAdminPinInput] = useState('');
   const [adminPinError, setAdminPinError] = useState<string | null>(null);
@@ -135,26 +144,22 @@ export default function App() {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Saha (telefon) modu: ana ekrandan açılan uygulama (?mod=saha) veya kullanıcının tercihi
-  const FIELD_MODE_KEY = 'storm_field_mode';
-  const [fieldMode, setFieldMode] = useState<boolean>(() => {
+  // 1.8.7: telefonda ayrı saha modu kaldırıldı; telefon da tam sürümü kullanır.
+  // Eski sürümden kalan saha modu tercihi temizlenir.
+  useEffect(() => {
     try {
-      if (new URLSearchParams(window.location.search).get('mod') === 'saha') {
-        const saved = localStorage.getItem(FIELD_MODE_KEY);
-        return saved !== 'off';
-      }
-      const saved = localStorage.getItem(FIELD_MODE_KEY);
-      if (saved === 'on') return true;
-      if (saved === 'off') return false;
-      return isStandaloneApp() && window.innerWidth < 768;
-    } catch (e) {
-      return false;
+      localStorage.removeItem('storm_field_mode');
+    } catch (err) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'App.clearFieldMode');
     }
-  });
-  const switchFieldMode = (on: boolean) => {
-    setFieldMode(on);
-    try { localStorage.setItem(FIELD_MODE_KEY, on ? 'on' : 'off'); } catch (e) { /* tercih kaydedilemezse bu oturumla sınırlı kalır */ }
-  };
+  }, []);
+  // Telefon genişliğinde kasa yerine pratik satış ekranı ve alt sekme çubuğu kullanılır
+  const [isMobileScreen, setIsMobileScreen] = useState<boolean>(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const onResize = () => setIsMobileScreen(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
@@ -271,7 +276,7 @@ export default function App() {
   const [profilePhoto, setProfilePhoto] = useState('');
   
   // Dynamic permissions and admin PIN states
-  const [sensitiveTabs, setSensitiveTabs] = useState<string[]>(() => {
+  const [baseSensitiveTabs, setSensitiveTabs] = useState<string[]>(() => {
     const saved = localStorage.getItem('storm_muhasebe_sensitive_tabs');
     if (saved) {
       try {
@@ -283,16 +288,16 @@ export default function App() {
     return ['dashboard', 'kasa', 'ceksenet', 'masraflar', 'calisanlar', 'krediler', 'raporlar', 'ayarlar'];
   });
 
-  const [escalationPin, setEscalationPin] = useState<string>(() => {
+  const [baseEscalationPin, setEscalationPin] = useState<string>(() => {
     return localStorage.getItem('storm_muhasebe_admin_pin') || '1923';
   });
 
-  const [isSecurityActive, setIsSecurityActive] = useState<boolean>(() => {
+  const [baseSecurityActive, setIsSecurityActive] = useState<boolean>(() => {
     return localStorage.getItem('storm_muhasebe_security_active') === 'true';
   });
 
   // Dynamic action-level permissions for employees (true means ALLOWED, false means RESTRICTED)
-  const [actionPermissions, setActionPermissions] = useState<{
+  const [baseActionPermissions, setActionPermissions] = useState<{
     delete_sale: boolean;
     delete_payment: boolean;
     delete_stock: boolean;
@@ -321,6 +326,68 @@ export default function App() {
     }
     return defaultPerms;
   });
+
+  // ---- Firma içi kullanıcılar (sahip / çalışan) ----
+  // Sistem açıkken (en az bir aktif kullanıcı) yetkiler giriş yapan kişiden gelir; kapalıyken eski tek PIN'li sistem geçerlidir.
+  const staff = useStaffSession(user?.uid);
+  const staffUser = staff.currentUser;
+  const isStaffSystem = staff.systemActive;
+  const userRole: 'admin' | 'employee' = isStaffSystem
+    ? (staffUser?.role === 'owner' ? 'admin' : baseUserRole)
+    : baseUserRole;
+  const isSecurityActive = isStaffSystem ? true : baseSecurityActive;
+  // Çalışan Takibi yalnızca sahiplere açıktır
+  const isStaffOwner = isStaffSystem && staffUser?.role === 'owner';
+  // Sistem açıkken eski firma PIN'i geçmez; onaylar sahip PIN'i (ya da sağlayıcı ana kodu) ister
+  const escalationPin = isStaffSystem ? '' : baseEscalationPin;
+  const sensitiveTabs = useMemo(
+    () => (isStaffSystem && staffUser ? restrictedTabsFor(staffUser, ALL_STAFF_TAB_IDS) : baseSensitiveTabs),
+    [isStaffSystem, staffUser, baseSensitiveTabs],
+  );
+  const actionPermissions = useMemo(
+    () => (isStaffSystem && staffUser ? { ...baseActionPermissions, ...staffUser.actions } : baseActionPermissions),
+    [isStaffSystem, staffUser, baseActionPermissions],
+  );
+  // Eski personel ayarları, yeni eklenen çalışanlar için varsayılan yetki olur
+  const staffLegacyDefaults = useMemo(() => ({
+    allowedTabs: baseSecurityActive
+      ? ALL_STAFF_TAB_IDS.filter((t) => !baseSensitiveTabs.includes(t === 'tahsilat' ? 'islemler' : t))
+      : [...DEFAULT_STAFF_TABS],
+    actions: { ...baseActionPermissions } as StaffActions,
+  }), [baseSecurityActive, baseSensitiveTabs, baseActionPermissions]);
+
+  // Hareket günlüğü: giriş yapan kişi firebase katmanına bildirilir (kayıtlara "kim yaptı" yazılır)
+  useEffect(() => {
+    setActivityActor(isStaffSystem && staffUser ? { id: staffUser.id, name: staffUser.name, role: staffUser.role } : null);
+  }, [isStaffSystem, staffUser]);
+
+  // Çalışan sahip PIN'iyle yönetici yetkisi aldığında günlüğe yazılır
+  useEffect(() => {
+    if (isStaffSystem && staffUser?.role === 'staff' && baseUserRole === 'admin') {
+      recordActivity({ category: 'yetki', action: 'elevate', title: "Sahip PIN'iyle yönetici yetkisi açıldı", risky: true });
+    }
+  }, [isStaffSystem, staffUser?.id, staffUser?.role, baseUserRole]);
+
+  // Kişi değişince yükseltilmiş yönetici yetkisi düşer
+  useEffect(() => {
+    if (isStaffSystem) setUserRole('employee');
+  }, [isStaffSystem, staffUser?.id]);
+
+  // Onay pencereleri sahiplerin kendi PIN'lerini kabul eder
+  useEffect(() => {
+    if (!isStaffSystem) {
+      registerAdminVerifier(null);
+      return;
+    }
+    const owners = staff.activeUsers.filter((u) => u.role === 'owner');
+    registerAdminVerifier(async (input) => {
+      for (const owner of owners) {
+        if (await checkPin(owner, input)) return true;
+      }
+      return false;
+    });
+    return () => registerAdminVerifier(null);
+  }, [isStaffSystem, staff.activeUsers]);
 
   useEffect(() => {
     if (user) {
@@ -379,7 +446,10 @@ export default function App() {
 
 
   const handleNavigate = (tabId: string) => {
-    if (isSecurityActive && userRole === 'employee' && sensitiveTabs.includes(tabId)) {
+    // Tahsilat ekranı Finansal Hareketler yetkisine bağlıdır
+    // Kullanıcı sisteminde Tahsilat ayrıca yetkilendirilir
+    const permissionTab = tabId === 'tahsilat' && !isStaffSystem ? 'islemler' : tabId;
+    if (isSecurityActive && userRole === 'employee' && sensitiveTabs.includes(permissionTab)) {
       setAdminPinError(null);
       setAdminPinInput('');
       setIsAdminPinModalOpen(true);
@@ -387,6 +457,18 @@ export default function App() {
     }
     setActiveTab(tabId as any);
   };
+  // Çalışan izinli olmadığı bir ekranda kaldıysa (giriş, kişi değişimi, yetki değişimi) izinli ekrana geçer
+  useEffect(() => {
+    if (activeTab === 'takip' && !isStaffOwner) {
+      setActiveTab(isMobileScreen ? 'menu' : 'dashboard');
+      return;
+    }
+    if (!isStaffSystem || !staffUser || userRole !== 'employee' || activeTab === 'menu') return;
+    if (!sensitiveTabs.includes(activeTab)) return;
+    const allowed = [...tabOrder, 'tahsilat'].find((t) => !sensitiveTabs.includes(t) && !hiddenTabs.includes(t));
+    setActiveTab(isMobileScreen ? 'menu' : (allowed || 'menu'));
+  }, [isStaffSystem, isStaffOwner, staffUser, userRole, activeTab, sensitiveTabs, tabOrder, hiddenTabs, isMobileScreen]);
+
   const { shortcuts, setShortcuts } = useAppShortcuts(handleNavigate, setPendingIslemModal, setPendingAddCari, setPendingAddStock);
   const [aiPrefilledData, setAiPrefilledData] = useState<{
     islem: 'sale' | 'purchase' | 'collection' | 'payment' | 'expense' | 'employee_payment' | 'sale_return' | 'purchase_return' | 'add_customer' | 'add_supplier' | 'add_product' | string;
@@ -707,6 +789,8 @@ export default function App() {
       setSensitiveTabs={setSensitiveTabs}
       shortcuts={shortcuts}
       setShortcuts={setShortcuts}
+      staff={staff}
+      staffLegacyDefaults={staffLegacyDefaults}
     />
   );
 
@@ -788,12 +872,34 @@ export default function App() {
     );
   }
 
-  if (loading) {
+  if (loading || !staff.loaded) {
     return (
       <LoadingScreen
         currentThemeData={currentThemeData}
         themeCssRules={themeCssRules}
       />
+    );
+  }
+
+  // Kullanıcı sistemi açıksa önce "Kim kullanıyor?" ekranı
+  if ((staff.systemActive && !staff.currentUser) || staff.waitingForUsers) {
+    return (
+      <>
+        <GlobalStyles themeCssRules={themeCssRules} bodyPatternSvg={bodyPatternSvg} activePattern={activePatternObj} />
+        <StaffLoginScreen
+          firmName={user.displayName || 'Firma'}
+          users={staff.activeUsers}
+          designStyle={designStyle}
+          onLogin={(u) => {
+            staff.login(u);
+            setActiveTab(isMobileScreen ? 'menu' : (u.role === 'owner' || u.allowedTabs.includes('dashboard') ? 'dashboard' : (u.allowedTabs.find((t) => t !== 'tahsilat') || 'menu')));
+          }}
+          onSignOutFirm={() => {
+            staff.logout();
+            handleSignOut();
+          }}
+        />
+      </>
     );
   }
 
@@ -870,50 +976,6 @@ export default function App() {
     }
   };
 
-  if (fieldMode) {
-    return (
-      <>
-        <style>{`:root { ${themeCssRules} }`}</style>
-        <Suspense fallback={<LoadingScreen currentThemeData={currentThemeData} themeCssRules={themeCssRules} />}>
-        <FieldApp
-          firmName={user.displayName || 'Storm'}
-          cariler={cariler}
-          stoklar={stoklar}
-          islemler={islemler}
-          bankAccounts={bankAccounts}
-          isOnline={isOnline}
-          toastMessage={toastMessage}
-          showToast={showToast as any}
-          onCompleteSale={handleCompletePosSale}
-          onSwitchToFull={(targetTab) => {
-            switchFieldMode(false);
-            if (targetTab) setActiveTab(targetTab as any);
-          }}
-          onSignOut={handleSignOut}
-          isRestricted={isSecurityActive && userRole === 'employee'}
-          sensitiveTabs={sensitiveTabs}
-          activeTheme={activeTheme}
-          onChangeTheme={(themeId) => {
-            setActiveTheme(themeId);
-            try {
-              localStorage.setItem('kolay_hesap_accent_theme', themeId);
-            } catch (err) {
-              logError(err instanceof Error ? err : new Error(String(err)), 'App.fieldChangeTheme');
-            }
-          }}
-          ai={{
-            enabled: isAiEnabled,
-            apiKey: geminiApiKey,
-            userRole,
-            isSecurityActive,
-            actionPermissions,
-            financialData: { cariler, stoklar, islemler, ceksenet, expenses, bankAccounts, employees, employeeTransactions, accountTransactions },
-          }}
-        />
-        </Suspense>
-      </>
-    );
-  }
 
   return (
     <div data-design-style={designStyle} data-nav-position={navPosition} className={`min-h-screen relative ${(currentThemeData as any).bgClass || 'bg-[#050505]'} text-[#e0e0e0] flex flex-col md:flex-row font-sans overflow-x-hidden`}>
@@ -943,7 +1005,7 @@ export default function App() {
         showToast={showToast as any}
         setPendingIslemModal={setPendingIslemModal}
         setActiveTab={setActiveTab}
-        isSecurityActive={isSecurityActive}
+        isSecurityActive={isSecurityActive && !(isStaffSystem && staffUser?.role === 'owner')}
         isOnline={isOnline}
         user={user}
         handleSignOut={handleSignOut}
@@ -952,6 +1014,9 @@ export default function App() {
         setAdminPinInput={setAdminPinInput}
         setIsAdminPinModalOpen={setIsAdminPinModalOpen}
         setUserRole={setUserRole}
+        staffUserName={isStaffSystem ? staffUser?.name : null}
+        onSwitchUser={isStaffSystem ? staff.logout : undefined}
+        onOpenStaffActivity={isStaffOwner ? () => setActiveTab('takip') : undefined}
       />
       <MobileHeader
         sidebarBg={sidebarBg}
@@ -998,7 +1063,6 @@ export default function App() {
             userRole={userRole}
             sensitiveTabs={sensitiveTabs}
             handleSignOut={handleSignOut}
-            onSwitchToField={() => switchFieldMode(true)}
             setAdminPinError={setAdminPinError}
             setAdminPinInput={setAdminPinInput}
             setIsAdminPinModalOpen={setIsAdminPinModalOpen}
@@ -1007,19 +1071,50 @@ export default function App() {
             setPendingIslemModal={setPendingIslemModal}
             showToast={showToast as any}
             setActiveTab={setActiveTab}
-            isSecurityActive={isSecurityActive}
+            isSecurityActive={isSecurityActive && !(isStaffSystem && staffUser?.role === 'owner')}
+            staffUserName={isStaffSystem ? staffUser?.name : null}
+            onSwitchUser={isStaffSystem ? staff.logout : undefined}
+            onOpenStaffActivity={isStaffOwner ? () => setActiveTab('takip') : undefined}
           />
         </div>
         <div className={activeTab === 'dashboard' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('dashboard', <DashboardView cariler={cariler} stoklar={stoklar} islemler={islemler} ceksenet={ceksenet} expenses={expenses} employeeTransactions={employeeTransactions} recurringTransactions={recurringTransactions} bankAccounts={bankAccounts} accountTransactions={accountTransactions} onNavigate={handleNavigate} />)}
         </div>
         <div className={activeTab === 'pos' ? 'block animate-fade-in' : 'hidden'}>
-          {renderWorkspaceView('pos', <PosView
-            stocks={stoklar}
-            cariler={cariler}
-            bankAccounts={bankAccounts}
-            onCompletePosSale={handleCompletePosSale}
-          />)}
+          {renderWorkspaceView('pos', isMobileScreen ? (
+            <div className="mobile-quick">
+              <FieldSale
+                stoklar={stoklar}
+                cariler={cariler}
+                bankAccounts={bankAccounts}
+                presetCari={null}
+                onPresetConsumed={() => {}}
+                onCompleteSale={handleCompletePosSale}
+                showToast={showToast as any}
+              />
+            </div>
+          ) : (
+            <PosView
+              stocks={stoklar}
+              cariler={cariler}
+              bankAccounts={bankAccounts}
+              onCompletePosSale={handleCompletePosSale}
+            />
+          ))}
+        </div>
+        <div className={activeTab === 'tahsilat' ? 'block animate-fade-in' : 'hidden'}>
+          {renderWorkspaceView('tahsilat', (
+            <div className="mobile-quick max-w-xl mx-auto">
+              <FieldCollection
+                cariler={cariler}
+                islemler={islemler}
+                bankAccounts={bankAccounts}
+                presetCari={null}
+                onPresetConsumed={() => {}}
+                showToast={showToast as any}
+              />
+            </div>
+          ))}
         </div>
         <div className={activeTab === 'cariler' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('cariler', <CarilerView 
@@ -1105,6 +1200,11 @@ export default function App() {
             employeeTransactions={employeeTransactions} 
           />)}
         </div>
+        {isStaffOwner && (
+          <div className={activeTab === 'takip' ? 'block animate-fade-in' : 'hidden'}>
+            {renderWorkspaceView('takip', <StaffActivityView users={staff.users} />)}
+          </div>
+        )}
         <div className={activeTab === 'ayarlar' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('ayarlar', renderSettingsView())}
         </div>

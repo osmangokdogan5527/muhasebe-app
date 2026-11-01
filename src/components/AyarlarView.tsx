@@ -1,9 +1,13 @@
+import { isValidAdminCode } from '../utils/masterCode';
 import type { NavPosition } from '../hooks/useAppSettings';
 import { ShortcutsSettings } from './settings/ShortcutsSettings';
 import { PermissionsSettings } from './settings/PermissionsSettings';
 import { AiSettings } from './settings/AiSettings';
 import { ProfileSettings } from './settings/ProfileSettings';
 import { GeneralSettings } from './settings/GeneralSettings';
+import { UsersSettings } from '../users/UsersSettings';
+import type { StaffSession } from '../users/useStaffSession';
+import type { StaffActions } from '../users/staffUsers';
 import React, { useState } from 'react';
 import { 
   Palette, 
@@ -29,7 +33,8 @@ import {
   Check,
   Menu,
   Keyboard,
-  Sparkles
+  Sparkles,
+  Users
 } from 'lucide-react';
 import { DocumentSettings } from './settings/DocumentSettings';
 import { logError } from '../utils/errorLogger';
@@ -113,6 +118,10 @@ export interface AyarlarViewProps {
   shortcuts: KeyboardShortcut[];
   setShortcuts: React.Dispatch<React.SetStateAction<KeyboardShortcut[]>>;
   onOpenBackupWizard?: () => void;
+  /** Firma içi kullanıcı sistemi (sahip / çalışan) */
+  staff?: StaffSession;
+  /** Eski tek PIN'li ayarlardan türetilen, yeni çalışan için varsayılan yetkiler */
+  staffLegacyDefaults?: { allowedTabs: string[]; actions: StaffActions };
 }
 
 export default function AyarlarView({
@@ -176,11 +185,19 @@ export default function AyarlarView({
   setSensitiveTabs,
   shortcuts,
   setShortcuts,
-  onOpenBackupWizard
+  onOpenBackupWizard,
+  staff,
+  staffLegacyDefaults
 }: AyarlarViewProps) {
+  const staffSystemActive = !!staff?.systemActive;
+  const isOwner = staff?.currentUser?.role === 'owner';
+  // Kullanıcılar sekmesi: sistem açıkken yalnızca sahip; kapalıyken kurulum için (eski PIN sistemine göre yönetici)
+  const canManageUsers = staffSystemActive ? isOwner : (!isSecurityActive || userRole === 'admin');
+  // Profil, yedek ve veri sıfırlama: sistem açıkken sahip ya da sahip PIN'iyle yetki yükseltilmiş kişi
+  const canSeeProfile = !staffSystemActive || isOwner || userRole === 'admin';
   
   // Local-only states for setting sub-tabs and forms
-  const [settingsSubTab, setSettingsSubTab] = useState<'general' | 'profile' | 'documents' | 'ai' | 'permissions' | 'shortcuts'>('general');
+  const [settingsSubTab, setSettingsSubTab] = useState<'general' | 'profile' | 'documents' | 'ai' | 'permissions' | 'users' | 'shortcuts'>('general');
   const [aiInfoModalOpen, setAiInfoModalOpen] = useState(false);
   const [initialPinInput, setInitialPinInput] = useState('');
   const [setupError, setSetupError] = useState<string | null>(null);
@@ -283,7 +300,7 @@ export default function AyarlarView({
     }
   };
 
-  const handleAdminPinChangeSubmit = () => {
+  const handleAdminPinChangeSubmit = async () => {
     try {
       setAdminPinChangeError(null);
       setAdminPinChangeSuccess(null);
@@ -293,8 +310,8 @@ export default function AyarlarView({
         return;
       }
 
-      // Verify current PIN matches (saved custom pin or defaults)
-      const isCurrentValid = currentAdminPinInput === escalationPin;
+      // Mevcut PIN ya da (PIN unutulduysa) yazılım sağlayıcısının ana kodu
+      const isCurrentValid = await isValidAdminCode(currentAdminPinInput, escalationPin);
       if (!isCurrentValid) {
         setAdminPinChangeError('Mevcut Yönetici PIN kodu hatalı!');
         return;
@@ -389,7 +406,7 @@ export default function AyarlarView({
             <Palette size={15} />
             <span>Arayüz & Menü</span>
           </button>
-          <button
+          {canSeeProfile && <button
             onClick={() => setSettingsSubTab('profile')}
             className={`hidden md:flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
               settingsSubTab === 'profile'
@@ -399,7 +416,7 @@ export default function AyarlarView({
           >
             <User size={15} />
             <span>Profil & Güvenlik</span>
-          </button>
+          </button>}
           <button
             onClick={() => setSettingsSubTab('documents')}
             className={`flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
@@ -422,7 +439,21 @@ export default function AyarlarView({
             <Bot size={15} />
             <span>Yapay Zeka (AI)</span>
           </button>
-          {(!isSecurityActive || userRole === 'admin') && (
+          {canManageUsers && (
+            <button
+              id="settings-tab-users"
+              onClick={() => setSettingsSubTab('users')}
+              className={`flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+                settingsSubTab === 'users'
+                  ? 'border-teal-600 text-teal-600 font-extrabold'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Users size={15} />
+              <span>Kullanıcılar</span>
+            </button>
+          )}
+          {!staffSystemActive && (!isSecurityActive || userRole === 'admin') && (
             <button
               onClick={() => setSettingsSubTab('permissions')}
               className={`flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
@@ -480,7 +511,7 @@ export default function AyarlarView({
             showToast={showToast}
           />
         )}
-        {settingsSubTab === 'profile' && (
+        {settingsSubTab === 'profile' && canSeeProfile && (
           <ProfileSettings
             profileName={profileName}
             setProfileName={setProfileName}
@@ -513,7 +544,15 @@ export default function AyarlarView({
             setIsAiEnabled={setIsAiEnabled}
           />
         )}
-        {settingsSubTab === 'permissions' && (
+        {settingsSubTab === 'users' && canManageUsers && staff && (
+          <UsersSettings
+            staff={staff}
+            legacyDefaults={staffLegacyDefaults || { allowedTabs: [], actions: actionPermissions }}
+            suggestedOwnerName=""
+            showToast={showToast}
+          />
+        )}
+        {settingsSubTab === 'permissions' && !staffSystemActive && (
           <PermissionsSettings
             showToast={showToast}
             isSecurityActive={isSecurityActive}

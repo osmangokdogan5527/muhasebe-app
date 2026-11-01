@@ -2,12 +2,12 @@ import React, { useMemo, useState, Suspense } from 'react';
 import { lazyWithReload } from '../../utils/lazyWithReload';
 import { Minus, Plus, Trash2, Package, User, Banknote, CreditCard, BookOpen, CheckCircle2, ShoppingCart, ChevronRight, FileText } from 'lucide-react';
 import { Cari, Stock, BankAccount } from '../../types';
-import { PosCartItem, PosPaymentSplit } from '../../types/pos';
+import { PosCartItem, PosPaymentSplit, PosSaleSummary } from '../../types/pos';
 import { calculateLineTotal, calculateCartSummary, findStockByBarcodeOrSearch, generateReceiptNo } from '../../utils/posUtils';
 import { parseScannedQrCode } from '../../utils/formatters';
 import { getTodayISO } from '../../utils/dateUtils';
 import { logError } from '../../utils/errorLogger';
-import { ReceiptPdfModal } from '../pdf/ReceiptPdfModal';
+import { ReceiptPdfModal, ReceiptInvoiceSource, invoiceSourceFromSummary } from '../pdf/ReceiptPdfModal';
 import { ReceiptSaleData, receiptDataFromPosSummary } from '../../pdf/posReceiptPdf';
 import { Card, SectionTitle, PrimaryButton, SegmentedControl, SearchBox, EmptyState, CariPickerSheet, formatMoney, norm, parseAmount } from './fieldUi';
 import { grossSalesPrice } from '../../utils/stockPricing';
@@ -51,7 +51,7 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isCariPickerOpen, setIsCariPickerOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [lastSale, setLastSale] = useState<{ receiptNo: string; total: number; cariName: string; receipt: ReceiptSaleData } | null>(null);
+  const [lastSale, setLastSale] = useState<{ receiptNo: string; total: number; cariName: string; receipt: ReceiptSaleData; invoice?: ReceiptInvoiceSource } | null>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   // Veresiyede peşin alınan (nakit) kısım; kalanı açık hesaba yazılır
   const [downPaymentText, setDownPaymentText] = useState('');
@@ -178,14 +178,15 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
       };
       const ok = await onCompleteSale(saleData);
       if (ok) {
-        const receipt = receiptDataFromPosSummary({
+        const summaryForDocs: PosSaleSummary = {
           ...saleData,
           time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
           credit: openAmount > 0.004 && liveCari
             ? { amount: openAmount, balanceBefore, balanceAfter: roundMoney(balanceBefore + openAmount) }
             : undefined,
-        });
-        setLastSale({ receiptNo, total, cariName, receipt });
+        };
+        const receipt = receiptDataFromPosSummary(summaryForDocs);
+        setLastSale({ receiptNo, total, cariName, receipt, invoice: invoiceSourceFromSummary(summaryForDocs, cariler) });
         setCart([]);
         setCari(null);
         setPayMethod('cash');
@@ -240,7 +241,7 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
         </Card>
       )}
       {lastSale && isReceiptOpen && (
-        <ReceiptPdfModal data={lastSale.receipt} onClose={() => setIsReceiptOpen(false)} />
+        <ReceiptPdfModal data={lastSale.receipt} invoice={lastSale.invoice} title="Satış Belgesi" onClose={() => setIsReceiptOpen(false)} />
       )}
 
       <div>

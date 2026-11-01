@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lock, LogOut, ShieldCheck, ChevronDown } from 'lucide-react';
+import { Repeat, Lock, LogOut, ShieldCheck, ChevronDown, ShoppingCart, ArrowDownLeft, UserCheck } from 'lucide-react';
 import { TAB_DEFS } from '../constants';
 
 interface MobileMenuViewProps {
@@ -20,8 +20,13 @@ interface MobileMenuViewProps {
   setPendingIslemModal: (modal: any) => void;
   showToast: (msg: string, type: string) => void;
   setActiveTab: (tab: any) => void;
+  /** Kullanıcı sistemi açıkken giriş yapan kişinin adı */
+  staffUserName?: string | null;
+  /** Kullanıcı sistemi açıkken: oturumu kapatıp "Kim kullanıyor?" ekranına döner */
+  onSwitchUser?: () => void;
+  /** Yalnızca sahipte: Çalışan Takibi ekranını açar */
+  onOpenStaffActivity?: () => void;
   isSecurityActive: boolean;
-  onSwitchToField?: () => void;
 }
 
 export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
@@ -42,8 +47,10 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
   setPendingIslemModal,
   showToast,
   setActiveTab,
+  staffUserName,
+  onSwitchUser,
+  onOpenStaffActivity,
   isSecurityActive,
-  onSwitchToField
 }) => {
   return (
     <div className="md:hidden flex flex-col justify-between w-full max-w-lg mx-auto bg-[#070709] text-white min-h-[calc(100vh-4rem)] p-4 sm:p-6 rounded-2xl border border-white/5 shadow-2xl overflow-y-auto">
@@ -60,24 +67,47 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
             Ana Menü
           </span>
         </div>
-        {onSwitchToField && (
-          <button
-            type="button"
-            onClick={onSwitchToField}
-            className="w-full mb-5 flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-teal-500/10 border border-teal-500/25 text-left cursor-pointer active:scale-[0.99] transition"
-          >
-            <div>
-              <div className="text-sm font-bold text-white">Saha Moduna Geç</div>
-              <div className="text-[11px] text-slate-400">Hızlı satış, tahsilat, stok ve cari için sade telefon ekranı</div>
-            </div>
-            <span className="text-teal-300 text-lg">›</span>
-          </button>
-        )}
+
+        {/* Hızlı işlemler: telefonda en sık kullanılan iki ekran */}
+        <div className="mobile-quick-actions grid grid-cols-2 gap-2.5 mb-5">
+          {[
+            { id: 'pos', title: 'Hızlı Satış', hint: 'Nakit, kart, veresiye', icon: <ShoppingCart size={22} />, tone: 'bg-teal-500/15 text-teal-300 border-teal-500/30' },
+            { id: 'tahsilat', title: 'Tahsilat / Ödeme', hint: 'Cariden para al / öde', icon: <ArrowDownLeft size={22} />, tone: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
+          ].map((action) => (
+            <button
+              key={action.id}
+              type="button"
+              id={`mobile-quick-${action.id}`}
+              onClick={() => handleNavigate(action.id)}
+              className={`flex flex-col items-start gap-2 p-4 rounded-2xl border text-left cursor-pointer active:scale-[0.98] transition ${action.tone}`}
+            >
+              <span className="mobile-quick-icon w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">{action.icon}</span>
+              <span>
+                <span className="block text-sm font-extrabold text-white">{action.title}</span>
+                <span className="block text-[11px] text-slate-400">{action.hint}</span>
+              </span>
+            </button>
+          ))}
+          {onOpenStaffActivity && (
+            <button
+              type="button"
+              id="mobile-quick-takip"
+              onClick={onOpenStaffActivity}
+              className="col-span-2 flex items-center gap-3 p-3.5 rounded-2xl border text-left cursor-pointer active:scale-[0.98] transition bg-sky-500/10 text-sky-300 border-sky-500/30"
+            >
+              <span className="mobile-quick-icon w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center"><UserCheck size={20} /></span>
+              <span>
+                <span className="block text-sm font-extrabold text-white">Çalışan Takibi</span>
+                <span className="block text-[11px] text-slate-400">Bugün kim ne yaptı, gün sonu raporu</span>
+              </span>
+            </button>
+          )}
+        </div>
 
         {/* Menu Grid - 3 Columns */}
         <div className="grid grid-cols-3 gap-2.5 mb-6">
           {tabOrder
-            .filter((tabId) => !hiddenTabs.includes(tabId) && tabId !== 'ceksenet' && tabId !== 'krediler')
+            .filter((tabId) => !hiddenTabs.includes(tabId) && tabId !== 'ceksenet' && tabId !== 'krediler' && tabId !== 'pos')
             .map((tabId) => {
               const def = TAB_DEFS[tabId];
               if (!def) return null;
@@ -197,22 +227,34 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
               <img src={(user as any).photoURL} alt="Profile" className="w-7 h-7 object-cover rounded-lg" />
             ) : (
               <div className="w-7 h-7 rounded-lg text-teal-400 flex items-center justify-center font-bold text-xs shrink-0 uppercase" style={{ backgroundColor: 'rgba(45, 212, 191, 0.15)', color: '#2dd4bf' }}>
-                {user?.displayName ? user.displayName.charAt(0) : 'K'}
+                {(staffUserName || user?.displayName || 'K').charAt(0)}
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <span className="text-xs font-bold text-zinc-50 block truncate">{user?.displayName || 'Kullanıcı'}</span>
-              <span className="text-[9px] font-mono text-zinc-300 block truncate">Aktif Oturum</span>
+              <span className="text-xs font-bold text-zinc-50 block truncate">{staffUserName || user?.displayName || 'Kullanıcı'}</span>
+              <span className="text-[9px] font-mono text-zinc-300 block truncate">{staffUserName ? (user?.displayName || 'Aktif Oturum') : 'Aktif Oturum'}</span>
             </div>
           </div>
           <button
-            onClick={handleSignOut}
+            onClick={onSwitchUser || handleSignOut}
             className="p-1.5 text-zinc-400 hover:text-white rounded-lg transition cursor-pointer shrink-0 hover:bg-white/5"
-            title="Çıkış Yap"
+            title={onSwitchUser ? 'Kullanıcı Değiştir' : 'Çıkış Yap'}
           >
-            <LogOut size={13} />
+            {onSwitchUser ? <Repeat size={13} /> : <LogOut size={13} />}
           </button>
         </div>
+
+        {onSwitchUser && (
+          <button
+            id="mobile-switch-user"
+            onClick={onSwitchUser}
+            className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl border border-white/10 text-zinc-200 hover:text-white transition cursor-pointer font-bold"
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+          >
+            <Repeat size={13} />
+            <span className="text-[11px] uppercase tracking-widest">Kullanıcı Değiştir</span>
+          </button>
+        )}
 
         {isSecurityActive && (userRole === 'employee' ? (
           <button
@@ -232,8 +274,7 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
             onClick={() => {
               setUserRole('employee');
               showToast('Yönetici yetkilerinden çıkış yapıldı. Personel moduna dönüldü.', 'info');
-              const sensitiveTabs = ['dashboard', 'kasa', 'ceksenet', 'masraflar', 'calisanlar', 'krediler', 'raporlar', 'ayarlar'];
-              if (sensitiveTabs.includes(activeTab)) {
+              if (sensitiveTabs.includes(activeTab === 'tahsilat' && !onSwitchUser ? 'islemler' : activeTab)) {
                 setActiveTab('cariler');
               }
             }}

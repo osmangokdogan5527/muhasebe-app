@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { X, UploadCloud, FileSpreadsheet, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { parseExcelWithAI, ParsedCari, ExcelParseResult } from '../../utils/aiExcelParser';
-import { saveCari, createTransaction } from '../../firebase';
+import { saveCari, createTransaction, runWithoutActivity, recordActivity } from '../../firebase';
 import { Cari } from '../../types';
 import { getTodayISO } from '../../utils/dateUtils';
 
@@ -63,46 +63,50 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
     setIsSaving(true);
     try {
       let successCount = 0;
-      for (const item of parseResult.data) {
-        const cariId = `cari_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const code = `CR-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
-        
-        const newCari: Cari = {
-          id: cariId,
-          name: item.name,
-          code,
-          type: item.type,
-          phone: item.phone,
-          email: '',
-          address: '',
-          balance: 0, // Transaction will add the balance
-          openingBalance: item.openingBalance,
-          createdAt: new Date().toISOString(),
-          isActive: true,
-          currency: item.currency || 'TRY'
-        };
-
-        const savedCariId = await saveCari(newCari, cariId);
-        newCari.id = savedCariId;
-
-        // Create opening balance transaction if not zero
-        if (item.openingBalance !== 0) {
-          const transId = `trans_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          await createTransaction({
-            type: item.openingBalance > 0 ? "sale" : "purchase", // representation of opening balance
-            cariId: newCari.id,
-            cariName: newCari.name,
-            date: getTodayISO(),
-            amount: Math.abs(item.openingBalance),
-            account: "", // Unpaid/Opening balance
-            description: "Açılış Bakiyesi",
-            isOpeningBalance: true,
+      // Hareket günlüğüne her cari ayrı yazılmaz; sonda tek özet kayıt düşülür
+      await runWithoutActivity(async () => {
+        for (const item of parseResult.data) {
+          const cariId = `cari_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const code = `CR-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+          
+          const newCari: Cari = {
+            id: cariId,
+            name: item.name,
+            code,
+            type: item.type,
+            phone: item.phone,
+            email: '',
+            address: '',
+            balance: 0, // Transaction will add the balance
+            openingBalance: item.openingBalance,
             createdAt: new Date().toISOString(),
-            currency: item.currency || "TRY"
-          });
+            isActive: true,
+            currency: item.currency || 'TRY'
+          };
+
+          const savedCariId = await saveCari(newCari, cariId);
+          newCari.id = savedCariId;
+
+          // Create opening balance transaction if not zero
+          if (item.openingBalance !== 0) {
+            const transId = `trans_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            await createTransaction({
+              type: item.openingBalance > 0 ? "sale" : "purchase", // representation of opening balance
+              cariId: newCari.id,
+              cariName: newCari.name,
+              date: getTodayISO(),
+              amount: Math.abs(item.openingBalance),
+              account: "", // Unpaid/Opening balance
+              description: "Açılış Bakiyesi",
+              isOpeningBalance: true,
+              createdAt: new Date().toISOString(),
+              currency: item.currency || "TRY"
+            });
+          }
+          successCount++;
         }
-        successCount++;
-      }
+      });
+      recordActivity({ category: 'cari', action: 'import', title: `Excel'den ${successCount} cari içe aktarıldı` });
 
       showToast(`${successCount} cari hesap başarıyla içeri aktarıldı.`, 'success');
       onSuccess();

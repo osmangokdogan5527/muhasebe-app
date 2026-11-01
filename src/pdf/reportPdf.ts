@@ -9,6 +9,10 @@ import {
   COLORS,
   FOOTER_HEIGHT,
   PAGE_MARGIN,
+  PaperSize,
+  pageMargin,
+  preparePaper,
+  sizeK,
   RGB,
   drawContinuationHeader,
   drawDocumentHeader,
@@ -72,15 +76,17 @@ const TONE_COLORS: Record<ReportTone, RGB> = {
   negative: [190, 18, 60],
 };
 
-export async function createReportPdf(report: ReportDocument, branding: DocumentBranding): Promise<GeneratedPdf> {
+export async function createReportPdf(report: ReportDocument, branding: DocumentBranding, paper: PaperSize = 'a4'): Promise<GeneratedPdf> {
   const [{ jsPDF }, { autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
-  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: report.landscape ? 'landscape' : 'portrait', compress: true });
+  const doc = new jsPDF({ unit: 'mm', format: paper, orientation: report.landscape ? 'landscape' : 'portrait', compress: true });
+  preparePaper(doc, paper);
+  const k = sizeK(doc);
   await registerPdfFonts(doc);
 
   const accent = hexToRgb(branding.accentColor);
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const contentWidth = pageWidth - PAGE_MARGIN * 2;
+  const contentWidth = pageWidth - pageMargin(doc) * 2;
   const today = getTodayISO();
   const title = report.title.toLocaleUpperCase('tr-TR');
 
@@ -104,7 +110,7 @@ export async function createReportPdf(report: ReportDocument, branding: Document
     cards.forEach((card, index) => {
       const col = index % perRow;
       const row = Math.floor(index / perRow);
-      const x = PAGE_MARGIN + col * (cardWidth + gap);
+      const x = pageMargin(doc) + col * (cardWidth + gap);
       const cy = y + row * (cardHeight + gap);
       doc.setFillColor(bg[0], bg[1], bg[2]);
       doc.roundedRect(x, cy, cardWidth, cardHeight, 2, 2, 'F');
@@ -142,9 +148,9 @@ export async function createReportPdf(report: ReportDocument, branding: Document
       if (y + lines.length * 4 > pageHeight - FOOTER_HEIGHT - 4) {
         doc.addPage();
         ensureContinuationHeader();
-        y = PAGE_MARGIN + 14;
+        y = pageMargin(doc) + 14;
       }
-      doc.text(lines, PAGE_MARGIN, y + 3);
+      doc.text(lines, pageMargin(doc), y + 3);
       y += lines.length * 4 + 6;
       return;
     }
@@ -153,11 +159,11 @@ export async function createReportPdf(report: ReportDocument, branding: Document
     if (section.title && y + 22 > pageHeight - FOOTER_HEIGHT - 4) {
       doc.addPage();
       ensureContinuationHeader();
-      y = PAGE_MARGIN + 14;
+      y = pageMargin(doc) + 14;
     }
     if (section.title) {
       setText(doc, 9, accent, 'bold');
-      doc.text(section.title.toLocaleUpperCase('tr-TR'), PAGE_MARGIN, y + 3);
+      doc.text(section.title.toLocaleUpperCase('tr-TR'), pageMargin(doc), y + 3);
       y += 6;
     }
 
@@ -166,13 +172,13 @@ export async function createReportPdf(report: ReportDocument, branding: Document
     section.columns.forEach((col, i) => {
       columnStyles[i] = {
         halign: col.align || 'left',
-        ...(col.width ? { cellWidth: col.width } : { cellWidth: 'auto' }),
+        ...(col.width ? { cellWidth: col.width * k } : { cellWidth: 'auto' }),
         ...(col.emphasis ? { font: PDF_FONT_SEMIBOLD } : {}),
       };
     });
     autoTable(doc, {
       startY: y,
-      margin: { left: PAGE_MARGIN, right: PAGE_MARGIN, top: PAGE_MARGIN + 11, bottom: FOOTER_HEIGHT + 4 },
+      margin: { left: pageMargin(doc), right: pageMargin(doc), top: pageMargin(doc) + 11, bottom: FOOTER_HEIGHT + 4 },
       head: [section.columns.map((c) => c.header)],
       body,
       foot: section.foot ? [section.foot] : undefined,
@@ -213,7 +219,7 @@ export async function createReportPdf(report: ReportDocument, branding: Document
 
   return {
     blob: doc.output('blob'),
-    fileName: `Rapor_${safeFileName(report.fileKey)}_${today}.pdf`,
+    fileName: `Rapor_${safeFileName(report.fileKey)}_${today}${paper === 'a5' ? '_A5' : ''}.pdf`,
     pageCount: doc.getNumberOfPages(),
   };
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, Lock, ChevronDown, MessageSquare, ShieldCheck } from 'lucide-react';
+import { Repeat, LogOut, Lock, ChevronDown, MessageSquare, ShieldCheck, UserCheck } from 'lucide-react';
 import { StormLogo, StormIconWrapper, TAB_DEFS, SIDEBAR_BG_PRESETS } from '../constants';
 
 interface DesktopSidebarProps {
@@ -31,6 +31,12 @@ interface DesktopSidebarProps {
   setIsAdminPinModalOpen: (open: boolean) => void;
   setUserRole: (role: any) => void;
   setActiveTab: (tab: any) => void;
+  /** Kullanıcı sistemi açıkken giriş yapan kişinin adı */
+  staffUserName?: string | null;
+  /** Kullanıcı sistemi açıkken: oturumu kapatıp "Kim kullanıyor?" ekranına döner */
+  onSwitchUser?: () => void;
+  /** Yalnızca sahipte: Çalışan Takibi ekranını açar */
+  onOpenStaffActivity?: () => void;
 }
 
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
@@ -62,6 +68,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   setIsAdminPinModalOpen,
   setUserRole,
   setActiveTab,
+  staffUserName,
+  onSwitchUser,
+  onOpenStaffActivity,
 }) => {
   const isPusula = designStyle === 'pusula';
 
@@ -237,26 +246,37 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                       <img src={(user as any).photoURL} alt="Profile" className="w-7 h-7 object-cover rounded-lg" />
                     ) : (
                       <div className="w-7 h-7 rounded-lg bg-teal-500/20 text-teal-400 flex items-center justify-center font-bold text-sm shrink-0 uppercase" style={{ backgroundColor: 'rgba(45, 212, 191, 0.15)', color: '#2dd4bf' }}>
-                        {user?.displayName ? user.displayName.charAt(0) : 'K'}
+                        {(staffUserName || user?.displayName || 'K').charAt(0)}
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <span className="text-[11px] font-bold text-zinc-50 block truncate" title={user?.displayName || 'Kullanıcı'}>{user?.displayName || 'Kullanıcı'}</span>
-                      <span className="text-[8px] font-mono text-zinc-300 block truncate">Aktif Oturum</span>
+                      <span className="text-[11px] font-bold text-zinc-50 block truncate" title={staffUserName || user?.displayName || 'Kullanıcı'}>{staffUserName || user?.displayName || 'Kullanıcı'}</span>
+                      <span className="text-[8px] font-mono text-zinc-300 block truncate">{staffUserName ? (user?.displayName || 'Aktif Oturum') : 'Aktif Oturum'}</span>
                     </div>
                   </div>
                   <button
-                    onClick={handleSignOut}
+                    onClick={onSwitchUser || handleSignOut}
                     className="p-1.5 text-zinc-400 hover:text-white rounded-lg transition cursor-pointer shrink-0"
                     style={{ backgroundColor: 'transparent' }}
                     onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--accent-500) 15%, transparent)'}
                     onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    title="Çıkış Yap"
+                    title={onSwitchUser ? 'Kullanıcı Değiştir' : 'Çıkış Yap'}
                   >
-                    <LogOut size={14} />
+                    {onSwitchUser ? <Repeat size={14} /> : <LogOut size={14} />}
                   </button>
                 </div>
                 
+                {onOpenStaffActivity && (
+                  <button
+                    id="sidebar-staff-activity"
+                    onClick={onOpenStaffActivity}
+                    className={`w-full flex items-center justify-center gap-2 p-2 rounded-xl border transition cursor-pointer ${activeTab === 'takip' ? 'border-teal-500/40 text-teal-300' : 'border-white/5 text-zinc-300 hover:text-white'}`}
+                    style={{ backgroundColor: activeTab === 'takip' ? 'rgba(45, 212, 191, 0.12)' : 'rgba(255, 255, 255, 0.05)' }}
+                  >
+                    <UserCheck size={12} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Çalışan Takibi</span>
+                  </button>
+                )}
                 <button
                   onClick={() => setShowFeedbackModal(true)}
                   className="w-full flex items-center justify-center gap-2 p-2 rounded-xl border border-white/5 text-zinc-400 hover:text-white transition cursor-pointer"
@@ -284,8 +304,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                     onClick={() => {
                       setUserRole('employee');
                       showToast('Yönetici yetkilerinden çıkış yapıldı. Personel moduna dönüldü.', 'info');
-                      const sensitiveTabs = ['dashboard', 'kasa', 'ceksenet', 'masraflar', 'calisanlar', 'krediler', 'raporlar', 'ayarlar'];
-                      if (sensitiveTabs.includes(activeTab)) {
+                      if (sensitiveTabs.includes(activeTab === 'tahsilat' && !onSwitchUser ? 'islemler' : activeTab)) {
                         setActiveTab('cariler');
                       }
                     }}
