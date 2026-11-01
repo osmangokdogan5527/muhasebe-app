@@ -425,6 +425,8 @@ export default function CalisanlarView({
             status: "portfolio",
             description: `Maaş/Avans ödemesi: ${selectedEmp.name}`,
             createdAt: new Date().toISOString(),
+            // Personel borcu maaş kaydıyla kapanır; çek bankadan ödenince yalnızca banka hareketi yazılır
+            cariBalanceApplied: true,
           };
           await saveCekSenet(newCek);
           updatedDescription = `Firma Çeki Verildi (Vade: ${txFormData.newCekDueDate}, Banka: ${txFormData.newCekBank}) - ${updatedDescription}`;

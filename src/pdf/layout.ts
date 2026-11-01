@@ -7,6 +7,7 @@ import { DocumentBranding } from './branding';
 import { PDF_FONT, PDF_FONT_SEMIBOLD } from './fonts';
 import { DocumentCurrency, formatBalance, formatDate, formatSignedMoney } from './format';
 import type { DocumentBalance } from '../utils/cariLedger';
+import { getTodayISO } from '../utils/dateUtils';
 
 export const PAGE_MARGIN = 14;
 export const FOOTER_HEIGHT = 16;
@@ -232,7 +233,7 @@ export function drawBalanceBox(
     [documentLabel, formatSignedMoney(balance.effect, currency), false],
     ['Belge Sonrası Bakiye', formatBalance(balance.after, currency), true],
   ];
-  if (showCurrent) rows.push([`Güncel Bakiye (${formatDate(new Date().toISOString().slice(0, 10))})`, formatBalance(balance.current, currency), true]);
+  if (showCurrent) rows.push([`Güncel Bakiye (${formatDate(getTodayISO())})`, formatBalance(balance.current, currency), true]);
   const rowHeight = 5;
   const height = 10 + rows.length * rowHeight + 2;
   if (measureOnly) return height;

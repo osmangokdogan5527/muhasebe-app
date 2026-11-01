@@ -150,7 +150,7 @@ export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({ isOpen, title,
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className={`w-full flex flex-col overflow-hidden border border-white/10 shadow-2xl rounded-t-3xl sm:rounded-2xl ${inlinePreview ? 'sm:max-w-5xl h-[92vh]' : 'sm:max-w-md max-h-[92vh]'}`}
+        className={`storm-doc-modal w-full flex flex-col overflow-hidden border border-white/10 shadow-2xl rounded-t-3xl sm:rounded-2xl ${inlinePreview ? 'sm:max-w-5xl h-[92vh]' : 'sm:max-w-md max-h-[92vh]'}`}
         style={{ backgroundColor: '#0f1225' }}
       >
         {/* Başlık */}

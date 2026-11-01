@@ -30,6 +30,7 @@ import { TransactionPdfModal } from './pdf/TransactionPdfModal';
 import { parseScannedQrCode } from '../utils/formatters';
 import { formatDateISO } from '../utils/dateUtils';
 import { alertDialog } from '../utils/dialogs';
+import { PinPromptModal } from './common/PinPromptModal';
 
 interface IslemlerViewProps {
   islemler: Transaction[];
@@ -84,8 +85,6 @@ function IslemlerView({
   
   // PIN Verification for restricted employee actions
   const [pinVerificationAction, setPinVerificationAction] = useState<(() => void) | null>(null);
-  const [pinInput, setPinInput] = useState('');
-  const [pinError, setPinError] = useState('');
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
 
   const checkPermissionAndExecute = useCallback((actionKey: 'delete_sale' | 'delete_payment' | 'edit_sale' | 'edit_payment', executeAction: () => void) => {
@@ -93,8 +92,6 @@ function IslemlerView({
       executeAction();
     } else {
       setPinVerificationAction(() => executeAction);
-      setPinInput('');
-      setPinError('');
       setIsPinModalOpen(true);
     }
   }, [isSecurityActive, userRole, actionPermissions]);
@@ -692,6 +689,7 @@ function IslemlerView({
         cariler={cariler}
         stoklar={stoklar}
         bankAccounts={bankAccounts}
+        islemler={islemler}
         aiPrefilledData={aiPrefilledData}
         onClearAiData={onClearPendingIslemModal}
       />
@@ -797,64 +795,18 @@ function IslemlerView({
       )}
 
       {/* PIN Verification Modal */}
-      {isPinModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[9999] animate-fade-in">
-          <div className="bg-[#18181b] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-xl text-center">
-            <div className="w-12 h-12 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center mx-auto mb-4">
-              <ShieldAlert size={24} />
-            </div>
-            
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Yönetici Doğrulaması</h3>
-            <p className="text-xs text-white/60 mt-1 mb-6">
-              Bu kritik işlemi gerçekleştirmek için 4 haneli Yönetici PIN kodunu giriniz.
-            </p>
-
-            <div className="space-y-4">
-              <input
-                type="password"
-                maxLength={4}
-                value={pinInput}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  setPinInput(val);
-                  setPinError('');
-                  
-                  if (val.length === 4) {
-                    if (val === escalationPin || ['1923', '1234', '9999'].includes(val)) {
-                      setIsPinModalOpen(false);
-                      if (pinVerificationAction) {
-                        pinVerificationAction();
-                      }
-                    } else {
-                      setPinError('Hatalı Yönetici PIN kodu!');
-                    }
-                  }
-                }}
-                placeholder="••••"
-                className="w-full bg-white/5 border border-white/10 focus:border-orange-500 rounded-xl px-4 py-3 text-center text-2xl tracking-[0.6em] text-white transition outline-none font-mono"
-                autoFocus
-              />
-
-              {pinError && (
-                <p className="text-xs font-bold text-rose-400">{pinError}</p>
-              )}
-            </div>
-
-            <div className="mt-6 flex justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsPinModalOpen(false);
-                  setPinVerificationAction(null);
-                }}
-                className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-white/80 rounded-xl text-xs font-bold uppercase tracking-wider transition border border-white/10"
-              >
-                Vazgeç
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PinPromptModal
+        isOpen={isPinModalOpen}
+        escalationPin={escalationPin}
+        onSuccess={() => {
+          setIsPinModalOpen(false);
+          if (pinVerificationAction) pinVerificationAction();
+        }}
+        onCancel={() => {
+          setIsPinModalOpen(false);
+          setPinVerificationAction(null);
+        }}
+      />
     </div>
   );
 }

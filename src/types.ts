@@ -31,6 +31,8 @@ export interface Cari {
   taxNo?: string;
   imageUrl?: string; // Profil/Logo resmi
   notes?: string;
+  /** Veresiye (açık hesap) limiti; 0 ya da tanımsız = sınırsız. Carinin para biriminde. */
+  creditLimit?: number;
 }
 
 export interface Stock {
@@ -40,6 +42,8 @@ export interface Stock {
   unit: "Adet" | "KG" | "Litre" | "Metre" | "Kutu" | "Hizmet";
   purchasePrice: number;
   salesPrice: number;
+  /** Satış fiyatı KDV dahil mi? Alan yoksa (eski kayıt) dahil kabul edilir — bkz. utils/stockPricing */
+  salesPriceIncludesTax?: boolean;
   taxRate: number; // e.g., 0, 1, 10, 20 (%)
   quantity: number;
   minQuantity: number;
@@ -128,6 +132,16 @@ export interface CekSenet {
   description?: string; // Açıklama
   createdAt: string;
   exchangeRate?: number; // Manual exchange rate for multi-currency checks
+  /**
+   * Girişte cari bakiyesine işlendi mi? (alınan çekte cari alacaklandı / verilen çekte borcumuz düştü)
+   * İşlendiyse tahsil/ödeme anında yalnızca kasa/banka hareketi yazılır, cari ikinci kez etkilenmez.
+   * Alan yoksa (eski kayıt) işlendi kabul edilir; giriş formunda bu seçenek varsayılan olarak açıktı.
+   */
+  cariBalanceApplied?: boolean;
+  /** Durum değişikliğinde oluşan cari işleminin id'si (ciro, karşılıksız borç dekontu, cariye işlenen tahsilat) */
+  settlementTransactionId?: string;
+  /** Durum değişikliğinde oluşan kasa/banka hareketinin id'si (tahsil / banka ödemesi) */
+  settlementAccountTxId?: string;
   convertedAmount?: number; // Amount after applying exchange rate to modify Cari's native balance
 }
 

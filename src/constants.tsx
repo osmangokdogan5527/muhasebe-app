@@ -28,8 +28,7 @@ export const StormLogo = ({
   sidebarBg?: string;
   onlySvg?: boolean;
 }) => {
-  const currentDesignStyle = designStyle || (typeof document !== 'undefined' && document.documentElement.getAttribute('data-design-style')) || localStorage.getItem('storm_muhasebe_design_style') || 'glass';
-  const isGlass = currentDesignStyle === 'glass';
+  const currentDesignStyle = designStyle || (typeof document !== 'undefined' && document.documentElement.getAttribute('data-design-style')) || localStorage.getItem('storm_muhasebe_design_style') || 'fluid-mesh';
   const isFluidMesh = currentDesignStyle === 'fluid-mesh';
 
   // Strip any shadow filters and transition effects to keep the logo perfectly flat and net
@@ -54,7 +53,6 @@ export const StormLogo = ({
 
   // Get active sidebar pattern details
   let currentPattern = sidebarPattern || localStorage.getItem('storm_muhasebe_sidebar_pattern') || 'crystal';
-  if (designStyle === 'pro-solid' || designStyle === 'navy-perf' || currentDesignStyle === 'navy-perf') currentPattern = 'none';
   if (currentPattern === 'circles') currentPattern = 'flame';
   if (currentPattern === 'waves') currentPattern = 'chain';
   const savedOpacity = sidebarPatternOpacity !== undefined ? sidebarPatternOpacity : parseFloat(localStorage.getItem('storm_muhasebe_sidebar_pattern_opacity') || '0.75');
@@ -213,12 +211,12 @@ export const StormLogo = ({
   }
 
   const svgElement = (
-    <svg className={isGlass ? 'storm-logo-glass' : (isFluidMesh ? 'storm-logo-fluid-mesh' : '')} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={width} height={height}>
+    <svg className={isFluidMesh ? 'storm-logo-fluid-mesh' : ''} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={width} height={height}>
         <defs>
           <clipPath id={`logo-clip-${uId}`}>
             <rect width="200" height="200" rx="48" />
           </clipPath>
-          {patternContent && !isGlass && !isFluidMesh && currentDesignStyle !== 'clean-light' && (
+          {patternContent && !isFluidMesh && currentDesignStyle !== 'pusula' && (
             <pattern 
               id={patternId} 
               width={patternWidth} 
@@ -232,39 +230,12 @@ export const StormLogo = ({
             </pattern>
           )}
           
-          {/* Glass Theme Gradients */}
+          {/* Logo parlama gradyanı (Sıvı Mesh) */}
           <linearGradient id={`glass-logo-grad-${uId}`} x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
             <stop offset="45%" stopColor="#ffffff" stopOpacity="0.18" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
           </linearGradient>
-          <linearGradient id={`glass-border-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
-            <stop offset="30%" stopColor="#ffffff" stopOpacity="0.4" />
-            <stop offset="70%" stopColor="#ffffff" stopOpacity="0.15" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.5" />
-          </linearGradient>
-          <linearGradient id={`glass-back-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.15" />
-            <stop offset="35%" stopColor={fillCol} stopOpacity="0.1" />
-            <stop offset="70%" stopColor={fillCol} stopOpacity="0.05" />
-            <stop offset="100%" stopColor="#000000" stopOpacity="0.35" />
-          </linearGradient>
-          <linearGradient id={`accent-bolt-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
-            <stop offset="50%" stopColor={fillCol} stopOpacity="0.85" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.95" />
-          </linearGradient>
-          <linearGradient id={`glass-shimmer-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
-            <stop offset="30%" stopColor="#ffffff" stopOpacity="0" />
-            <stop offset="50%" stopColor="#ffffff" stopOpacity="0.5" />
-            <stop offset="70%" stopColor="#ffffff" stopOpacity="0" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-          </linearGradient>
-          <filter id={`logo-text-shadow-${uId}`} x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" floodColor="#000000" floodOpacity="0.35" />
-          </filter>
 
           {/* Fluid Mesh Theme Gradients */}
           <linearGradient id={`fluid-border-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -298,19 +269,6 @@ export const StormLogo = ({
           </filter>
           {!downloadMode && (
             <style>{`
-              @keyframes storm-glass-shimmer {
-                0% { transform: translate3d(0, 0, 0) skewX(-25deg); opacity: 0; }
-                8% { opacity: 0.7; }
-                32% { transform: translate3d(420px, 0, 0) skewX(-25deg); opacity: 0.7; }
-                35%, 100% { transform: translate3d(420px, 0, 0) skewX(-25deg); opacity: 0; }
-              }
-              .storm-logo-shimmer {
-                animation: storm-glass-shimmer 5s infinite cubic-bezier(0.4, 0, 0.2, 1);
-                pointer-events: none;
-                transform-origin: center;
-                mix-blend-mode: overlay;
-                will-change: transform;
-              }
               @keyframes mesh-logo-blob-1 {
                 0% { transform: translate3d(0, 0, 0) scale3d(1, 1, 1); }
                 50% { transform: translate3d(15px, -15px, 0) scale3d(1.15, 1.15, 1); }
@@ -351,29 +309,12 @@ export const StormLogo = ({
             {/* Futuristic glowing multi-stop colorful border line */}
             <rect width="194" height="194" x="3" y="3" rx="45" fill="none" stroke={`url(#fluid-border-grad-${uId})`} strokeWidth="4.5" />
           </g>
-        ) : isGlass ? (
-          <g clipPath={`url(#logo-clip-${uId})`}>
-            {/* Always render a solid premium dark/black background so it is a perfect "siyah logo" */}
-            <rect width="200" height="200" fill="#0c0b14" />
-            {/* Base tinted dark glass backing */}
-            <rect width="200" height="200" fill={`url(#glass-back-grad-${uId})`} />
-            {/* Main 3D curved gloss reflection block */}
-            <path d="M 0,0 L 200,0 L 200,95 Q 100,125 0,95 Z" fill={`url(#glass-logo-grad-${uId})`} />
-            {/* Ambient inner soft glowing light beam */}
-            <circle cx="100" cy="50" r="70" fill="#ffffff" opacity="0.03" />
-            {/* Moving glass shimmer light beam */}
-            {!downloadMode && (
-              <rect className="storm-logo-shimmer" x="-150" y="0" width="120" height="200" fill={`url(#glass-shimmer-grad-${uId})`} />
-            )}
-            {/* Beveled edge stroke with linear gradient */}
-            <rect width="196" height="196" x="2" y="2" rx="46" fill="none" stroke={`url(#glass-border-grad-${uId})`} strokeWidth="3.5" />
-          </g>
         ) : (
           <rect width="200" height="200" rx="48" fill={fillCol} />
         )}
 
         {/* Textured overlay pattern inside the logo background */}
-        {patternContent && !isGlass && !isFluidMesh && currentDesignStyle !== 'clean-light' && currentDesignStyle !== 'pro-solid' && currentDesignStyle !== 'navy-perf' && (
+        {patternContent && !isFluidMesh && currentDesignStyle !== 'pusula' && (
           <rect width="200" height="200" rx="48" fill={`url(#${patternId})`} />
         )}
 
@@ -381,7 +322,7 @@ export const StormLogo = ({
         <g transform="translate(63.75, 12) scale(1.45)">
           <path 
             d="M28 2 L8 38 L23 38 L15 66 L42 28 L28 28 Z" 
-            fill={isFluidMesh ? `url(#fluid-bolt-grad-${uId})` : (isGlass ? `url(#accent-bolt-grad-${uId})` : "#ffffff")} 
+            fill={isFluidMesh ? `url(#fluid-bolt-grad-${uId})` : "#ffffff"} 
             filter={isFluidMesh ? `url(#fluid-bolt-glow-${uId})` : undefined}
           />
         </g>
@@ -397,7 +338,7 @@ export const StormLogo = ({
           fontSize="33" 
           fill="#ffffff" 
           letterSpacing="3.5" 
-          filter={isFluidMesh ? `url(#fluid-logo-text-glow-${uId})` : (isGlass ? `url(#logo-text-shadow-${uId})` : undefined)}
+          filter={isFluidMesh ? `url(#fluid-logo-text-glow-${uId})` : undefined}
         >
           STORM
         </text>
@@ -412,7 +353,7 @@ export const StormLogo = ({
           fill="#ffffff" 
           letterSpacing="2.5" 
           opacity="0.95" 
-          filter={isFluidMesh ? `url(#fluid-logo-text-glow-${uId})` : (isGlass ? `url(#logo-text-shadow-${uId})` : undefined)}
+          filter={isFluidMesh ? `url(#fluid-logo-text-glow-${uId})` : undefined}
         >
           MUHASEBE
         </text>
@@ -430,27 +371,31 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.8.5';
+export const APP_VERSION = '1.8.6';
 
 export const CHANGELOG = {
-  version: '1.8.5',
+  version: '1.8.6',
   features: [
-    "Yeni PDF Belgeler: Fatura, tahsilat/ödeme makbuzu, cari hesap ekstresi, POS fişi, etiketler ve raporlar artık gerçek PDF olarak hazırlanır; yazılar net, Türkçe karakterler eksiksiz, uzun belgeler sayfalara bölünür. Yazdırmak için PDF kendi programınızda açılır.",
-    "Paylaş: Her belge penceresinde önizleme, PDF İndir ve telefonda WhatsApp / e-posta ile Paylaş düğmesi vardır.",
-    "Cari Hesap Durumu: Fatura ve makbuzda carinin önceki bakiyesi, belgenin etkisi, belge sonrası ve güncel bakiyesi gösterilir.",
-    "Cari Ekstre PDF'i: Devreden bakiye, borç / alacak / bakiye tablosu, toplamlar ve mutabakat notuyla; telefonda cari kartından da alınır.",
-    "POS Fişi: 80 mm ve 58 mm termal rulo fiş; satıştan sonra, İşlemler'den (Fiş / A4 Fatura seçimi) ve telefondan alınabilir.",
-    "Etiket Tasarla: Rulo ve A4 (21/24/40/65'li) etiketler ya da özel ölçü; ürün adı, fiyat, kod, barkod, QR kod, firma adı seçilebilir; canlı önizleme, toplu etiket ve kopya sayısı, yarım A4 sayfaya başlangıç konumu.",
-    "Belge Görünümü: Ayarlar'da logo, firma ve vergi bilgileri, renk, alt not (IBAN vb.) ve belge seçenekleri tek yerden ayarlanır; tüm cihazlarda ortaktır.",
-    "Yeni Rapor PDF'leri: Kâr-zarar, KDV, stok, cari bakiye ve gider raporları özet kartları ve tüm satırlarıyla.",
+    "Pusula Arayüzü: Yeni varsayılan açık tasarım. Menü tema renginde kavisli bir şerit, sayfa başlıkları gradyan bant, kartlarda renkli üst şerit ve gradyan simge rozetleri; giriş ekranında marka paneli. Telefonda da kullanılır.",
+    "Menü Konumu: Ayarlar > Arayüz & Menü'den menü solda, sağda ya da üstte yatay çubuk olarak kullanılabilir.",
+    "Veresiye Satış: Hızlı Satış'ta VERESİYE [F5] düğmesi; tutar seçili müşterinin açık hesabına yazılır. Müşteri listesinden ad ve telefonla hızlıca yeni müşteri eklenebilir.",
+    "Müşteri Bakiyesi Kasada: Seçili müşterinin güncel borcu, veresiye limiti ve satış sonrası bakiyesi kasa ve telefon satış ekranında görünür; parçalı ödemede 'Kalanı veresiyeye yaz', telefonda peşinat alanı.",
+    "Veresiye Limiti: Cari kartına limit tanımlanabilir; limit aşılacaksa satışta uyarı ve onay sorulur.",
+    "Veresiye Fişi: Fişte açık hesaba yazılan tutar, önceki ve güncel bakiye ile müşteri imza alanı yer alır.",
+    "Satış Fiyatı KDV Dahil / Hariç: Stok kartında seçilir; kasa ve etiket KDV dahil, fatura KDV hariç fiyatı kendiliğinden hesaplar.",
+    "Karşılıksız Çek: Karşılıksız işaretlenen çekte cari otomatik yeniden borçlandırılır (isteğe bağlı); portföye geri almada tahsil, ödeme, ciro ve karşılıksız hareketleri geri alınır.",
   ],
   fixes: [
-    "Rapor PDF'leri her tablonun yalnızca ilk 25 satırını basıyordu; artık tüm kayıtlar yer alır.",
-    "PDF'lerde Türkçe karakterlerin silinmesi ('Isbu hesap dokumu') düzeltildi.",
-    "Uzun cari ekstresinin PDF'te tek sayfaya sığdırılıp kesilmesi düzeltildi.",
-    "Telefonda ve önizleme ekranlarında yazdırma pencerelerinin açılmaması sorunu PDF ile ortadan kalktı.",
-    "Stok kartında satış fiyatının kasada ve faturada nasıl kullanıldığı açıklandı.",
-    "GitHub'da masaüstü sürümünün iki ayrı sürüm olarak yüklenip otomatik güncellemenin görememesi düzeltildi.",
+    "Kasadan yapılan satış İşlemler'den düzenlenince nakit/kart tahsilatı kayboluyor, satış veresiyeye dönüyordu.",
+    "Fatura düzenleme yarıda kalırsa eski fatura siliniyordu; düzenleme artık tek seferde yazılır.",
+    "Çek/senet tahsil edildiğinde ya da bankadan ödendiğinde cari bakiyesi iki kez etkileniyordu.",
+    "Ana sayfadaki Kasa/Banka/POS tutarları açılış bakiyelerini ve virmanları saymıyordu; Kasa ekranıyla aynı hesaplanır.",
+    "Satış faturasında KDV dahil fiyatlı üründe KDV iki kez biniyordu.",
+    "İşlemler'den alınan POS fişinde nakit/kartla ödenmiş satış 'Açık Hesap' görünüyordu.",
+    "Excel'den cari aktarımında 1.234,56 gibi tutarlar yanlış okunuyordu; yıllık tekrarlayan işlemde 29 Şubat 1 Mart'a kayıyordu; gece 00:00-03:00 arası PDF tarihleri bir önceki günü gösteriyordu.",
+    "Geniş pencereler (ör. satış faturası) sol menünün altında kalıp kesiliyordu.",
+    "Güvenlik: Yönetici PIN'i dışında her zaman kabul edilen sabit kodlar kaldırıldı.",
+    "Sadeleştirme: Tasarım stilleri Pusula (açık) ve Sıvı Mesh (koyu) olarak ikiye indi; kasadaki yanlış kurla çalışan para birimi seçici kaldırıldı.",
   ]
 };
 
@@ -638,13 +583,12 @@ export const COLOR_PRESETS = [
 ];
 
 export const StormIconWrapper = ({ iconElement, isActive, designStyle }: { iconElement: React.ReactNode, isActive?: boolean, designStyle?: string }) => {
-  const isProSolid = designStyle === 'pro-solid';
   return (
     <div 
-      className={`storm-icon-wrapper ${isActive ? 'active-icon' : ''} relative flex items-center justify-center shrink-0 rounded-lg transition-all duration-200 w-8 h-8 ${isProSolid && isActive ? 'text-white' : 'text-white'} group-hover:scale-110`}
+      className={`storm-icon-wrapper ${isActive ? 'active-icon' : ''} relative flex items-center justify-center shrink-0 rounded-lg transition-all duration-200 w-8 h-8 text-white group-hover:scale-110`}
       style={{
-        backgroundColor: isProSolid ? 'transparent' : (isActive ? 'var(--accent-600)' : 'color-mix(in srgb, var(--accent-900) 40%, transparent)'),
-        boxShadow: (isActive && !isProSolid) ? '0 0 10px color-mix(in srgb, var(--accent-500) 40%, transparent)' : 'none'
+        backgroundColor: isActive ? 'var(--accent-600)' : 'color-mix(in srgb, var(--accent-900) 40%, transparent)',
+        boxShadow: isActive ? '0 0 10px color-mix(in srgb, var(--accent-500) 40%, transparent)' : 'none'
       }}
     >
       {/* Actual Icon */}
@@ -692,6 +636,30 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.8.6",
+    date: "01.11.2026",
+    changes: [
+      "Pusula Arayüzü: Yeni varsayılan açık tasarım. Menü tema renginde kavisli bir şerit, sayfa başlıkları gradyan bant, kartlarda renkli üst şerit ve gradyan simge rozetleri; giriş ekranında marka paneli. Telefonda da kullanılır.",
+      "Menü Konumu: Ayarlar > Arayüz & Menü'den menü solda, sağda ya da üstte yatay çubuk olarak kullanılabilir.",
+      "Veresiye Satış: Hızlı Satış'ta VERESİYE [F5] düğmesi; tutar seçili müşterinin açık hesabına yazılır. Müşteri listesinden ad ve telefonla hızlıca yeni müşteri eklenebilir.",
+      "Müşteri Bakiyesi Kasada: Seçili müşterinin güncel borcu, veresiye limiti ve satış sonrası bakiyesi kasa ve telefon satış ekranında görünür; parçalı ödemede 'Kalanı veresiyeye yaz', telefonda peşinat alanı.",
+      "Veresiye Limiti: Cari kartına limit tanımlanabilir; limit aşılacaksa satışta uyarı ve onay sorulur.",
+      "Veresiye Fişi: Fişte açık hesaba yazılan tutar, önceki ve güncel bakiye ile müşteri imza alanı yer alır.",
+      "Satış Fiyatı KDV Dahil / Hariç: Stok kartında seçilir; kasa ve etiket KDV dahil, fatura KDV hariç fiyatı kendiliğinden hesaplar.",
+      "Karşılıksız Çek: Karşılıksız işaretlenen çekte cari otomatik yeniden borçlandırılır (isteğe bağlı); portföye geri almada tahsil, ödeme, ciro ve karşılıksız hareketleri geri alınır.",
+      "Kasadan yapılan satış İşlemler'den düzenlenince nakit/kart tahsilatı kayboluyor, satış veresiyeye dönüyordu.",
+      "Fatura düzenleme yarıda kalırsa eski fatura siliniyordu; düzenleme artık tek seferde yazılır.",
+      "Çek/senet tahsil edildiğinde ya da bankadan ödendiğinde cari bakiyesi iki kez etkileniyordu.",
+      "Ana sayfadaki Kasa/Banka/POS tutarları açılış bakiyelerini ve virmanları saymıyordu; Kasa ekranıyla aynı hesaplanır.",
+      "Satış faturasında KDV dahil fiyatlı üründe KDV iki kez biniyordu.",
+      "İşlemler'den alınan POS fişinde nakit/kartla ödenmiş satış 'Açık Hesap' görünüyordu.",
+      "Excel'den cari aktarımında 1.234,56 gibi tutarlar yanlış okunuyordu; yıllık tekrarlayan işlemde 29 Şubat 1 Mart'a kayıyordu; gece 00:00-03:00 arası PDF tarihleri bir önceki günü gösteriyordu.",
+      "Geniş pencereler (ör. satış faturası) sol menünün altında kalıp kesiliyordu.",
+      "Güvenlik: Yönetici PIN'i dışında her zaman kabul edilen sabit kodlar kaldırıldı.",
+      "Sadeleştirme: Tasarım stilleri Pusula (açık) ve Sıvı Mesh (koyu) olarak ikiye indi; kasadaki yanlış kurla çalışan para birimi seçici kaldırıldı.",
+    ]
+  },
   {
     version: "1.8.5",
     date: "31.10.2026",

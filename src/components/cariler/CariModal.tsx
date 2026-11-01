@@ -35,6 +35,7 @@ export function CariModal({
     taxOffice: "",
     taxNo: "",
     imageUrl: "",
+    creditLimit: 0,
   });
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,6 +56,7 @@ export function CariModal({
           taxOffice: editingCari.taxOffice || "",
           taxNo: editingCari.taxNo || "",
           imageUrl: editingCari.imageUrl || "",
+          creditLimit: Number(editingCari.creditLimit) || 0,
         });
       } else if (!aiPrefilledData) {
         setFormData({
@@ -70,6 +72,7 @@ export function CariModal({
           taxOffice: "",
           taxNo: "",
           imageUrl: "",
+          creditLimit: 0,
         });
       }
       setFormError("");
@@ -126,6 +129,7 @@ export function CariModal({
           taxOffice: formData.taxOffice,
           taxNo: formData.taxNo,
           imageUrl: formData.imageUrl,
+          creditLimit: Math.max(0, Number(formData.creditLimit) || 0),
           createdAt: editingCari.createdAt || new Date().toISOString(),
         };
         await saveCari(updatedCari, editingCari.id);
@@ -144,6 +148,7 @@ export function CariModal({
           taxOffice: formData.taxOffice,
           taxNo: formData.taxNo,
           imageUrl: formData.imageUrl,
+          creditLimit: Math.max(0, Number(formData.creditLimit) || 0),
           createdAt: new Date().toISOString(),
         };
         await saveCari(newCari);
@@ -402,6 +407,35 @@ export function CariModal({
                   <p className="text-[9px] text-white/30 mt-1 uppercase tracking-wider font-mono">
                     Müşteri borçlu (alacaklıyız) ise artı (+), tedarikçiye
                     borçlu isek eksi (-) bakiye giriniz.
+                  </p>
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-[9px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 font-mono">
+                    Veresiye (Açık Hesap) Limiti ({formData.currency || "TRY"})
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="form-cari-credit-limit"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Sınırsız"
+                      value={formData.creditLimit || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          creditLimit: Math.max(0, parseFloat(e.target.value) || 0),
+                        })
+                      }
+                      className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded text-xs font-semibold focus:outline-hidden focus:border-teal-500"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-white/30 font-mono">
+                      {formData.currency || "TRY"}
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-white/30 mt-1 uppercase tracking-wider font-mono">
+                    Müşterinin borcu bu tutarı aşacaksa kasada ve sahada uyarı çıkar. Boş bırakılırsa sınır yoktur.
                   </p>
                 </div>
 

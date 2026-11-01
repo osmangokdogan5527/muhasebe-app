@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Transaction, Cari, Stock, BankAccount, InvoiceItem, LinkedReceiptInput } from '../../types';
-import { calculateInvoiceLine, calculateInvoiceTotals } from '../../utils/invoiceMath';
-import { createTransaction, removeTransaction } from '../../firebase';
+import { calculateInvoiceLine, calculateInvoiceTotals, roundMoney } from '../../utils/invoiceMath';
+import { logError } from '../../utils/errorLogger';
+import { netSalesPrice } from '../../utils/stockPricing';
+import { createTransaction, replaceTransaction } from '../../firebase';
 import { Plus, Trash2, X, Search, FileText, CreditCard, Wallet, AlertCircle, Check, ScanBarcode, ArrowRightLeft, DollarSign, FileCheck, Scan, PlusCircle, MinusCircle, RefreshCw } from 'lucide-react';
 import BarcodeScannerModal from '../BarcodeScannerModal';
 import { parseScannedQrCode } from '../../utils/formatters';
@@ -17,6 +19,8 @@ export interface IslemModalProps {
   cariler: Cari[];
   stoklar: Stock[];
   bankAccounts?: BankAccount[];
+  /** Düzenlenen faturanın bağlı peşin tahsilatlarını (POS nakit/kart) korumak için */
+  islemler?: Transaction[];
   aiPrefilledData?: any;
   onClearAiData?: () => void;
 }
@@ -30,9 +34,20 @@ export function IslemModal({
   cariler,
   stoklar,
   bankAccounts = [],
+  islemler = [],
   aiPrefilledData,
   onClearAiData
 }: IslemModalProps) {
+  // Kasadan (POS) yapılan satışta tahsilat faturanın kendisinde değil, bağlı nakit/kart
+  // kayıtlarındadır. Düzenlemede "Açık Hesap" seçili kalırsa bu kayıtlar aynen korunur.
+  const preservedSplitReceipts = useMemo<LinkedReceiptInput[]>(() => {
+    if (!editingTransaction || editingTransaction.account || !editingTransaction.linkedReceiptIds?.length) return [];
+    return islemler
+      .filter((t) => t.linkedInvoiceId === editingTransaction.id && (t.account === 'cash' || t.account === 'bank' || t.account === 'pos'))
+      .map((t) => ({ amount: t.amount, account: t.account, bankAccountId: t.bankAccountId, description: t.description }));
+  }, [editingTransaction, islemler]);
+  const preservedSplitTotal = roundMoney(preservedSplitReceipts.reduce((sum, r) => sum + (Number(r.amount) || 0), 0));
+
 const theme = useMemo(() => {
     switch (modalType) {
       case 'sale':
@@ -233,7 +248,7 @@ const activeCariCurrency = useMemo(() => {
             setInvoiceItems(updatedItems);
           } else {
             const price = modalType === 'sale' || modalType === 'sale_return' 
-              ? scannedStock.salesPrice 
+              ? netSalesPrice(scannedStock) 
               : scannedStock.purchasePrice;
             const emptyRowIndex = invoiceItems.findIndex(item => !item.stockId);
             const newItem = {
@@ -355,7 +370,7 @@ const activeCariCurrency = useMemo(() => {
            if (matchedStok) {
              stockId = matchedStok.id;
              matchedStockName = matchedStok.name;
-             matchedPrice = ['sale', 'sale_return'].includes(modalType) ? matchedStok.salesPrice : matchedStok.purchasePrice;
+             matchedPrice = ['sale', 'sale_return'].includes(modalType) ? netSalesPrice(matchedStok) : matchedStok.purchasePrice;
              matchedUnit = matchedStok.unit || 'Adet';
            }
         }
@@ -435,8 +450,8 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
         item.stockId = selectedStock.id;
         item.stockName = selectedStock.name;
         item.unit = selectedStock.unit;
-        // set default price: sale invoice uses salesPrice, purchase invoice uses purchasePrice
-        item.price = ['sale', 'sale_return'].includes(modalType) ? selectedStock.salesPrice : selectedStock.purchasePrice;
+        // Varsayılan fiyat: satış faturası KDV hariç satış fiyatı, alış faturası alış fiyatı
+        item.price = ['sale', 'sale_return'].includes(modalType) ? netSalesPrice(selectedStock) : selectedStock.purchasePrice;
         item.taxRate = selectedStock.taxRate;
       } else {
         item.stockId = '';
@@ -488,7 +503,7 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
         setInvoiceItems(updatedItems);
       } else {
         // Add new line item
-        const price = ['sale', 'sale_return'].includes(modalType) ? scannedStock.salesPrice : scannedStock.purchasePrice;
+        const price = ['sale', 'sale_return'].includes(modalType) ? netSalesPrice(scannedStock) : scannedStock.purchasePrice;
         
         // Check if there is an empty row we can fill
         const emptyRowIndex = invoiceItems.findIndex(item => !item.stockId);
@@ -570,14 +585,25 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
         // Kasa/Banka/POS seçildiyse fatura peşin ödenmiştir: cariyi kapatan bağlı tahsilat/ödeme oluşturulur.
         // Para girişi kasaya faturanın kendisinden yansıdığı için bağlı kaydın hesabı boş bırakılır.
         const isPaidNow = account === 'cash' || account === 'bank' || account === 'pos';
-        const linkedReceipts: LinkedReceiptInput[] = isPaidNow
+        let linkedReceipts: LinkedReceiptInput[] = isPaidNow
           ? [{ amount: islemData.amount, account: '' }]
           : [];
 
-        if (editingTransaction) {
-          await removeTransaction(editingTransaction);
+        if (!isPaidNow && preservedSplitReceipts.length > 0) {
+          if (preservedSplitTotal > islemData.amount + 0.005) {
+            setFormError(`Bu satışta ${formatCurrency(preservedSplitTotal, islemData.currency || 'TRY')} tahsil edilmiş. Fatura toplamı tahsil edilen tutarın altına düşürülemez; gerekirse faturayı silip yeniden girin.`);
+            setIsSubmitting(false);
+            return;
+          }
+          linkedReceipts = preservedSplitReceipts;
         }
-        await createTransaction(islemData, linkedReceipts);
+
+        // Düzenleme tek atomik yazmadır: yeni kayıt yazılamazsa eski fatura yerinde kalır
+        if (editingTransaction) {
+          await replaceTransaction(editingTransaction, islemData, linkedReceipts);
+        } else {
+          await createTransaction(islemData, linkedReceipts);
+        }
       } else {
         // Receipt (collection or payment)
         if (receiptAmount <= 0) {
@@ -608,16 +634,18 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
         };
 
         if (editingTransaction) {
-          await removeTransaction(editingTransaction);
+          await replaceTransaction(editingTransaction, islemData);
+        } else {
+          await createTransaction(islemData);
         }
-        await createTransaction(islemData);
       }
 
       
       onClose();
     } catch (err: any) {
-      console.error(err);
-      setFormError('İşlem kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.');
+      logError(err instanceof Error ? err : new Error(String(err)), 'IslemModal.handleSubmit');
+      const detail = err?.message && !/Missing or insufficient permissions|FirebaseError/i.test(err.message) ? ` (${err.message})` : '';
+      setFormError(`İşlem kaydedilirken bir hata oluştu${detail}. Lütfen tekrar deneyin.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -730,6 +758,11 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
                         <option value="bank">🏦 Banka (Havale/EFT)</option>
                         <option value="pos">💳 POS (Kredi Kartı)</option>
                       </select>
+                      {!account && preservedSplitReceipts.length > 0 && (
+                        <p className="mt-1 text-[10px] leading-snug text-teal-700 font-medium">
+                          Kasadan yapılan bu satışın {formatCurrency(preservedSplitTotal, editingTransaction?.currency || 'TRY')} tahsilatı (nakit/kart) korunur.
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -1194,7 +1227,7 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
               };
               setInvoiceItems(updatedItems);
             } else {
-              const price = ['sale', 'sale_return'].includes(modalType) ? scannedStock.salesPrice : scannedStock.purchasePrice;
+              const price = ['sale', 'sale_return'].includes(modalType) ? netSalesPrice(scannedStock) : scannedStock.purchasePrice;
               const emptyRowIndex = invoiceItems.findIndex(item => !item.stockId);
               const newItem = {
                 stockId: scannedStock.id,

@@ -60,11 +60,15 @@ export function transactionTypeLabel(t: Pick<Transaction, 'type' | 'linkedInvoic
 }
 
 /** Aynı gündeki işlemler giriş sırasına göre dizilir (createdAt), böylece yürüyen bakiye doğru olur. */
-function compareTransactions(a: Transaction, b: Transaction): number {
+export function compareTransactions(a: Transaction, b: Transaction): number {
   if (a.date !== b.date) return a.date < b.date ? -1 : 1;
   const ca = a.createdAt || '';
   const cb = b.createdAt || '';
   if (ca !== cb) return ca < cb ? -1 : 1;
+  // Peşin tahsilat/ödeme faturayla aynı anda yazılır: fatura her zaman önce gelir
+  const aLinked = a.linkedInvoiceId ? 1 : 0;
+  const bLinked = b.linkedInvoiceId ? 1 : 0;
+  if (aLinked !== bLinked) return aLinked - bLinked;
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
 

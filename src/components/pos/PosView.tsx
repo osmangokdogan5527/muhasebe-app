@@ -8,11 +8,14 @@ import { ReceiptPdfModal } from '../pdf/ReceiptPdfModal';
 import { receiptDataFromPosSummary } from '../../pdf/posReceiptPdf';
 import { PosParkedSalesModal } from './PosParkedSalesModal';
 import { findStockByBarcodeOrSearch, calculateLineTotal, calculateCartSummary, generateReceiptNo } from '../../utils/posUtils';
-import { ShoppingCart, Zap, DollarSign, CreditCard, User, Clock, CheckCircle2, RotateCcw, Search, Plus, Sparkles, HelpCircle, Percent } from 'lucide-react';
+import { ShoppingCart, Zap, DollarSign, CreditCard, User, Clock, CheckCircle2, RotateCcw, Search, Plus, Sparkles, HelpCircle, Percent, BookOpen, UserPlus } from 'lucide-react';
+import { QuickCariModal } from '../common/QuickCariModal';
+import { checkCreditLimit, confirmCreditLimit } from '../../utils/creditLimit';
 import { logError } from '../../utils/errorLogger';
 import { formatDateISO } from '../../utils/dateUtils';
 import { APP_VERSION } from '../../constants';
 import { confirmDialog, alertDialog } from '../../utils/dialogs';
+import { grossSalesPrice } from '../../utils/stockPricing';
 
 interface PosViewProps {
   stocks: Stock[];
@@ -38,11 +41,16 @@ export const PosView: React.FC<PosViewProps> = ({
   bankAccounts,
   onCompletePosSale,
 }) => {
+  // Hızlı müşteri kartı penceresi (veresiye için); null = kapalı
+  const [quickCariName, setQuickCariName] = useState<string | null>(null);
+  const customerInputRef = useRef<HTMLInputElement>(null);
   // SEPET & MÜŞTERİ STATE'LERİ
   const [cartItems, setCartItems] = useState<PosCartItem[]>([]);
   const [selectedCari, setSelectedCari] = useState<Cari | null>(null);
   const [cariSearchTerm, setCariSearchTerm] = useState<string>('');
   const [isCariDropdownOpen, setIsCariDropdownOpen] = useState<boolean>(false);
+  // Seçili carinin güncel hâli (bakiye satış sırasında başka cihazdan değişmiş olabilir)
+  const liveCari = useMemo(() => (selectedCari ? cariler.find((c) => c.id === selectedCari.id) || selectedCari : null), [selectedCari, cariler]);
 
   // ÜRÜN ARAMA & BARKOD
   const [productSearchTerm, setProductSearchTerm] = useState<string>('');
@@ -52,14 +60,6 @@ export const PosView: React.FC<PosViewProps> = ({
   const [globalTaxRate, setGlobalTaxRate] = useState<number>(0);
   const [discountMode, setDiscountMode] = useState<'percent' | 'amount' | 'target'>('percent');
   const [discountVal, setDiscountVal] = useState<number | string>('');
-
-  // PARA BİRİMİ SEÇİMİ (TRY, USD, EUR)
-  const [selectedCurrency, setSelectedCurrency] = useState<'TRY' | 'USD' | 'EUR'>('TRY');
-  const [exchangeRates] = useState<{ USD: number; EUR: number }>({
-    USD: 38.50,
-    EUR: 41.20,
-  });
-  const [customRate, setCustomRate] = useState<string>('');
 
   // ASKIDAKİ SATIŞLAR (PARKED SALES)
   const [parkedSales, setParkedSales] = useState<PosParkedSale[]>(() => {
@@ -97,22 +97,6 @@ export const PosView: React.FC<PosViewProps> = ({
     globalTaxRate
   );
 
-  // KUR VE DÖVİZLİ TUTAR HESAPLAMASI
-  const currentRate =
-    selectedCurrency === 'TRY'
-      ? 1
-      : customRate !== ''
-      ? Math.max(0.0001, Number(customRate))
-      : exchangeRates[selectedCurrency] || 1;
-
-  const convertedTotal = summary.grandTotal / currentRate;
-  const currencySymbol =
-    selectedCurrency === 'TRY'
-      ? '₺'
-      : selectedCurrency === 'USD'
-      ? '$'
-      : '€';
-
   // SEPETE ÜRÜN EKLE VEYA MİKTAR ARTTIR
   const handleAddToCart = useCallback((stock: Stock) => {
     try {
@@ -135,7 +119,7 @@ export const PosView: React.FC<PosViewProps> = ({
           };
           return updated;
         } else {
-          const unitPrice = stock.salesPrice || 0;
+          const unitPrice = grossSalesPrice(stock);
           const { discountAmount, totalLine } = calculateLineTotal(unitPrice, 1, 0);
           const newItem: PosCartItem = {
             id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
@@ -169,7 +153,7 @@ export const PosView: React.FC<PosViewProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       try {
         // Eğer modal açıksa kısayolları engelle
-        if (isSplitModalOpen || isReceiptModalOpen || isParkedModalOpen) return;
+        if (isSplitModalOpen || isReceiptModalOpen || isParkedModalOpen || quickCariName !== null) return;
 
         // F1: Arama Kutusuna Odaklan
         if (e.key === 'F1') {
@@ -199,6 +183,13 @@ export const PosView: React.FC<PosViewProps> = ({
           return;
         }
 
+        // F5: Veresiye (tamamı açık hesaba)
+        if (e.key === 'F5') {
+          e.preventDefault();
+          handleCreditSale();
+          return;
+        }
+
         // F8: Askıya Al
         if (e.key === 'F8') {
           e.preventDefault();
@@ -217,7 +208,7 @@ export const PosView: React.FC<PosViewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cartItems, isSplitModalOpen, isReceiptModalOpen, isParkedModalOpen]);
+  }, [cartItems, isSplitModalOpen, isReceiptModalOpen, isParkedModalOpen, quickCariName, liveCari, summary.grandTotal, isProcessing]);
 
   // ARAMA METNİ DEĞİŞTİĞİNDE TAM EŞLEŞEN BARKOD VARSA SEPETE AT
   useEffect(() => {
@@ -366,6 +357,25 @@ export const PosView: React.FC<PosViewProps> = ({
     await executeSale(split);
   };
 
+  // VERESİYE SATIŞ (F5): tutarın tamamı seçili müşterinin açık hesabına yazılır
+  const handleCreditSale = async () => {
+    if (cartItems.length === 0 || isProcessing) return;
+    if (!liveCari) {
+      await alertDialog({ title: 'Müşteri seçin', message: 'Veresiye satış için önce müşteriyi seçin. Listede yoksa adını yazıp "Yeni müşteri" ile hızlıca ekleyebilirsiniz.' });
+      setIsCariDropdownOpen(true);
+      setTimeout(() => customerInputRef.current?.focus(), 50);
+      return;
+    }
+    const split: PosPaymentSplit = {
+      cashAmount: 0,
+      cashReceived: 0,
+      changeGiven: 0,
+      posAmount: 0,
+      openAccountAmount: summary.grandTotal,
+    };
+    await executeSale(split);
+  };
+
   // ASKIYA AL (F8)
   const handleParkSale = () => {
     try {
@@ -412,6 +422,14 @@ export const PosView: React.FC<PosViewProps> = ({
   // SATIŞI GERÇEKLEŞTİR
   const executeSale = async (paymentSplit: PosPaymentSplit) => {
     try {
+      const openAmount = Number(paymentSplit.openAccountAmount) || 0;
+      if (openAmount > 0.004) {
+        if (!liveCari) {
+          await alertDialog('Açık hesap (veresiye) için müşteri seçilmelidir.');
+          return;
+        }
+        if (!(await confirmCreditLimit(liveCari, openAmount))) return;
+      }
       setIsProcessing(true);
       const receiptNo = generateReceiptNo();
       const now = new Date();
@@ -452,6 +470,13 @@ export const PosView: React.FC<PosViewProps> = ({
           totalDiscount: summary.totalDiscount,
           totalTax: summary.totalTax,
           grandTotal: summary.grandTotal,
+          credit: openAmount > 0.004 && liveCari
+            ? {
+                amount: openAmount,
+                balanceBefore: Number(liveCari.balance) || 0,
+                balanceAfter: Math.round(((Number(liveCari.balance) || 0) + openAmount) * 100) / 100,
+              }
+            : undefined,
         };
 
         setCompletedSaleSummary(saleSummary);
@@ -498,46 +523,10 @@ export const PosView: React.FC<PosViewProps> = ({
           </div>
         </div>
 
-        {/* KISAYOL TUŞLARI - YÜKSEK KONTRAST BİLİŞİM/SATIŞ BUTONLARI */}
-        <div className="flex items-center gap-2 overflow-x-auto text-[11px] font-mono font-bold">
-          <span
-            className="px-3 py-1.5 rounded-lg font-black shadow-md flex items-center gap-1.5 border"
-            style={{ backgroundColor: '#1e293b', color: '#ffffff', borderColor: '#334155' }}
-          >
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-black" style={{ color: '#2dd4bf', backgroundColor: 'rgba(20,184,166,0.25)' }}>
-              F1
-            </span>
-            <span style={{ color: '#ffffff' }}>Barkod</span>
-          </span>
-
-          <span
-            className="px-3 py-1.5 rounded-lg font-black shadow-md flex items-center gap-1.5 border"
-            style={{ backgroundColor: '#065f46', color: '#ffffff', borderColor: '#10b981' }}
-          >
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-black" style={{ color: '#a7f3d0', backgroundColor: 'rgba(16,185,129,0.25)' }}>
-              F2
-            </span>
-            <span style={{ color: '#ffffff' }}>Hızlı Nakit</span>
-          </span>
-
-          <span
-            className="px-3 py-1.5 rounded-lg font-black shadow-md flex items-center gap-1.5 border"
-            style={{ backgroundColor: '#1e40af', color: '#ffffff', borderColor: '#3b82f6' }}
-          >
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-black" style={{ color: '#bfdbfe', backgroundColor: 'rgba(59,130,246,0.25)' }}>
-              F3
-            </span>
-            <span style={{ color: '#ffffff' }}>Hızlı POS</span>
-          </span>
-
-          <span
-            className="px-3 py-1.5 rounded-lg font-black shadow-md flex items-center gap-1.5 border"
-            style={{ backgroundColor: '#6b21a8', color: '#ffffff', borderColor: '#a855f7' }}
-          >
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-black" style={{ color: '#e9d5ff', backgroundColor: 'rgba(168,85,247,0.25)' }}>
-              F4
-            </span>
-            <span style={{ color: '#ffffff' }}>Parçalı Ödeme</span>
+        {/* KISAYOLLAR: tek satırlık ipucu + askıdaki satışlar */}
+        <div className="flex items-center gap-3 flex-wrap justify-end">
+          <span className="pos-shortcut-hint text-[11px] font-semibold text-slate-400 whitespace-nowrap" title="Klavye kısayolları">
+            F1 Barkod · F2 Nakit · F3 POS · F4 Parçalı · F5 Veresiye · F8 Askı
           </span>
 
           <button
@@ -569,10 +558,10 @@ export const PosView: React.FC<PosViewProps> = ({
           {/* KASA GÖSTERGESİ VE ÖDEME PANELİ (GÖSTERGE SOL PANEL ALTINA ALINDI) */}
           <div className="p-4 bg-slate-900 rounded-2xl border-2 border-slate-700 shadow-2xl space-y-3.5 shrink-0" style={{ backgroundColor: '#0f172a' }}>
             
-            {/* KDV ORANI, İSKONTO VE PARA BİRİMİ PANELİ */}
+            {/* KDV ORANI VE İSKONTO PANELİ */}
             <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 grid grid-cols-1 md:grid-cols-12 gap-3 items-center" style={{ backgroundColor: '#020617' }}>
               {/* 1. KDV SEÇİMİ (VARSAYILAN %0) */}
-              <div className="md:col-span-3 space-y-1.5">
+              <div className="md:col-span-5 space-y-1.5">
                 <span className="text-[11px] font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5" style={{ color: '#cbd5e1' }}>
                   <Percent size={13} className="text-teal-400" style={{ color: '#2dd4bf' }} />
                   KDV Oranı:
@@ -597,7 +586,7 @@ export const PosView: React.FC<PosViewProps> = ({
               </div>
 
               {/* 2. İSKONTO SEÇİMİ (% YÜZDE, ₺ İSKONTO, 🎯 NET ALINACAK TUTAR) */}
-              <div className="md:col-span-5 space-y-1.5">
+              <div className="md:col-span-7 space-y-1.5">
                 <div className="flex items-center justify-between gap-1">
                   <span className="text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1" style={{ color: '#fcd34d' }}>
                     <Sparkles size={14} />
@@ -661,61 +650,6 @@ export const PosView: React.FC<PosViewProps> = ({
                 </div>
               </div>
 
-              {/* 3. ÖDENECEK PARA BİRİMİ SEÇİMİ (SAĞA YANAŞTIRILMIŞ) */}
-              <div className="md:col-span-4 space-y-1.5 flex flex-col items-end text-right">
-                <div className="flex items-center justify-end gap-2 w-full">
-                  <span className="text-[11px] font-black text-teal-300 uppercase tracking-wider flex items-center gap-1" style={{ color: '#5eead4' }}>
-                    <DollarSign size={13} />
-                    Para Birimi:
-                  </span>
-                  <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-700">
-                    {[
-                      { code: 'TRY', label: '₺ TRY' },
-                      { code: 'USD', label: '$ USD' },
-                      { code: 'EUR', label: '€ EUR' },
-                    ].map((c) => (
-                      <button
-                        key={c.code}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCurrency(c.code as any);
-                          setCustomRate('');
-                        }}
-                        className={`px-2 py-0.5 rounded text-[10px] font-black transition-all cursor-pointer ${
-                          selectedCurrency === c.code
-                            ? 'bg-teal-400 text-slate-950 shadow'
-                            : 'text-slate-400 hover:text-white'
-                        }`}
-                        style={selectedCurrency === c.code ? { backgroundColor: '#2dd4bf', color: '#020617', fontWeight: 900 } : {}}
-                      >
-                        {c.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {selectedCurrency !== 'TRY' ? (
-                  <div className="flex items-center justify-end gap-1.5 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 self-end">
-                    <span className="text-[10px] font-bold text-slate-300">
-                      1 {selectedCurrency} Kur:
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        value={customRate !== '' ? customRate : exchangeRates[selectedCurrency as keyof typeof exchangeRates]}
-                        onChange={(e) => setCustomRate(e.target.value)}
-                        className="w-16 py-0.5 bg-slate-950 border border-slate-700 rounded text-right text-xs font-mono font-black text-teal-300"
-                        style={{ backgroundColor: '#020617', color: '#2dd4bf' }}
-                      />
-                      <span className="text-[10px] font-mono text-slate-400">₺</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-[10px] text-slate-500 font-mono text-right pt-0.5">Türk Lirası (Standart)</div>
-                )}
-              </div>
             </div>
 
             {/* HESAPLAMA ÖZETİ & EKRAN GÖSTERGESİ (2 KOLONLU DÜZEN) */}
@@ -756,16 +690,11 @@ export const PosView: React.FC<PosViewProps> = ({
                   ₺{summary.grandTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
 
-                {selectedCurrency !== 'TRY' && (
-                  <div className="text-amber-300 font-mono text-base font-black pt-1 border-t border-slate-800 w-full text-right" style={{ color: '#fcd34d' }}>
-                    Ödenecek: {currencySymbol}{convertedTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {selectedCurrency}
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* HIZLI AKSİYON ÖDEME BUTONLARI (TEK SATIR 4 BUTON) */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {/* HIZLI AKSİYON ÖDEME BUTONLARI (TEK SATIR 5 BUTON) */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               <button
                 disabled={cartItems.length === 0 || isProcessing}
                 onClick={handleQuickCashSale}
@@ -791,6 +720,17 @@ export const PosView: React.FC<PosViewProps> = ({
               >
                 <Zap size={15} />
                 PARÇALI [F4]
+              </button>
+
+              <button
+                id="pos-btn-credit"
+                disabled={cartItems.length === 0 || isProcessing}
+                onClick={handleCreditSale}
+                title={liveCari ? `${liveCari.name} hesabına veresiye yaz` : 'Veresiye için önce müşteri seçin'}
+                className="py-3 px-2 bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white font-black rounded-xl text-xs shadow-lg shadow-rose-600/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <BookOpen size={15} />
+                VERESİYE [F5]
               </button>
 
               <button
@@ -829,24 +769,47 @@ export const PosView: React.FC<PosViewProps> = ({
               )}
             </div>
 
-            {selectedCari ? (
-              <div className="p-2.5 bg-teal-500/10 border border-teal-400/40 rounded-xl flex items-center justify-between">
-                <div>
-                  <h5 className="text-xs font-black text-white" style={{ color: '#ffffff' }}>{selectedCari.name}</h5>
-                  <span className="text-[11px] text-slate-300 font-mono">
-                    {selectedCari.code} • Bakiye:{' '}
-                    <strong className={selectedCari.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                      ₺{selectedCari.balance.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                    </strong>
-                  </span>
+            {liveCari ? (() => {
+              const credit = checkCreditLimit(liveCari, summary.grandTotal);
+              const cur = liveCari.currency || 'TRY';
+              const money = (v: number) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: cur }).format(v);
+              return (
+                <div className="p-2.5 bg-teal-500/10 border border-teal-400/40 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <h5 className="text-xs font-black text-white truncate" style={{ color: '#ffffff' }}>{liveCari.name}</h5>
+                      <span className="text-[11px] text-slate-300 font-mono">{liveCari.code}{liveCari.phone ? ` • ${liveCari.phone}` : ''}</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-teal-500/20 text-teal-200 border border-teal-400/50 shrink-0">
+                      Seçili Cari
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="rounded-lg bg-slate-950/60 border border-slate-700 px-2 py-1.5">
+                      <div className="text-slate-400 font-bold">Mevcut bakiye</div>
+                      <div className={`font-black font-mono ${credit.balanceBefore > 0 ? 'text-red-400' : credit.balanceBefore < 0 ? 'text-emerald-400' : 'text-slate-300'}`}>
+                        {money(Math.abs(credit.balanceBefore))} {credit.balanceBefore > 0.004 ? 'Borç' : credit.balanceBefore < -0.004 ? 'Alacak' : ''}
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-slate-950/60 border border-slate-700 px-2 py-1.5">
+                      <div className="text-slate-400 font-bold">Veresiye limiti</div>
+                      <div className="font-black font-mono text-white">
+                        {credit.limit === null ? 'Sınırsız' : money(credit.limit)}
+                      </div>
+                    </div>
+                  </div>
+                  {cartItems.length > 0 && (
+                    <div className={`rounded-lg px-2 py-1.5 text-[11px] font-bold border ${credit.exceeded ? 'bg-red-500/20 border-red-400/50 text-red-400' : 'bg-slate-950/60 border-slate-700 text-slate-300'}`}>
+                      Veresiye yazılırsa yeni bakiye: <span className="font-black font-mono">{money(credit.balanceAfter)}</span>
+                      {credit.exceeded && <span className="block">Limit {money(credit.overBy)} aşılıyor — satışta uyarı çıkar.</span>}
+                    </div>
+                  )}
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-teal-500/20 text-teal-200 border border-teal-400/50">
-                  Seçili Cari
-                </span>
-              </div>
-            ) : (
+              );
+            })() : (
               <div className="relative">
                 <input
+                  ref={customerInputRef}
                   type="text"
                   value={cariSearchTerm}
                   onFocus={() => setIsCariDropdownOpen(true)}
@@ -869,6 +832,17 @@ export const PosView: React.FC<PosViewProps> = ({
                       className="w-full text-left p-2.5 hover:bg-slate-800 text-xs font-black text-teal-300 border-b border-slate-700 cursor-pointer"
                     >
                       🛒 Perakende Müşteri (Kasasız Anında Satış)
+                    </button>
+                    <button
+                      id="pos-quick-cari"
+                      onClick={() => {
+                        setIsCariDropdownOpen(false);
+                        setQuickCariName(cariSearchTerm.trim());
+                      }}
+                      className="w-full text-left p-2.5 hover:bg-slate-800 text-xs font-black text-amber-300 border-b border-slate-700 cursor-pointer flex items-center gap-1.5"
+                    >
+                      <UserPlus size={14} />
+                      {cariSearchTerm.trim() ? `"${cariSearchTerm.trim()}" adıyla yeni müşteri ekle` : 'Yeni müşteri ekle'}
                     </button>
                     {filteredCariler.map((c) => (
                       <button
@@ -911,7 +885,7 @@ export const PosView: React.FC<PosViewProps> = ({
         onClose={() => setIsSplitModalOpen(false)}
         grandTotal={summary.grandTotal}
         bankAccounts={bankAccounts}
-        selectedCari={selectedCari}
+        selectedCari={liveCari}
         onConfirmPayment={executeSale}
       />
 
@@ -932,6 +906,20 @@ export const PosView: React.FC<PosViewProps> = ({
         onRestoreSale={handleRestoreParkedSale}
         onDeleteSale={(id) => setParkedSales((prev) => prev.filter((p) => p.id !== id))}
       />
+
+      {/* VERESİYE İÇİN HIZLI MÜŞTERİ KARTI */}
+      {quickCariName !== null && (
+        <QuickCariModal
+          initialName={quickCariName}
+          existingCount={cariler.length}
+          onClose={() => setQuickCariName(null)}
+          onCreated={(cari) => {
+            setSelectedCari(cari);
+            setCariSearchTerm('');
+            setQuickCariName(null);
+          }}
+        />
+      )}
     </div>
   );
 };

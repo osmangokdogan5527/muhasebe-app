@@ -165,7 +165,7 @@ export const LabelDesignerModal: React.FC<LabelDesignerModalProps> = ({ initialS
       aria-label="Etiket Tasarla"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full sm:max-w-5xl h-[94vh] sm:h-[90vh] flex flex-col overflow-hidden border border-white/10 shadow-2xl rounded-t-3xl sm:rounded-2xl" style={{ backgroundColor: PANEL_BG, color: TEXT }}>
+      <div className="storm-doc-modal w-full sm:max-w-5xl h-[94vh] sm:h-[90vh] flex flex-col overflow-hidden border border-white/10 shadow-2xl rounded-t-3xl sm:rounded-2xl" style={{ backgroundColor: PANEL_BG, color: TEXT }}>
         {/* Başlık */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-white/10 shrink-0">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(56,189,248,0.14)', color: '#7dd3fc' }}><Tag size={20} /></div>

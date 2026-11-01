@@ -275,15 +275,23 @@ export const PosSplitPaymentModal: React.FC<PosSplitPaymentModalProps> = ({
                   <User size={16} className="text-amber-400" />
                   Açık Hesap (Cari Borcu / Veresiye)
                 </label>
-                {remainingToAllocate > 0 && selectedCari && (
-                  <button
-                    onClick={() => fillRemainingTo('openAccount')}
-                    className="text-[11px] font-bold text-amber-300 hover:text-white underline cursor-pointer"
-                  >
-                    Kalanı Veresiye Yaz (+₺{remainingToAllocate.toFixed(2)})
-                  </button>
-                )}
               </div>
+
+              {selectedCari ? (
+                remainingToAllocate > 0.004 && (
+                  <button
+                    id="split-fill-credit"
+                    onClick={() => fillRemainingTo('openAccount')}
+                    className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer transition-all"
+                  >
+                    Kalanı veresiyeye yaz (+₺{remainingToAllocate.toLocaleString('tr-TR', { minimumFractionDigits: 2 })})
+                  </button>
+                )
+              ) : (
+                <p className="text-[11px] text-amber-200 font-semibold">
+                  Veresiye için önce kasa ekranında müşteri seçin ya da yeni müşteri ekleyin.
+                </p>
+              )}
 
               <div>
                 <div className="flex items-center justify-between mb-1">
@@ -306,6 +314,17 @@ export const PosSplitPaymentModal: React.FC<PosSplitPaymentModalProps> = ({
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-600 rounded-lg text-white font-mono text-sm font-bold focus:outline-none focus:border-amber-400 disabled:opacity-50"
                 />
               </div>
+              {selectedCari && openAccountAmount > 0.004 && (
+                <div className="text-[11px] font-bold text-slate-200">
+                  Veresiye sonrası bakiye:{' '}
+                  <strong className="text-white font-black font-mono">
+                    ₺{((Number(selectedCari.balance) || 0) + openAccountAmount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                  </strong>
+                  {Number(selectedCari.creditLimit) > 0 && (
+                    <span className="text-slate-400"> / limit ₺{Number(selectedCari.creditLimit).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

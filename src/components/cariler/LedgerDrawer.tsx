@@ -6,8 +6,10 @@ import { X, Printer, Download, Plus, ArrowRight, ArrowLeft, RotateCcw, AlertTria
 
 import { createTransaction, saveCari } from '../../firebase';
 import { calculateInvoiceLine } from '../../utils/invoiceMath';
-import { getTodayISO } from '../../utils/dateUtils';
+import { netSalesPrice } from '../../utils/stockPricing';
+import { formatDateISO, getTodayISO } from '../../utils/dateUtils';
 import { alertDialog } from '../../utils/dialogs';
+import { compareTransactions } from '../../utils/cariLedger';
 
 export interface LedgerDrawerProps {
   isOpen: boolean;
@@ -58,7 +60,7 @@ export function LedgerDrawer({
     if (quickTxType === "sale_return" || quickTxType === "purchase_return") {
       const selectedStock = stoklar.find(s => s.id === quickTxStockId);
       if (selectedStock) {
-        const price = quickTxType === "sale_return" ? selectedStock.salesPrice : selectedStock.purchasePrice;
+        const price = quickTxType === "sale_return" ? netSalesPrice(selectedStock) : selectedStock.purchasePrice;
         setQuickTxUnitPrice(price.toString());
         const qty = parseFloat(quickTxQuantity) || 1;
         setQuickTxAmount(calculateInvoiceLine(qty, price, selectedStock.taxRate).total.toFixed(2));
@@ -323,14 +325,14 @@ export function LedgerDrawer({
     // Filter and sort transactions related to selected Cari
     const relatedTransactions = islemler
       .filter((t) => t.cariId === currentCari.id)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .sort(compareTransactions);
 
     let runningBalance = currentCari.openingBalance;
 
     return [
       {
         id: "opening",
-        date: currentCari.createdAt?.substring(0, 10) || "Açılış",
+        date: currentCari.createdAt && !isNaN(new Date(currentCari.createdAt).getTime()) ? formatDateISO(new Date(currentCari.createdAt)) : "Açılış",
         type: "Açılış Bakiyesi",
         description: "Hesap açılış bakiyesi",
         amount: Math.abs(currentCari.openingBalance),

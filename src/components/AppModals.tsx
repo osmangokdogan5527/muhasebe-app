@@ -635,8 +635,8 @@ export const AppModals: React.FC<AppModalsProps> = ({
                     setAdminPinError(null);
                     
                     if (val.length === 4) {
-                      // Validate admin PIN - we can accept '1234', '1923', or '9999' as valid management PINs
-                      if (val === escalationPin || ['1234', '1923', '9999'].includes(val)) {
+                      // Yalnızca Ayarlar'da belirlenen yönetici PIN'i kabul edilir
+                      if (val === escalationPin) {
                         setUserRole('admin');
                         setIsAdminPinModalOpen(false);
                         setAdminPinInput('');

@@ -27,6 +27,7 @@ import BarcodeScannerModal from './BarcodeScannerModal';
 import { StockModal } from './stoklar/StockModal';
 import { LabelDesignerModal } from './labels/LabelDesignerModal';
 import { confirmDialog, alertDialog } from '../utils/dialogs';
+import { salesPriceTaxLabel } from '../utils/stockPricing';
 
 interface StoklarViewProps {
   stoklar?: Stock[];
@@ -139,8 +140,6 @@ function StoklarView({
   
   // PIN Verification for restricted employee actions
   const [pinVerificationAction, setPinVerificationAction] = useState<(() => void) | null>(null);
-  const [pinInput, setPinInput] = useState('');
-  const [pinError, setPinError] = useState('');
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
 
   const checkPermissionAndExecute = useCallback((actionKey: 'delete_stock' | 'decrease_stock' | 'edit_stock', executeAction: () => void) => {
@@ -148,8 +147,6 @@ function StoklarView({
       executeAction();
     } else {
       setPinVerificationAction(() => executeAction);
-      setPinInput('');
-      setPinError('');
       setIsPinModalOpen(true);
     }
   }, [isSecurityActive, userRole, actionPermissions]);
@@ -362,6 +359,7 @@ function StoklarView({
         </td>
         <td className="p-4 text-sm font-semibold text-teal-400 tabular-nums font-sans">
           {formatCurrency(stok.salesPrice)}
+          <div className="text-[9px] font-mono font-semibold text-white/35 uppercase tracking-wider">{salesPriceTaxLabel(stok)}</div>
         </td>
         <td className="p-4 text-center text-xs font-semibold text-white/40 font-mono">
           %{stok.taxRate}
@@ -846,7 +844,7 @@ function StoklarView({
 
                       <div className="grid grid-cols-2 gap-2 mt-3 text-xs border-t border-white/5 pt-2 text-white/50 font-sans">
                         <div>Alış Fiyatı: <strong className="text-white/80 font-semibold tabular-nums">{formatCurrency(stok.purchasePrice)}</strong></div>
-                        <div>Satış Fiyatı: <strong className="text-teal-400 font-semibold tabular-nums">{formatCurrency(stok.salesPrice)}</strong></div>
+                        <div>Satış Fiyatı: <strong className="text-teal-400 font-semibold tabular-nums">{formatCurrency(stok.salesPrice)}</strong> <span className="text-[10px] text-white/35">({salesPriceTaxLabel(stok)})</span></div>
                         <div>KDV Oranı: <strong className="text-white/70 font-semibold">%{stok.taxRate}</strong></div>
                         <div>Toplam Değer: <strong className="text-teal-400 font-bold tabular-nums">{formatCurrency(stockValue)}</strong></div>
                       </div>
@@ -912,10 +910,6 @@ function StoklarView({
 
       <StoklarExtraModals 
         isPinModalOpen={isPinModalOpen}
-        pinInput={pinInput}
-        setPinInput={setPinInput}
-        pinError={pinError}
-        setPinError={setPinError}
         escalationPin={escalationPin}
         pinVerificationAction={pinVerificationAction}
         setPinVerificationAction={setPinVerificationAction}

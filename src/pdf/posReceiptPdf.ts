@@ -8,7 +8,7 @@ import { PosSaleSummary } from '../types/pos';
 import { roundMoney } from '../utils/invoiceMath';
 import { DocumentBranding, ReceiptWidth } from './branding';
 import { registerPdfFonts, PDF_FONT, PDF_FONT_SEMIBOLD } from './fonts';
-import { DocumentCurrency, formatDate, formatMoney, formatQuantity, normalizeCurrency, safeFileName } from './format';
+import { DocumentCurrency, formatBalance, formatDate, formatMoney, formatQuantity, normalizeCurrency, safeFileName } from './format';
 import type { GeneratedPdf } from './invoicePdf';
 
 export interface ReceiptLine {
@@ -37,6 +37,8 @@ export interface ReceiptSaleData {
   change?: number;
   note?: string;
   currency: DocumentCurrency;
+  /** Veresiye: açık hesaba yazılan tutar ve (varsa) carinin satış öncesi / sonrası bakiyesi */
+  credit?: { amount: number; balanceBefore?: number; balanceAfter?: number };
 }
 
 const RETAIL_NAMES = new Set(['perakende müşteri', 'perakende']);
@@ -70,6 +72,7 @@ export function receiptDataFromPosSummary(summary: PosSaleSummary): ReceiptSaleD
     change: split.changeGiven > 0.004 ? split.changeGiven : undefined,
     note: summary.note,
     currency: 'TRY',
+    credit: summary.credit && summary.credit.amount > 0.004 ? { ...summary.credit } : undefined,
   };
 }
 
@@ -80,8 +83,15 @@ const ACCOUNT_PAYMENT_LABEL: Record<string, string> = {
   '': 'Açık Hesap (Veresiye)',
 };
 
+export interface ReceiptTransactionOptions {
+  /** Satışla birlikte yazılan peşin tahsilatlar (nakit / kart); verilmezse fatura hesabı esas alınır */
+  linkedReceipts?: Transaction[];
+  /** Carinin satış öncesi bakiyesi (veresiye bölümünde gösterilir) */
+  balanceBefore?: number;
+}
+
 /** Kayıtlı bir satış (İşlemler listesinden) için fiş verisi. Satırlar KDV dahil fiyatla gösterilir. */
-export function receiptDataFromTransaction(islem: Transaction, isRetail: boolean): ReceiptSaleData {
+export function receiptDataFromTransaction(islem: Transaction, isRetail: boolean, options: ReceiptTransactionOptions = {}): ReceiptSaleData {
   const items = Array.isArray(islem.items) ? islem.items : [];
   const lines: ReceiptLine[] = items.map((item) => {
     const lineTotal = roundMoney(Number(item.total) || 0);
@@ -96,6 +106,32 @@ export function receiptDataFromTransaction(islem: Transaction, isRetail: boolean
       lineTotal,
     };
   });
+  // Ödeme dağılımı: kasadan yapılan satışta tahsilat faturanın kendisinde değil, bağlı kayıtlardadır
+  const grandTotal = roundMoney(Number(islem.amount) || 0);
+  let payments: { label: string; amount: number }[];
+  let openAmount = 0;
+  if (islem.account) {
+    payments = [{ label: ACCOUNT_PAYMENT_LABEL[islem.account] || 'Ödeme', amount: grandTotal }];
+  } else {
+    const linked = (options.linkedReceipts || []).filter((r) => r && r.linkedInvoiceId === islem.id);
+    const byLabel = new Map<string, number>();
+    linked.forEach((r) => {
+      const label = ACCOUNT_PAYMENT_LABEL[r.account || ''] || 'Ödeme';
+      byLabel.set(label, roundMoney((byLabel.get(label) || 0) + (Number(r.amount) || 0)));
+    });
+    const paid = roundMoney([...byLabel.values()].reduce((sum, v) => sum + v, 0));
+    openAmount = roundMoney(Math.max(0, grandTotal - paid));
+    payments = [...byLabel.entries()].map(([label, amount]) => ({ label, amount }));
+    if (openAmount > 0.004) payments.push({ label: ACCOUNT_PAYMENT_LABEL[''], amount: openAmount });
+  }
+  const credit = openAmount > 0.004 && !isRetail
+    ? {
+        amount: openAmount,
+        balanceBefore: options.balanceBefore,
+        balanceAfter: options.balanceBefore !== undefined ? roundMoney(options.balanceBefore + openAmount) : undefined,
+      }
+    : undefined;
+
   const totalTax = items.reduce((sum, item) => {
     const total = Number(item.total) || 0;
     const rate = Number(item.taxRate) || 0;
@@ -110,9 +146,10 @@ export function receiptDataFromTransaction(islem: Transaction, isRetail: boolean
     lines: lines.length ? lines : [{ name: islem.description || 'Satış', quantity: 1, unit: 'Adet', unitPrice: islem.amount, discountAmount: 0, discountRate: 0, lineTotal: islem.amount }],
     totalTax: roundMoney(totalTax),
     grandTotal: roundMoney(islem.amount),
-    payments: [{ label: ACCOUNT_PAYMENT_LABEL[islem.account || ''] || 'Ödeme', amount: roundMoney(islem.amount) }],
+    payments,
     note: islem.description && !/^POS Satışı/i.test(islem.description) ? islem.description : undefined,
     currency: normalizeCurrency(islem.currency),
+    credit,
   };
 }
 
@@ -236,6 +273,26 @@ function drawReceipt(doc: JsPdfType, data: ReceiptSaleData, branding: DocumentBr
   data.payments.forEach((p) => pair(p.label, money(p.amount), m.base));
   if (data.cashReceived) pair('Alınan Nakit', money(data.cashReceived), m.base);
   if (data.change) pair('Para Üstü', money(data.change), m.base, 'semibold');
+
+  // Veresiye (açık hesap) bölümü
+  if (data.credit && data.credit.amount > 0.004) {
+    dashed();
+    centered('AÇIK HESAP (VERESİYE)', m.base + 0.6, 'bold');
+    centered(`${money(data.credit.amount)} hesabınıza borç yazılmıştır.`, m.base - 0.6);
+    if (branding.showBalance !== false && data.credit.balanceBefore !== undefined && data.credit.balanceAfter !== undefined) {
+      y += 0.6;
+      pair('Önceki Bakiye', formatBalance(data.credit.balanceBefore, data.currency), m.base - 0.6);
+      pair('Bu Satış', `+ ${money(data.credit.amount)}`, m.base - 0.6);
+      pair('Güncel Bakiye', formatBalance(data.credit.balanceAfter, data.currency), m.base, 'bold');
+    }
+    if (branding.showSignatureArea !== false) {
+      y += 7;
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.2);
+      doc.line(left + cw * 0.15, y, right - cw * 0.15, y);
+      centered('Müşteri İmzası', m.base - 1.4, 'normal', true);
+    }
+  }
 
   // Not ve alt bilgi
   if (data.note || branding.footerNote) {

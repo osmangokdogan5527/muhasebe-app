@@ -5,6 +5,7 @@ import { DeviceAccount } from '../utils/accountStore';
 import { TenantLoginPanel } from './auth/TenantLoginPanel';
 import { InstallAppBanner } from './auth/InstallAppBanner';
 import { FluidMeshBackground } from './FluidMeshBackground';
+import { PusulaAuthHero } from './auth/PusulaAuthHero';
 import { confirmDialog, alertDialog } from '../utils/dialogs';
 
 interface AuthScreenProps {
@@ -75,96 +76,57 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [expandedLogId, setExpandedLogId] = React.useState<string | null>(null);
 
   const isFluidMesh = designStyle === 'fluid-mesh';
-  const isGlass = designStyle === 'glass';
-  const isNavyPerf = designStyle === 'navy-perf';
-  const isCleanLight = designStyle === 'clean-light' || designStyle === 'pro-solid';
+  // Açık zeminli stil (Pusula) için açık renkli giriş ekranı sınıfları
+  const isLightStyle = designStyle === 'pusula';
 
   // Tema ve tasarım stiline uygun metin renkleri ve görsel hiyerarşi sınıfları
-  const textPrimary = isCleanLight ? 'text-slate-800' : 'text-white';
-  const textSecondary = isCleanLight ? 'text-slate-600' : 'text-white/60';
-  const textTertiary = isCleanLight ? 'text-slate-500' : 'text-white/40';
-  const textMuted = isCleanLight ? 'text-slate-300' : 'text-white/20';
-  const textActive = isCleanLight ? 'text-teal-600 font-bold' : 'text-teal-400 font-bold';
+  const textPrimary = isLightStyle ? 'text-slate-800' : 'text-white';
+  const textSecondary = isLightStyle ? 'text-slate-600' : 'text-white/60';
+  const textTertiary = isLightStyle ? 'text-slate-500' : 'text-white/40';
+  const textMuted = isLightStyle ? 'text-slate-300' : 'text-white/20';
+  const textActive = isLightStyle ? 'text-teal-600 font-bold' : 'text-teal-400 font-bold';
 
-  const cardBgClass = isCleanLight 
+  const cardBgClass = isLightStyle 
     ? 'bg-white border border-slate-200/80 shadow-[0_12px_40px_-5px_rgba(15,23,42,0.08)]' 
-    : isNavyPerf 
-    ? 'bg-slate-950/85 border border-slate-800 shadow-[0_15px_45px_rgba(0,0,0,0.5)]'
     : 'bg-white/5 border border-white/10 backdrop-blur-xl shadow-2xl';
 
-  const buttonBgClass = isCleanLight
+  const buttonBgClass = isLightStyle
     ? 'border border-slate-200/80 bg-white hover:bg-slate-50/80 hover:border-teal-500/40 hover:shadow-sm text-slate-800'
-    : isNavyPerf
-    ? 'border border-slate-800 bg-slate-900/40 hover:bg-slate-900 hover:border-teal-500/40 text-white'
     : 'border border-white/10 bg-white/5 hover:bg-teal-500/10 hover:border-teal-500/30 text-white';
 
-  const userIconBg = isCleanLight
+  const userIconBg = isLightStyle
     ? 'bg-slate-100 text-slate-400 group-hover:bg-teal-50 group-hover:text-teal-600'
-    : isNavyPerf
-    ? 'bg-slate-800 text-slate-400 group-hover:bg-teal-950 group-hover:text-teal-400'
     : 'bg-white/5 text-white/40 group-hover:bg-teal-500/20 group-hover:text-teal-400';
 
-  const inputStyleClass = isCleanLight
+  const inputStyleClass = isLightStyle
     ? 'bg-slate-50 border border-slate-200/80 focus:border-teal-500/50 text-slate-800 placeholder-slate-300 focus:bg-white focus:ring-4 focus:ring-teal-500/5'
-    : isNavyPerf
-    ? 'bg-slate-900/60 border border-slate-800 focus:border-teal-500/50 text-white placeholder-slate-600 focus:bg-slate-900'
     : 'bg-white/5 border border-white/10 focus:border-teal-500/50 text-white placeholder-slate-400';
 
-  const adminBtnClass = isCleanLight
+  const adminBtnClass = isLightStyle
     ? 'bg-white border border-slate-200 shadow-sm hover:border-red-500/40 text-slate-600 hover:text-red-600'
-    : isNavyPerf
-    ? 'bg-slate-900/85 border border-slate-800 hover:border-red-500/40 text-slate-300 hover:text-red-400'
     : 'bg-[#0c0c0c] border border-white/10 hover:border-red-500/50 text-white/60 hover:text-red-400';
 
-  const adminBoxClass = isCleanLight
+  const adminBoxClass = isLightStyle
     ? 'bg-white border border-red-200/80 shadow-[0_15px_45px_rgba(239,68,68,0.06)]'
-    : isNavyPerf
-    ? 'bg-slate-950 border border-red-900/40 shadow-[0_15px_45px_rgba(0,0,0,0.6)]'
     : 'bg-[#0c0c0c] border border-red-500/30 backdrop-blur-xl';
 
-  const changelogBoxClass = isCleanLight
+  const changelogBoxClass = isLightStyle
     ? 'bg-white border border-slate-200/80 shadow-[0_15px_45px_rgba(15,23,42,0.06)]'
-    : isNavyPerf
-    ? 'bg-slate-950 border border-slate-800 shadow-[0_15px_45px_rgba(0,0,0,0.6)]'
     : 'bg-[#0c0c0c] border border-white/20 backdrop-blur-xl';
 
-  const changelogWidgetBg = isCleanLight
+  const changelogWidgetBg = isLightStyle
     ? 'bg-slate-50/80 border border-slate-100'
-    : isNavyPerf
-    ? 'bg-slate-900/40 border border-slate-800'
     : 'bg-white/[0.03] border border-white/10';
 
-  const changelogBtnClass = isCleanLight
+  const changelogBtnClass = isLightStyle
     ? 'bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-700 shadow-[0_4px_12px_rgba(79,70,229,0.15)]'
-    : isNavyPerf
-    ? 'bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-900'
     : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_4px_12px_rgba(79,70,229,0.3)] hover:shadow-[0_4px_18px_rgba(79,70,229,0.5)]';
 
-  const timelineBorder = isCleanLight ? 'border-slate-100' : 'border-white/10';
+  const timelineBorder = isLightStyle ? 'border-slate-100' : 'border-white/10';
 
 
-  const mainBgStyle = isGlass 
-    ? {
-        background: `
-          radial-gradient(circle at 10% 20%, color-mix(in srgb, var(--accent-500) 18%, transparent) 0%, transparent 45%),
-          radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.14) 0%, transparent 50%),
-          radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.1) 0%, transparent 40%),
-          radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-          linear-gradient(135deg, #050505 0%, #08080a 100%)
-        `,
-        backgroundSize: '100% 100%, 100% 100%, 100% 100%, 24px 24px, 100% 100%',
-      }
-    : isFluidMesh
+  const mainBgStyle = isFluidMesh
     ? { backgroundColor: '#06040e' }
-    : isNavyPerf
-    ? {
-        background: `
-          radial-gradient(circle at 10% 10%, color-mix(in srgb, var(--accent-500) 15%, transparent) 0%, transparent 45%),
-          radial-gradient(circle at 90% 90%, color-mix(in srgb, var(--accent-500) 10%, transparent) 0%, transparent 45%),
-          linear-gradient(135deg, #020617 0%, #080c1e 100%)
-        `,
-        backgroundSize: '100% 100%, 100% 100%, 100% 100%',
-      }
     : {
         background: `
           radial-gradient(circle at 10% 20%, color-mix(in srgb, var(--accent-500) 8%, transparent) 0%, transparent 35%),
@@ -188,6 +150,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         `}</style>
 
         {isFluidMesh && <FluidMeshBackground />}
+        {designStyle === 'pusula' && (
+          <PusulaAuthHero activeLogoTheme={activeLogoTheme} activeTheme={activeTheme} designStyle={designStyle} />
+        )}
         
         <div className="w-full max-w-md my-auto relative z-10">
           <div className="text-center mb-10 flex flex-col items-center">
@@ -418,7 +383,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                 </div>
                 <ul className="space-y-2.5">
                   {log.changes.map((change, cIdx) => (
-                    <li key={cIdx} className={`text-xs leading-relaxed flex items-start gap-2 ${isCleanLight ? 'text-slate-600' : 'text-white/95'}`}>
+                    <li key={cIdx} className={`text-xs leading-relaxed flex items-start gap-2 ${isLightStyle ? 'text-slate-600' : 'text-white/95'}`}>
                       <span className="text-teal-500 mt-1 shrink-0">•</span>
                       <span>{change}</span>
                     </li>
@@ -431,16 +396,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
         {/* Admin Dashboard Modal */}
         {showAdminDashboard && (
-          <div className={`fixed inset-0 z-[100] flex items-center justify-center p-6 ${isCleanLight ? 'bg-slate-900/50 backdrop-blur-md' : 'bg-black/90 backdrop-blur-md'}`}>
+          <div className={`fixed inset-0 z-[100] flex items-center justify-center p-6 ${isLightStyle ? 'bg-slate-900/50 backdrop-blur-md' : 'bg-black/90 backdrop-blur-md'}`}>
             <div className={`w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-fade-in ${
-              isCleanLight
+              isLightStyle
                 ? 'bg-white border border-slate-200 text-slate-800'
-                : isNavyPerf
-                ? 'bg-slate-950 border border-slate-800 text-white'
                 : 'bg-[#0c0c0c] border border-white/10 text-white'
             }`}>
               {/* Header */}
-              <div className={`p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b ${isCleanLight ? 'border-slate-100' : 'border-white/5'}`}>
+              <div className={`p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b ${isLightStyle ? 'border-slate-100' : 'border-white/5'}`}>
                 <div>
                   <h2 className={`text-lg font-bold tracking-widest uppercase flex items-center gap-3 ${textPrimary}`}>
                     <Shield className="text-teal-500" size={24} />
@@ -449,7 +412,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   <p className={`text-xs font-mono mt-1 uppercase tracking-widest ${textTertiary}`}>Kullanıcı & Sistem Yönetimi</p>
                 </div>
                 
-                <div className={`flex p-1 rounded-xl w-full md:w-auto ${isCleanLight ? 'bg-slate-100' : isNavyPerf ? 'bg-slate-900' : 'bg-white/5'}`}>
+                <div className={`flex p-1 rounded-xl w-full md:w-auto ${isLightStyle ? 'bg-slate-100' : 'bg-white/5'}`}>
                   <button
                     onClick={() => setAdminTab('errors')}
                     className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition cursor-pointer ${
@@ -491,7 +454,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   <button 
                     onClick={() => setShowAdminDashboard(false)} 
                     className={`p-2 rounded-lg transition cursor-pointer ${
-                      isCleanLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-500' : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white'
+                      isLightStyle ? 'bg-slate-100 hover:bg-slate-200 text-slate-500' : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white'
                     }`}
                   >
                     <X size={20} />
@@ -512,7 +475,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                     <div className="space-y-4">
                       {errorLogs.map((log) => (
                         <div key={log.id} className={`rounded-xl overflow-hidden transition-colors ${
-                          isCleanLight 
+                          isLightStyle 
                             ? 'bg-slate-50 border border-slate-200 hover:border-slate-300' 
                             : 'bg-white/5 border border-white/10 hover:border-white/20'
                         }`}>
@@ -552,7 +515,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                           
                           {/* Expanded Stack Trace */}
                           {expandedLogId === log.id && (
-                            <div className={`p-4 border-t ${isCleanLight ? 'border-slate-200 bg-slate-100/50' : 'border-white/5 bg-black/40'}`}>
+                            <div className={`p-4 border-t ${isLightStyle ? 'border-slate-200 bg-slate-100/50' : 'border-white/5 bg-black/40'}`}>
                               <h4 className={`text-xs font-bold uppercase tracking-widest mb-3 ${textSecondary}`}>Stack Trace</h4>
                               <pre className="text-[10px] text-red-500/90 font-mono whitespace-pre-wrap overflow-x-auto bg-black p-4 rounded-lg border border-red-500/10">
                                 {log.stack || 'Stack trace bulunamadı.'}
@@ -578,7 +541,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                         const currentStatus = feedback.status || 'Okundu';
                         return (
                           <div key={feedback.id} className={`border rounded-xl overflow-hidden transition-colors ${
-                            isCleanLight ? 'bg-slate-50 border-slate-200' : 'bg-white/5 border-white/10'
+                            isLightStyle ? 'bg-slate-50 border-slate-200' : 'bg-white/5 border-white/10'
                           } ${feedback.type === 'error' ? 'border-red-500/20' : 'border-teal-500/20'}`}>
                             <div className="p-4 flex flex-col md:flex-row md:items-start justify-between gap-4">
                               <div className="flex items-start gap-4 flex-1">
@@ -586,11 +549,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                                   {feedback.type === 'error' ? <AlertTriangle size={20} /> : <MessageSquare size={20} />}
                                 </div>
                                 <div className="flex-1">
-                                  <p className={`text-sm whitespace-pre-wrap leading-relaxed ${isCleanLight ? 'text-slate-700' : 'text-white/90'}`}>{feedback.text}</p>
+                                  <p className={`text-sm whitespace-pre-wrap leading-relaxed ${isLightStyle ? 'text-slate-700' : 'text-white/90'}`}>{feedback.text}</p>
                                   {feedback.image && (
                                     <div className="mt-3">
                                       <span className={`text-[10px] uppercase font-bold tracking-wider block mb-1 ${textTertiary}`}>Ekli Görsel (Büyütmek için tıklayın):</span>
-                                      <div className={`relative group max-w-[200px] aspect-video rounded-lg overflow-hidden border transition cursor-zoom-in ${isCleanLight ? 'border-slate-200 hover:border-teal-500/50' : 'border-white/10 hover:border-teal-500/50'}`}>
+                                      <div className={`relative group max-w-[200px] aspect-video rounded-lg overflow-hidden border transition cursor-zoom-in ${isLightStyle ? 'border-slate-200 hover:border-teal-500/50' : 'border-white/10 hover:border-teal-500/50'}`}>
                                         <img 
                                           src={feedback.image} 
                                           alt="Ekli Görsel" 
@@ -623,7 +586,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                               <div className="shrink-0 flex flex-col md:items-end items-start gap-3 justify-between">
                                 <div className="flex flex-col gap-1 w-full">
                                   <span className={`text-[9px] uppercase font-bold tracking-widest block mb-0.5 md:text-right ${textTertiary}`}>Durumu Güncelle</span>
-                                  <div className={`flex items-center gap-1 p-1 rounded-lg border ${isCleanLight ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/5'}`}>
+                                  <div className={`flex items-center gap-1 p-1 rounded-lg border ${isLightStyle ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/5'}`}>
                                     <button
                                       onClick={() => {
                                         const newFeedbackList = feedbackList.map(f => f.id === feedback.id ? { ...f, status: 'Okundu' } : f);
@@ -665,7 +628,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                                         setFeedbackList(newFeedbackList);
                                       }
                                     }}
-                                    className={`p-2 rounded transition cursor-pointer ${isCleanLight ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-400'}`}
+                                    className={`p-2 rounded transition cursor-pointer ${isLightStyle ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-400'}`}
                                     title="Bu Bildirimi Sil"
                                   >
                                     <Trash2 size={16} />

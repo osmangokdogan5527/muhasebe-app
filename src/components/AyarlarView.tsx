@@ -1,3 +1,4 @@
+import type { NavPosition } from '../hooks/useAppSettings';
 import { ShortcutsSettings } from './settings/ShortcutsSettings';
 import { PermissionsSettings } from './settings/PermissionsSettings';
 import { AiSettings } from './settings/AiSettings';
@@ -46,6 +47,8 @@ export interface AyarlarViewProps {
   activeTheme: string;
   setActiveTheme: (theme: string) => void;
   designStyle: string;
+  navPosition: NavPosition;
+  setNavPosition: (position: NavPosition) => void;
   setDesignStyle: (style: string) => void;
   activeLogoTheme: string;
   setActiveLogoTheme: (theme: string) => void;
@@ -117,6 +120,8 @@ export default function AyarlarView({
   setActiveTheme,
   designStyle,
   setDesignStyle,
+  navPosition,
+  setNavPosition,
   activeLogoTheme,
   setActiveLogoTheme,
   appFontSize,
@@ -289,7 +294,7 @@ export default function AyarlarView({
       }
 
       // Verify current PIN matches (saved custom pin or defaults)
-      const isCurrentValid = currentAdminPinInput === escalationPin || ['1923', '1234', '9999'].includes(currentAdminPinInput);
+      const isCurrentValid = currentAdminPinInput === escalationPin;
       if (!isCurrentValid) {
         setAdminPinChangeError('Mevcut Yönetici PIN kodu hatalı!');
         return;
@@ -449,6 +454,8 @@ export default function AyarlarView({
             setActiveTheme={setActiveTheme}
             designStyle={designStyle}
             setDesignStyle={setDesignStyle}
+            navPosition={navPosition}
+            setNavPosition={setNavPosition}
             activeLogoTheme={activeLogoTheme}
             setActiveLogoTheme={setActiveLogoTheme}
             appFontSize={appFontSize}

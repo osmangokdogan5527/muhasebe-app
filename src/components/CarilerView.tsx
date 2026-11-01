@@ -25,6 +25,8 @@ import {
   Save,
   Calendar,
 } from "lucide-react";
+import { compareTransactions } from '../utils/cariLedger';
+import { formatDateISO } from '../utils/dateUtils';
 
 interface CarilerViewProps {
   showToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
@@ -377,14 +379,14 @@ function CarilerView({
     // Filter and sort transactions related to selected Cari
     const relatedTransactions = islemler
       .filter((t) => t.cariId === currentCari.id)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .sort(compareTransactions);
 
     let runningBalance = currentCari.openingBalance;
 
     return [
       {
         id: "opening",
-        date: currentCari.createdAt?.substring(0, 10) || "Açılış",
+        date: currentCari.createdAt && !isNaN(new Date(currentCari.createdAt).getTime()) ? formatDateISO(new Date(currentCari.createdAt)) : "Açılış",
         type: "Açılış Bakiyesi",
         description: "Hesap açılış bakiyesi",
         amount: Math.abs(currentCari.openingBalance),

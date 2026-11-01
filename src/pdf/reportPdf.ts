@@ -18,6 +18,7 @@ import {
   tint,
 } from './layout';
 import type { GeneratedPdf } from './invoicePdf';
+import { getTodayISO } from '../utils/dateUtils';
 
 export type ReportTone = 'neutral' | 'positive' | 'negative';
 
@@ -80,7 +81,7 @@ export async function createReportPdf(report: ReportDocument, branding: Document
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const contentWidth = pageWidth - PAGE_MARGIN * 2;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayISO();
   const title = report.title.toLocaleUpperCase('tr-TR');
 
   doc.setProperties({ title: report.title, subject: report.periodLabel || '', creator: 'Storm Ön Muhasebe' });

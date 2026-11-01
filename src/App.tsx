@@ -200,6 +200,7 @@ export default function App() {
   const {
     activeTheme, setActiveTheme,
     designStyle, setDesignStyle,
+    navPosition, setNavPosition,
     activeLogoTheme, setActiveLogoTheme,
     appFontSize, setAppFontSize,
     sidebarBg, setSidebarBg,
@@ -620,13 +621,13 @@ export default function App() {
     return rules;
   }, [currentThemeData]);
   const activePatternObj = SIDEBAR_PATTERNS.find(p => p.id === sidebarPattern) || SIDEBAR_PATTERNS[0];
-  const bodyPatternSvg = (activePatternObj.svg && designStyle !== 'clean-light' && designStyle !== 'pro-solid')
+  const bodyPatternSvg = (activePatternObj.svg && designStyle !== 'pusula')
     ? activePatternObj.svg
         .replace(/PATTERNCOLOR/g, sidebarPatternColor === 'white' ? '%23ffffff' : '%23000000')
         .replace(/OPACITY/g, (sidebarPatternOpacity * 0.5).toString()) // Slightly lower opacity for body
     : '';
-  const isLightSidebar = sidebarBg === '#ffffff';
-    const sidebarPatternStyle = (sidebarPattern !== 'none' && sidebarPatternOpacity > 0 && designStyle !== 'clean-light' && designStyle !== 'pro-solid') ? {
+  const isLightSidebar = sidebarBg === '#ffffff' && designStyle !== 'pusula';
+    const sidebarPatternStyle = (sidebarPattern !== 'none' && sidebarPatternOpacity > 0 && designStyle !== 'pusula') ? {
     backgroundImage: activePatternObj.svg
       ?.replace(/PATTERNCOLOR/g, sidebarPatternColor === 'white' ? '%23ffffff' : '%23000000')
       ?.replace(/OPACITY/g, sidebarPatternOpacity.toString()),
@@ -649,6 +650,8 @@ export default function App() {
       setActiveTheme={setActiveTheme}
       designStyle={designStyle}
       setDesignStyle={setDesignStyle}
+      navPosition={navPosition}
+      setNavPosition={setNavPosition}
       activeLogoTheme={activeLogoTheme}
       setActiveLogoTheme={setActiveLogoTheme}
       appFontSize={appFontSize}
@@ -913,7 +916,7 @@ export default function App() {
   }
 
   return (
-    <div data-design-style={designStyle} className={`min-h-screen relative ${(currentThemeData as any).bgClass || 'bg-[#050505]'} text-[#e0e0e0] flex flex-col md:flex-row font-sans overflow-x-hidden`}>
+    <div data-design-style={designStyle} data-nav-position={navPosition} className={`min-h-screen relative ${(currentThemeData as any).bgClass || 'bg-[#050505]'} text-[#e0e0e0] flex flex-col md:flex-row font-sans overflow-x-hidden`}>
       <GlobalStyles themeCssRules={themeCssRules} bodyPatternSvg={bodyPatternSvg} activePattern={activePatternObj} />
 
       {designStyle === 'fluid-mesh' && <FluidMeshBackground />}
@@ -1008,7 +1011,7 @@ export default function App() {
           />
         </div>
         <div className={activeTab === 'dashboard' ? 'block animate-fade-in' : 'hidden'}>
-          {renderWorkspaceView('dashboard', <DashboardView cariler={cariler} stoklar={stoklar} islemler={islemler} ceksenet={ceksenet} expenses={expenses} employeeTransactions={employeeTransactions} recurringTransactions={recurringTransactions} onNavigate={handleNavigate} />)}
+          {renderWorkspaceView('dashboard', <DashboardView cariler={cariler} stoklar={stoklar} islemler={islemler} ceksenet={ceksenet} expenses={expenses} employeeTransactions={employeeTransactions} recurringTransactions={recurringTransactions} bankAccounts={bankAccounts} accountTransactions={accountTransactions} onNavigate={handleNavigate} />)}
         </div>
         <div className={activeTab === 'pos' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('pos', <PosView
@@ -1078,7 +1081,7 @@ export default function App() {
           />)}
         </div>
         <div className={activeTab === 'ceksenet' ? 'block animate-fade-in' : 'hidden'}>
-          {renderWorkspaceView('ceksenet', <CekSenetView ceksenet={ceksenet} cariler={cariler} islemler={islemler} />)}
+          {renderWorkspaceView('ceksenet', <CekSenetView ceksenet={ceksenet} cariler={cariler} islemler={islemler} bankAccounts={bankAccounts} />)}
         </div>
         <div className={activeTab === 'masraflar' ? 'block animate-fade-in' : 'hidden'}>
           {renderWorkspaceView('masraflar', <MasraflarView expenses={expenses} recurringTransactions={recurringTransactions} bankAccounts={bankAccounts} cariler={cariler} aiPrefilledData={aiPrefilledData} onClearAiPrefilledData={() => setAiPrefilledData(null)} />)}

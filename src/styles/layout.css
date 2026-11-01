@@ -1,0 +1,211 @@
+/* =========================================================================
+   MENÜ KONUMU — sol / sağ / üst (masaüstü)
+   -------------------------------------------------------------------------
+   Kök öğede data-nav-position özniteliği bulunur (useAppSettings). Kurallar
+   yalnızca yerleşimi değiştirir; renkler tasarım stiline aittir.
+   Tüm tasarım stillerinde geçerlidir. Telefon görünümü (768px altı) etkilenmez.
+   ========================================================================= */
+
+@media (min-width: 768px) {
+  /* ---------------------------------------------------------------------
+     SAĞ: menü sağ kenarda
+     --------------------------------------------------------------------- */
+  .min-h-screen[data-nav-position="right"] {
+    flex-direction: row-reverse !important;
+  }
+
+  .min-h-screen[data-nav-position="right"] > aside {
+    margin-left: 0 !important;
+    margin-right: 1rem !important;
+  }
+
+  /* ---------------------------------------------------------------------
+     ÜST: menü sayfanın üstünde yatay bir komuta çubuğu
+     --------------------------------------------------------------------- */
+  .min-h-screen[data-nav-position="top"] {
+    flex-direction: column !important;
+  }
+
+  .min-h-screen[data-nav-position="top"] > aside {
+    width: auto !important;
+    max-width: 80rem;
+    align-self: stretch;
+    margin: 0.875rem 1rem 0 !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.5rem;
+    height: auto !important;
+    position: sticky !important;
+    top: 0.75rem;
+    z-index: 45 !important;
+    overflow: visible !important;
+    padding: 0.4rem 0.6rem !important;
+    border-radius: 22px !important;
+  }
+
+  @media (min-width: 1360px) {
+    .min-h-screen[data-nav-position="top"] > aside {
+      margin-left: max(1rem, calc((100% - 80rem) / 2 + 1rem)) !important;
+      margin-right: max(1rem, calc((100% - 80rem) / 2 + 1rem)) !important;
+    }
+  }
+
+  /* Işık halkaları yatay çubukta kullanılmaz */
+  .min-h-screen[data-nav-position="top"] > aside::before,
+  .min-h-screen[data-nav-position="top"] > aside::after {
+    display: none !important;
+  }
+
+  /* Marka: kompakt; büyük logo yerine yalnızca simge */
+  .min-h-screen[data-nav-position="top"] > aside > div:first-child {
+    padding: 0.25rem 0.5rem 0.25rem 0.25rem !important;
+    flex: 0 0 auto;
+  }
+
+  .min-h-screen[data-nav-position="top"] > aside > div:first-child svg[viewBox="0 0 200 200"] {
+    max-width: 2.5rem;
+    max-height: 2.5rem;
+  }
+
+  .min-h-screen[data-nav-position="top"] > aside > div:first-child :is(.w-36) {
+    width: 2.5rem !important;
+  }
+
+  /* Sekmeler yan yana */
+  .min-h-screen[data-nav-position="top"] > aside > nav {
+    flex: 1 1 auto;
+    overflow: visible !important;
+    padding: 0 !important;
+    direction: ltr !important;
+  }
+
+  .min-h-screen[data-nav-position="top"] > aside > nav > div {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+
+  .min-h-screen[data-nav-position="top"] > aside nav :is(.space-y-1) > * {
+    margin: 0 !important;
+  }
+
+  .min-h-screen[data-nav-position="top"] > aside > nav > div > div {
+    position: relative;
+  }
+
+  .min-h-screen[data-nav-position="top"] > aside nav button[id^="tab-btn-"] {
+    width: auto !important;
+    padding: 0.3rem !important;
+    justify-content: center !important;
+    gap: 0.25rem;
+  }
+
+  /* Yalnızca etkin sekmenin adı görünür; diğerleri simge (adı üzerine gelince) */
+  .min-h-screen[data-nav-position="top"] > aside nav button[id^="tab-btn-"] span.whitespace-nowrap {
+    display: none;
+  }
+
+  .min-h-screen[data-nav-position="top"] > aside nav button[id^="tab-btn-"][style*="background-color"] {
+    padding-right: 0.8rem !important;
+  }
+
+  .min-h-screen[data-nav-position="top"] > aside nav button[id^="tab-btn-"][style*="background-color"] span.whitespace-nowrap {
+    display: inline;
+  }
+
+  /* Finansal Hareketler alt menüsü açılır liste olur */
+  .min-h-screen[data-nav-position="top"] > aside nav .pl-3.pr-1 {
+    position: absolute;
+    top: calc(100% + 0.6rem);
+    left: 0;
+    width: 13.5rem;
+    z-index: 70;
+    margin: 0 !important;
+    padding: 0.4rem !important;
+    border-radius: 16px !important;
+    background: #111827 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 22px 44px -16px rgba(15, 23, 42, 0.55) !important;
+  }
+
+  /* Alt bilgi: profil satırı ve simge düğmeleri yan yana */
+  .min-h-screen[data-nav-position="top"] > aside > div:last-child {
+    margin: 0 !important;
+    padding: 0 !important;
+    flex: 0 0 auto;
+  }
+
+  .min-h-screen[data-nav-position="top"] > aside > div:last-child > div {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem !important;
+    border-radius: 16px !important;
+  }
+
+  .min-h-screen[data-nav-position="top"] > aside > div:last-child > div > * {
+    margin: 0 !important;
+  }
+
+  /* "Bulut durumu" satırı gizlenir; çevrimiçi bilgisi profil kartında zaten var */
+  .min-h-screen[data-nav-position="top"] > aside > div:last-child > div > div:first-child:not(:only-child) {
+    display: none !important;
+  }
+
+  .min-h-screen[data-nav-position="top"] > aside > div:last-child > div > button {
+    width: auto !important;
+    padding: 0.45rem !important;
+  }
+
+  .min-h-screen[data-nav-position="top"] > aside > div:last-child > div > button span {
+    display: none;
+  }
+
+  .min-h-screen[data-nav-position="top"] > aside > div:last-child > div > div {
+    padding: 0.3rem 0.4rem !important;
+  }
+
+  .min-h-screen[data-nav-position="top"] > aside > div:last-child > div > div .min-w-0.flex-1 {
+    max-width: 8rem;
+  }
+
+  /* İçerik çubuğun altında, tam genişlikte ortalanır */
+  .min-h-screen[data-nav-position="top"] > main {
+    width: 100%;
+  }
+}
+
+/* Pusula: üst çubuktaki açılır liste ve şerit renkleri */
+@media (min-width: 768px) {
+  .min-h-screen[data-design-style="pusula"][data-nav-position="top"] > aside nav .pl-3.pr-1.pl-3 {
+    background: linear-gradient(160deg, var(--accent-600), var(--accent-800)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  }
+
+  [data-design-style="pusula"][data-nav-position="top"] > aside {
+    border-radius: 24px !important;
+  }
+
+  /* Sağda dururken ışık halkaları sola bakar */
+  [data-design-style="pusula"][data-nav-position="right"] > aside::before {
+    right: auto;
+    left: -120px;
+  }
+
+  [data-design-style="pusula"][data-nav-position="right"] > aside::after {
+    left: auto;
+    right: -140px;
+  }
+}
+
+/* Menü sağdayken Storm AI düğmesi ve sohbet penceresi sol alta geçer */
+@media (min-width: 768px) {
+  html[data-nav-position="right"] .fixed.bottom-20.z-\[100\] {
+    right: auto !important;
+    left: 1rem !important;
+  }
+}
