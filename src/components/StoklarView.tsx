@@ -140,8 +140,6 @@ function StoklarView({
   
   // PIN Verification for restricted employee actions
   const [pinVerificationAction, setPinVerificationAction] = useState<(() => void) | null>(null);
-  const [pinInput, setPinInput] = useState('');
-  const [pinError, setPinError] = useState('');
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
 
   const checkPermissionAndExecute = useCallback((actionKey: 'delete_stock' | 'decrease_stock' | 'edit_stock', executeAction: () => void) => {
@@ -149,8 +147,6 @@ function StoklarView({
       executeAction();
     } else {
       setPinVerificationAction(() => executeAction);
-      setPinInput('');
-      setPinError('');
       setIsPinModalOpen(true);
     }
   }, [isSecurityActive, userRole, actionPermissions]);
@@ -914,10 +910,6 @@ function StoklarView({
 
       <StoklarExtraModals 
         isPinModalOpen={isPinModalOpen}
-        pinInput={pinInput}
-        setPinInput={setPinInput}
-        pinError={pinError}
-        setPinError={setPinError}
         escalationPin={escalationPin}
         pinVerificationAction={pinVerificationAction}
         setPinVerificationAction={setPinVerificationAction}
