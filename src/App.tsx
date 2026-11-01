@@ -882,7 +882,7 @@ export default function App() {
   }
 
   // Kullanıcı sistemi açıksa önce "Kim kullanıyor?" ekranı
-  if (staff.systemActive && !staff.currentUser) {
+  if ((staff.systemActive && !staff.currentUser) || staff.waitingForUsers) {
     return (
       <>
         <GlobalStyles themeCssRules={themeCssRules} bodyPatternSvg={bodyPatternSvg} activePattern={activePatternObj} />

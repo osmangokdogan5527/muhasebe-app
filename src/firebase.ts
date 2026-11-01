@@ -1193,10 +1193,12 @@ export async function deleteCredit(id: string) {
 
 // FİRMA AYARLARI (users/{firma}/ayarlar/{ayarId}) - firmanın tüm cihazlarında ortak
 // Kullanılanlar: belgeGorunumu (PDF logo, firma bilgileri, renk), etiketTasarimi (etiket ölçü/içerik)
-export function subscribeSettingDoc(settingId: string, callback: (data: Record<string, any> | null) => void) {
+export function subscribeSettingDoc(settingId: string, callback: (data: Record<string, any> | null, meta: { fromCache: boolean }) => void) {
   const ref = doc(db, getPath(AYARLAR_COLL), settingId);
   return onSnapshot(ref, (snapshot) => {
-    callback(snapshot.exists() ? (snapshot.data() as Record<string, any>) : null);
+    // fromCache: veri sunucudan doğrulanmadı (çevrimdışı ya da önbellekten ilk okuma)
+    const fromCache = !!(snapshot as any).metadata?.fromCache;
+    callback(snapshot.exists() ? (snapshot.data() as Record<string, any>) : null, { fromCache });
   }, (error) => handleFirestoreError(error, OperationType.GET, `${getPath(AYARLAR_COLL)}/${settingId}`));
 }
 

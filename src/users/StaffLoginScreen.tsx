@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Delete, LogOut, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Delete, LogOut, ShieldCheck, User as UserIcon, WifiOff } from 'lucide-react';
 import { StaffUser, MAX_PIN_LENGTH, MIN_PIN_LENGTH, checkPin } from './staffUsers';
 import { isMasterCode } from '../utils/masterCode';
 import { logError } from '../utils/errorLogger';
@@ -19,6 +19,8 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ firmName, us
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
+  // Dokunmatik cihazlarda gizli alana otomatik odaklanılmaz (ekran klavyesi tuş takımını örtmesin)
+  const finePointer = typeof navigator === 'undefined' || !/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
   const owners = users.filter((u) => u.role === 'owner');
   const staff = users.filter((u) => u.role !== 'owner');
 
@@ -63,10 +65,16 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ firmName, us
         <div className="text-center mb-6">
           <div className="text-[11px] uppercase tracking-widest text-slate-400">{firmName}</div>
           <h1 className="text-2xl font-extrabold mt-1">{selected ? `Merhaba, ${selected.name}` : 'Kim kullanıyor?'}</h1>
-          <p className="text-xs text-slate-400 mt-1">{selected ? 'PIN kodunuzu girin' : 'Adınızı seçip kendi PIN kodunuzla girin'}</p>
+          <p className="text-xs text-slate-400 mt-1">{users.length === 0 ? 'İnternet bağlantısı bekleniyor' : selected ? 'PIN kodunuzu girin' : 'Adınızı seçip kendi PIN kodunuzla girin'}</p>
         </div>
 
-        {!selected ? (
+        {users.length === 0 ? (
+          <div id="staff-waiting" className="rounded-3xl bg-white/5 border border-white/10 p-6 text-center">
+            <WifiOff size={28} className="mx-auto text-amber-300 mb-3" />
+            <p className="text-sm font-bold text-white">Kullanıcı listesi bekleniyor</p>
+            <p className="text-xs text-slate-400 mt-1">Bu firmada kullanıcı girişi açık. Listeyi almak için cihazı internete bağlayın; bağlanınca ekran kendiliğinden açılır.</p>
+          </div>
+        ) : !selected ? (
           <div className="space-y-2">
             {[...owners, ...staff].map((u) => (
               <button
@@ -98,7 +106,7 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ firmName, us
               id="staff-pin-input"
               type="password"
               inputMode="numeric"
-              autoFocus
+              autoFocus={finePointer}
               value={pin}
               maxLength={MAX_PIN_LENGTH}
               onChange={(e) => {

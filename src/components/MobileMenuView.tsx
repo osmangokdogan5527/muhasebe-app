@@ -244,6 +244,18 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
           </button>
         </div>
 
+        {onSwitchUser && (
+          <button
+            id="mobile-switch-user"
+            onClick={onSwitchUser}
+            className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl border border-white/10 text-zinc-200 hover:text-white transition cursor-pointer font-bold"
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+          >
+            <Repeat size={13} />
+            <span className="text-[11px] uppercase tracking-widest">Kullanıcı Değiştir</span>
+          </button>
+        )}
+
         {isSecurityActive && (userRole === 'employee' ? (
           <button
             onClick={() => {
