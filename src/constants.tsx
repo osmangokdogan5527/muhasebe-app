@@ -412,31 +412,29 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.8.6';
+export const APP_VERSION = '1.8.8';
 
 export const CHANGELOG = {
-  version: '1.8.6',
+  version: '1.8.8',
   features: [
-    "Pusula Arayüzü: Yeni varsayılan açık tasarım. Menü tema renginde kavisli bir şerit, sayfa başlıkları gradyan bant, kartlarda renkli üst şerit ve gradyan simge rozetleri; giriş ekranında marka paneli. Telefonda da kullanılır.",
-    "Menü Konumu: Ayarlar > Arayüz & Menü'den menü solda, sağda ya da üstte yatay çubuk olarak kullanılabilir.",
-    "Veresiye Satış: Hızlı Satış'ta VERESİYE [F5] düğmesi; tutar seçili müşterinin açık hesabına yazılır. Müşteri listesinden ad ve telefonla hızlıca yeni müşteri eklenebilir.",
-    "Müşteri Bakiyesi Kasada: Seçili müşterinin güncel borcu, veresiye limiti ve satış sonrası bakiyesi kasa ve telefon satış ekranında görünür; parçalı ödemede 'Kalanı veresiyeye yaz', telefonda peşinat alanı.",
-    "Veresiye Limiti: Cari kartına limit tanımlanabilir; limit aşılacaksa satışta uyarı ve onay sorulur.",
-    "Veresiye Fişi: Fişte açık hesaba yazılan tutar, önceki ve güncel bakiye ile müşteri imza alanı yer alır.",
-    "Satış Fiyatı KDV Dahil / Hariç: Stok kartında seçilir; kasa ve etiket KDV dahil, fatura KDV hariç fiyatı kendiliğinden hesaplar.",
-    "Karşılıksız Çek: Karşılıksız işaretlenen çekte cari otomatik yeniden borçlandırılır (isteğe bağlı); portföye geri almada tahsil, ödeme, ciro ve karşılıksız hareketleri geri alınır.",
+    "Kullanıcılar ve Kişiye Özel Giriş: Her çalışan kendi adını seçip kendi PIN'iyle girer ('Kim kullanıyor?' ekranı). Sahip, Ayarlar > Kullanıcılar'dan kullanıcı ekler, PIN sıfırlar, pasif yapar; her çalışana görebileceği ekranları ve yapabileceği işlemleri tek tek verir.",
+    "Otomatik Çıkış: 20 dakika işlem yapılmazsa oturum kapanır; menüde 'Kullanıcı Değiştir' düğmesi.",
+    "Sahip Onayı: Çalışanın yetkisi olmayan işlemler sahibin kendi PIN'iyle onaylanır.",
+    "Kim Yaptı: Satış, tahsilat, cari, stok ve diğer kayıtlara kaydeden ve düzenleyen kişi yazılır; Finansal Hareketler listesinde görünür.",
+    "Hareket Günlüğü: Girişler, çıkışlar, satışlar, tahsilatlar, silme ve düzenlemeler kaydın eski hâliyle birlikte saklanır.",
+    "Çalışan Takibi (yalnızca sahip): Kişi bazında çalışma saatleri, satış ve tahsilat toplamı, silme/düzenleme sayısı; zaman çizelgesi, riskli işlemler kırmızı, önce/sonra karşılaştırması ve gün sonu PDF raporu.",
+    "Telefonda Tek Düzen: Saha modu kaldırıldı; telefon tam sürümü kullanır. Pratik Hızlı Satış ve Tahsilat ekranları ana menüde.",
+    "Belge Türü ve Boyutu Her Yerde: Hızlı satış dahil her yerden Fiş 80 mm / 58 mm ya da Fatura A4 / A5 alınabilir; fatura, makbuz, ekstre ve raporlar A5 olarak da çıkar.",
+    "Veresiye Takibi: Cari Hesaplar'da açık borçların yaşlandırması (kaç gündür ödenmedi), sıralama ve WhatsApp ile hatırlatma.",
+    "KDV'siz Belge: KDV olmayan satışta fiş ve faturada KDV satırı/sütunu gösterilmez; KDV varsa oranıyla yazılır.",
+    "Pusula Logosu ve Pencereler: Logo tema rengine uygun hâle geldi; askıdaki satışlar, yedekleme sihirbazı ve belge pencereleri Pusula'ya uyarlandı.",
+    "Yazılım Sağlayıcısı Ana Kodu: Yönetici Paneli yalnızca sağlayıcı koduyla açılır; PIN'ini unutan firmanın PIN'i sağlayıcı tarafından sıfırlanabilir.",
   ],
   fixes: [
-    "Kasadan yapılan satış İşlemler'den düzenlenince nakit/kart tahsilatı kayboluyor, satış veresiyeye dönüyordu.",
-    "Fatura düzenleme yarıda kalırsa eski fatura siliniyordu; düzenleme artık tek seferde yazılır.",
-    "Çek/senet tahsil edildiğinde ya da bankadan ödendiğinde cari bakiyesi iki kez etkileniyordu.",
-    "Ana sayfadaki Kasa/Banka/POS tutarları açılış bakiyelerini ve virmanları saymıyordu; Kasa ekranıyla aynı hesaplanır.",
-    "Satış faturasında KDV dahil fiyatlı üründe KDV iki kez biniyordu.",
-    "İşlemler'den alınan POS fişinde nakit/kartla ödenmiş satış 'Açık Hesap' görünüyordu.",
-    "Excel'den cari aktarımında 1.234,56 gibi tutarlar yanlış okunuyordu; yıllık tekrarlayan işlemde 29 Şubat 1 Mart'a kayıyordu; gece 00:00-03:00 arası PDF tarihleri bir önceki günü gösteriyordu.",
-    "Geniş pencereler (ör. satış faturası) sol menünün altında kalıp kesiliyordu.",
-    "Güvenlik: Yönetici PIN'i dışında her zaman kabul edilen sabit kodlar kaldırıldı.",
-    "Sadeleştirme: Tasarım stilleri Pusula (açık) ve Sıvı Mesh (koyu) olarak ikiye indi; kasadaki yanlış kurla çalışan para birimi seçici kaldırıldı.",
+    "Android'de WhatsApp ile PDF paylaşımı açılmıyordu; paylaşım düzeltildi, olmazsa dosya indirilip yol gösterilir.",
+    "Kasa kısayolları (F2/F3/F5) KDV ya da iskonto değişince eski tutarla satış yapıyordu.",
+    "Kısa fişler yan dönmüş ve kesik çıkıyordu.",
+    "Çevrimdışı ve kullanıcı listesi henüz inmemiş cihazda uygulama herkese açık başlamaz; bağlantı beklenir.",
   ]
 };
 
@@ -677,6 +675,28 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.8.8",
+    date: "01.11.2026",
+    changes: [
+      "Kullanıcılar ve Kişiye Özel Giriş: Her çalışan kendi adını seçip kendi PIN'iyle girer ('Kim kullanıyor?' ekranı). Sahip, Ayarlar > Kullanıcılar'dan kullanıcı ekler, PIN sıfırlar, pasif yapar; her çalışana görebileceği ekranları ve yapabileceği işlemleri tek tek verir.",
+      "Otomatik Çıkış: 20 dakika işlem yapılmazsa oturum kapanır; menüde 'Kullanıcı Değiştir' düğmesi.",
+      "Sahip Onayı: Çalışanın yetkisi olmayan işlemler sahibin kendi PIN'iyle onaylanır.",
+      "Kim Yaptı: Satış, tahsilat, cari, stok ve diğer kayıtlara kaydeden ve düzenleyen kişi yazılır; Finansal Hareketler listesinde görünür.",
+      "Hareket Günlüğü: Girişler, çıkışlar, satışlar, tahsilatlar, silme ve düzenlemeler kaydın eski hâliyle birlikte saklanır.",
+      "Çalışan Takibi (yalnızca sahip): Kişi bazında çalışma saatleri, satış ve tahsilat toplamı, silme/düzenleme sayısı; zaman çizelgesi, riskli işlemler kırmızı, önce/sonra karşılaştırması ve gün sonu PDF raporu.",
+      "Telefonda Tek Düzen: Saha modu kaldırıldı; telefon tam sürümü kullanır. Pratik Hızlı Satış ve Tahsilat ekranları ana menüde.",
+      "Belge Türü ve Boyutu Her Yerde: Hızlı satış dahil her yerden Fiş 80 mm / 58 mm ya da Fatura A4 / A5 alınabilir; fatura, makbuz, ekstre ve raporlar A5 olarak da çıkar.",
+      "Veresiye Takibi: Cari Hesaplar'da açık borçların yaşlandırması (kaç gündür ödenmedi), sıralama ve WhatsApp ile hatırlatma.",
+      "KDV'siz Belge: KDV olmayan satışta fiş ve faturada KDV satırı/sütunu gösterilmez; KDV varsa oranıyla yazılır.",
+      "Pusula Logosu ve Pencereler: Logo tema rengine uygun hâle geldi; askıdaki satışlar, yedekleme sihirbazı ve belge pencereleri Pusula'ya uyarlandı.",
+      "Yazılım Sağlayıcısı Ana Kodu: Yönetici Paneli yalnızca sağlayıcı koduyla açılır; PIN'ini unutan firmanın PIN'i sağlayıcı tarafından sıfırlanabilir.",
+      "Android'de WhatsApp ile PDF paylaşımı açılmıyordu; paylaşım düzeltildi, olmazsa dosya indirilip yol gösterilir.",
+      "Kasa kısayolları (F2/F3/F5) KDV ya da iskonto değişince eski tutarla satış yapıyordu.",
+      "Kısa fişler yan dönmüş ve kesik çıkıyordu.",
+      "Çevrimdışı ve kullanıcı listesi henüz inmemiş cihazda uygulama herkese açık başlamaz; bağlantı beklenir.",
+    ]
+  },
   {
     version: "1.8.6",
     date: "01.11.2026",
