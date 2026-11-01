@@ -31,8 +31,27 @@ export async function isMasterCode(input: string): Promise<boolean> {
   }
 }
 
-/** Firma PIN'i ya da sağlayıcı ana kodu ile yetki doğrulaması */
+type AdminVerifier = (input: string) => Promise<boolean>;
+let ownerVerifier: AdminVerifier | null = null;
+
+/**
+ * Kullanıcı sistemi açıkken onay pencereleri firma sahiplerinin kendi PIN'lerini de kabul eder.
+ * Uygulama, sahip listesi değiştikçe doğrulayıcıyı yeniler; null verilirse kaldırılır.
+ */
+export function registerAdminVerifier(fn: AdminVerifier | null): void {
+  ownerVerifier = fn;
+}
+
+/** Firma PIN'i, sahip PIN'i ya da sağlayıcı ana kodu ile yetki doğrulaması */
 export async function isValidAdminCode(input: string, firmPin: string): Promise<boolean> {
-  if (input && firmPin && input === firmPin) return true;
+  if (!input) return false;
+  if (firmPin && input === firmPin) return true;
+  if (ownerVerifier) {
+    try {
+      if (await ownerVerifier(input)) return true;
+    } catch (err) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'masterCode.ownerVerifier');
+    }
+  }
   return isMasterCode(input);
 }

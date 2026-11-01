@@ -644,18 +644,35 @@ export const AppModals: React.FC<AppModalsProps> = ({
                       showToast('Yönetici modu başarıyla aktif edildi. Tüm yetkiler açıldı!', 'success');
                     };
                     // Firma PIN'i ya da (PIN unutulduysa) yazılım sağlayıcısının ana kodu
-                    if (val === escalationPin) {
+                    if (escalationPin && val === escalationPin) {
                       grantAdmin();
-                    } else if (val.length === MASTER_CODE_LENGTH) {
+                    } else if (val.length >= 4) {
+                      // Sahip PIN'i 4-6 hane olabilir; hata yalnızca 6 hanede gösterilir
                       isValidAdminCode(val, escalationPin).then((ok) => {
                         if (ok) {
                           grantAdmin();
-                        } else {
+                        } else if (val.length === MASTER_CODE_LENGTH) {
                           setAdminPinError('Hatalı Yönetici PIN kodu! Lütfen tekrar deneyiniz.');
                           setAdminPinInput('');
                         }
                       }).catch((err) => logError(err instanceof Error ? err : new Error(String(err)), 'AppModals.adminLogin'));
                     }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter' || !adminPinInput) return;
+                    e.preventDefault();
+                    const val = adminPinInput;
+                    isValidAdminCode(val, escalationPin).then((ok) => {
+                      if (ok) {
+                        setUserRole('admin');
+                        setIsAdminPinModalOpen(false);
+                        setAdminPinInput('');
+                        showToast('Yönetici modu başarıyla aktif edildi. Tüm yetkiler açıldı!', 'success');
+                      } else {
+                        setAdminPinError('Hatalı Yönetici PIN kodu! Lütfen tekrar deneyiniz.');
+                        setAdminPinInput('');
+                      }
+                    }).catch((err) => logError(err instanceof Error ? err : new Error(String(err)), 'AppModals.adminLoginEnter'));
                   }}
                   placeholder="••••"
                   className="w-full bg-white/5 border border-white/10 focus:border-teal-500/50 rounded-xl px-4 py-3.5 text-center text-3xl tracking-[1em] text-teal-400 placeholder-zinc-600 transition outline-none font-mono"

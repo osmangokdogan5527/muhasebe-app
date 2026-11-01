@@ -49,6 +49,11 @@ import { MobileHeader } from "./components/MobileHeader";
 import { MobileMenuView } from "./components/MobileMenuView";
 import { MobileBottomNav } from "./components/MobileBottomNav";
 import { AuthScreen } from "./components/AuthScreen";
+import { useStaffSession } from "./users/useStaffSession";
+import { StaffLoginScreen } from "./users/StaffLoginScreen";
+import { ALL_STAFF_TAB_IDS } from "./users/UsersSettings";
+import { DEFAULT_STAFF_TABS, StaffActions, checkPin, restrictedTabsFor } from "./users/staffUsers";
+import { registerAdminVerifier } from "./utils/masterCode";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { AppModals } from "./components/AppModals";
 import { 
@@ -121,7 +126,7 @@ export default function App() {
   useEffect(() => {
     setVisitedTabs((prev) => (prev.has(activeTab) ? prev : new Set(prev).add(activeTab)));
   }, [activeTab]);
-  const [userRole, setUserRole] = useState<'admin' | 'employee'>('employee');
+  const [baseUserRole, setUserRole] = useState<'admin' | 'employee'>('employee');
   const [isAdminPinModalOpen, setIsAdminPinModalOpen] = useState(false);
   const [adminPinInput, setAdminPinInput] = useState('');
   const [adminPinError, setAdminPinError] = useState<string | null>(null);
@@ -268,7 +273,7 @@ export default function App() {
   const [profilePhoto, setProfilePhoto] = useState('');
   
   // Dynamic permissions and admin PIN states
-  const [sensitiveTabs, setSensitiveTabs] = useState<string[]>(() => {
+  const [baseSensitiveTabs, setSensitiveTabs] = useState<string[]>(() => {
     const saved = localStorage.getItem('storm_muhasebe_sensitive_tabs');
     if (saved) {
       try {
@@ -280,16 +285,16 @@ export default function App() {
     return ['dashboard', 'kasa', 'ceksenet', 'masraflar', 'calisanlar', 'krediler', 'raporlar', 'ayarlar'];
   });
 
-  const [escalationPin, setEscalationPin] = useState<string>(() => {
+  const [baseEscalationPin, setEscalationPin] = useState<string>(() => {
     return localStorage.getItem('storm_muhasebe_admin_pin') || '1923';
   });
 
-  const [isSecurityActive, setIsSecurityActive] = useState<boolean>(() => {
+  const [baseSecurityActive, setIsSecurityActive] = useState<boolean>(() => {
     return localStorage.getItem('storm_muhasebe_security_active') === 'true';
   });
 
   // Dynamic action-level permissions for employees (true means ALLOWED, false means RESTRICTED)
-  const [actionPermissions, setActionPermissions] = useState<{
+  const [baseActionPermissions, setActionPermissions] = useState<{
     delete_sale: boolean;
     delete_payment: boolean;
     delete_stock: boolean;
@@ -318,6 +323,54 @@ export default function App() {
     }
     return defaultPerms;
   });
+
+  // ---- Firma içi kullanıcılar (sahip / çalışan) ----
+  // Sistem açıkken (en az bir aktif kullanıcı) yetkiler giriş yapan kişiden gelir; kapalıyken eski tek PIN'li sistem geçerlidir.
+  const staff = useStaffSession(user?.uid);
+  const staffUser = staff.currentUser;
+  const isStaffSystem = staff.systemActive;
+  const userRole: 'admin' | 'employee' = isStaffSystem
+    ? (staffUser?.role === 'owner' ? 'admin' : baseUserRole)
+    : baseUserRole;
+  const isSecurityActive = isStaffSystem ? true : baseSecurityActive;
+  // Sistem açıkken eski firma PIN'i geçmez; onaylar sahip PIN'i (ya da sağlayıcı ana kodu) ister
+  const escalationPin = isStaffSystem ? '' : baseEscalationPin;
+  const sensitiveTabs = useMemo(
+    () => (isStaffSystem && staffUser ? restrictedTabsFor(staffUser, ALL_STAFF_TAB_IDS) : baseSensitiveTabs),
+    [isStaffSystem, staffUser, baseSensitiveTabs],
+  );
+  const actionPermissions = useMemo(
+    () => (isStaffSystem && staffUser ? { ...baseActionPermissions, ...staffUser.actions } : baseActionPermissions),
+    [isStaffSystem, staffUser, baseActionPermissions],
+  );
+  // Eski personel ayarları, yeni eklenen çalışanlar için varsayılan yetki olur
+  const staffLegacyDefaults = useMemo(() => ({
+    allowedTabs: baseSecurityActive
+      ? ALL_STAFF_TAB_IDS.filter((t) => !baseSensitiveTabs.includes(t === 'tahsilat' ? 'islemler' : t))
+      : [...DEFAULT_STAFF_TABS],
+    actions: { ...baseActionPermissions } as StaffActions,
+  }), [baseSecurityActive, baseSensitiveTabs, baseActionPermissions]);
+
+  // Kişi değişince yükseltilmiş yönetici yetkisi düşer
+  useEffect(() => {
+    if (isStaffSystem) setUserRole('employee');
+  }, [isStaffSystem, staffUser?.id]);
+
+  // Onay pencereleri sahiplerin kendi PIN'lerini kabul eder
+  useEffect(() => {
+    if (!isStaffSystem) {
+      registerAdminVerifier(null);
+      return;
+    }
+    const owners = staff.activeUsers.filter((u) => u.role === 'owner');
+    registerAdminVerifier(async (input) => {
+      for (const owner of owners) {
+        if (await checkPin(owner, input)) return true;
+      }
+      return false;
+    });
+    return () => registerAdminVerifier(null);
+  }, [isStaffSystem, staff.activeUsers]);
 
   useEffect(() => {
     if (user) {
@@ -377,7 +430,8 @@ export default function App() {
 
   const handleNavigate = (tabId: string) => {
     // Tahsilat ekranı Finansal Hareketler yetkisine bağlıdır
-    const permissionTab = tabId === 'tahsilat' ? 'islemler' : tabId;
+    // Kullanıcı sisteminde Tahsilat ayrıca yetkilendirilir
+    const permissionTab = tabId === 'tahsilat' && !isStaffSystem ? 'islemler' : tabId;
     if (isSecurityActive && userRole === 'employee' && sensitiveTabs.includes(permissionTab)) {
       setAdminPinError(null);
       setAdminPinInput('');
@@ -386,6 +440,14 @@ export default function App() {
     }
     setActiveTab(tabId as any);
   };
+  // Çalışan izinli olmadığı bir ekranda kaldıysa (giriş, kişi değişimi, yetki değişimi) izinli ekrana geçer
+  useEffect(() => {
+    if (!isStaffSystem || !staffUser || userRole !== 'employee' || activeTab === 'menu') return;
+    if (!sensitiveTabs.includes(activeTab)) return;
+    const allowed = [...tabOrder, 'tahsilat'].find((t) => !sensitiveTabs.includes(t) && !hiddenTabs.includes(t));
+    setActiveTab(isMobileScreen ? 'menu' : (allowed || 'menu'));
+  }, [isStaffSystem, staffUser, userRole, activeTab, sensitiveTabs, tabOrder, hiddenTabs, isMobileScreen]);
+
   const { shortcuts, setShortcuts } = useAppShortcuts(handleNavigate, setPendingIslemModal, setPendingAddCari, setPendingAddStock);
   const [aiPrefilledData, setAiPrefilledData] = useState<{
     islem: 'sale' | 'purchase' | 'collection' | 'payment' | 'expense' | 'employee_payment' | 'sale_return' | 'purchase_return' | 'add_customer' | 'add_supplier' | 'add_product' | string;
@@ -706,6 +768,8 @@ export default function App() {
       setSensitiveTabs={setSensitiveTabs}
       shortcuts={shortcuts}
       setShortcuts={setShortcuts}
+      staff={staff}
+      staffLegacyDefaults={staffLegacyDefaults}
     />
   );
 
@@ -787,12 +851,34 @@ export default function App() {
     );
   }
 
-  if (loading) {
+  if (loading || !staff.loaded) {
     return (
       <LoadingScreen
         currentThemeData={currentThemeData}
         themeCssRules={themeCssRules}
       />
+    );
+  }
+
+  // Kullanıcı sistemi açıksa önce "Kim kullanıyor?" ekranı
+  if (staff.systemActive && !staff.currentUser) {
+    return (
+      <>
+        <GlobalStyles themeCssRules={themeCssRules} bodyPatternSvg={bodyPatternSvg} activePattern={activePatternObj} />
+        <StaffLoginScreen
+          firmName={user.displayName || 'Firma'}
+          users={staff.activeUsers}
+          designStyle={designStyle}
+          onLogin={(u) => {
+            staff.login(u);
+            setActiveTab(isMobileScreen ? 'menu' : (u.role === 'owner' || u.allowedTabs.includes('dashboard') ? 'dashboard' : (u.allowedTabs.find((t) => t !== 'tahsilat') || 'menu')));
+          }}
+          onSignOutFirm={() => {
+            staff.logout();
+            handleSignOut();
+          }}
+        />
+      </>
     );
   }
 
@@ -898,7 +984,7 @@ export default function App() {
         showToast={showToast as any}
         setPendingIslemModal={setPendingIslemModal}
         setActiveTab={setActiveTab}
-        isSecurityActive={isSecurityActive}
+        isSecurityActive={isSecurityActive && !(isStaffSystem && staffUser?.role === 'owner')}
         isOnline={isOnline}
         user={user}
         handleSignOut={handleSignOut}
@@ -907,6 +993,8 @@ export default function App() {
         setAdminPinInput={setAdminPinInput}
         setIsAdminPinModalOpen={setIsAdminPinModalOpen}
         setUserRole={setUserRole}
+        staffUserName={isStaffSystem ? staffUser?.name : null}
+        onSwitchUser={isStaffSystem ? staff.logout : undefined}
       />
       <MobileHeader
         sidebarBg={sidebarBg}
@@ -961,7 +1049,9 @@ export default function App() {
             setPendingIslemModal={setPendingIslemModal}
             showToast={showToast as any}
             setActiveTab={setActiveTab}
-            isSecurityActive={isSecurityActive}
+            isSecurityActive={isSecurityActive && !(isStaffSystem && staffUser?.role === 'owner')}
+            staffUserName={isStaffSystem ? staffUser?.name : null}
+            onSwitchUser={isStaffSystem ? staff.logout : undefined}
           />
         </div>
         <div className={activeTab === 'dashboard' ? 'block animate-fade-in' : 'hidden'}>

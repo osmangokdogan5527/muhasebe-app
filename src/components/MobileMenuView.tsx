@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lock, LogOut, ShieldCheck, ChevronDown, ShoppingCart, ArrowDownLeft } from 'lucide-react';
+import { Repeat, Lock, LogOut, ShieldCheck, ChevronDown, ShoppingCart, ArrowDownLeft } from 'lucide-react';
 import { TAB_DEFS } from '../constants';
 
 interface MobileMenuViewProps {
@@ -20,6 +20,10 @@ interface MobileMenuViewProps {
   setPendingIslemModal: (modal: any) => void;
   showToast: (msg: string, type: string) => void;
   setActiveTab: (tab: any) => void;
+  /** Kullanıcı sistemi açıkken giriş yapan kişinin adı */
+  staffUserName?: string | null;
+  /** Kullanıcı sistemi açıkken: oturumu kapatıp "Kim kullanıyor?" ekranına döner */
+  onSwitchUser?: () => void;
   isSecurityActive: boolean;
 }
 
@@ -41,6 +45,8 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
   setPendingIslemModal,
   showToast,
   setActiveTab,
+  staffUserName,
+  onSwitchUser,
   isSecurityActive,
 }) => {
   return (
@@ -204,20 +210,20 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
               <img src={(user as any).photoURL} alt="Profile" className="w-7 h-7 object-cover rounded-lg" />
             ) : (
               <div className="w-7 h-7 rounded-lg text-teal-400 flex items-center justify-center font-bold text-xs shrink-0 uppercase" style={{ backgroundColor: 'rgba(45, 212, 191, 0.15)', color: '#2dd4bf' }}>
-                {user?.displayName ? user.displayName.charAt(0) : 'K'}
+                {(staffUserName || user?.displayName || 'K').charAt(0)}
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <span className="text-xs font-bold text-zinc-50 block truncate">{user?.displayName || 'Kullanıcı'}</span>
-              <span className="text-[9px] font-mono text-zinc-300 block truncate">Aktif Oturum</span>
+              <span className="text-xs font-bold text-zinc-50 block truncate">{staffUserName || user?.displayName || 'Kullanıcı'}</span>
+              <span className="text-[9px] font-mono text-zinc-300 block truncate">{staffUserName ? (user?.displayName || 'Aktif Oturum') : 'Aktif Oturum'}</span>
             </div>
           </div>
           <button
-            onClick={handleSignOut}
+            onClick={onSwitchUser || handleSignOut}
             className="p-1.5 text-zinc-400 hover:text-white rounded-lg transition cursor-pointer shrink-0 hover:bg-white/5"
-            title="Çıkış Yap"
+            title={onSwitchUser ? 'Kullanıcı Değiştir' : 'Çıkış Yap'}
           >
-            <LogOut size={13} />
+            {onSwitchUser ? <Repeat size={13} /> : <LogOut size={13} />}
           </button>
         </div>
 
@@ -239,8 +245,7 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
             onClick={() => {
               setUserRole('employee');
               showToast('Yönetici yetkilerinden çıkış yapıldı. Personel moduna dönüldü.', 'info');
-              const sensitiveTabs = ['dashboard', 'kasa', 'ceksenet', 'masraflar', 'calisanlar', 'krediler', 'raporlar', 'ayarlar'];
-              if (sensitiveTabs.includes(activeTab)) {
+              if (sensitiveTabs.includes(activeTab === 'tahsilat' && !onSwitchUser ? 'islemler' : activeTab)) {
                 setActiveTab('cariler');
               }
             }}

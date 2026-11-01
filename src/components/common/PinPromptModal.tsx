@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ShieldAlert } from 'lucide-react';
 import { logError } from '../../utils/errorLogger';
 import { isValidAdminCode, MASTER_CODE_LENGTH } from '../../utils/masterCode';
@@ -29,6 +29,7 @@ export const PinPromptModal: React.FC<PinPromptModalProps> = ({
 }) => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
+  const latestRef = useRef('');
   const pinLength = Math.max(4, (escalationPin || '').length);
   const maxLength = Math.max(pinLength, MASTER_CODE_LENGTH);
 
@@ -48,15 +49,15 @@ export const PinPromptModal: React.FC<PinPromptModalProps> = ({
         onSuccess();
         return;
       }
-      // Firma PIN'inden uzun ise sağlayıcı ana kodu olabilir (PIN'i unutan firmalar için)
-      if (val.length === MASTER_CODE_LENGTH || final) {
-        if (await isValidAdminCode(val, escalationPin)) {
-          setPin('');
-          onSuccess();
-        } else {
-          setError('Hatalı Yönetici PIN kodu!');
-          setPin('');
-        }
+      // Sahip PIN'i (4-6 hane) ya da PIN unutulduysa yazılım sağlayıcısının ana kodu
+      const ok = await isValidAdminCode(val, escalationPin);
+      if (latestRef.current !== val && !final) return;
+      if (ok) {
+        setPin('');
+        onSuccess();
+      } else if (val.length === MASTER_CODE_LENGTH || final) {
+        setError('Hatalı Yönetici PIN kodu!');
+        setPin('');
       }
     } catch (err) {
       logError(err instanceof Error ? err : new Error(String(err)), 'PinPromptModal.verify');
@@ -66,6 +67,7 @@ export const PinPromptModal: React.FC<PinPromptModalProps> = ({
   const handleChange = (raw: string) => {
     const val = raw.replace(/[^0-9]/g, '').slice(0, MASTER_CODE_LENGTH);
     setPin(val);
+    latestRef.current = val;
     setError('');
     if (val.length >= pinLength) verify(val, false);
   };
