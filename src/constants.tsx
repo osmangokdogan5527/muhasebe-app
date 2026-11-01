@@ -371,27 +371,31 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.8.5';
+export const APP_VERSION = '1.8.6';
 
 export const CHANGELOG = {
-  version: '1.8.5',
+  version: '1.8.6',
   features: [
-    "Yeni PDF Belgeler: Fatura, tahsilat/ödeme makbuzu, cari hesap ekstresi, POS fişi, etiketler ve raporlar artık gerçek PDF olarak hazırlanır; yazılar net, Türkçe karakterler eksiksiz, uzun belgeler sayfalara bölünür. Yazdırmak için PDF kendi programınızda açılır.",
-    "Paylaş: Her belge penceresinde önizleme, PDF İndir ve telefonda WhatsApp / e-posta ile Paylaş düğmesi vardır.",
-    "Cari Hesap Durumu: Fatura ve makbuzda carinin önceki bakiyesi, belgenin etkisi, belge sonrası ve güncel bakiyesi gösterilir.",
-    "Cari Ekstre PDF'i: Devreden bakiye, borç / alacak / bakiye tablosu, toplamlar ve mutabakat notuyla; telefonda cari kartından da alınır.",
-    "POS Fişi: 80 mm ve 58 mm termal rulo fiş; satıştan sonra, İşlemler'den (Fiş / A4 Fatura seçimi) ve telefondan alınabilir.",
-    "Etiket Tasarla: Rulo ve A4 (21/24/40/65'li) etiketler ya da özel ölçü; ürün adı, fiyat, kod, barkod, QR kod, firma adı seçilebilir; canlı önizleme, toplu etiket ve kopya sayısı, yarım A4 sayfaya başlangıç konumu.",
-    "Belge Görünümü: Ayarlar'da logo, firma ve vergi bilgileri, renk, alt not (IBAN vb.) ve belge seçenekleri tek yerden ayarlanır; tüm cihazlarda ortaktır.",
-    "Yeni Rapor PDF'leri: Kâr-zarar, KDV, stok, cari bakiye ve gider raporları özet kartları ve tüm satırlarıyla.",
+    "Pusula Arayüzü: Yeni varsayılan açık tasarım. Menü tema renginde kavisli bir şerit, sayfa başlıkları gradyan bant, kartlarda renkli üst şerit ve gradyan simge rozetleri; giriş ekranında marka paneli. Telefonda da kullanılır.",
+    "Menü Konumu: Ayarlar > Arayüz & Menü'den menü solda, sağda ya da üstte yatay çubuk olarak kullanılabilir.",
+    "Veresiye Satış: Hızlı Satış'ta VERESİYE [F5] düğmesi; tutar seçili müşterinin açık hesabına yazılır. Müşteri listesinden ad ve telefonla hızlıca yeni müşteri eklenebilir.",
+    "Müşteri Bakiyesi Kasada: Seçili müşterinin güncel borcu, veresiye limiti ve satış sonrası bakiyesi kasa ve telefon satış ekranında görünür; parçalı ödemede 'Kalanı veresiyeye yaz', telefonda peşinat alanı.",
+    "Veresiye Limiti: Cari kartına limit tanımlanabilir; limit aşılacaksa satışta uyarı ve onay sorulur.",
+    "Veresiye Fişi: Fişte açık hesaba yazılan tutar, önceki ve güncel bakiye ile müşteri imza alanı yer alır.",
+    "Satış Fiyatı KDV Dahil / Hariç: Stok kartında seçilir; kasa ve etiket KDV dahil, fatura KDV hariç fiyatı kendiliğinden hesaplar.",
+    "Karşılıksız Çek: Karşılıksız işaretlenen çekte cari otomatik yeniden borçlandırılır (isteğe bağlı); portföye geri almada tahsil, ödeme, ciro ve karşılıksız hareketleri geri alınır.",
   ],
   fixes: [
-    "Rapor PDF'leri her tablonun yalnızca ilk 25 satırını basıyordu; artık tüm kayıtlar yer alır.",
-    "PDF'lerde Türkçe karakterlerin silinmesi ('Isbu hesap dokumu') düzeltildi.",
-    "Uzun cari ekstresinin PDF'te tek sayfaya sığdırılıp kesilmesi düzeltildi.",
-    "Telefonda ve önizleme ekranlarında yazdırma pencerelerinin açılmaması sorunu PDF ile ortadan kalktı.",
-    "Stok kartında satış fiyatının kasada ve faturada nasıl kullanıldığı açıklandı.",
-    "GitHub'da masaüstü sürümünün iki ayrı sürüm olarak yüklenip otomatik güncellemenin görememesi düzeltildi.",
+    "Kasadan yapılan satış İşlemler'den düzenlenince nakit/kart tahsilatı kayboluyor, satış veresiyeye dönüyordu.",
+    "Fatura düzenleme yarıda kalırsa eski fatura siliniyordu; düzenleme artık tek seferde yazılır.",
+    "Çek/senet tahsil edildiğinde ya da bankadan ödendiğinde cari bakiyesi iki kez etkileniyordu.",
+    "Ana sayfadaki Kasa/Banka/POS tutarları açılış bakiyelerini ve virmanları saymıyordu; Kasa ekranıyla aynı hesaplanır.",
+    "Satış faturasında KDV dahil fiyatlı üründe KDV iki kez biniyordu.",
+    "İşlemler'den alınan POS fişinde nakit/kartla ödenmiş satış 'Açık Hesap' görünüyordu.",
+    "Excel'den cari aktarımında 1.234,56 gibi tutarlar yanlış okunuyordu; yıllık tekrarlayan işlemde 29 Şubat 1 Mart'a kayıyordu; gece 00:00-03:00 arası PDF tarihleri bir önceki günü gösteriyordu.",
+    "Geniş pencereler (ör. satış faturası) sol menünün altında kalıp kesiliyordu.",
+    "Güvenlik: Yönetici PIN'i dışında her zaman kabul edilen sabit kodlar kaldırıldı.",
+    "Sadeleştirme: Tasarım stilleri Pusula (açık) ve Sıvı Mesh (koyu) olarak ikiye indi; kasadaki yanlış kurla çalışan para birimi seçici kaldırıldı.",
   ]
 };
 
@@ -632,6 +636,30 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.8.6",
+    date: "01.11.2026",
+    changes: [
+      "Pusula Arayüzü: Yeni varsayılan açık tasarım. Menü tema renginde kavisli bir şerit, sayfa başlıkları gradyan bant, kartlarda renkli üst şerit ve gradyan simge rozetleri; giriş ekranında marka paneli. Telefonda da kullanılır.",
+      "Menü Konumu: Ayarlar > Arayüz & Menü'den menü solda, sağda ya da üstte yatay çubuk olarak kullanılabilir.",
+      "Veresiye Satış: Hızlı Satış'ta VERESİYE [F5] düğmesi; tutar seçili müşterinin açık hesabına yazılır. Müşteri listesinden ad ve telefonla hızlıca yeni müşteri eklenebilir.",
+      "Müşteri Bakiyesi Kasada: Seçili müşterinin güncel borcu, veresiye limiti ve satış sonrası bakiyesi kasa ve telefon satış ekranında görünür; parçalı ödemede 'Kalanı veresiyeye yaz', telefonda peşinat alanı.",
+      "Veresiye Limiti: Cari kartına limit tanımlanabilir; limit aşılacaksa satışta uyarı ve onay sorulur.",
+      "Veresiye Fişi: Fişte açık hesaba yazılan tutar, önceki ve güncel bakiye ile müşteri imza alanı yer alır.",
+      "Satış Fiyatı KDV Dahil / Hariç: Stok kartında seçilir; kasa ve etiket KDV dahil, fatura KDV hariç fiyatı kendiliğinden hesaplar.",
+      "Karşılıksız Çek: Karşılıksız işaretlenen çekte cari otomatik yeniden borçlandırılır (isteğe bağlı); portföye geri almada tahsil, ödeme, ciro ve karşılıksız hareketleri geri alınır.",
+      "Kasadan yapılan satış İşlemler'den düzenlenince nakit/kart tahsilatı kayboluyor, satış veresiyeye dönüyordu.",
+      "Fatura düzenleme yarıda kalırsa eski fatura siliniyordu; düzenleme artık tek seferde yazılır.",
+      "Çek/senet tahsil edildiğinde ya da bankadan ödendiğinde cari bakiyesi iki kez etkileniyordu.",
+      "Ana sayfadaki Kasa/Banka/POS tutarları açılış bakiyelerini ve virmanları saymıyordu; Kasa ekranıyla aynı hesaplanır.",
+      "Satış faturasında KDV dahil fiyatlı üründe KDV iki kez biniyordu.",
+      "İşlemler'den alınan POS fişinde nakit/kartla ödenmiş satış 'Açık Hesap' görünüyordu.",
+      "Excel'den cari aktarımında 1.234,56 gibi tutarlar yanlış okunuyordu; yıllık tekrarlayan işlemde 29 Şubat 1 Mart'a kayıyordu; gece 00:00-03:00 arası PDF tarihleri bir önceki günü gösteriyordu.",
+      "Geniş pencereler (ör. satış faturası) sol menünün altında kalıp kesiliyordu.",
+      "Güvenlik: Yönetici PIN'i dışında her zaman kabul edilen sabit kodlar kaldırıldı.",
+      "Sadeleştirme: Tasarım stilleri Pusula (açık) ve Sıvı Mesh (koyu) olarak ikiye indi; kasadaki yanlış kurla çalışan para birimi seçici kaldırıldı.",
+    ]
+  },
   {
     version: "1.8.5",
     date: "31.10.2026",
