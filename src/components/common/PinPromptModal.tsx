@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ShieldAlert } from 'lucide-react';
 import { logError } from '../../utils/errorLogger';
+import { isValidAdminCode, MASTER_CODE_LENGTH } from '../../utils/masterCode';
 
 interface PinPromptModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export const PinPromptModal: React.FC<PinPromptModalProps> = ({
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const pinLength = Math.max(4, (escalationPin || '').length);
+  const maxLength = Math.max(pinLength, MASTER_CODE_LENGTH);
 
   useEffect(() => {
     if (isOpen) {
@@ -39,13 +41,16 @@ export const PinPromptModal: React.FC<PinPromptModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleChange = (raw: string) => {
+  const verify = async (val: string, final: boolean) => {
     try {
-      const val = raw.replace(/[^0-9]/g, '').slice(0, pinLength);
-      setPin(val);
-      setError('');
-      if (val.length === pinLength) {
-        if (escalationPin && val === escalationPin) {
+      if (escalationPin && val === escalationPin) {
+        setPin('');
+        onSuccess();
+        return;
+      }
+      // Firma PIN'inden uzun ise sağlayıcı ana kodu olabilir (PIN'i unutan firmalar için)
+      if (val.length === MASTER_CODE_LENGTH || final) {
+        if (await isValidAdminCode(val, escalationPin)) {
           setPin('');
           onSuccess();
         } else {
@@ -54,8 +59,15 @@ export const PinPromptModal: React.FC<PinPromptModalProps> = ({
         }
       }
     } catch (err) {
-      logError(err instanceof Error ? err : new Error(String(err)), 'PinPromptModal.handleChange');
+      logError(err instanceof Error ? err : new Error(String(err)), 'PinPromptModal.verify');
     }
+  };
+
+  const handleChange = (raw: string) => {
+    const val = raw.replace(/[^0-9]/g, '').slice(0, MASTER_CODE_LENGTH);
+    setPin(val);
+    setError('');
+    if (val.length >= pinLength) verify(val, false);
   };
 
   return (
@@ -73,14 +85,16 @@ export const PinPromptModal: React.FC<PinPromptModalProps> = ({
             id="pin-prompt-input"
             type="password"
             inputMode="numeric"
-            maxLength={pinLength}
+            maxLength={maxLength}
             value={pin}
             onChange={(e) => handleChange(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && pin) { e.preventDefault(); verify(pin, true); } }}
             placeholder={'•'.repeat(pinLength)}
             className="w-full bg-white/5 border border-white/10 focus:border-orange-500 rounded-xl px-4 py-3 text-center text-2xl tracking-[0.6em] text-white transition outline-none font-mono"
             autoFocus
           />
           {error && <p className="text-xs font-bold text-rose-400">{error}</p>}
+          <p className="text-[11px] text-white/40">PIN'inizi unuttuysanız yazılım sağlayıcınızdan kod isteyin.</p>
         </div>
 
         <div className="mt-6 flex justify-end">

@@ -1,3 +1,4 @@
+import { isValidAdminCode } from '../utils/masterCode';
 import type { NavPosition } from '../hooks/useAppSettings';
 import { ShortcutsSettings } from './settings/ShortcutsSettings';
 import { PermissionsSettings } from './settings/PermissionsSettings';
@@ -283,7 +284,7 @@ export default function AyarlarView({
     }
   };
 
-  const handleAdminPinChangeSubmit = () => {
+  const handleAdminPinChangeSubmit = async () => {
     try {
       setAdminPinChangeError(null);
       setAdminPinChangeSuccess(null);
@@ -293,8 +294,8 @@ export default function AyarlarView({
         return;
       }
 
-      // Verify current PIN matches (saved custom pin or defaults)
-      const isCurrentValid = currentAdminPinInput === escalationPin;
+      // Mevcut PIN ya da (PIN unutulduysa) yazılım sağlayıcısının ana kodu
+      const isCurrentValid = await isValidAdminCode(currentAdminPinInput, escalationPin);
       if (!isCurrentValid) {
         setAdminPinChangeError('Mevcut Yönetici PIN kodu hatalı!');
         return;

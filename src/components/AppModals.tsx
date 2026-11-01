@@ -1,3 +1,5 @@
+import { logError } from '../utils/errorLogger';
+import { isValidAdminCode, MASTER_CODE_LENGTH } from '../utils/masterCode';
 import React, { useState } from 'react';
 import { RotateCcw, CloudLightning, Check, MessageSquare, ImageIcon, ShieldCheck, X, Download, ShieldAlert, Info } from 'lucide-react';
 import { StormLogo, } from '../constants';
@@ -622,39 +624,47 @@ export const AppModals: React.FC<AppModalsProps> = ({
                 <ShieldCheck size={24} />
               </div>
               <h3 className="text-base font-extrabold text-white tracking-wider uppercase">Yönetici Yetkilendirmesi</h3>
-              <p className="text-[11px] text-zinc-400 mt-1 max-w-[240px]">Hassas sekmelere erişim sağlamak için lütfen 4 haneli Yönetici PIN kodunu giriniz</p>
+              <p className="text-[11px] text-zinc-400 mt-1 max-w-[240px]">Hassas sekmelere erişim için Yönetici PIN kodunu giriniz. PIN'inizi unuttuysanız yazılım sağlayıcınızdan kod isteyin.</p>
               
               <div className="my-6 w-full space-y-4">
                 <input
+                  id="admin-login-pin"
                   type="password"
-                  maxLength={4}
+                  inputMode="numeric"
+                  maxLength={MASTER_CODE_LENGTH}
                   value={adminPinInput}
                   onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, MASTER_CODE_LENGTH);
                     setAdminPinInput(val);
                     setAdminPinError(null);
-                    
-                    if (val.length === 4) {
-                      // Yalnızca Ayarlar'da belirlenen yönetici PIN'i kabul edilir
-                      if (val === escalationPin) {
-                        setUserRole('admin');
-                        setIsAdminPinModalOpen(false);
-                        setAdminPinInput('');
-                        showToast('Yönetici modu başarıyla aktif edildi. Tüm yetkiler açıldı!', 'success');
-                      } else {
-                        setAdminPinError('Hatalı Yönetici PIN kodu! Lütfen tekrar deneyiniz.');
-                        setAdminPinInput('');
-                      }
+                    const grantAdmin = () => {
+                      setUserRole('admin');
+                      setIsAdminPinModalOpen(false);
+                      setAdminPinInput('');
+                      showToast('Yönetici modu başarıyla aktif edildi. Tüm yetkiler açıldı!', 'success');
+                    };
+                    // Firma PIN'i ya da (PIN unutulduysa) yazılım sağlayıcısının ana kodu
+                    if (val === escalationPin) {
+                      grantAdmin();
+                    } else if (val.length === MASTER_CODE_LENGTH) {
+                      isValidAdminCode(val, escalationPin).then((ok) => {
+                        if (ok) {
+                          grantAdmin();
+                        } else {
+                          setAdminPinError('Hatalı Yönetici PIN kodu! Lütfen tekrar deneyiniz.');
+                          setAdminPinInput('');
+                        }
+                      }).catch((err) => logError(err instanceof Error ? err : new Error(String(err)), 'AppModals.adminLogin'));
                     }
                   }}
                   placeholder="••••"
-                  className="w-full bg-white/5 border border-white/10 focus:border-teal-500/50 rounded-xl px-4 py-3.5 text-center text-3xl tracking-[1.5em] text-teal-400 placeholder-zinc-600 transition outline-none font-mono"
+                  className="w-full bg-white/5 border border-white/10 focus:border-teal-500/50 rounded-xl px-4 py-3.5 text-center text-3xl tracking-[1em] text-teal-400 placeholder-zinc-600 transition outline-none font-mono"
                   autoFocus
                 />
                 
                 {/* Visual PIN dots indicator */}
                 <div className="flex justify-center gap-3">
-                  {[0, 1, 2, 3].map((idx) => (
+                  {Array.from({ length: Math.max(4, adminPinInput.length) }, (_, idx) => idx).map((idx) => (
                     <div 
                       key={idx} 
                       className={`w-3.5 h-3.5 rounded-full border transition-all duration-200 ${

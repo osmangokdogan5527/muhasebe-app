@@ -133,8 +133,10 @@ export const PermissionsSettings: React.FC<PermissionsSettingsProps> = ({
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Mevcut Yönetici PIN Kodu</label>
                       <input
+                        id="current-admin-pin"
                         type="password"
-                        maxLength={4}
+                        inputMode="numeric"
+                        maxLength={6}
                         value={currentAdminPinInput}
                         onChange={(e) => {
                           const val = e.target.value.replace(/[^0-9]/g, '');
@@ -145,6 +147,7 @@ export const PermissionsSettings: React.FC<PermissionsSettingsProps> = ({
                         placeholder="••••"
                         className="w-full bg-white/5 border border-white/10 focus:border-teal-500 rounded-xl px-4 py-2.5 text-center text-xl tracking-[0.5em] text-white transition outline-none font-mono"
                       />
+                      <p className="text-[10px] text-white/40">PIN'inizi unuttuysanız yazılım sağlayıcınızdan alacağınız kodu bu alana girip yeni PIN belirleyebilirsiniz.</p>
                     </div>
 
                     <div className="space-y-1.5">
