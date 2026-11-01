@@ -125,6 +125,7 @@ export const PosCartTable: React.FC<PosCartTableProps> = ({
                       min="1"
                       value={item.quantity}
                       onChange={(e) => onSetQuantity(item.id, Math.max(1, Number(e.target.value) || 1))}
+                      onFocus={(e) => e.target.select()}
                       className="pos-number-input w-12 text-center text-xs font-black font-mono text-white"
                       title="Adet"
                       style={{ color: '#ffffff' }}
