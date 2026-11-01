@@ -1,10 +1,10 @@
 {
   "name": "Storm Ön Muhasebe",
   "short_name": "Storm",
-  "description": "Ön muhasebe, stok ve hızlı satış — telefonda saha işlemleri",
+  "description": "Ön muhasebe, stok, kasa ve hızlı satış",
   "lang": "tr",
   "dir": "ltr",
-  "start_url": "./?mod=saha",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

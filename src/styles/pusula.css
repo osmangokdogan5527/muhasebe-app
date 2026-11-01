@@ -1209,7 +1209,6 @@ main[data-design-style="pusula"]:has(.pusula-auth-hero) > .max-w-md > div:first-
     padding-left: calc(min(38%, 580px) + 1.5rem) !important;
   }
 
-
   /* Yönetici düğmesi marka panelinin üzerinde cam görünümde */
   main[data-design-style="pusula"]:has(.pusula-auth-hero) > .absolute.top-8.left-8 {
     z-index: 20;
@@ -1479,7 +1478,6 @@ main[data-design-style="pusula"] > .max-w-md > div:first-child p {
   color: #ffffff !important;
 }
 
-
 /* ---------------------------------------------------------------------
    20. TELEFON — ana menü (dar ekrandaki tam uygulama)
    --------------------------------------------------------------------- */
@@ -1550,148 +1548,11 @@ main[data-design-style="pusula"] > .max-w-md > div:first-child p {
   color: #ffffff !important;
 }
 
-/* ---------------------------------------------------------------------
-   21. TELEFON — saha uygulaması
-   --------------------------------------------------------------------- */
-[data-design-style="pusula"] .field-app {
-  background: var(--k-bg) !important;
-  background-image:
-    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--accent-900) 8%, transparent) 1px, transparent 0),
-    radial-gradient(600px 300px at 100% 0%, color-mix(in srgb, var(--accent-300) 22%, transparent), transparent 65%) !important;
-  background-size: 20px 20px, auto !important;
-  color: var(--k-text-2) !important;
-}
-
-/* Üst çubuk: gradyan */
-[data-design-style="pusula"] .field-app > header {
-  background: var(--k-grad) !important;
-  background-image:
-    radial-gradient(300px 140px at 100% 0%, rgba(255, 255, 255, 0.25), transparent 70%),
-    var(--k-grad) !important;
-  border: none !important;
-  border-radius: 0 0 24px 24px;
-  box-shadow: 0 14px 30px -16px color-mix(in srgb, var(--accent-700) 85%, transparent) !important;
-  backdrop-filter: none !important;
-}
-
-[data-design-style="pusula"] .field-app > header :is(h1, div, span, button, svg) {
-  color: #ffffff !important;
-}
-
-[data-design-style="pusula"] .field-app > header .rounded-full {
-  background: rgba(255, 255, 255, 0.18) !important;
-  border: 1px solid rgba(255, 255, 255, 0.25) !important;
-}
-
-/* Üst çubuktaki açılır menü (Tema / Tam Sürüm / Çıkış) */
-[data-design-style="pusula"] .field-app > header .bg-\[\#0d1024\] {
-  background: #ffffff !important;
-  border-color: var(--k-border) !important;
-  box-shadow: var(--k-shadow-lg) !important;
-}
-
-[data-design-style="pusula"] .field-app > header .bg-\[\#0d1024\] :is(button, svg) {
-  color: var(--k-text) !important;
-}
-
-[data-design-style="pusula"] .field-app > header .bg-\[\#0d1024\] button.text-rose-300,
-[data-design-style="pusula"] .field-app > header .bg-\[\#0d1024\] button.text-rose-300 svg {
-  color: var(--k-neg) !important;
-}
-
-/* Kartlar ve arama kutusu */
-[data-design-style="pusula"] .field-app main :is(.bg-white\/\[0\.04\], .bg-white\/5) {
-  background: #ffffff !important;
-  border-color: var(--k-border) !important;
-  box-shadow: var(--k-shadow-sm) !important;
-}
-
-[data-design-style="pusula"] .field-app main :is(.bg-black\/30, .bg-black\/20) {
-  background: #ffffff !important;
-  border-color: var(--k-border-strong) !important;
-}
-
-[data-design-style="pusula"] .field-app main :is(.bg-black\/30, .bg-black\/20) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]) {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
-[data-design-style="pusula"] .field-app :is(.text-white, .text-slate-100, .text-slate-200) {
-  color: var(--k-text) !important;
-}
-
-[data-design-style="pusula"] .field-app :is(.text-slate-300, .text-slate-400) {
-  color: var(--k-text-3) !important;
-}
-
-[data-design-style="pusula"] .field-app :is(.text-slate-500, .text-slate-600) {
-  color: var(--k-text-4) !important;
-}
-
-/* Barkod düğmesi ve ana düğmeler gradyan */
-[data-design-style="pusula"] .field-app button[style*="background"]:not([style*="transparent"]) {
-  background: var(--k-grad) !important;
-  border-color: transparent !important;
-  color: #ffffff !important;
-}
-
-[data-design-style="pusula"] .field-app button[style*="background"]:not([style*="transparent"]) * {
-  color: #ffffff !important;
-}
-
-/* Alt sekme çubuğu: beyaz, etkin sekme tema renginde hap */
-[data-design-style="pusula"] .field-app > nav {
-  background: rgba(255, 255, 255, 0.94) !important;
-  border-top: 1px solid var(--k-border) !important;
-  box-shadow: 0 -10px 30px -18px rgba(15, 23, 42, 0.25) !important;
-}
-
-[data-design-style="pusula"] .field-app > nav button {
-  color: var(--k-text-4) !important;
-}
-
-[data-design-style="pusula"] .field-app > nav button.text-white {
-  color: var(--accent-700) !important;
-}
-
-[data-design-style="pusula"] .field-app > nav button.text-white > span[style] {
-  color: #ffffff !important;
-  background: var(--k-grad);
-  padding: 0.3rem 0.9rem;
-  border-radius: 9999px;
-  box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--accent-600) 80%, transparent);
-}
-
-[data-design-style="pusula"] .field-app > nav button.text-white > span.absolute {
-  display: none;
-}
-
 /* Alttan açılan seçim penceresi */
-[data-design-style="pusula"] .field-app .bg-\[\#0b0d1f\],
+
 [data-design-style="pusula"] .bg-\[\#0b0d1f\] {
   background: #ffffff !important;
   border-color: var(--k-border) !important;
-}
-
-[data-design-style="pusula"] .field-app .border-dashed {
-  border-color: var(--k-border-strong) !important;
-}
-
-/* Saha üst çubuğunda firma adı */
-[data-design-style="pusula"] .field-app > header :is(.text-slate-400, .text-slate-500) {
-  color: rgba(255, 255, 255, 0.75) !important;
-}
-
-/* Saha arama kutusunun yanındaki barkod düğmesi */
-[data-design-style="pusula"] .field-app main button.shrink-0.w-12.rounded-2xl {
-  background: var(--k-grad) !important;
-  border-color: transparent !important;
-  box-shadow: 0 10px 20px -12px color-mix(in srgb, var(--accent-700) 90%, transparent) !important;
-}
-
-[data-design-style="pusula"] .field-app main button.shrink-0.w-12.rounded-2xl svg {
-  color: #ffffff !important;
 }
 
 /* Krem/sarımsı açık zeminli büyük kutular (ör. raporlardaki "Satılan Malın Maliyeti")

@@ -21,7 +21,6 @@ interface MobileMenuViewProps {
   showToast: (msg: string, type: string) => void;
   setActiveTab: (tab: any) => void;
   isSecurityActive: boolean;
-  onSwitchToField?: () => void;
 }
 
 export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
@@ -43,7 +42,6 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
   showToast,
   setActiveTab,
   isSecurityActive,
-  onSwitchToField
 }) => {
   return (
     <div className="md:hidden flex flex-col justify-between w-full max-w-lg mx-auto bg-[#070709] text-white min-h-[calc(100vh-4rem)] p-4 sm:p-6 rounded-2xl border border-white/5 shadow-2xl overflow-y-auto">
@@ -60,19 +58,6 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
             Ana Menü
           </span>
         </div>
-        {onSwitchToField && (
-          <button
-            type="button"
-            onClick={onSwitchToField}
-            className="w-full mb-5 flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-teal-500/10 border border-teal-500/25 text-left cursor-pointer active:scale-[0.99] transition"
-          >
-            <div>
-              <div className="text-sm font-bold text-white">Saha Moduna Geç</div>
-              <div className="text-[11px] text-slate-400">Hızlı satış, tahsilat, stok ve cari için sade telefon ekranı</div>
-            </div>
-            <span className="text-teal-300 text-lg">›</span>
-          </button>
-        )}
 
         {/* Menu Grid - 3 Columns */}
         <div className="grid grid-cols-3 gap-2.5 mb-6">

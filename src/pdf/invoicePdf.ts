@@ -165,16 +165,18 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
   // 3) Kalemler
   const rows = buildRows(islem);
   const zebra = tint(accent, 0.965);
+  // KDV'siz belgede KDV sütunu ve %0 satırları gösterilmez
+  const hasTax = rows.some((row) => Number(row.taxRate) > 0);
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN, top: PAGE_MARGIN + 11, bottom: FOOTER_HEIGHT + 4 },
-    head: [['#', 'Mal / Hizmet', 'Miktar', 'Birim Fiyat', 'KDV', 'Tutar']],
+    head: [hasTax ? ['#', 'Mal / Hizmet', 'Miktar', 'Birim Fiyat', 'KDV', 'Tutar'] : ['#', 'Mal / Hizmet', 'Miktar', 'Birim Fiyat', 'Tutar']],
     body: rows.map((row, index) => [
       String(index + 1),
       row.name,
       `${formatQuantity(row.quantity)} ${row.unit}`,
       formatMoney(row.unitNet, currency),
-      `%${formatQuantity(row.taxRate)}`,
+      ...(hasTax ? [`%${formatQuantity(row.taxRate)}`] : []),
       formatMoney(row.lineNet, currency),
     ]),
     theme: 'plain',
@@ -230,11 +232,15 @@ export async function createInvoicePdf(islem: Transaction, cari: Cari | undefine
 
   const totalLines: { label: string; value: string; strong?: boolean }[] = [];
   if (discount > 0.009) {
-    totalLines.push({ label: 'Satır Toplamı (KDV dahil)', value: formatMoney(itemsTotal, currency) });
+    totalLines.push({ label: hasTax ? 'Satır Toplamı (KDV dahil)' : 'Satır Toplamı', value: formatMoney(itemsTotal, currency) });
     totalLines.push({ label: 'İskonto', value: `- ${formatMoney(discount, currency)}` });
   }
-  totalLines.push({ label: 'Ara Toplam (KDV hariç)', value: formatMoney(totalNet, currency) });
-  vatGroups.forEach((g) => totalLines.push({ label: `KDV (%${formatQuantity(g.rate)})`, value: formatMoney(roundMoney(g.tax), currency) }));
+  if (hasTax) {
+    totalLines.push({ label: 'Ara Toplam (KDV hariç)', value: formatMoney(totalNet, currency) });
+    vatGroups
+      .filter((g) => g.rate > 0)
+      .forEach((g) => totalLines.push({ label: `KDV (%${formatQuantity(g.rate)})`, value: formatMoney(roundMoney(g.tax), currency) }));
+  }
 
   const totalsWidth = 82;
   const totalsX = pageWidth - PAGE_MARGIN - totalsWidth;

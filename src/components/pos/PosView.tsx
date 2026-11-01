@@ -145,6 +145,12 @@ export const PosView: React.FC<PosViewProps> = ({
     }
   }, []);
 
+  // Klavye kısayolları her zaman güncel sepet, KDV oranı, iskonto ve müşteriyle çalışsın diye
+  // işleyiciler her çizimde bu ref'e yazılır (dinleyici yalnızca bir kez bağlanır)
+  const shortcutHandlersRef = useRef<{ cash: () => void; pos: () => void; credit: () => void; park: () => void }>({
+    cash: () => {}, pos: () => {}, credit: () => {}, park: () => {},
+  });
+
   // BARKOD OKUYUCU DİNLEYİCİSİ (Arama kutusuna hızlı yazılan barkodları algılar)
   useEffect(() => {
     let barcodeBuffer = '';
@@ -165,14 +171,14 @@ export const PosView: React.FC<PosViewProps> = ({
         // F2: Hızlı Nakit Satış
         if (e.key === 'F2') {
           e.preventDefault();
-          handleQuickCashSale();
+          shortcutHandlersRef.current.cash();
           return;
         }
 
         // F3: Hızlı POS Satış
         if (e.key === 'F3') {
           e.preventDefault();
-          handleQuickPosSale();
+          shortcutHandlersRef.current.pos();
           return;
         }
 
@@ -186,14 +192,14 @@ export const PosView: React.FC<PosViewProps> = ({
         // F5: Veresiye (tamamı açık hesaba)
         if (e.key === 'F5') {
           e.preventDefault();
-          handleCreditSale();
+          shortcutHandlersRef.current.credit();
           return;
         }
 
         // F8: Askıya Al
         if (e.key === 'F8') {
           e.preventDefault();
-          handleParkSale();
+          shortcutHandlersRef.current.park();
           return;
         }
 
@@ -400,6 +406,13 @@ export const PosView: React.FC<PosViewProps> = ({
     } catch (err: any) {
       logError(err, 'PosView:handleParkSale');
     }
+  };
+
+  shortcutHandlersRef.current = {
+    cash: handleQuickCashSale,
+    pos: handleQuickPosSale,
+    credit: handleCreditSale,
+    park: handleParkSale,
   };
 
   // ASKIDAKİ SATIŞI GERİ YÜKLE
@@ -668,10 +681,12 @@ export const PosView: React.FC<PosViewProps> = ({
                   </div>
                 )}
 
-                <div className="flex justify-between text-slate-300 font-bold">
-                  <span>KDV Matrahı (%{globalTaxRate}):</span>
-                  <span className="text-white" style={{ color: '#ffffff' }}>₺{summary.taxBase.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
+                {globalTaxRate > 0 && (
+                  <div className="flex justify-between text-slate-300 font-bold">
+                    <span>KDV Matrahı (%{globalTaxRate}):</span>
+                    <span className="text-white" style={{ color: '#ffffff' }}>₺{summary.taxBase.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                )}
 
                 {globalTaxRate > 0 && (
                   <div className="flex justify-between text-slate-400 font-bold">
