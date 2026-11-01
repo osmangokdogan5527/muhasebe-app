@@ -30,6 +30,7 @@ export const StormLogo = ({
 }) => {
   const currentDesignStyle = designStyle || (typeof document !== 'undefined' && document.documentElement.getAttribute('data-design-style')) || localStorage.getItem('storm_muhasebe_design_style') || 'fluid-mesh';
   const isFluidMesh = currentDesignStyle === 'fluid-mesh';
+  const isPusula = currentDesignStyle === 'pusula';
 
   // Strip any shadow filters and transition effects to keep the logo perfectly flat and net
   const cleanedStyle = { ...style };
@@ -50,6 +51,16 @@ export const StormLogo = ({
   } else if (preset.id !== 'sky') {
     fillCol = preset.preview || '#0ea5e9';
   }
+
+  // Pusula: logonun zemini tema renginin açık-koyu tonlarından gradyan
+  const presetColors = (preset as any).colors || {};
+  const pusulaColors = {
+    tint: presetColors['--accent-50'] || '#f0f9ff',
+    soft: presetColors['--accent-100'] || '#e0f2fe',
+    light: presetColors['--accent-400'] || fillCol,
+    mid: presetColors['--accent-600'] || fillCol,
+    dark: presetColors['--accent-800'] || fillCol,
+  };
 
   // Get active sidebar pattern details
   let currentPattern = sidebarPattern || localStorage.getItem('storm_muhasebe_sidebar_pattern') || 'crystal';
@@ -267,6 +278,20 @@ export const StormLogo = ({
           <filter id={`fluid-bolt-glow-${uId}`} x="-30%" y="-30%" width="160%" height="160%">
             <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor={fluidColors.dropShadow} floodOpacity="0.5" />
           </filter>
+          {/* Pusula Theme Gradients */}
+          {/* Beyaz zemin üzerinde tema rengi: renkli menü şeridinde ve beyaz sayfada öne çıkar */}
+          <linearGradient id={`pusula-bg-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="100%" stopColor={pusulaColors.soft} />
+          </linearGradient>
+          <linearGradient id={`pusula-ink-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={pusulaColors.light} />
+            <stop offset="55%" stopColor={pusulaColors.mid} />
+            <stop offset="100%" stopColor={pusulaColors.dark} />
+          </linearGradient>
+          <filter id={`pusula-soft-shadow-${uId}`} x="-25%" y="-25%" width="150%" height="150%">
+            <feDropShadow dx="0" dy="3" stdDeviation="3" floodColor={pusulaColors.mid} floodOpacity="0.35" />
+          </filter>
           {!downloadMode && (
             <style>{`
               @keyframes mesh-logo-blob-1 {
@@ -309,6 +334,22 @@ export const StormLogo = ({
             {/* Futuristic glowing multi-stop colorful border line */}
             <rect width="194" height="194" x="3" y="3" rx="45" fill="none" stroke={`url(#fluid-border-grad-${uId})`} strokeWidth="4.5" />
           </g>
+        ) : isPusula ? (
+          <g clipPath={`url(#logo-clip-${uId})`}>
+            {/* Tema renginden gradyan zemin ve sağ üstten gelen ışık */}
+            <rect width="200" height="200" fill={`url(#pusula-bg-grad-${uId})`} />
+            {/* Pusula halkası ve yön çentikleri */}
+            <circle cx="100" cy="100" r="82" fill="none" stroke={pusulaColors.mid} strokeOpacity="0.14" strokeWidth="2" />
+            <circle cx="100" cy="100" r="64" fill="none" stroke={pusulaColors.mid} strokeOpacity="0.07" strokeWidth="1.5" />
+            <g stroke={pusulaColors.mid} strokeOpacity="0.35" strokeWidth="3" strokeLinecap="round">
+              <line x1="100" y1="12" x2="100" y2="24" />
+              <line x1="188" y1="100" x2="176" y2="100" />
+              <line x1="100" y1="188" x2="100" y2="176" />
+              <line x1="12" y1="100" x2="24" y2="100" />
+            </g>
+            {/* İnce iç kenar */}
+            <rect width="194" height="194" x="3" y="3" rx="45" fill="none" stroke={pusulaColors.mid} strokeOpacity="0.18" strokeWidth="2" />
+          </g>
         ) : (
           <rect width="200" height="200" rx="48" fill={fillCol} />
         )}
@@ -322,8 +363,8 @@ export const StormLogo = ({
         <g transform="translate(63.75, 12) scale(1.45)">
           <path 
             d="M28 2 L8 38 L23 38 L15 66 L42 28 L28 28 Z" 
-            fill={isFluidMesh ? `url(#fluid-bolt-grad-${uId})` : "#ffffff"} 
-            filter={isFluidMesh ? `url(#fluid-bolt-glow-${uId})` : undefined}
+            fill={isFluidMesh ? `url(#fluid-bolt-grad-${uId})` : isPusula ? `url(#pusula-ink-grad-${uId})` : "#ffffff"} 
+            filter={isFluidMesh ? `url(#fluid-bolt-glow-${uId})` : isPusula ? `url(#pusula-soft-shadow-${uId})` : undefined}
           />
         </g>
 
@@ -336,7 +377,7 @@ export const StormLogo = ({
           fontFamily="system-ui, -apple-system, sans-serif" 
           fontWeight="950" 
           fontSize="33" 
-          fill="#ffffff" 
+          fill={isPusula ? pusulaColors.dark : "#ffffff"} 
           letterSpacing="3.5" 
           filter={isFluidMesh ? `url(#fluid-logo-text-glow-${uId})` : undefined}
         >
@@ -350,7 +391,7 @@ export const StormLogo = ({
           fontFamily="system-ui, -apple-system, sans-serif" 
           fontWeight="900" 
           fontSize="19" 
-          fill="#ffffff" 
+          fill={isPusula ? pusulaColors.dark : "#ffffff"} 
           letterSpacing="2.5" 
           opacity="0.95" 
           filter={isFluidMesh ? `url(#fluid-logo-text-glow-${uId})` : undefined}
