@@ -240,7 +240,9 @@ export const PosView: React.FC<PosViewProps> = ({
         prev
           .map((item) => {
             if (item.id === id) {
-              const newQty = Math.max(1, item.quantity + delta);
+              // Ondalıklı miktarlarda (1,80 m) kayan nokta artığı kalmaz; 1'in altına düşecekse miktar korunur
+              const stepped = Math.round((item.quantity + delta) * 1000) / 1000;
+              const newQty = stepped > 0 ? stepped : item.quantity;
               const { discountAmount, totalLine } = calculateLineTotal(
                 item.unitPrice,
                 newQty,
@@ -262,12 +264,14 @@ export const PosView: React.FC<PosViewProps> = ({
       setCartItems((prev) =>
         prev.map((item) => {
           if (item.id === id) {
+            if (!Number.isFinite(qty) || qty <= 0) return item;
+            const quantity = Math.round(qty * 1000) / 1000;
             const { discountAmount, totalLine } = calculateLineTotal(
               item.unitPrice,
-              qty,
+              quantity,
               item.discountRate
             );
-            return { ...item, quantity: qty, discountAmount, totalLine };
+            return { ...item, quantity, discountAmount, totalLine };
           }
           return item;
         })

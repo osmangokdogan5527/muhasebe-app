@@ -1,12 +1,14 @@
 import React, { useMemo, useState, Suspense } from 'react';
 import { lazyWithReload } from '../../utils/lazyWithReload';
 import { Minus, Plus, Trash2, Package, User, Banknote, CreditCard, BookOpen, CheckCircle2, ShoppingCart, ChevronRight, FileText } from 'lucide-react';
+import { formatQuantity } from '../../pdf/format';
 import { Cari, Stock, BankAccount } from '../../types';
 import { PosCartItem, PosPaymentSplit, PosSaleSummary } from '../../types/pos';
 import { calculateLineTotal, calculateCartSummary, findStockByBarcodeOrSearch, generateReceiptNo } from '../../utils/posUtils';
 import { parseScannedQrCode } from '../../utils/formatters';
 import { getTodayISO } from '../../utils/dateUtils';
 import { logError } from '../../utils/errorLogger';
+import { QuantityInput } from '../common/QuantityInput';
 import { ReceiptPdfModal, ReceiptInvoiceSource, invoiceSourceFromSummary } from '../pdf/ReceiptPdfModal';
 import { ReceiptSaleData, receiptDataFromPosSummary } from '../../pdf/posReceiptPdf';
 import { Card, SectionTitle, PrimaryButton, SegmentedControl, SearchBox, EmptyState, CariPickerSheet, formatMoney, norm, parseAmount } from './fieldUi';
@@ -42,53 +44,6 @@ interface FieldSaleProps {
 }
 
 type PayMethod = 'cash' | 'card' | 'credit';
-
-/**
- * Sepetteki miktar: dokununca rakam klavyesi açılır, mevcut değer seçili gelir; 200 gibi
- * büyük miktarlar tek tek basmadan yazılır; toplam yazdıkça güncellenir.
- * Ondalık (1,5 kg) kabul edilir. Boş/0 yazılırsa eski değer geri gelir.
- */
-const QuantityInput: React.FC<{ value: number; onCommit: (value: number) => void; label: string }> = ({ value, onCommit, label }) => {
-  const [draft, setDraft] = useState<string | null>(null);
-  const shown = draft ?? String(value).replace('.', ',');
-  const commit = () => {
-    if (draft === null) return;
-    try {
-      const parsed = Number(draft.replace(/\s/g, '').replace(',', '.'));
-      if (Number.isFinite(parsed) && parsed > 0) onCommit(parsed);
-    } catch (err) {
-      logError(err instanceof Error ? err : new Error(String(err)), 'FieldSale.QuantityInput');
-    }
-    setDraft(null);
-  };
-  return (
-    <input
-      type="text"
-      inputMode="decimal"
-      enterKeyHint="done"
-      aria-label={label}
-      value={shown}
-      onFocus={(e) => {
-        const initial = String(value).replace('.', ',');
-        const el = e.target;
-        setDraft(initial);
-        el.select();
-        // Bazı telefon tarayıcıları seçimi odaktan hemen sonra bozar: henüz yazılmadıysa yeniden seç
-        requestAnimationFrame(() => { if (document.activeElement === el && el.value === initial) el.select(); });
-      }}
-      onChange={(e) => {
-        const next = e.target.value.replace(/[^0-9.,]/g, '').slice(0, 9);
-        setDraft(next);
-        // Toplam yazdıkça güncellenir; geçersiz/boş ara değerlerde son geçerli miktar kalır
-        const parsed = Number(next.replace(',', '.'));
-        if (next && Number.isFinite(parsed) && parsed > 0) onCommit(parsed);
-      }}
-      onBlur={commit}
-      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') { setDraft(null); (e.target as HTMLInputElement).blur(); } }}
-      className="qty-input w-16 bg-transparent text-center text-sm font-bold text-white tabular-nums outline-none rounded-lg focus:bg-white/10 py-1.5"
-    />
-  );
-};
 
 export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAccounts, presetCari, onPresetConsumed, onCompleteSale, showToast }) => {
   const [query, setQuery] = useState('');
@@ -269,7 +224,7 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-white truncate">{stock.name}</div>
                 <div className={`text-[11px] ${stock.quantity <= stock.minQuantity ? 'text-amber-400' : 'text-slate-500'}`}>
-                  Stok: {stock.quantity} {stock.unit} • {stock.code}
+                  Stok: {formatQuantity(stock.quantity)} {stock.unit} • {stock.code}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -322,14 +277,14 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-white truncate">{item.stockName}</div>
                       <div className="text-[11px] text-slate-500">{formatMoney(item.unitPrice)} / {item.unit}</div>
-                      {overStock && <div className="text-[11px] text-amber-400">Stokta {stock!.quantity} {item.unit} var</div>}
+                      {overStock && <div className="text-[11px] text-amber-400">Stokta {formatQuantity(stock!.quantity)} {item.unit} var</div>}
                     </div>
                     <span className="text-sm font-bold text-white tabular-nums shrink-0">{formatMoney(item.totalLine)}</span>
                   </div>
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center gap-1 rounded-xl bg-black/30 border border-white/10">
                       <button type="button" onClick={() => changeQuantity(item.id, -1)} className="p-2.5 text-white cursor-pointer" aria-label="Azalt"><Minus size={16} /></button>
-                      <QuantityInput value={item.quantity} onCommit={(v) => setQuantity(item.id, v)} label={`${item.stockName} miktarı`} />
+                      <QuantityInput value={item.quantity} onCommit={(v) => setQuantity(item.id, v)} label={`${item.stockName} miktarı`} className="qty-input w-16 bg-transparent text-center text-sm font-bold text-white tabular-nums outline-none rounded-lg focus:bg-white/10 py-1.5" />
                       <button type="button" onClick={() => changeQuantity(item.id, 1)} className="p-2.5 text-white cursor-pointer" aria-label="Artır"><Plus size={16} /></button>
                     </div>
                     <button type="button" onClick={() => changeQuantity(item.id, -item.quantity)} className="p-2.5 text-rose-400 cursor-pointer" aria-label="Kaldır"><Trash2 size={17} /></button>

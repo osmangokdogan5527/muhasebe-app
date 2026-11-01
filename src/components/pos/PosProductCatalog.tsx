@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Stock } from '../../types';
 import { Search, Package, Check, Tag, Filter, Zap, Barcode, Plus, FolderPlus, Layers, LayoutGrid, ListFilter, X, Edit2 } from 'lucide-react';
+import { formatQuantity } from '../../pdf/format';
 import { logError } from '../../utils/errorLogger';
 import { confirmDialog } from '../../utils/dialogs';
 import { grossSalesPrice } from '../../utils/stockPricing';
@@ -522,7 +523,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 : 'bg-teal-400 text-slate-950 border-teal-200 font-black'
             }`}
           >
-            {stock.quantity} {stock.unit}
+            {formatQuantity(stock.quantity)} {stock.unit}
           </div>
 
           {/* BÖLÜM ROZETİ */}
