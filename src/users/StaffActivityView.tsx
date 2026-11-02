@@ -214,7 +214,7 @@ export const StaffActivityView: React.FC<StaffActivityViewProps> = ({ users }) =
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-[#111111] p-5 sm:p-6 rounded-lg border border-white/5 shadow-lg">
         <div>
           <h1 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/90 flex items-center gap-2"><UserCheck size={16} className="text-teal-400" /> Çalışan Takibi</h1>
-          <p className="text-white/40 text-xs mt-1">Kim, ne zaman, ne yaptı? Bu ekranı yalnızca firma sahipleri görür.</p>
+          <p className="text-white/40 text-xs mt-1">Kim, ne zaman, ne yaptı? Bu ekranı firma sahipleri ve sahibin yetki verdiği kullanıcılar görür.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {periodButton('today', 'Bugün')}

@@ -336,7 +336,8 @@ export default function App() {
     : baseUserRole;
   const isSecurityActive = isStaffSystem ? true : baseSecurityActive;
   // Çalışan Takibi yalnızca sahiplere açıktır
-  const isStaffOwner = isStaffSystem && staffUser?.role === 'owner';
+  // Çalışan Takibi: sahipler ve sahibin ayrıca yetki verdiği kullanıcılar görür
+  const canSeeStaffActivity = isStaffSystem && !!staffUser && (staffUser.role === 'owner' || staffUser.allowedTabs.includes('takip'));
   // Sistem açıkken eski firma PIN'i geçmez; onaylar sahip PIN'i (ya da sağlayıcı ana kodu) ister
   const escalationPin = isStaffSystem ? '' : baseEscalationPin;
   const sensitiveTabs = useMemo(
@@ -350,7 +351,7 @@ export default function App() {
   // Eski personel ayarları, yeni eklenen çalışanlar için varsayılan yetki olur
   const staffLegacyDefaults = useMemo(() => ({
     allowedTabs: baseSecurityActive
-      ? ALL_STAFF_TAB_IDS.filter((t) => !baseSensitiveTabs.includes(t === 'tahsilat' ? 'islemler' : t))
+      ? ALL_STAFF_TAB_IDS.filter((t) => t !== 'takip' && !baseSensitiveTabs.includes(t === 'tahsilat' ? 'islemler' : t))
       : [...DEFAULT_STAFF_TABS],
     actions: { ...baseActionPermissions } as StaffActions,
   }), [baseSecurityActive, baseSensitiveTabs, baseActionPermissions]);
@@ -468,7 +469,7 @@ export default function App() {
 
   // Çalışan izinli olmadığı bir ekranda kaldıysa (giriş, kişi değişimi, yetki değişimi) izinli ekrana geçer
   useEffect(() => {
-    if (activeTab === 'takip' && !isStaffOwner) {
+    if (activeTab === 'takip' && !canSeeStaffActivity) {
       setActiveTab(isMobileScreen ? 'menu' : 'dashboard');
       return;
     }
@@ -476,7 +477,7 @@ export default function App() {
     if (!sensitiveTabs.includes(activeTab)) return;
     const allowed = [...tabOrder, 'tahsilat'].find((t) => !sensitiveTabs.includes(t) && !hiddenTabs.includes(t));
     setActiveTab(isMobileScreen ? 'menu' : (allowed || 'menu'));
-  }, [isStaffSystem, isStaffOwner, staffUser, userRole, activeTab, sensitiveTabs, tabOrder, hiddenTabs, isMobileScreen]);
+  }, [isStaffSystem, canSeeStaffActivity, staffUser, userRole, activeTab, sensitiveTabs, tabOrder, hiddenTabs, isMobileScreen]);
 
   const { shortcuts, setShortcuts } = useAppShortcuts(handleNavigate, setPendingIslemModal, setPendingAddCari, setPendingAddStock);
   const [aiPrefilledData, setAiPrefilledData] = useState<{
@@ -844,6 +845,16 @@ export default function App() {
     }
   };
 
+  // Sayfa yenilemede oturum geri yüklenirken giriş ekranı bir an görünmesin
+  if (authLoading) {
+    return (
+      <LoadingScreen
+        currentThemeData={currentThemeData}
+        themeCssRules={themeCssRules}
+      />
+    );
+  }
+
   if (!user) {
     return (
       <AuthScreen
@@ -1024,7 +1035,7 @@ export default function App() {
         setUserRole={setUserRole}
         staffUserName={isStaffSystem ? staffUser?.name : null}
         onSwitchUser={isStaffSystem ? staff.logout : undefined}
-        onOpenStaffActivity={isStaffOwner ? () => setActiveTab('takip') : undefined}
+        onOpenStaffActivity={canSeeStaffActivity ? () => setActiveTab('takip') : undefined}
       />
       <MobileHeader
         sidebarBg={sidebarBg}
@@ -1082,7 +1093,7 @@ export default function App() {
             isSecurityActive={isSecurityActive && !(isStaffSystem && staffUser?.role === 'owner')}
             staffUserName={isStaffSystem ? staffUser?.name : null}
             onSwitchUser={isStaffSystem ? staff.logout : undefined}
-            onOpenStaffActivity={isStaffOwner ? () => setActiveTab('takip') : undefined}
+            onOpenStaffActivity={canSeeStaffActivity ? () => setActiveTab('takip') : undefined}
           />
         </div>
         <div className={activeTab === 'dashboard' ? 'block animate-fade-in' : 'hidden'}>
@@ -1208,7 +1219,7 @@ export default function App() {
             employeeTransactions={employeeTransactions} 
           />)}
         </div>
-        {isStaffOwner && (
+        {canSeeStaffActivity && (
           <div className={activeTab === 'takip' ? 'block animate-fade-in' : 'hidden'}>
             {renderWorkspaceView('takip', <StaffActivityView users={staff.users} />)}
           </div>
