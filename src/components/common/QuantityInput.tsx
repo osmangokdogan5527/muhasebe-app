@@ -15,9 +15,13 @@ export interface QuantityInputProps {
   className?: string;
   style?: React.CSSProperties;
   title?: string;
+  /** Sayım gibi yerlerde 0 geçerli bir miktardır */
+  allowZero?: boolean;
+  id?: string;
 }
 
-export const QuantityInput: React.FC<QuantityInputProps> = ({ value, onCommit, label, className, style, title }) => {
+export const QuantityInput: React.FC<QuantityInputProps> = ({ value, onCommit, label, className, style, title, allowZero = false, id }) => {
+  const valid = (n: number) => Number.isFinite(n) && (allowZero ? n >= 0 : n > 0);
   const [draft, setDraft] = useState<string | null>(null);
   // Odaktan sonra yazı yazıldı mı? (gecikmeli yeniden seçim yazılanı seçip ezmesin)
   const typedRef = useRef(false);
@@ -36,7 +40,7 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({ value, onCommit, l
     if (draft === null) return;
     try {
       const parsed = parse(draft);
-      if (Number.isFinite(parsed) && parsed > 0) onCommit(parsed);
+      if (valid(parsed)) onCommit(parsed);
     } catch (err) {
       logError(err instanceof Error ? err : new Error(String(err)), 'QuantityInput.commit');
     }
@@ -48,6 +52,7 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({ value, onCommit, l
       inputMode="decimal"
       enterKeyHint="done"
       aria-label={label}
+      id={id}
       value={shown}
       onFocus={(e) => {
         const initial = String(value).replace('.', ',');
@@ -66,7 +71,7 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({ value, onCommit, l
         setDraft(next);
         // Toplam yazdıkça güncellenir; geçersiz/boş ara değerlerde son geçerli miktar kalır
         const parsed = parse(next);
-        if (next && Number.isFinite(parsed) && parsed > 0) onCommit(parsed);
+        if (next && valid(parsed)) onCommit(parsed);
       }}
       onBlur={commit}
       // Değer aynı kalsa bile ("1" iken "1") yazmaya başlandığı tuş/giriş olayından anlaşılır

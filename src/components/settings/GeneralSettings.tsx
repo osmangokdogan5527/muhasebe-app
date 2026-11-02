@@ -162,7 +162,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {[
                       { id: 'pusula', name: 'Pusula (Canlı)', badge: 'Varsayılan', dot: 'bg-gradient-to-br from-sky-400 via-indigo-500 to-fuchsia-500' },
-                      { id: 'fluid-mesh', name: 'Sıvı Mesh Gradient', badge: 'Seçkin & Canlı', dot: 'bg-gradient-to-r from-teal-400 to-indigo-500' },
+                      { id: 'fluid-mesh', name: 'Sıvı Mesh (Gece Mavisi)', badge: 'Koyu & Sakin', dot: 'bg-gradient-to-r from-slate-700 to-blue-900' },
                     ].map((styleOpt) => {
                       const isSelected = designStyle === styleOpt.id;
                       return (

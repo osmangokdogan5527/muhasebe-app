@@ -469,6 +469,67 @@ export async function deleteStock(id: string) {
   }
 }
 
+export interface StockAdjustment {
+  stockId: string;
+  stockName: string;
+  unit?: string;
+  /** Eklenecek (+) ya da düşülecek (-) miktar */
+  delta: number;
+  /** Sayımda: sistemdeki ve sayılan miktar (günlük için) */
+  systemQuantity?: number;
+  countedQuantity?: number;
+}
+
+/**
+ * Manuel stok girişi/çıkışı ve stok sayımı farklarını tek seferde uygular.
+ * Miktar artırımlı yazılır (increment): sayım sırasında yapılan satışların stok hareketi ezilmez.
+ * Hareket günlüğüne oturum başına tek kayıt düşer.
+ */
+export async function adjustStockQuantities(adjustments: StockAdjustment[], mode: 'entry' | 'count', note?: string): Promise<number> {
+  const lines = adjustments.filter((a) => a && a.stockId && Number.isFinite(a.delta) && Math.abs(a.delta) > 0.0005);
+  if (lines.length === 0) return 0;
+  try {
+    const stamp = stampFields(false);
+    let batch = writeBatch(db);
+    let count = 0;
+    for (const line of lines) {
+      const delta = Math.round(line.delta * 1000) / 1000;
+      batch.update(doc(db, getPath(STOKLAR_COLL), line.stockId), { quantity: increment(delta), ...stamp });
+      count++;
+      if (count === 450) {
+        await commitWrite(batch.commit(), 'adjustStockQuantities');
+        batch = writeBatch(db);
+        count = 0;
+      }
+    }
+    if (count > 0) await commitWrite(batch.commit(), 'adjustStockQuantities');
+
+    if (activityEnabled()) {
+      const decreased = lines.some((l) => l.delta < 0);
+      const label = mode === 'count' ? 'Stok sayımı' : (decreased && lines.every((l) => l.delta < 0) ? 'Manuel stok çıkışı' : 'Manuel stok girişi');
+      const items: Record<string, any> = {};
+      lines.slice(0, 40).forEach((l, i) => {
+        const sign = l.delta > 0 ? '+' : '';
+        items[`${i + 1}. ${l.stockName}`] = mode === 'count'
+          ? `sistem ${l.systemQuantity ?? '?'} → sayılan ${l.countedQuantity ?? '?'} (${sign}${Math.round(l.delta * 1000) / 1000} ${l.unit || ''})`.trim()
+          : `${sign}${Math.round(l.delta * 1000) / 1000} ${l.unit || ''}`.trim();
+      });
+      if (note) items['Not'] = note;
+      recordActivity({
+        category: 'stok',
+        action: 'update',
+        title: `${label}: ${lines.length} ürün${note ? ` · ${note}` : ''}`,
+        risky: decreased ? true : undefined,
+        after: items,
+      });
+    }
+    return lines.length;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, getPath(STOKLAR_COLL));
+    throw error;
+  }
+}
+
 // Cari bakiyesine etki (pozitif = cari bize borçlanır)
 function getCariBalanceEffect(t: Pick<Transaction, 'type' | 'amount' | 'convertedAmount'>): number {
   const effectAmount = t.convertedAmount !== undefined && t.convertedAmount !== 0 ? t.convertedAmount : (t.amount || 0);

@@ -4,7 +4,6 @@ import { StormLogo, APP_VERSION } from '../constants';
 import { DeviceAccount } from '../utils/accountStore';
 import { TenantLoginPanel } from './auth/TenantLoginPanel';
 import { InstallAppBanner } from './auth/InstallAppBanner';
-import { FluidMeshBackground } from './FluidMeshBackground';
 import { PusulaAuthHero } from './auth/PusulaAuthHero';
 import { confirmDialog, alertDialog } from '../utils/dialogs';
 import { isMasterCode, MASTER_CODE_LENGTH } from '../utils/masterCode';
@@ -127,8 +126,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const timelineBorder = isLightStyle ? 'border-slate-100' : 'border-white/10';
 
 
+  // Sıvı Mesh zemini src/styles/sivimesh.css'ten gelir
   const mainBgStyle = isFluidMesh
-    ? { backgroundColor: '#06040e' }
+    ? {}
     : {
         background: `
           radial-gradient(circle at 10% 20%, color-mix(in srgb, var(--accent-500) 8%, transparent) 0%, transparent 35%),
@@ -151,14 +151,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           }
         `}</style>
 
-        {isFluidMesh && <FluidMeshBackground />}
         {designStyle === 'pusula' && (
           <PusulaAuthHero activeLogoTheme={activeLogoTheme} activeTheme={activeTheme} designStyle={designStyle} />
         )}
         
         <div className="w-full max-w-md my-auto relative z-10">
           <div className="text-center mb-10 flex flex-col items-center">
-            <StormLogo className="w-44 h-auto mx-auto mb-6" logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern={sidebarPattern} sidebarPatternOpacity={sidebarPatternOpacity} designStyle={designStyle} />
+            <StormLogo className={isFluidMesh ? 'w-24 h-auto mx-auto mb-4' : 'w-44 h-auto mx-auto mb-6'} logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern={sidebarPattern} sidebarPatternOpacity={sidebarPatternOpacity} designStyle={designStyle} />
+            {isFluidMesh && (
+              // Logo yazı içermez: marka adı altında
+              <div className="mb-4 leading-tight">
+                <div className="text-2xl font-extrabold tracking-tight text-white">Storm</div>
+                <div className="text-sm font-medium text-slate-400">Ön Muhasebe</div>
+              </div>
+            )}
             <p className={`text-xs uppercase tracking-widest font-mono ${textTertiary}`}>Güvenli Yönetim Paneli</p>
           </div>
 

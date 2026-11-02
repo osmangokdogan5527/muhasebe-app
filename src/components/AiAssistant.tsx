@@ -760,7 +760,7 @@ export default function AiAssistant({
   };
 
   return (
-    <div className={embedded ? 'w-full h-full flex flex-col min-h-0' : 'fixed bottom-20 right-1.5 sm:right-4 z-[100]'}>
+    <div className={embedded ? 'w-full h-full flex flex-col min-h-0' : 'storm-ai-fab fixed bottom-20 right-1.5 sm:right-4 z-[100]'}>
       {/* Chat Window */}
       {isOpen && (
         <div className={embedded

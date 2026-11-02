@@ -73,7 +73,7 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
           {[
             { id: 'pos', title: 'Hızlı Satış', hint: 'Nakit, kart, veresiye', icon: <ShoppingCart size={22} />, tone: 'bg-teal-500/15 text-teal-300 border-teal-500/30' },
             { id: 'tahsilat', title: 'Tahsilat / Ödeme', hint: 'Cariden para al / öde', icon: <ArrowDownLeft size={22} />, tone: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
-          ].map((action) => (
+          ].filter((action) => !hiddenTabs.includes(action.id)).map((action) => (
             <button
               key={action.id}
               type="button"

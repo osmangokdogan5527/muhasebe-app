@@ -88,8 +88,8 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         {/* Sidebar Brand Logo Header */}
         <div className={`pt-5 pb-4 transition-all duration-500 ease-in-out flex items-center justify-between relative z-10 px-6`}>
           <div className="flex items-center justify-center min-w-0 flex-1">
-            {isPusula ? (
-              // Pusula: büyük kare logo yerine yatay marka satırı (simge + yazı)
+            {isPusula || designStyle === 'fluid-mesh' ? (
+              // Büyük kare logo yerine yatay marka satırı (simge + yazı); logo yazı içermez
               <div className="pusula-brand flex items-center gap-3 w-full min-w-0">
                 <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 shadow-[0_6px_16px_-6px_var(--accent-500)]">
                   <StormLogo className="w-full h-full" logoTheme={activeLogoTheme} theme={activeTheme} sidebarPattern="none" sidebarPatternOpacity={0} designStyle={designStyle} sidebarBg={sidebarBg} onlySvg={true} />

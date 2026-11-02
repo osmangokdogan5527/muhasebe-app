@@ -6,6 +6,7 @@ import { DialogHost } from './components/common/DialogHost';
 import './index.css';
 import './styles/pusula.css';
 import './styles/layout.css';
+import './styles/sivimesh.css';
 import { registerServiceWorker } from './utils/pwa';
 
 registerServiceWorker();

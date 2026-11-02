@@ -56,6 +56,7 @@ export const StormLogo = ({
   const presetColors = (preset as any).colors || {};
   const pusulaColors = {
     tint: presetColors['--accent-50'] || '#f0f9ff',
+    pale: presetColors['--accent-300'] || fillCol,
     soft: presetColors['--accent-100'] || '#e0f2fe',
     light: presetColors['--accent-400'] || fillCol,
     mid: presetColors['--accent-600'] || fillCol,
@@ -221,7 +222,66 @@ export const StormLogo = ({
     );
   }
 
-  const svgElement = (
+  // Pusula ve Sıvı Mesh (Gece): Storm şimşeği pusula halkasının içinde iğne gibi durur, üstte kuzey
+  // işareti. Yazı içermez (marka adı logonun yanında yazılır); küçük boyutta da nettir.
+  // Pusula: tema renginde gradyan karo, beyaz iğne. Gece: koyu lacivert karo, tema renginde halka/iğne.
+  const isNight = isFluidMesh;
+  const compassRing = isNight ? `url(#night-ring-${uId})` : '#ffffff';
+  const pusulaSvg = (
+    <svg className={isNight ? 'storm-logo-night' : 'storm-logo-pusula'} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={width} height={height}>
+      <defs>
+        <linearGradient id={`pusula-tile-${uId}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor={isNight ? '#1c2a4a' : pusulaColors.light} />
+          <stop offset="0.55" stopColor={isNight ? '#121c33' : pusulaColors.mid} />
+          <stop offset="1" stopColor={isNight ? '#0a1120' : pusulaColors.dark} />
+        </linearGradient>
+        {/* Gece: ince RGB geçişleri (camgöbeği → mor → pembe) */}
+        <linearGradient id={`night-needle-${uId}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="0.45" stopColor="#a5f3fc" />
+          <stop offset="1" stopColor="#c4b5fd" />
+        </linearGradient>
+        <linearGradient id={`night-ring-${uId}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#22d3ee" />
+          <stop offset="0.4" stopColor="#818cf8" />
+          <stop offset="0.75" stopColor="#e879f9" />
+          <stop offset="1" stopColor="#34d399" />
+        </linearGradient>
+        <radialGradient id={`pusula-gloss-${uId}`} cx="0.3" cy="0.2" r="0.8">
+          <stop offset="0" stopColor={isNight ? '#22d3ee' : '#ffffff'} stopOpacity={isNight ? 0.16 : 0.35} />
+          <stop offset="0.6" stopColor="#ffffff" stopOpacity="0" />
+        </radialGradient>
+        <filter id={`pusula-needle-shadow-${uId}`} x="-30%" y="-30%" width="160%" height="160%">
+          {isNight
+            ? <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#818cf8" floodOpacity="0.6" />
+            : <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor={pusulaColors.dark} floodOpacity="0.45" />}
+        </filter>
+        <clipPath id={`pusula-clip-${uId}`}>
+          <rect width="200" height="200" rx="46" />
+        </clipPath>
+      </defs>
+      <g clipPath={`url(#pusula-clip-${uId})`}>
+        <rect width="200" height="200" fill={`url(#pusula-tile-${uId})`} />
+        <rect width="200" height="200" fill={`url(#pusula-gloss-${uId})`} />
+        {isNight && <rect x="1.5" y="1.5" width="197" height="197" rx="45" fill="none" stroke="#ffffff" strokeOpacity="0.08" strokeWidth="3" />}
+      </g>
+      {/* Pusula halkası, kuzey işareti ve yön noktaları */}
+      <circle cx="100" cy="100" r="70" fill="none" stroke={compassRing} strokeOpacity={isNight ? 0.85 : 0.26} strokeWidth={isNight ? 3 : 2.5} />
+      <path d="M100 18 L107 30 L93 30 Z" fill={isNight ? '#22d3ee' : '#ffffff'} />
+      <g fill={isNight ? '#a5b4fc' : compassRing} fillOpacity={isNight ? 0.8 : 0.6}>
+        <circle cx="170" cy="100" r="4" />
+        <circle cx="100" cy="170" r="4" />
+        <circle cx="30" cy="100" r="4" />
+      </g>
+      {/* İğne: Storm şimşeği */}
+      <g filter={`url(#pusula-needle-shadow-${uId})`}>
+        <path d="M112 40 L66 108 L96 108 L84 160 L136 88 L106 88 Z" fill={isNight ? `url(#night-needle-${uId})` : '#ffffff'} />
+        <path d="M136 88 L106 88 L112 40 L104 88 Z" fill={pusulaColors.dark} fillOpacity="0.14" />
+      </g>
+    </svg>
+  );
+
+  const svgElement = (isPusula || isFluidMesh) ? pusulaSvg : (
     <svg className={isFluidMesh ? 'storm-logo-fluid-mesh' : ''} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={width} height={height}>
         <defs>
           <clipPath id={`logo-clip-${uId}`}>
@@ -278,20 +338,6 @@ export const StormLogo = ({
           <filter id={`fluid-bolt-glow-${uId}`} x="-30%" y="-30%" width="160%" height="160%">
             <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor={fluidColors.dropShadow} floodOpacity="0.5" />
           </filter>
-          {/* Pusula Theme Gradients */}
-          {/* Beyaz zemin üzerinde tema rengi: renkli menü şeridinde ve beyaz sayfada öne çıkar */}
-          <linearGradient id={`pusula-bg-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="100%" stopColor={pusulaColors.soft} />
-          </linearGradient>
-          <linearGradient id={`pusula-ink-grad-${uId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={pusulaColors.light} />
-            <stop offset="55%" stopColor={pusulaColors.mid} />
-            <stop offset="100%" stopColor={pusulaColors.dark} />
-          </linearGradient>
-          <filter id={`pusula-soft-shadow-${uId}`} x="-25%" y="-25%" width="150%" height="150%">
-            <feDropShadow dx="0" dy="3" stdDeviation="3" floodColor={pusulaColors.mid} floodOpacity="0.35" />
-          </filter>
           {!downloadMode && (
             <style>{`
               @keyframes mesh-logo-blob-1 {
@@ -334,22 +380,6 @@ export const StormLogo = ({
             {/* Futuristic glowing multi-stop colorful border line */}
             <rect width="194" height="194" x="3" y="3" rx="45" fill="none" stroke={`url(#fluid-border-grad-${uId})`} strokeWidth="4.5" />
           </g>
-        ) : isPusula ? (
-          <g clipPath={`url(#logo-clip-${uId})`}>
-            {/* Tema renginden gradyan zemin ve sağ üstten gelen ışık */}
-            <rect width="200" height="200" fill={`url(#pusula-bg-grad-${uId})`} />
-            {/* Pusula halkası ve yön çentikleri */}
-            <circle cx="100" cy="100" r="82" fill="none" stroke={pusulaColors.mid} strokeOpacity="0.14" strokeWidth="2" />
-            <circle cx="100" cy="100" r="64" fill="none" stroke={pusulaColors.mid} strokeOpacity="0.07" strokeWidth="1.5" />
-            <g stroke={pusulaColors.mid} strokeOpacity="0.35" strokeWidth="3" strokeLinecap="round">
-              <line x1="100" y1="12" x2="100" y2="24" />
-              <line x1="188" y1="100" x2="176" y2="100" />
-              <line x1="100" y1="188" x2="100" y2="176" />
-              <line x1="12" y1="100" x2="24" y2="100" />
-            </g>
-            {/* İnce iç kenar */}
-            <rect width="194" height="194" x="3" y="3" rx="45" fill="none" stroke={pusulaColors.mid} strokeOpacity="0.18" strokeWidth="2" />
-          </g>
         ) : (
           <rect width="200" height="200" rx="48" fill={fillCol} />
         )}
@@ -363,8 +393,8 @@ export const StormLogo = ({
         <g transform="translate(63.75, 12) scale(1.45)">
           <path 
             d="M28 2 L8 38 L23 38 L15 66 L42 28 L28 28 Z" 
-            fill={isFluidMesh ? `url(#fluid-bolt-grad-${uId})` : isPusula ? `url(#pusula-ink-grad-${uId})` : "#ffffff"} 
-            filter={isFluidMesh ? `url(#fluid-bolt-glow-${uId})` : isPusula ? `url(#pusula-soft-shadow-${uId})` : undefined}
+            fill={isFluidMesh ? `url(#fluid-bolt-grad-${uId})` : "#ffffff"} 
+            filter={isFluidMesh ? `url(#fluid-bolt-glow-${uId})` : undefined}
           />
         </g>
 
@@ -377,7 +407,7 @@ export const StormLogo = ({
           fontFamily="system-ui, -apple-system, sans-serif" 
           fontWeight="950" 
           fontSize="33" 
-          fill={isPusula ? pusulaColors.dark : "#ffffff"} 
+          fill="#ffffff" 
           letterSpacing="3.5" 
           filter={isFluidMesh ? `url(#fluid-logo-text-glow-${uId})` : undefined}
         >
@@ -391,7 +421,7 @@ export const StormLogo = ({
           fontFamily="system-ui, -apple-system, sans-serif" 
           fontWeight="900" 
           fontSize="19" 
-          fill={isPusula ? pusulaColors.dark : "#ffffff"} 
+          fill="#ffffff" 
           letterSpacing="2.5" 
           opacity="0.95" 
           filter={isFluidMesh ? `url(#fluid-logo-text-glow-${uId})` : undefined}
@@ -412,28 +442,21 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.8.9';
+export const APP_VERSION = '1.9.0';
 
 export const CHANGELOG = {
-  version: '1.8.9',
+  version: '1.9.0',
   features: [
-    "Miktarı Doğrudan Yazma: Telefonda sepetteki adete dokunup 200 gibi miktarlar tek tek basmadan yazılır; toplam yazdıkça güncellenir.",
-    "Virgüllü Miktar: Kasada ve telefonda 1,80 metre, 1,5 kg gibi ondalık miktar girilebilir; Türkçe yazım geçerli (1.000 = bin). Miktar başlığı ürünün birimini gösterir (Miktar (Metre)).",
-    "Esc ile Vazgeç: Miktarı yazarken Esc'ye basınca önceki miktar geri gelir.",
-    "Satış Sonrası Bilgi: Telefonda 'Satış tamamlandı' kutusunda müşteri adı ve tam fiş numarası okunur şekilde gösterilir.",
-    "Hızlı PIN Girişi: Çalışanın yanlış PIN'i anında 'PIN hatalı' gösterir; PIN doğrulaması daha hızlı.",
+    "Stok Sayımı: Ürünler telefon kamerası ya da el tipi okuyucuyla okutulur (her okutma 1 adet) veya sayılan miktar yazılır; sistemdekiyle fark anında görünür, 'Farkları Uygula' ile stok sayılan miktara getirilir. Sayılmayan ürünlere dokunulmaz.",
+    "Manuel Stok Girişi / Çıkışı: Fatura kesmeden stoğa ekleme ya da stoktan düşme (tedarik, fire, kendi kullanım), sebep notu ile.",
+    "Sayım ve stok girişinde miktar fark olarak yazılır, aynı anda yapılan satışlar ezilmez; çalışanın stok düşürmesi sahip PIN'i ister; yapılanlar Çalışan Takibi'ne düşer.",
+    "Çalışana Kapalı Ekranlar Gizli: Yetkisi olmayan ekranlar menülerde kilitli görünmez, hiç gösterilmez; yönetici girişiyle yetki verilince geri gelir.",
+    "Yeni Pusula Logosu: Storm şimşeği pusula halkasının içinde iğne gibi; tema rengine uyar, küçük boyutta da net.",
+    "Sıvı Mesh Baştan Tasarlandı (Gece Mavisi): Derin lacivert, sakin paneller, tek vurgu rengi; her ekranın simgesi kendi renginde, başlık ve şeritlerde ölçülü RGB çizgiler, göz yormayan profesyonel görünüm.",
   ],
   fixes: [
-    "Telefonda 6 haneli PIN hızlı tuşlanınca son rakamlar kayboluyordu.",
-    "Eski bir yedeği geri yüklemek kullanıcı listesini silip kullanıcı sistemini kapatabiliyordu; kullanıcılar ve PIN'ler artık korunur.",
-    "Çevrimdışı açılıştan sonra 'Kullanıcı listesi bekleniyor' ekranında takılı kalınabiliyordu.",
-    "Onay penceresinde doğru PIN'den sonra fazladan basılan rakam onayı engelliyordu.",
-    "Miktar kutusuna çok hızlı yazınca ilk rakam kaybolabiliyordu (1,80 yerine 0,80).",
-    "Kasada miktar kutusu yalnızca tam sayı alıyordu; silip yazınca 1200 gibi birleşiyordu.",
-    "Telefonda küsuratlı miktarda '−' düğmesi ürünü sepetten siliyordu.",
-    "Pusula kasada 'Askıdaki Satışlar' yazısının arkasında işaretlenmiş gibi bir kutu görünüyordu.",
-    "Stok miktarları kasada ve telefonda 98.19999 gibi görünebiliyordu; Türkçe biçimde (98,2) gösterilir.",
-    "Kayıt ve silme işlemleri hareket günlüğü yüzünden fazladan internet beklemesi yapıyordu.",
+    "Storm AI düğmesi açık pencerelerin üstüne binip alanları kapatıyordu; pencere açıkken gizlenir.",
+    "Sıvı Mesh'te hareketli arka plan ve parlama efektleri kaldırıldı; daha hızlı ve akıcı.",
   ]
 };
 
@@ -674,6 +697,20 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.9.0",
+    date: "02.11.2026",
+    changes: [
+      "Stok Sayımı: Ürünler telefon kamerası ya da el tipi okuyucuyla okutulur (her okutma 1 adet) veya sayılan miktar yazılır; sistemdekiyle fark anında görünür, 'Farkları Uygula' ile stok sayılan miktara getirilir. Sayılmayan ürünlere dokunulmaz.",
+      "Manuel Stok Girişi / Çıkışı: Fatura kesmeden stoğa ekleme ya da stoktan düşme (tedarik, fire, kendi kullanım), sebep notu ile.",
+      "Sayım ve stok girişinde miktar fark olarak yazılır, aynı anda yapılan satışlar ezilmez; çalışanın stok düşürmesi sahip PIN'i ister; yapılanlar Çalışan Takibi'ne düşer.",
+      "Çalışana Kapalı Ekranlar Gizli: Yetkisi olmayan ekranlar menülerde kilitli görünmez, hiç gösterilmez; yönetici girişiyle yetki verilince geri gelir.",
+      "Yeni Pusula Logosu: Storm şimşeği pusula halkasının içinde iğne gibi; tema rengine uyar, küçük boyutta da net.",
+      "Sıvı Mesh Baştan Tasarlandı (Gece Mavisi): Derin lacivert, sakin paneller, tek vurgu rengi; her ekranın simgesi kendi renginde, başlık ve şeritlerde ölçülü RGB çizgiler, göz yormayan profesyonel görünüm.",
+      "Storm AI düğmesi açık pencerelerin üstüne binip alanları kapatıyordu; pencere açıkken gizlenir.",
+      "Sıvı Mesh'te hareketli arka plan ve parlama efektleri kaldırıldı; daha hızlı ve akıcı.",
+    ]
+  },
   {
     version: "1.8.9",
     date: "01.11.2026",
