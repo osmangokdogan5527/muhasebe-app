@@ -22,7 +22,12 @@ import {
 export const STAFF_TAB_OPTIONS: { id: string; label: string }[] = [
   ...Object.entries(TAB_DEFS).map(([id, def]) => ({ id, label: def.label })),
   { id: 'tahsilat', label: 'Tahsilat / Ödeme (hızlı ekran)' },
+  // Ek yetki: herkesin günlük işlerini gösterir; sahip ayrıca açmadıkça kimseye verilmez
+  { id: 'takip', label: 'Çalışan Takibi (herkesin günlük işleri)' },
 ];
+
+/** "Tümü" düğmesi Çalışan Takibi'ni kapsamaz; o ayrıca işaretlenir */
+export const STAFF_TAKIP_TAB = 'takip';
 
 export const ALL_STAFF_TAB_IDS = STAFF_TAB_OPTIONS.map((t) => t.id);
 
@@ -348,7 +353,7 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
         <div className="flex-1">
           <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2"><Users size={16} className="text-teal-400" /> Kullanıcılar</h3>
           <p className="text-xs text-white/50 mt-1">
-            Her kişi kendi PIN'iyle girer. {IDLE_LOGOUT_MINUTES} dakika işlem yapılmazsa oturum kapanır. Çalışanın günlük işlerini yalnızca sahipler görür.
+            Her kişi kendi PIN'iyle girer. {IDLE_LOGOUT_MINUTES} dakika işlem yapılmazsa oturum kapanır. Çalışan Takibi'ni sahipler görür; bir çalışana da ekranlardan 'Çalışan Takibi'ni işaretleyerek açabilirsiniz.
           </p>
         </div>
         <button
@@ -454,7 +459,7 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-[11px] font-extrabold text-white/80 uppercase tracking-wider">Görebileceği ekranlar</h4>
                     <div className="flex gap-2 text-[11px]">
-                      <button type="button" onClick={() => setDraft({ ...draft, allowedTabs: [...ALL_STAFF_TAB_IDS] })} className="text-teal-300 cursor-pointer">Tümü</button>
+                      <button type="button" onClick={() => setDraft({ ...draft, allowedTabs: ALL_STAFF_TAB_IDS.filter((t) => t !== STAFF_TAKIP_TAB || draft.allowedTabs.includes(STAFF_TAKIP_TAB)) })} className="text-teal-300 cursor-pointer">Tümü</button>
                       <button type="button" onClick={() => setDraft({ ...draft, allowedTabs: [] })} className="text-white/50 cursor-pointer">Hiçbiri</button>
                     </div>
                   </div>

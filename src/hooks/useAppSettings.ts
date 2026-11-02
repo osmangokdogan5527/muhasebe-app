@@ -100,7 +100,8 @@ export function useAppSettings() {
   });
 
   const [appFontSize, setAppFontSize] = useState<'small' | 'medium' | 'large'>(() => {
-    return (localStorage.getItem('storm_muhasebe_font_size') as 'small' | 'medium' | 'large') || 'medium';
+    // Varsayılan küçük yazı (1.9.1); Ayarlar'dan seçim yapılmışsa o korunur
+    return (localStorage.getItem('storm_muhasebe_font_size') as 'small' | 'medium' | 'large') || 'small';
   });
 
   const [sidebarBg, setSidebarBg] = useState<string>(() => {

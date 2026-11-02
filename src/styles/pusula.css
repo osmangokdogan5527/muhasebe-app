@@ -948,6 +948,14 @@ body:has([data-design-style="pusula"]),
   overflow: hidden;
 }
 
+/* Kendi içinde kayan pencereler (ör. Yeni Kullanıcı, telefonda alttan açılanlar): köşe kırpması
+   yalnızca yatayda; dikey kaydırma açık kalır */
+[data-design-style="pusula"] .fixed.inset-0 > :is(div, form):is([class*="overflow-y-auto"], [class*="overflow-auto"], [class*="overflow-y-scroll"]) {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Ana sayfa bölüm başlıklarının noktası tema renginde halka */
 [data-design-style="pusula"] .dashboard-widget-header > span:first-child {
   font-size: 12px !important;

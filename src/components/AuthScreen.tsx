@@ -1,4 +1,5 @@
 import React from 'react';
+import { markSessionActive } from '../hooks/useAppAuth';
 import { User, ChevronDown, Shield, X, CloudLightning, RotateCcw, Download, Trash2, AlertTriangle, Check, ChevronUp, MessageSquare } from 'lucide-react';
 import { StormLogo, APP_VERSION } from '../constants';
 import { DeviceAccount } from '../utils/accountStore';
@@ -183,6 +184,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                 email: `${account.id}@storm.com`
               };
               localStorage.setItem('storm_muhasebe_active_user', JSON.stringify(userData));
+              // Aynı açılışta sayfa yenilenirse oturum korunur
+              markSessionActive(account.id);
               setUserRole('employee');
               const defaultTab = window.innerWidth < 768 ? 'menu' : 'cariler';
               setActiveTab(defaultTab);

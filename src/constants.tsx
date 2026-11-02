@@ -442,21 +442,18 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.9.0';
+export const APP_VERSION = '1.9.1';
 
 export const CHANGELOG = {
-  version: '1.9.0',
+  version: '1.9.1',
   features: [
-    "Stok Sayımı: Ürünler telefon kamerası ya da el tipi okuyucuyla okutulur (her okutma 1 adet) veya sayılan miktar yazılır; sistemdekiyle fark anında görünür, 'Farkları Uygula' ile stok sayılan miktara getirilir. Sayılmayan ürünlere dokunulmaz.",
-    "Manuel Stok Girişi / Çıkışı: Fatura kesmeden stoğa ekleme ya da stoktan düşme (tedarik, fire, kendi kullanım), sebep notu ile.",
-    "Sayım ve stok girişinde miktar fark olarak yazılır, aynı anda yapılan satışlar ezilmez; çalışanın stok düşürmesi sahip PIN'i ister; yapılanlar Çalışan Takibi'ne düşer.",
-    "Çalışana Kapalı Ekranlar Gizli: Yetkisi olmayan ekranlar menülerde kilitli görünmez, hiç gösterilmez; yönetici girişiyle yetki verilince geri gelir.",
-    "Yeni Pusula Logosu: Storm şimşeği pusula halkasının içinde iğne gibi; tema rengine uyar, küçük boyutta da net.",
-    "Sıvı Mesh Baştan Tasarlandı (Gece Mavisi): Derin lacivert, sakin paneller, tek vurgu rengi; her ekranın simgesi kendi renginde, başlık ve şeritlerde ölçülü RGB çizgiler, göz yormayan profesyonel görünüm.",
+    "Fiyatı Değiştirme (telefon): Hızlı satışta fiyat stoktan otomatik gelir; fiyat kutusuna dokunup o satış için değiştirilebilir. Stok kartı değişmez, 'Liste fiyatı · geri al' ile eski fiyata dönülür.",
+    "Yenilemede Oturum Korunur: Telefonda aşağı çekip yenileme ya da F5 firma giriş ekranına atmaz; uygulama tamamen kapatılıp açılınca şifre yine sorulur.",
+    "Küçük Yazı Varsayılan: Uygulama küçük yazıyla açılır; Ayarlar'da başka boyut seçildiyse o korunur.",
+    "Çalışan Takibi Yetkisi: Sahipler görür; sahip bir kullanıcıya Ayarlar > Kullanıcılar'dan 'Çalışan Takibi' ekranını işaretleyerek açabilir.",
   ],
   fixes: [
-    "Storm AI düğmesi açık pencerelerin üstüne binip alanları kapatıyordu; pencere açıkken gizlenir.",
-    "Sıvı Mesh'te hareketli arka plan ve parlama efektleri kaldırıldı; daha hızlı ve akıcı.",
+    "Pusula'da uzun pencereler (ör. Yeni Kullanıcı) telefonda aşağı kaydırılamıyordu.",
   ]
 };
 
@@ -697,6 +694,17 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.9.1",
+    date: "02.11.2026",
+    changes: [
+      "Fiyatı Değiştirme (telefon): Hızlı satışta fiyat stoktan otomatik gelir; fiyat kutusuna dokunup o satış için değiştirilebilir. Stok kartı değişmez, 'Liste fiyatı · geri al' ile eski fiyata dönülür.",
+      "Yenilemede Oturum Korunur: Telefonda aşağı çekip yenileme ya da F5 firma giriş ekranına atmaz; uygulama tamamen kapatılıp açılınca şifre yine sorulur.",
+      "Küçük Yazı Varsayılan: Uygulama küçük yazıyla açılır; Ayarlar'da başka boyut seçildiyse o korunur.",
+      "Çalışan Takibi Yetkisi: Sahipler görür; sahip bir kullanıcıya Ayarlar > Kullanıcılar'dan 'Çalışan Takibi' ekranını işaretleyerek açabilir.",
+      "Pusula'da uzun pencereler (ör. Yeni Kullanıcı) telefonda aşağı kaydırılamıyordu.",
+    ]
+  },
   {
     version: "1.9.0",
     date: "02.11.2026",

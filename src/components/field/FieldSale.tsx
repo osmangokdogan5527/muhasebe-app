@@ -1,7 +1,7 @@
 import React, { useMemo, useState, Suspense } from 'react';
 import { lazyWithReload } from '../../utils/lazyWithReload';
 import { Minus, Plus, Trash2, Package, User, Banknote, CreditCard, BookOpen, CheckCircle2, ShoppingCart, ChevronRight, FileText } from 'lucide-react';
-import { formatQuantity } from '../../pdf/format';
+import { formatQuantity, formatNumber } from '../../pdf/format';
 import { Cari, Stock, BankAccount } from '../../types';
 import { PosCartItem, PosPaymentSplit, PosSaleSummary } from '../../types/pos';
 import { calculateLineTotal, calculateCartSummary, findStockByBarcodeOrSearch, generateReceiptNo } from '../../utils/posUtils';
@@ -144,6 +144,17 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
     }));
   };
 
+  /** Bu satıştaki birim fiyatı değiştirir (stok kartındaki fiyat değişmez) */
+  const setUnitPrice = (id: string, value: number) => {
+    if (!Number.isFinite(value) || value < 0) return;
+    const unitPrice = Math.round(value * 100) / 100;
+    setCart(prev => prev.map(item => {
+      if (item.id !== id) return item;
+      const { discountAmount, totalLine } = calculateLineTotal(unitPrice, item.quantity, item.discountRate);
+      return { ...item, unitPrice, discountAmount, totalLine };
+    }));
+  };
+
   const handleScan = (code: string) => {
     const parsed = parseScannedQrCode(code);
     const stock = findStockByBarcodeOrSearch(stoklar, parsed);
@@ -281,7 +292,31 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-white truncate">{item.stockName}</div>
-                      <div className="text-[11px] text-slate-500">{formatMoney(item.unitPrice)} / {item.unit}</div>
+                      {/* Birim fiyat: stoktan gelir, bu satış için değiştirilebilir */}
+                      <div className="mt-1 flex items-center gap-1.5 text-[12px] text-slate-400">
+                        <label className="price-edit flex items-center gap-1 rounded-lg border border-white/10 bg-black/20 pl-2 pr-1 focus-within:border-[color:var(--accent-400,#38bdf8)]">
+                          <span className="text-slate-400">₺</span>
+                          <QuantityInput
+                            value={item.unitPrice}
+                            onCommit={(v) => setUnitPrice(item.id, v)}
+                            allowZero
+                            formatDisplay={(v) => formatNumber(v, 2)}
+                            label={`${item.stockName} birim fiyatı`}
+                            title="Birim fiyatı değiştirmek için dokunun"
+                            className="unit-price-input w-[72px] bg-transparent py-1 text-[13px] font-semibold text-white tabular-nums outline-none"
+                          />
+                        </label>
+                        <span>/ {item.unit}</span>
+                      </div>
+                      {stock && Math.abs(grossSalesPrice(stock) - item.unitPrice) > 0.004 && (
+                        <button
+                          type="button"
+                          onClick={() => setUnitPrice(item.id, grossSalesPrice(stock))}
+                          className="text-[11px] text-slate-500 underline decoration-dotted cursor-pointer"
+                        >
+                          Liste fiyatı {formatMoney(grossSalesPrice(stock))} · geri al
+                        </button>
+                      )}
                       {overStock && <div className="text-[11px] text-amber-400">Stokta {formatQuantity(stock!.quantity)} {item.unit} var</div>}
                     </div>
                     <span className="text-sm font-bold text-white tabular-nums shrink-0">{formatMoney(item.totalLine)}</span>
