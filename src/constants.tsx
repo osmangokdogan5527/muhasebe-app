@@ -442,28 +442,21 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.8.9';
+export const APP_VERSION = '1.9.0';
 
 export const CHANGELOG = {
-  version: '1.8.9',
+  version: '1.9.0',
   features: [
-    "Miktarı Doğrudan Yazma: Telefonda sepetteki adete dokunup 200 gibi miktarlar tek tek basmadan yazılır; toplam yazdıkça güncellenir.",
-    "Virgüllü Miktar: Kasada ve telefonda 1,80 metre, 1,5 kg gibi ondalık miktar girilebilir; Türkçe yazım geçerli (1.000 = bin). Miktar başlığı ürünün birimini gösterir (Miktar (Metre)).",
-    "Esc ile Vazgeç: Miktarı yazarken Esc'ye basınca önceki miktar geri gelir.",
-    "Satış Sonrası Bilgi: Telefonda 'Satış tamamlandı' kutusunda müşteri adı ve tam fiş numarası okunur şekilde gösterilir.",
-    "Hızlı PIN Girişi: Çalışanın yanlış PIN'i anında 'PIN hatalı' gösterir; PIN doğrulaması daha hızlı.",
+    "Stok Sayımı: Ürünler telefon kamerası ya da el tipi okuyucuyla okutulur (her okutma 1 adet) veya sayılan miktar yazılır; sistemdekiyle fark anında görünür, 'Farkları Uygula' ile stok sayılan miktara getirilir. Sayılmayan ürünlere dokunulmaz.",
+    "Manuel Stok Girişi / Çıkışı: Fatura kesmeden stoğa ekleme ya da stoktan düşme (tedarik, fire, kendi kullanım), sebep notu ile.",
+    "Sayım ve stok girişinde miktar fark olarak yazılır, aynı anda yapılan satışlar ezilmez; çalışanın stok düşürmesi sahip PIN'i ister; yapılanlar Çalışan Takibi'ne düşer.",
+    "Çalışana Kapalı Ekranlar Gizli: Yetkisi olmayan ekranlar menülerde kilitli görünmez, hiç gösterilmez; yönetici girişiyle yetki verilince geri gelir.",
+    "Yeni Pusula Logosu: Storm şimşeği pusula halkasının içinde iğne gibi; tema rengine uyar, küçük boyutta da net.",
+    "Sıvı Mesh Baştan Tasarlandı (Gece Mavisi): Derin lacivert, sakin paneller, tek vurgu rengi; her ekranın simgesi kendi renginde, başlık ve şeritlerde ölçülü RGB çizgiler, göz yormayan profesyonel görünüm.",
   ],
   fixes: [
-    "Telefonda 6 haneli PIN hızlı tuşlanınca son rakamlar kayboluyordu.",
-    "Eski bir yedeği geri yüklemek kullanıcı listesini silip kullanıcı sistemini kapatabiliyordu; kullanıcılar ve PIN'ler artık korunur.",
-    "Çevrimdışı açılıştan sonra 'Kullanıcı listesi bekleniyor' ekranında takılı kalınabiliyordu.",
-    "Onay penceresinde doğru PIN'den sonra fazladan basılan rakam onayı engelliyordu.",
-    "Miktar kutusuna çok hızlı yazınca ilk rakam kaybolabiliyordu (1,80 yerine 0,80).",
-    "Kasada miktar kutusu yalnızca tam sayı alıyordu; silip yazınca 1200 gibi birleşiyordu.",
-    "Telefonda küsuratlı miktarda '−' düğmesi ürünü sepetten siliyordu.",
-    "Pusula kasada 'Askıdaki Satışlar' yazısının arkasında işaretlenmiş gibi bir kutu görünüyordu.",
-    "Stok miktarları kasada ve telefonda 98.19999 gibi görünebiliyordu; Türkçe biçimde (98,2) gösterilir.",
-    "Kayıt ve silme işlemleri hareket günlüğü yüzünden fazladan internet beklemesi yapıyordu.",
+    "Storm AI düğmesi açık pencerelerin üstüne binip alanları kapatıyordu; pencere açıkken gizlenir.",
+    "Sıvı Mesh'te hareketli arka plan ve parlama efektleri kaldırıldı; daha hızlı ve akıcı.",
   ]
 };
 
@@ -704,6 +697,20 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.9.0",
+    date: "02.11.2026",
+    changes: [
+      "Stok Sayımı: Ürünler telefon kamerası ya da el tipi okuyucuyla okutulur (her okutma 1 adet) veya sayılan miktar yazılır; sistemdekiyle fark anında görünür, 'Farkları Uygula' ile stok sayılan miktara getirilir. Sayılmayan ürünlere dokunulmaz.",
+      "Manuel Stok Girişi / Çıkışı: Fatura kesmeden stoğa ekleme ya da stoktan düşme (tedarik, fire, kendi kullanım), sebep notu ile.",
+      "Sayım ve stok girişinde miktar fark olarak yazılır, aynı anda yapılan satışlar ezilmez; çalışanın stok düşürmesi sahip PIN'i ister; yapılanlar Çalışan Takibi'ne düşer.",
+      "Çalışana Kapalı Ekranlar Gizli: Yetkisi olmayan ekranlar menülerde kilitli görünmez, hiç gösterilmez; yönetici girişiyle yetki verilince geri gelir.",
+      "Yeni Pusula Logosu: Storm şimşeği pusula halkasının içinde iğne gibi; tema rengine uyar, küçük boyutta da net.",
+      "Sıvı Mesh Baştan Tasarlandı (Gece Mavisi): Derin lacivert, sakin paneller, tek vurgu rengi; her ekranın simgesi kendi renginde, başlık ve şeritlerde ölçülü RGB çizgiler, göz yormayan profesyonel görünüm.",
+      "Storm AI düğmesi açık pencerelerin üstüne binip alanları kapatıyordu; pencere açıkken gizlenir.",
+      "Sıvı Mesh'te hareketli arka plan ve parlama efektleri kaldırıldı; daha hızlı ve akıcı.",
+    ]
+  },
   {
     version: "1.8.9",
     date: "01.11.2026",
