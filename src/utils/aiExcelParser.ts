@@ -1,4 +1,5 @@
 import { parseLocaleNumber } from './excelParser';
+import { generateContentWithFallback } from '../ai/geminiModel';
 
 export interface ParsedCari {
   name: string;
@@ -73,16 +74,13 @@ Görevlerin şunlardır:
   "creditKeywords": ["alacak", "alacaklı"]
 }
 `;
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: {
-                  responseMimeType: "application/json",
-                  temperature: 0.1
-                }
-              })
+            // Model anahtara göre seçilir; eski model kapatılmışsa yenisine geçilir
+            const { response } = await generateContentWithFallback(geminiApiKey, {
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0.1
+              }
             });
 
             if (response.ok) {
