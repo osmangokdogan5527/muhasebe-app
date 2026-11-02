@@ -40,7 +40,6 @@ import { PosCartItem, PosPaymentSplit } from './types/pos';
 
 import { enableNetwork, disableNetwork } from 'firebase/firestore';
 import { BackupWizardModal } from './components/backup/BackupWizardModal';
-import { FluidMeshBackground } from './components/FluidMeshBackground';
 import { GlobalStyles } from "./components/GlobalStyles";
 import YetkisizErisimView from './components/YetkisizErisimView';
 // Telefonda pratik satış ve tahsilat ekranları (tam sürümün içinde)
@@ -991,7 +990,6 @@ export default function App() {
     <div data-design-style={designStyle} data-nav-position={navPosition} className={`min-h-screen relative ${(currentThemeData as any).bgClass || 'bg-[#050505]'} text-[#e0e0e0] flex flex-col md:flex-row font-sans overflow-x-hidden`}>
       <GlobalStyles themeCssRules={themeCssRules} bodyPatternSvg={bodyPatternSvg} activePattern={activePatternObj} />
 
-      {designStyle === 'fluid-mesh' && <FluidMeshBackground />}
 
 
       

@@ -269,23 +269,12 @@ html {
   color: #ffffff !important;
 }
 
-/* Storm AI Badge Override - Fluid Mesh Theme Only */
-[data-design-style="fluid-mesh"] .storm-ai-badge {
-  background-color: #0f172a !important;
-  background: rgba(15, 23, 42, 0.95) !important;
-  color: #ffffff !important;
-  border-color: rgba(255, 255, 255, 0.25) !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6), 0 0 10px rgba(14, 165, 233, 0.35) !important;
-  backdrop-filter: blur(12px) !important;
-}
-
 /* 
   =========================================
   POS TERMINAL UNIFIED HIGH-LEGIBILITY STYLES
   =========================================
 */
-.pos-terminal-wrapper,
-[data-design-style="fluid-mesh"] .pos-terminal-wrapper {
+.pos-terminal-wrapper {
   background-color: #020617 !important;
   color: #ffffff !important;
 }
