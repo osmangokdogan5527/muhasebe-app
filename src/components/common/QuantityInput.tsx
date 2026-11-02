@@ -18,9 +18,11 @@ export interface QuantityInputProps {
   /** Sayım gibi yerlerde 0 geçerli bir miktardır */
   allowZero?: boolean;
   id?: string;
+  /** Düzenlenmezken gösterim biçimi (ör. fiyat için "80,00") */
+  formatDisplay?: (value: number) => string;
 }
 
-export const QuantityInput: React.FC<QuantityInputProps> = ({ value, onCommit, label, className, style, title, allowZero = false, id }) => {
+export const QuantityInput: React.FC<QuantityInputProps> = ({ value, onCommit, label, className, style, title, allowZero = false, id, formatDisplay }) => {
   const valid = (n: number) => Number.isFinite(n) && (allowZero ? n >= 0 : n > 0);
   const [draft, setDraft] = useState<string | null>(null);
   // Odaktan sonra yazı yazıldı mı? (gecikmeli yeniden seçim yazılanı seçip ezmesin)
@@ -30,7 +32,7 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({ value, onCommit, l
   // Esc sonrası gelen blur, vazgeçilen değeri yeniden yazmasın
   const cancelledRef = useRef(false);
   const parse = (text: string): number => parseLocaleNumber(text);
-  const shown = draft ?? String(value).replace('.', ',');
+  const shown = draft ?? (formatDisplay ? formatDisplay(value) : String(value).replace('.', ','));
   const commit = () => {
     if (cancelledRef.current) {
       cancelledRef.current = false;
