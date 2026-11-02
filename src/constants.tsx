@@ -226,7 +226,7 @@ export const StormLogo = ({
   // işareti. Yazı içermez (marka adı logonun yanında yazılır); küçük boyutta da nettir.
   // Pusula: tema renginde gradyan karo, beyaz iğne. Gece: koyu lacivert karo, tema renginde halka/iğne.
   const isNight = isFluidMesh;
-  const compassRing = isNight ? pusulaColors.light : '#ffffff';
+  const compassRing = isNight ? `url(#night-ring-${uId})` : '#ffffff';
   const pusulaSvg = (
     <svg className={isNight ? 'storm-logo-night' : 'storm-logo-pusula'} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={width} height={height}>
       <defs>
@@ -235,17 +235,25 @@ export const StormLogo = ({
           <stop offset="0.55" stopColor={isNight ? '#121c33' : pusulaColors.mid} />
           <stop offset="1" stopColor={isNight ? '#0a1120' : pusulaColors.dark} />
         </linearGradient>
+        {/* Gece: ince RGB geçişleri (camgöbeği → mor → pembe) */}
         <linearGradient id={`night-needle-${uId}`} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#ffffff" />
-          <stop offset="1" stopColor={pusulaColors.pale} />
+          <stop offset="0.45" stopColor="#a5f3fc" />
+          <stop offset="1" stopColor="#c4b5fd" />
+        </linearGradient>
+        <linearGradient id={`night-ring-${uId}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#22d3ee" />
+          <stop offset="0.4" stopColor="#818cf8" />
+          <stop offset="0.75" stopColor="#e879f9" />
+          <stop offset="1" stopColor="#34d399" />
         </linearGradient>
         <radialGradient id={`pusula-gloss-${uId}`} cx="0.3" cy="0.2" r="0.8">
-          <stop offset="0" stopColor={isNight ? pusulaColors.light : '#ffffff'} stopOpacity={isNight ? 0.22 : 0.35} />
+          <stop offset="0" stopColor={isNight ? '#22d3ee' : '#ffffff'} stopOpacity={isNight ? 0.16 : 0.35} />
           <stop offset="0.6" stopColor="#ffffff" stopOpacity="0" />
         </radialGradient>
         <filter id={`pusula-needle-shadow-${uId}`} x="-30%" y="-30%" width="160%" height="160%">
           {isNight
-            ? <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor={pusulaColors.light} floodOpacity="0.55" />
+            ? <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#818cf8" floodOpacity="0.6" />
             : <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor={pusulaColors.dark} floodOpacity="0.45" />}
         </filter>
         <clipPath id={`pusula-clip-${uId}`}>
@@ -258,9 +266,9 @@ export const StormLogo = ({
         {isNight && <rect x="1.5" y="1.5" width="197" height="197" rx="45" fill="none" stroke="#ffffff" strokeOpacity="0.08" strokeWidth="3" />}
       </g>
       {/* Pusula halkası, kuzey işareti ve yön noktaları */}
-      <circle cx="100" cy="100" r="70" fill="none" stroke={compassRing} strokeOpacity={isNight ? 0.5 : 0.26} strokeWidth="2.5" />
-      <path d="M100 18 L107 30 L93 30 Z" fill={isNight ? pusulaColors.light : '#ffffff'} />
-      <g fill={compassRing} fillOpacity={isNight ? 0.75 : 0.6}>
+      <circle cx="100" cy="100" r="70" fill="none" stroke={compassRing} strokeOpacity={isNight ? 0.85 : 0.26} strokeWidth={isNight ? 3 : 2.5} />
+      <path d="M100 18 L107 30 L93 30 Z" fill={isNight ? '#22d3ee' : '#ffffff'} />
+      <g fill={isNight ? '#a5b4fc' : compassRing} fillOpacity={isNight ? 0.8 : 0.6}>
         <circle cx="170" cy="100" r="4" />
         <circle cx="100" cy="170" r="4" />
         <circle cx="30" cy="100" r="4" />

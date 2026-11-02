@@ -31,6 +31,9 @@
   --g-accent-soft: color-mix(in srgb, var(--accent-500, #3b82f6) 14%, transparent);
   --g-accent-soft-2: color-mix(in srgb, var(--accent-500, #3b82f6) 22%, transparent);
   --g-accent-text: color-mix(in srgb, var(--accent-300, #93c5fd) 85%, #ffffff);
+  /* RGB vurgu: yalnızca ince çizgiler, şeritler ve logoda; yüzeyler sakin kalır */
+  --g-rgb: linear-gradient(90deg, #22d3ee 0%, #818cf8 38%, #e879f9 68%, #34d399 100%);
+  --g-rgb-v: linear-gradient(180deg, #22d3ee 0%, #818cf8 40%, #e879f9 75%, #34d399 100%);
   --g-radius: 16px;
   --g-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 10px 30px -18px rgba(0, 0, 0, 0.85);
   --g-shadow-lg: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 30px 70px -24px rgba(0, 0, 0, 0.9);
@@ -46,8 +49,10 @@
 html:has([data-design-style="fluid-mesh"]),
 body:has([data-design-style="fluid-mesh"]) {
   background:
-    radial-gradient(1100px 600px at -5% -15%, color-mix(in srgb, var(--accent-500, #3b82f6) 11%, transparent), transparent 62%),
-    radial-gradient(900px 520px at 108% 112%, color-mix(in srgb, var(--accent-700, #1d4ed8) 9%, transparent), transparent 60%),
+    radial-gradient(900px 560px at -6% -14%, rgba(34, 211, 238, 0.15), transparent 62%),
+    radial-gradient(760px 480px at 106% -8%, rgba(232, 121, 249, 0.10), transparent 60%),
+    radial-gradient(980px 560px at 104% 112%, rgba(129, 140, 248, 0.15), transparent 62%),
+    radial-gradient(700px 420px at 10% 115%, rgba(52, 211, 153, 0.08), transparent 60%),
     linear-gradient(180deg, var(--g-bg) 0%, var(--g-bg-deep) 100%) !important;
   background-attachment: fixed !important;
 }
@@ -123,11 +128,12 @@ body:has([data-design-style="fluid-mesh"]) {
    --------------------------------------------------------------------- */
 [data-design-style="fluid-mesh"] main > div > div.max-w-7xl > div > div:first-child:is([class*="rounded-"]) {
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--accent-500, #3b82f6) 12%, transparent) 0%, transparent 55%),
+    var(--g-rgb) top / 100% 3px no-repeat,
+    linear-gradient(90deg, rgba(34, 211, 238, 0.10) 0%, rgba(129, 140, 248, 0.07) 35%, rgba(232, 121, 249, 0.03) 70%, transparent 100%),
     var(--g-surface) !important;
   border: 1px solid var(--g-border) !important;
   border-radius: 18px !important;
-  box-shadow: inset 0 2px 0 0 color-mix(in srgb, var(--accent-400, #60a5fa) 75%, transparent), var(--g-shadow) !important;
+  box-shadow: var(--g-shadow) !important;
 }
 [data-design-style="fluid-mesh"] main > div > div.max-w-7xl > div > div:first-child:is([class*="rounded-"]) :is(h1, h2) {
   color: #ffffff !important;
@@ -152,9 +158,10 @@ body:has([data-design-style="fluid-mesh"]) {
 
 /* Ana sayfa bölüm başlık şeritleri: lacivert yüzey, solda tema renginde ince çizgi */
 [data-design-style="fluid-mesh"] .dashboard-widget-header {
-  background: var(--g-surface) !important;
+  background:
+    var(--g-rgb-v) left / 3px 100% no-repeat,
+    var(--g-surface) !important;
   border: 1px solid var(--g-border) !important;
-  border-left: 3px solid var(--accent-500, #3b82f6) !important;
   box-shadow: none !important;
 }
 [data-design-style="fluid-mesh"] .dashboard-widget-header :is(span, p, h1, h2, h3) {
@@ -312,9 +319,11 @@ body:has([data-design-style="fluid-mesh"]) {
 }
 [data-design-style="fluid-mesh"] aside nav button[style*="background-color"],
 [data-design-style="fluid-mesh"] aside nav button[style*="color-mix"] {
-  background: var(--g-accent-soft) !important;
-  border-color: color-mix(in srgb, var(--accent-500, #3b82f6) 28%, transparent) !important;
-  box-shadow: inset 3px 0 0 var(--accent-400, #60a5fa) !important;
+  background:
+    var(--g-rgb-v) left / 3px 100% no-repeat,
+    linear-gradient(90deg, rgba(34, 211, 238, 0.10), rgba(129, 140, 248, 0.08) 60%, rgba(232, 121, 249, 0.04)) !important;
+  border-color: rgba(129, 140, 248, 0.22) !important;
+  box-shadow: none !important;
   color: #ffffff !important;
 }
 [data-design-style="fluid-mesh"] aside nav button[style*="background-color"] :is(span, div) {
@@ -351,10 +360,10 @@ body:has([data-design-style="fluid-mesh"]) {
   border-color: var(--g-border-strong) !important;
 }
 [data-design-style="fluid-mesh"] .storm-icon-wrapper.active-icon {
-  background: var(--g-accent-strong) !important;
+  background: linear-gradient(135deg, #22d3ee 0%, #818cf8 55%, #c084fc 100%) !important;
   border-color: transparent !important;
   color: #ffffff !important;
-  box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--accent-600, #2563eb) 80%, transparent) !important;
+  box-shadow: 0 6px 14px -6px rgba(129, 140, 248, 0.6) !important;
 }
 
 /* Logo kutusu: eski parlama ve hareketler yok */
@@ -386,7 +395,11 @@ body:has([data-design-style="fluid-mesh"]) {
 [data-design-style="fluid-mesh"] .mobile-quick-actions > button {
   background: var(--g-surface) !important;
   border: 1px solid var(--g-border) !important;
-  box-shadow: inset 0 2px 0 0 color-mix(in srgb, var(--accent-400, #60a5fa) 70%, transparent), var(--g-shadow) !important;
+  background-image: var(--g-rgb) !important;
+  background-size: 100% 2px !important;
+  background-repeat: no-repeat !important;
+  background-position: top !important;
+  box-shadow: var(--g-shadow) !important;
 }
 [data-design-style="fluid-mesh"] .mobile-quick-actions .mobile-quick-icon {
   background: var(--g-accent-soft) !important;
@@ -765,3 +778,41 @@ main[data-design-style="fluid-mesh"].staff-login {
 [data-design-style="fluid-mesh"] .border-purple-300:not(.print-paper-sheet *) {
   border-color: rgba(168, 85, 247, 0.35) !important;
 }
+
+/* ---------------------------------------------------------------------
+   17. RENKLİ SİMGELER (RGB dokunuşu)
+   Her ekranın simgesi kendi renginde; yüzeyler sakin kalır. Menüde ve
+   telefon ana menüsünde aynı renkler kullanılır.
+   --------------------------------------------------------------------- */
+[data-design-style="fluid-mesh"] :is(#tab-btn-dashboard, #mob-nav-dashboard) { --g-hue: #22d3ee; }
+[data-design-style="fluid-mesh"] :is(#tab-btn-pos, #mob-nav-pos) { --g-hue: #34d399; }
+[data-design-style="fluid-mesh"] :is(#tab-btn-cariler, #mob-nav-cariler) { --g-hue: #818cf8; }
+[data-design-style="fluid-mesh"] :is(#tab-btn-kasa, #mob-nav-kasa) { --g-hue: #2dd4bf; }
+[data-design-style="fluid-mesh"] :is(#tab-btn-islemler, #mob-nav-islemler) { --g-hue: #38bdf8; }
+[data-design-style="fluid-mesh"] :is(#tab-btn-stoklar, #mob-nav-stoklar) { --g-hue: #a78bfa; }
+[data-design-style="fluid-mesh"] :is(#tab-btn-masraflar, #mob-nav-masraflar) { --g-hue: #f472b6; }
+[data-design-style="fluid-mesh"] :is(#tab-btn-calisanlar, #mob-nav-calisanlar) { --g-hue: #c084fc; }
+[data-design-style="fluid-mesh"] :is(#tab-btn-ceksenet, #mob-nav-ceksenet) { --g-hue: #e879f9; }
+[data-design-style="fluid-mesh"] :is(#tab-btn-krediler, #mob-nav-krediler) { --g-hue: #60a5fa; }
+[data-design-style="fluid-mesh"] :is(#tab-btn-raporlar, #mob-nav-raporlar) { --g-hue: #4ade80; }
+[data-design-style="fluid-mesh"] :is(#tab-btn-ayarlar, #mob-nav-ayarlar) { --g-hue: #94a3b8; }
+
+[data-design-style="fluid-mesh"] :is([id^="tab-btn-"], [id^="mob-nav-"]) .storm-icon-wrapper:not(.active-icon),
+[data-design-style="fluid-mesh"] [id^="mob-nav-"] :is(.w-12, .w-11, .w-10).rounded-2xl,
+[data-design-style="fluid-mesh"] [id^="mob-nav-"] :is(.w-12, .w-11, .w-10).rounded-xl {
+  color: var(--g-hue, var(--g-text-2)) !important;
+  background: color-mix(in srgb, var(--g-hue, #94a3b8) 12%, transparent) !important;
+  border-color: color-mix(in srgb, var(--g-hue, #94a3b8) 26%, transparent) !important;
+}
+[data-design-style="fluid-mesh"] [id^="mob-nav-"] svg {
+  color: var(--g-hue, var(--g-text-2)) !important;
+  stroke: var(--g-hue, var(--g-text-2)) !important;
+}
+/* Seçili sekmenin simgesi kendi renginde dolu */
+[data-design-style="fluid-mesh"] [id^="tab-btn-"] .storm-icon-wrapper.active-icon {
+  background: linear-gradient(135deg, var(--g-hue, #22d3ee), color-mix(in srgb, var(--g-hue, #22d3ee) 55%, #4f46e5)) !important;
+  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--g-hue, #22d3ee) 70%, transparent) !important;
+}
+/* Telefon hızlı kartlarının simgeleri */
+[data-design-style="fluid-mesh"] #mobile-quick-pos .mobile-quick-icon { background: rgba(52, 211, 153, 0.14) !important; color: #6ee7b7 !important; }
+[data-design-style="fluid-mesh"] #mobile-quick-tahsilat .mobile-quick-icon { background: rgba(34, 211, 238, 0.14) !important; color: #67e8f9 !important; }
