@@ -816,3 +816,13 @@ main[data-design-style="fluid-mesh"].staff-login {
 /* Telefon hızlı kartlarının simgeleri */
 [data-design-style="fluid-mesh"] #mobile-quick-pos .mobile-quick-icon { background: rgba(52, 211, 153, 0.14) !important; color: #6ee7b7 !important; }
 [data-design-style="fluid-mesh"] #mobile-quick-tahsilat .mobile-quick-icon { background: rgba(34, 211, 238, 0.14) !important; color: #67e8f9 !important; }
+
+/* Kasa sepetindeki fiyat/miktar alanları: çerçeveyi dış kutu çizer, içte ikinci çerçeve olmaz */
+[data-design-style="fluid-mesh"] .pos-terminal-wrapper input.pos-number-input.pos-number-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+[data-design-style="fluid-mesh"] .pos-terminal-wrapper input.pos-number-input.pos-number-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):focus {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  min-width: 0;
+}
