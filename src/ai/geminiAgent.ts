@@ -4,7 +4,8 @@
  * Akış: kullanıcı mesajı → Gemini → araç çağrıları. Okuma araçları hemen çalışır ve
  * sonucu modele geri verilir. Yazma araçları için motor durur ve onay bekleyen işlemleri
  * döndürür; kullanıcı onaylayınca/iptal edince resumeAgent ile kaldığı yerden devam edilir.
- * Model: gemini-2.5-flash (ücretsiz katmanda kullanılabilir).
+ * Model: anahtarın erişebildiği güncel "flash" modeli (bkz. geminiModel.ts); eski model
+ * yeni anahtarlara kapatılırsa kendiliğinden yenisine geçilir.
  */
 import {
   AiTool, AiToolContext, AiChart, PreparedWrite,
@@ -12,8 +13,10 @@ import {
 } from './aiTools';
 import { getTodayISO } from '../utils/dateUtils';
 import { logError } from '../utils/errorLogger';
+import { DEFAULT_GEMINI_MODEL, generateContentWithFallback } from './geminiModel';
 
-export const GEMINI_MODEL = 'gemini-2.5-flash';
+/** Varsayılan model (çalışan model anahtar başına geminiModel.ts'de belirlenir) */
+export const GEMINI_MODEL = DEFAULT_GEMINI_MODEL;
 const MAX_STEPS = 8; // Bir kullanıcı mesajı için en fazla model turu
 const MAX_HISTORY = 40; // Bağlam şişmesin diye tutulan en fazla içerik sayısı
 
@@ -67,16 +70,12 @@ Kurallar:
 }
 
 async function callGemini(apiKey: string, contents: GeminiContent[], tools: AiTool[], ctx: AiToolContext): Promise<GeminiContent> {
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: buildSystemInstruction(ctx) }] },
-      contents,
-      tools: [{ functionDeclarations: toFunctionDeclarations(tools) }],
-      toolConfig: { functionCallingConfig: { mode: 'AUTO' } },
-      generationConfig: { temperature: 0.2 },
-    }),
+  const { response } = await generateContentWithFallback(apiKey, {
+    systemInstruction: { parts: [{ text: buildSystemInstruction(ctx) }] },
+    contents,
+    tools: [{ functionDeclarations: toFunctionDeclarations(tools) }],
+    toolConfig: { functionCallingConfig: { mode: 'AUTO' } },
+    generationConfig: { temperature: 0.2 },
   });
 
   if (!response.ok) {
@@ -85,6 +84,7 @@ async function callGemini(apiKey: string, contents: GeminiContent[], tools: AiTo
     if (response.status === 429) throw new GeminiApiError('Ücretsiz kullanım limitine ulaşıldı. Lütfen bir dakika bekleyip tekrar deneyin.', 429);
     if (response.status === 400 && /api key/i.test(detail)) throw new GeminiApiError('Gemini API anahtarı geçersiz. Ayarlar > Yapay Zeka bölümünden kontrol edin.', 400);
     if (response.status === 403) throw new GeminiApiError('Gemini API anahtarının bu modele erişim izni yok. Ayarlar > Yapay Zeka bölümünden kontrol edin.', 403);
+    if (response.status === 404) throw new GeminiApiError('Bu API anahtarıyla kullanılabilen bir Gemini modeli bulunamadı. Anahtarın Google AI Studio\'da etkin olduğunu kontrol edin.', 404);
     throw new GeminiApiError(`Yapay zeka isteği başarısız oldu (${response.status}). ${detail}`.trim(), response.status);
   }
 

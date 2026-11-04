@@ -232,7 +232,7 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
             )}
             <div className="min-w-0 flex-1">
               <span className="text-xs font-bold text-zinc-50 block truncate">{staffUserName || user?.displayName || 'Kullanıcı'}</span>
-              <span className="text-[9px] font-mono text-zinc-300 block truncate">{staffUserName ? (user?.displayName || 'Aktif Oturum') : 'Aktif Oturum'}</span>
+              <span className="text-[9px] font-mono text-zinc-300 block truncate" title={user?.uid ? `Firma kodu: ${user.uid}` : undefined}>{/* Firma kodu: başka cihazdan bağlanırken gerekir */}{staffUserName ? `${user?.displayName || ''} · Kod: ${user?.uid || ''}` : `Firma kodu: ${user?.uid || ''}`}</span>
             </div>
           </div>
           <button

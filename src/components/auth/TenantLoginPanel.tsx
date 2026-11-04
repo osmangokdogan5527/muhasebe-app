@@ -98,9 +98,29 @@ export const TenantLoginPanel: React.FC<TenantLoginPanelProps> = ({ accounts, on
     run(() => createTenant(firmName, firmCode, password));
   };
 
+  /**
+   * Bağlanırken firma kodu istenir; kullanıcı firma adını yazdıysa ("Gökdoğan Tekstil") koda
+   * çevrilir ("gokdogan_tekstil"). Firma oluşturulurken kod elle değiştirildiyse kodun kendisi gerekir.
+   */
+  const resolveConnectCode = (raw: string): string => {
+    const value = (raw || '').trim();
+    const lowered = value.toLowerCase();
+    return validateTenantCode(lowered) === null ? lowered : suggestTenantCode(value);
+  };
+  const connectCode = resolveConnectCode(firmCode);
+
   const handleConnect = (e: React.FormEvent) => {
     e.preventDefault();
-    run(() => connectTenant(firmCode, password));
+    run(async () => {
+      const result = await connectTenant(connectCode, password);
+      if (result.status === 'failed' && /hatalı/i.test(result.message)) {
+        return {
+          ...result,
+          message: `Firma kodu (${connectCode}) veya firma şifresi hatalı. Firma adı değil firma kodu gerekir; kodu ilk cihazda giriş ekranında firma adının altında ya da menünün altındaki firma kartında görebilirsiniz. Şifre, kişisel PIN değil firma şifresidir (en az ${MIN_PASSWORD_LENGTH} karakter).`,
+        };
+      }
+      return result;
+    });
   };
 
   // Onay tarayıcı penceresiyle (window.confirm) değil sayfa içinde sorulur: AI Studio önizlemesi gibi
@@ -294,21 +314,29 @@ export const TenantLoginPanel: React.FC<TenantLoginPanelProps> = ({ accounts, on
         <p className={`text-xs mt-1 ${textTertiary}`}>Başka cihazda oluşturulmuş firmanızı bu cihaza ekleyin (internet gerekir)</p>
       </div>
       <div>
-        <label className={labelClass}>Firma Kodu</label>
+        <label className={labelClass}>Firma Kodu (ya da firma adı)</label>
         <input
+          id="connect-firm-code"
           value={firmCode}
-          onChange={(e) => setFirmCode(e.target.value.toLowerCase().trim())}
+          onChange={(e) => setFirmCode(e.target.value)}
           placeholder="yilmaz_ticaret"
           className={`${inputClass} font-mono`}
           autoFocus
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           disabled={isBusy}
         />
+        {firmCode.trim() && connectCode !== firmCode.trim() && (
+          <p className={`text-[11px] mt-1 ${textTertiary}`}>Bağlanılacak firma kodu: <span className="font-mono font-bold">{connectCode || '—'}</span></p>
+        )}
+        <p className={`text-[11px] mt-1 ${textTertiary}`}>Firma kodunu ilk cihazda menünün altındaki firma kartında görebilirsiniz.</p>
       </div>
       <div>
-        <label className={labelClass}>Şifre</label>
+        <label className={labelClass}>Firma Şifresi</label>
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} disabled={isBusy} />
       </div>
-      <button type="submit" disabled={isBusy || !firmCode || !password} className={primaryBtn}>
+      <button type="submit" disabled={isBusy || !connectCode || !password} className={primaryBtn}>
         {isBusy ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />} Bağlan ve Giriş Yap
       </button>
       {errorBox}

@@ -484,13 +484,25 @@ export function LedgerDrawer({
   return (
     <>
       <div className="fixed inset-0 z-50 flex justify-end bg-black/85 backdrop-blur-xs animate-fade-in">
-        <div className="bg-[#0c0c0c] border-l border-white/10 w-full max-w-5xl h-full shadow-2xl flex flex-col lg:flex-row animate-slide-left overflow-hidden">
+        {/* Telefonda (lg altı) ekstre üstte, işlem paneli altında; ikisi birlikte kayar. Geniş ekranda yan yana, ayrı kayar. */}
+        <div className="ledger-drawer-panel bg-[#0c0c0c] border-l border-white/10 w-full max-w-5xl h-full shadow-2xl flex flex-col lg:flex-row animate-slide-left overflow-y-auto lg:overflow-hidden">
           
           {/* Left Column (Ledger Table & Info) */}
           <div
             id="printable-invoice-content"
-            className="flex-1 overflow-y-auto flex flex-col bg-[#0c0c0c] print:bg-white print:text-black lg:border-r lg:border-white/5"
+            className="shrink-0 lg:shrink lg:flex-1 lg:overflow-y-auto flex flex-col bg-[#0c0c0c] print:bg-white print:text-black lg:border-r lg:border-white/5"
           >
+            {/* Telefonda kapatma düğmesi (geniş ekranda sağ paneldedir) */}
+            <div className="lg:hidden hidden-print sticky top-0 z-10 flex justify-end px-4 pt-3 -mb-12 pointer-events-none">
+              <button
+                type="button"
+                onClick={() => onClose()}
+                aria-label="Ekstreyi kapat"
+                className="pointer-events-auto p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/10 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
             {/* Corporate Header */}
             <div className="p-8 border-b border-white/5 print:border-black/10 flex justify-between items-start gap-6 flex-col md:flex-row">
               <div className="flex-1">
@@ -659,7 +671,7 @@ export function LedgerDrawer({
           </div>
           
           {/* Right Column (Sidebar: Notes & Quick Transaction) */}
-          <div className="hidden-print w-full lg:w-96 bg-[#0f172a] text-slate-100 border-t lg:border-t-0 lg:border-l border-slate-800 p-5 flex flex-col gap-5 overflow-y-auto shrink-0 shadow-2xl">
+          <div className="hidden-print w-full lg:w-96 bg-[#0f172a] text-slate-100 border-t lg:border-t-0 lg:border-l border-slate-800 p-5 flex flex-col gap-5 lg:overflow-y-auto shrink-0 shadow-2xl">
             <div className="flex justify-between items-center pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-pulse"></span>

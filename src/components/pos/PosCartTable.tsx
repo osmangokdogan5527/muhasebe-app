@@ -84,7 +84,8 @@ export const PosCartTable: React.FC<PosCartTableProps> = ({
               </div>
 
               {/* SATIR 2: Birim Fiyat, Miktar (Adet) & Net Tutar */}
-              <div className="flex items-center justify-between gap-3 pt-1">
+              {/* Dar kasada (küçük ekran / yakınlaştırma) taşmasın: sığmazsa tutar alt satıra, sağa geçer */}
+              <div className="pos-cart-line flex flex-wrap items-end justify-between gap-x-3 gap-y-2 pt-1 min-w-0">
                 {/* 1. Birim Fiyat Kutusu */}
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
@@ -140,7 +141,7 @@ export const PosCartTable: React.FC<PosCartTableProps> = ({
                 </div>
 
                 {/* 3. Satır Toplam Tutar */}
-                <div className="flex flex-col gap-1 text-right min-w-[90px]">
+                <div className="flex flex-col gap-1 text-right ml-auto min-w-0">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
                     Tutar
                   </span>

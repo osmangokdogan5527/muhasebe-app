@@ -436,3 +436,14 @@ main:has(.fixed.inset-0[class*="z-"]) {
 body:has(main .fixed.inset-0, [aria-modal="true"]:not(.storm-ai-fab *)) .storm-ai-fab {
   display: none !important;
 }
+
+/* iPhone / iPad: Safari, yazısı 16 pikselden küçük bir kutuya dokununca sayfayı kendiliğinden
+   büyütür ve büyük bırakır (varsayılan küçük yazıda her alana dokunuşta ekran yakınlaşıyordu).
+   Yalnızca iOS'ta giriş alanlarının yazısı en az 16 piksel tutulur; diğer cihazlar etkilenmez. */
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: max(16px, 1em) !important;
+  }
+}

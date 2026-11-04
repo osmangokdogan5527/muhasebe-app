@@ -442,18 +442,20 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.9.1';
+export const APP_VERSION = '1.9.2';
 
 export const CHANGELOG = {
-  version: '1.9.1',
+  version: '1.9.2',
   features: [
-    "Fiyatı Değiştirme (telefon): Hızlı satışta fiyat stoktan otomatik gelir; fiyat kutusuna dokunup o satış için değiştirilebilir. Stok kartı değişmez, 'Liste fiyatı · geri al' ile eski fiyata dönülür.",
-    "Yenilemede Oturum Korunur: Telefonda aşağı çekip yenileme ya da F5 firma giriş ekranına atmaz; uygulama tamamen kapatılıp açılınca şifre yine sorulur.",
-    "Küçük Yazı Varsayılan: Uygulama küçük yazıyla açılır; Ayarlar'da başka boyut seçildiyse o korunur.",
-    "Çalışan Takibi Yetkisi: Sahipler görür; sahip bir kullanıcıya Ayarlar > Kullanıcılar'dan 'Çalışan Takibi' ekranını işaretleyerek açabilir.",
+    "Başka Cihazdan Bağlanma Kolaylaştı: 'Mevcut Firmaya Bağlan' ekranına firma adı da yazılabilir, firma koduna kendiliğinden çevrilir; firma kodu menünün altındaki firma kartında görünür.",
+    "Telefonda Cari Ekstresi: Cariye dokununca ekstre (özet/detaylı, tarih aralığı, PDF) üstte açılır; not ve hızlı işlem paneli altında.",
   ],
   fixes: [
-    "Pusula'da uzun pencereler (ör. Yeni Kullanıcı) telefonda aşağı kaydırılamıyordu.",
+    "Storm AI yeni API anahtarlarında 'model artık kullanılamıyor' (404) hatası veriyordu; uygun Gemini modeli kendiliğinden seçilir.",
+    "Kasa sepetinde dar ekranda tutar kartın dışına taşıyordu; fiyat kutusunda çift çerçeve görünüyordu.",
+    "Telefonda ekstre ve PDF düğmesi işlem panelinin arkasında kalıyordu.",
+    "iPhone'da yazı kutusuna dokununca ekran kendiliğinden büyüyüp büyük kalıyordu.",
+    "Hatalı firma bağlantısında mesaj artık ne gerektiğini (firma kodu, firma şifresi) açıklıyor.",
   ]
 };
 
@@ -694,6 +696,19 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.9.2",
+    date: "04.11.2026",
+    changes: [
+      "Başka Cihazdan Bağlanma Kolaylaştı: 'Mevcut Firmaya Bağlan' ekranına firma adı da yazılabilir, firma koduna kendiliğinden çevrilir; firma kodu menünün altındaki firma kartında görünür.",
+      "Telefonda Cari Ekstresi: Cariye dokununca ekstre (özet/detaylı, tarih aralığı, PDF) üstte açılır; not ve hızlı işlem paneli altında.",
+      "Storm AI yeni API anahtarlarında 'model artık kullanılamıyor' (404) hatası veriyordu; uygun Gemini modeli kendiliğinden seçilir.",
+      "Kasa sepetinde dar ekranda tutar kartın dışına taşıyordu; fiyat kutusunda çift çerçeve görünüyordu.",
+      "Telefonda ekstre ve PDF düğmesi işlem panelinin arkasında kalıyordu.",
+      "iPhone'da yazı kutusuna dokununca ekran kendiliğinden büyüyüp büyük kalıyordu.",
+      "Hatalı firma bağlantısında mesaj artık ne gerektiğini (firma kodu, firma şifresi) açıklıyor.",
+    ]
+  },
   {
     version: "1.9.1",
     date: "02.11.2026",

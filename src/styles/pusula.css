@@ -1361,6 +1361,16 @@ main[data-design-style="pusula"] > .max-w-md > div:first-child p {
   color: #9aa6b8 !important;
 }
 
+/* Kasa sepetindeki fiyat/miktar alanları: çerçeveyi dış kutu çizer, içte ikinci çerçeve olmaz */
+[data-design-style="pusula"] .pos-terminal-wrapper input.pos-number-input.pos-number-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+[data-design-style="pusula"] .pos-terminal-wrapper input.pos-number-input.pos-number-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):focus {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  min-width: 0;
+}
+
 [data-design-style="pusula"] .pos-terminal-wrapper .pos-number-input {
   color: var(--k-text) !important;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
