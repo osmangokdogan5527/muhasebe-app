@@ -26,7 +26,7 @@ export const STAFF_TAB_OPTIONS: { id: string; label: string }[] = [
   { id: 'tahsilat', label: 'Tahsilat / Ödeme (hızlı ekran)' },
 ];
 
-/** Yalnızca ekranlar; sahibe ait ek yetkiler (Çalışan Takibi, Sahip Uyarıları, Otomatik Yedek) ayrıdır */
+/** Yalnızca ekranlar; sahibe ait ek yetkiler (Çalışan Takibi, Otomatik Yedek) ayrıdır */
 export const ALL_STAFF_TAB_IDS = STAFF_TAB_OPTIONS.map((t) => t.id);
 
 /** Günlükte ekran ve ek yetki adları */
@@ -453,7 +453,7 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
 
             {draft.role === 'owner' ? (
               <p className="mt-4 text-xs text-white/60 bg-amber-500/5 border border-amber-500/20 rounded-xl p-3">
-                Sahip tüm ekranlara ve işlemlere erişir, kullanıcıları yönetir; Çalışan Takibi, Sahip Uyarıları ve Otomatik Yedek'i görür. Sahip PIN'i çalışanların onay isteyen işlemlerinde de kullanılır.
+                Sahip tüm ekranlara ve işlemlere erişir, kullanıcıları yönetir; Çalışan Takibi ve Otomatik Yedek'i görür. Sahip PIN'i çalışanların onay isteyen işlemlerinde de kullanılır.
               </p>
             ) : (
               <>
@@ -507,7 +507,7 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
                 <div className="mt-5">
                   <h4 className="text-[11px] font-extrabold text-white/80 uppercase tracking-wider mb-2">Sahip yetkileri</h4>
                   <p className="text-[11px] text-white/45 mb-2">Normalde yalnızca sahip görür. İşaretlerseniz bu kişiye de açılır.</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                     {SPECIAL_PERMISSIONS.map((p) => {
                       const on = draft.allowedTabs.includes(p.id);
                       return (

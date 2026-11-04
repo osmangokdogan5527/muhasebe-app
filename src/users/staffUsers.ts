@@ -120,7 +120,6 @@ export function newUserId(): string {
  */
 export const SPECIAL_PERMISSIONS = [
   { id: 'takip', label: 'Çalışan Takibi', hint: 'Herkesin günlük işleri ve gün sonu raporu' },
-  { id: 'uyarilar', label: 'Sahip Uyarıları', hint: 'Çalışanların silme, düzenleme ve büyük indirimleri' },
   { id: 'yedek', label: 'Otomatik Yedek', hint: 'Yedek durumu, yedek alma ve indirme' },
 ] as const;
 

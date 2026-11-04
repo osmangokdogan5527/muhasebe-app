@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { lazyWithReload } from './utils/lazyWithReload';
 import { useAppSettings } from './hooks/useAppSettings';
 import { useAppData } from './hooks/useAppData';
@@ -40,6 +40,7 @@ import { PosCartItem, PosPaymentSplit } from './types/pos';
 
 import { enableNetwork, disableNetwork } from 'firebase/firestore';
 import { BackupWizardModal } from './components/backup/BackupWizardModal';
+import { useAutoBackup } from './backup/useAutoBackup';
 import { GlobalStyles } from "./components/GlobalStyles";
 import YetkisizErisimView from './components/YetkisizErisimView';
 // Telefonda pratik satış ve tahsilat ekranları (tam sürümün içinde)
@@ -222,8 +223,6 @@ export default function App() {
     isBackupLoading,
     backupMessage,
     setBackupMessage,
-    handleManualBackup,
-    handleRestoreBackup,
     toggleAutoBackup,
     handleOpenBackupFolder
   } = useBackupActions(showToast, autoBackupEnabled, setAutoBackupEnabled);
@@ -337,8 +336,17 @@ export default function App() {
   const isSecurityActive = isStaffSystem ? true : baseSecurityActive;
   // Sahip yetkileri: sahipler ve sahibin ayrıca yetki verdiği kullanıcılar görür
   const canSeeStaffActivity = isStaffSystem && hasSpecialPermission(staffUser, 'takip', isStaffSystem);
-  const canSeeOwnerAlerts = isStaffSystem && hasSpecialPermission(staffUser, 'uyarilar', isStaffSystem);
   const canManageBackup = hasSpecialPermission(staffUser, 'yedek', isStaffSystem);
+  // Yedekten geri yükleme tüm verileri değiştirir: yalnızca sahip / yönetici
+  const canRestoreBackup = userRole === 'admin' || !isSecurityActive;
+  const autoBackup = useAutoBackup({
+    tenantId: user?.uid,
+    ready: !!user?.uid && !authLoading && staff.loaded && !staff.waitingForUsers,
+    autoEnabled: autoBackupEnabled,
+    canManage: canManageBackup,
+    actorName: staffUser?.name || profileName || undefined,
+    showToast,
+  });
   // Sistem açıkken eski firma PIN'i geçmez; onaylar sahip PIN'i (ya da sağlayıcı ana kodu) ister
   const escalationPin = isStaffSystem ? '' : baseEscalationPin;
   const sensitiveTabs = useMemo(
@@ -571,37 +579,17 @@ export default function App() {
     setShowChangelog(false);
   };
 
-  // Automatic backup reminder check on mount
+  // Yedek hatırlatması: otomatik yedeğin çalışmadığı cihazda, yalnızca yedek yetkisi olan kişiye, oturumda bir kez
+  const backupReminderShownRef = useRef(false);
   useEffect(() => {
-    const frequency = localStorage.getItem('storm_backup_frequency') || 'weekly';
-    if (frequency === 'disabled') return;
-
-    const lastBackupTime = localStorage.getItem('storm_last_backup_time');
-    if (!lastBackupTime) {
-      // First time using the app, set last backup to now so we count from here.
-      localStorage.setItem('storm_last_backup_time', Date.now().toString());
-      return;
-    }
-
-    const lastBackup = parseInt(lastBackupTime);
-    const diffMs = Date.now() - lastBackup;
-    
-    let limitMs = 7 * 24 * 60 * 60 * 1000; // default weekly
-    if (frequency === 'daily') {
-      limitMs = 24 * 60 * 60 * 1000;
-    } else if (frequency === 'monthly') {
-      limitMs = 30 * 24 * 60 * 60 * 1000;
-    }
-
-    if (diffMs > limitMs) {
-      // Trigger backup wizard with a gentle delay
-      const timer = setTimeout(() => {
-        setIsBackupWizardOpen(true);
-        showToast("Veri Sağlığı & Güvenlik Hatırlatıcısı: Son yedeklemeniz üzerinden uzun süre geçti. Lütfen verilerinizi yedekleyin.", "info");
-      }, 3500);
-      return () => clearTimeout(timer);
-    }
-  }, []);
+    if (!autoBackup.reminderDue || backupReminderShownRef.current) return;
+    backupReminderShownRef.current = true;
+    const timer = setTimeout(() => {
+      setIsBackupWizardOpen(true);
+      showToast("Yedek zamanı: son yedeğin üzerinden uzun süre geçti. Lütfen verilerinizi yedekleyin.", "info");
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [autoBackup.reminderDue]);
 
   // Listen for auto update events
   useEffect(() => {
@@ -774,9 +762,9 @@ export default function App() {
       settingsPasswordSuccess={settingsPasswordSuccess}
       settingsPasswordError={settingsPasswordError}
       handleProfileUpdate={handleProfileUpdate}
-      handleManualBackup={handleManualBackup}
-      isBackupLoading={isBackupLoading}
-      handleRestoreBackup={handleRestoreBackup}
+      handleManualBackup={() => { autoBackup.backupNow(); }}
+      isBackupLoading={isBackupLoading || autoBackup.running}
+      handleRestoreBackup={() => setIsBackupWizardOpen(true)}
       toggleAutoBackup={toggleAutoBackup}
       autoBackupEnabled={autoBackupEnabled}
       handleOpenBackupFolder={handleOpenBackupFolder}
@@ -1037,6 +1025,7 @@ export default function App() {
         staffUserName={isStaffSystem ? staffUser?.name : null}
         onSwitchUser={isStaffSystem ? staff.logout : undefined}
         onOpenStaffActivity={canSeeStaffActivity ? () => setActiveTab('takip') : undefined}
+        onOpenBackup={canManageBackup && staffUser?.role === 'staff' ? () => setIsBackupWizardOpen(true) : undefined}
       />
       <MobileHeader
         sidebarBg={sidebarBg}
@@ -1095,6 +1084,7 @@ export default function App() {
             staffUserName={isStaffSystem ? staffUser?.name : null}
             onSwitchUser={isStaffSystem ? staff.logout : undefined}
             onOpenStaffActivity={canSeeStaffActivity ? () => setActiveTab('takip') : undefined}
+            onOpenBackup={canManageBackup ? () => setIsBackupWizardOpen(true) : undefined}
           />
         </div>
         <div className={activeTab === 'dashboard' ? 'block animate-fade-in' : 'hidden'}>
@@ -1312,6 +1302,9 @@ export default function App() {
         recurringTransactions={recurringTransactions}
         onImportData={importAllDatabaseData}
         showToast={showToast}
+        autoBackup={autoBackup}
+        canRestore={canRestoreBackup}
+        actorName={staffUser?.name || profileName || undefined}
       />
     </div>
   );

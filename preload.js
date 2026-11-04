@@ -30,7 +30,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setAutoBackup: (enabled) => ipcRenderer.send('set-auto-backup', enabled),
   createManualBackup: () => ipcRenderer.invoke('create-manual-backup'),
   restoreFromBackup: () => ipcRenderer.invoke('restore-from-backup'),
-  openAutoBackupFolder: () => ipcRenderer.invoke('open-auto-backup-folder')
+  openAutoBackupFolder: () => ipcRenderer.invoke('open-auto-backup-folder'),
+  saveAutoBackup: (content, fileName) => ipcRenderer.invoke('save-auto-backup', content, fileName)
 });
 
 window.addEventListener('DOMContentLoaded', () => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Repeat, LogOut, Lock, ChevronDown, MessageSquare, ShieldCheck, UserCheck } from 'lucide-react';
+import { Repeat, LogOut, Lock, ChevronDown, MessageSquare, ShieldCheck, UserCheck, DatabaseBackup } from 'lucide-react';
 import { StormLogo, StormIconWrapper, TAB_DEFS, SIDEBAR_BG_PRESETS } from '../constants';
 
 interface DesktopSidebarProps {
@@ -37,6 +37,8 @@ interface DesktopSidebarProps {
   onSwitchUser?: () => void;
   /** Yalnızca sahipte: Çalışan Takibi ekranını açar */
   onOpenStaffActivity?: () => void;
+  /** Yedek yetkisi verilen çalışanda: Yedek Sihirbazı'nı açar */
+  onOpenBackup?: () => void;
 }
 
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
@@ -71,6 +73,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   staffUserName,
   onSwitchUser,
   onOpenStaffActivity,
+  onOpenBackup,
 }) => {
   const isPusula = designStyle === 'pusula';
 
@@ -275,6 +278,17 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                   >
                     <UserCheck size={12} />
                     <span className="text-[10px] font-bold uppercase tracking-widest">Çalışan Takibi</span>
+                  </button>
+                )}
+                {onOpenBackup && (
+                  <button
+                    id="sidebar-backup"
+                    onClick={onOpenBackup}
+                    className="w-full flex items-center justify-center gap-2 p-2 rounded-xl border border-white/5 text-zinc-300 hover:text-white transition cursor-pointer"
+                    style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                  >
+                    <DatabaseBackup size={12} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Yedekleme</span>
                   </button>
                 )}
                 <button
