@@ -54,7 +54,7 @@ import { AuthScreen } from "./components/AuthScreen";
 import { useStaffSession } from "./users/useStaffSession";
 import { StaffLoginScreen } from "./users/StaffLoginScreen";
 import { ALL_STAFF_TAB_IDS } from "./users/UsersSettings";
-import { DEFAULT_STAFF_TABS, StaffActions, checkPin, restrictedTabsFor } from "./users/staffUsers";
+import { DEFAULT_STAFF_TABS, StaffActions, checkPin, hasSpecialPermission, restrictedTabsFor } from "./users/staffUsers";
 import { registerAdminVerifier } from "./utils/masterCode";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { AppModals } from "./components/AppModals";
@@ -335,9 +335,10 @@ export default function App() {
     ? (staffUser?.role === 'owner' ? 'admin' : baseUserRole)
     : baseUserRole;
   const isSecurityActive = isStaffSystem ? true : baseSecurityActive;
-  // Çalışan Takibi yalnızca sahiplere açıktır
-  // Çalışan Takibi: sahipler ve sahibin ayrıca yetki verdiği kullanıcılar görür
-  const canSeeStaffActivity = isStaffSystem && !!staffUser && (staffUser.role === 'owner' || staffUser.allowedTabs.includes('takip'));
+  // Sahip yetkileri: sahipler ve sahibin ayrıca yetki verdiği kullanıcılar görür
+  const canSeeStaffActivity = isStaffSystem && hasSpecialPermission(staffUser, 'takip', isStaffSystem);
+  const canSeeOwnerAlerts = isStaffSystem && hasSpecialPermission(staffUser, 'uyarilar', isStaffSystem);
+  const canManageBackup = hasSpecialPermission(staffUser, 'yedek', isStaffSystem);
   // Sistem açıkken eski firma PIN'i geçmez; onaylar sahip PIN'i (ya da sağlayıcı ana kodu) ister
   const escalationPin = isStaffSystem ? '' : baseEscalationPin;
   const sensitiveTabs = useMemo(
@@ -351,7 +352,7 @@ export default function App() {
   // Eski personel ayarları, yeni eklenen çalışanlar için varsayılan yetki olur
   const staffLegacyDefaults = useMemo(() => ({
     allowedTabs: baseSecurityActive
-      ? ALL_STAFF_TAB_IDS.filter((t) => t !== 'takip' && !baseSensitiveTabs.includes(t === 'tahsilat' ? 'islemler' : t))
+      ? ALL_STAFF_TAB_IDS.filter((t) => !baseSensitiveTabs.includes(t === 'tahsilat' ? 'islemler' : t))
       : [...DEFAULT_STAFF_TABS],
     actions: { ...baseActionPermissions } as StaffActions,
   }), [baseSecurityActive, baseSensitiveTabs, baseActionPermissions]);

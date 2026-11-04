@@ -113,6 +113,36 @@ export function newUserId(): string {
   return `u_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 }
 
+/**
+ * Sahibe ait ek yetkiler. Sahipler hepsini görür; çalışana ancak sahip ayrıca işaretlerse açılır
+ * ("Tümü" düğmesi bunları kapsamaz). Geriye uyum için çalışanın allowedTabs listesinde tutulur
+ * ('takip' 1.9.1'den beri bu şekilde saklanıyor).
+ */
+export const SPECIAL_PERMISSIONS = [
+  { id: 'takip', label: 'Çalışan Takibi', hint: 'Herkesin günlük işleri ve gün sonu raporu' },
+  { id: 'uyarilar', label: 'Sahip Uyarıları', hint: 'Çalışanların silme, düzenleme ve büyük indirimleri' },
+  { id: 'yedek', label: 'Otomatik Yedek', hint: 'Yedek durumu, yedek alma ve indirme' },
+] as const;
+
+export type SpecialPermission = typeof SPECIAL_PERMISSIONS[number]['id'];
+export const SPECIAL_PERMISSION_IDS: string[] = SPECIAL_PERMISSIONS.map((p) => p.id);
+
+/**
+ * Kullanıcı bu ek yetkiye sahip mi?
+ * Kullanıcı sistemi kapalıysa uygulamayı kullanan kişi firmanın sahibidir: yetki vardır.
+ */
+export function hasSpecialPermission(user: StaffUser | null | undefined, permission: SpecialPermission, systemActive: boolean): boolean {
+  try {
+    if (!systemActive) return true;
+    if (!user) return false;
+    if (user.role === 'owner') return true;
+    return Array.isArray(user.allowedTabs) && user.allowedTabs.includes(permission);
+  } catch (err) {
+    logError(err instanceof Error ? err : new Error(String(err)), 'staffUsers.hasSpecialPermission');
+    return false;
+  }
+}
+
 /** Tüm sekmeler: kullanıcının izinli olmadığı sekmeler mevcut yetki sistemine "hassas" olarak verilir */
 export function restrictedTabsFor(user: StaffUser, allTabs: string[]): string[] {
   if (user.role === 'owner') return [];
