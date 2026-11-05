@@ -1,12 +1,39 @@
+// Storm Ön Muhasebe - Firestore güvenlik kuralları
+// Yönetim Paneli > Firmalar > Kurallar ekranı bu metni kurucu UID'si doldurulmuş olarak verir;
+// Firebase Console > Firestore Database > Kurallar bölümüne oradan kopyalanıp yayınlanır.
+// KURUCU_UID yerine kurucu hesabının kimliği yazılmadıkça kurucu yetkisi hiçbir hesaba açılmaz.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Her firma yalnızca kendi verisine erişir: users/{firmaId}/... verisine yalnızca
-    // Firebase'de firmaId@storm.com hesabıyla oturum açmış kullanıcı okuyup yazabilir.
-    // Uygulama PIN doğrulandıktan sonra bu hesapla oturum açar (src/utils/tenantAuth.ts).
+    // Sistem kurucusu (Storm Yönetim Paneli): firmaları listeler, dondurur, siler
+    function isFounder() {
+      return request.auth != null && request.auth.uid == 'KURUCU_UID';
+    }
+
+    // Firma hesabı: firmaKodu@storm.com
+    function isTenant(tenantId) {
+      return request.auth != null && request.auth.token.email == (tenantId + '@storm.com');
+    }
+
+    // Dondurulmuş ya da silinmiş firma verisine erişemez (kaydı olmayan eski firmalar etkilenmez)
+    function tenantActive(tenantId) {
+      let path = /databases/$(database)/documents/firmalar/$(tenantId);
+      return !exists(path) || get(path).data.get('status', 'active') == 'active';
+    }
+
+    // Her firma yalnızca kendi verisine erişir
     match /users/{tenantId}/{document=**} {
-      allow read, write: if request.auth != null
-        && request.auth.token.email == (tenantId + '@storm.com');
+      allow read, write: if (isTenant(tenantId) && tenantActive(tenantId)) || isFounder();
+    }
+
+    // Firma kayıtları: firma kendi kaydını günceller ama durumunu değiştiremez
+    match /firmalar/{tenantId} {
+      allow read: if isFounder() || isTenant(tenantId);
+      allow create: if isFounder()
+        || (isTenant(tenantId) && request.resource.data.get('status', 'active') == 'active');
+      allow update: if isFounder()
+        || (isTenant(tenantId) && request.resource.data.get('status', 'active') == resource.data.get('status', 'active'));
+      allow delete: if isFounder();
     }
 
     // Bunun dışındaki her yol kapalıdır.

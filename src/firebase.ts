@@ -55,7 +55,7 @@ import {
 import { USERS_SETTING_ID } from './users/staffUsers';
 
 // Read config from the provisioned project
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyCcoCQMZBX4TD07jaP4-LOjlDlBWxbnXWo",
   authDomain: "aesthetic-light-cw2h4.firebaseapp.com",
   projectId: "aesthetic-light-cw2h4",
@@ -63,6 +63,9 @@ const firebaseConfig = {
   messagingSenderId: "191044825350",
   appId: "1:191044825350:web:7471a7c7c855960490ee87"
 };
+
+/** Uygulamanın Firestore veritabanı (kurucu paneli de aynı veritabanına bağlanır) */
+export const FIRESTORE_DATABASE_ID = "ai-studio-59bd0d02-f537-4d2e-bf76-4d16ab336635";
 
 const app = initializeApp(firebaseConfig);
 
@@ -75,7 +78,7 @@ export const db = initializeFirestore(app, {
     tabManager: persistentMultipleTabManager(),
     cacheSizeBytes: CACHE_SIZE_UNLIMITED
   })
-}, "ai-studio-59bd0d02-f537-4d2e-bf76-4d16ab336635");
+}, FIRESTORE_DATABASE_ID);
 export const auth = getAuth();
 
 export {
@@ -121,6 +124,12 @@ export const DOCUMENT_BRANDING_DOC_ID = 'belgeGorunumu';
 const TEKRARLAYAN_COLL = 'tekrarlayanIslemler';
 // Kim ne yaptı günlüğü (yedeğe ve geri yüklemeye dahil değildir; eski yedek dönülse de günlük silinmez)
 const HAREKET_COLL = 'hareketGunlugu';
+
+/** Bir firmanın altındaki tüm koleksiyonlar (kurucu panelinden firma silinirken kullanılır) */
+export const TENANT_COLLECTIONS: string[] = [
+  CARILER_COLL, STOKLAR_COLL, ISLEMLER_COLL, CEKSENET_COLL, GIDERLER_COLL, CALISANLAR_COLL, CALISAN_ISLEMLER_COLL,
+  KREDILER_COLL, HESAPLAR_COLL, HESAP_ISLEMLER_COLL, AYARLAR_COLL, TEKRARLAYAN_COLL, HAREKET_COLL,
+];
 
 let currentUserId: string | null = null;
 export function setActiveUser(userId: string | null) {

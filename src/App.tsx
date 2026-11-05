@@ -41,6 +41,7 @@ import { PosCartItem, PosPaymentSplit } from './types/pos';
 import { enableNetwork, disableNetwork } from 'firebase/firestore';
 import { BackupWizardModal } from './components/backup/BackupWizardModal';
 import { useAutoBackup } from './backup/useAutoBackup';
+import { subscribeFirmStatus } from './admin/firmRegistry';
 import type { AiCredentials } from './ai/aiProviders';
 import { useFirmInfo } from './onboarding/useFirmInfo';
 import { FirmInfoModal } from './onboarding/FirmInfoModal';
@@ -611,6 +612,19 @@ export default function App() {
     const timer = setTimeout(() => setIsFirmInfoOpen(true), 1200);
     return () => clearTimeout(timer);
   }, [user?.uid, canEditFirmInfo, firmInfo.missing, showChangelog]);
+
+  // Kurucu firmayı dondurur/silerse açık oturum kapatılır (sunucu kuralları da veriyi kapatır)
+  const firmBlockedRef = useRef(false);
+  useEffect(() => {
+    firmBlockedRef.current = false;
+    if (!user?.uid) return;
+    return subscribeFirmStatus(user.uid, (message) => {
+      if (firmBlockedRef.current) return;
+      firmBlockedRef.current = true;
+      handleSignOut();
+      alertDialog(message);
+    });
+  }, [user?.uid]);
 
   // Yedek hatırlatması: otomatik yedeğin çalışmadığı cihazda, yalnızca yedek yetkisi olan kişiye, oturumda bir kez
   const backupReminderShownRef = useRef(false);

@@ -13,8 +13,10 @@ import {
   updateProfile,
   updatePassword,
   reauthenticateWithCredential,
-  EmailAuthProvider
+  EmailAuthProvider,
+  signOut
 } from '../firebase';
+import { checkFirmBlocked, recordFirmLogin } from '../admin/firmRegistry';
 import { DeviceAccount, createPasswordVerifier, upsertDeviceAccount, verifyPassword } from './accountStore';
 import { logError } from './errorLogger';
 
@@ -61,6 +63,24 @@ function describeAuthError(err: any): string {
   return err?.message || String(err);
 }
 
+/**
+ * Sunucuya girişten sonra: kurucu firmayı dondurduysa/sildiyse oturum kapatılır ve mesaj döner.
+ * Engel yoksa firma kaydı (son giriş, şifre kasası) arka planda güncellenir.
+ */
+async function afterServerSignIn(code: string, name: string, password: string): Promise<string | null> {
+  const blocked = await checkFirmBlocked(code);
+  if (blocked) {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'tenantAuth.blockedSignOut');
+    }
+    return blocked;
+  }
+  void recordFirmLogin(code, name, password);
+  return null;
+}
+
 async function rememberAccount(account: DeviceAccount, password: string): Promise<DeviceAccount> {
   const verifier = await createPasswordVerifier(password);
   const saved: DeviceAccount = { ...account, verifier };
@@ -79,6 +99,7 @@ export async function createTenant(name: string, code: string, password: string)
   try {
     const credential = await createUserWithEmailAndPassword(auth, getTenantEmail(code), password);
     await updateProfile(credential.user, { displayName: trimmedName });
+    void recordFirmLogin(code, trimmedName, password);
     const account = await rememberAccount({ id: code, name: trimmedName }, password);
     return { status: 'signed_in', account };
   } catch (err: any) {
@@ -96,6 +117,8 @@ export async function connectTenant(code: string, password: string): Promise<Ten
   try {
     const credential = await signInWithEmailAndPassword(auth, getTenantEmail(normalized), password);
     const name = credential.user.displayName || normalized;
+    const blocked = await afterServerSignIn(normalized, name, password);
+    if (blocked) return { status: 'failed', message: blocked };
     const account = await rememberAccount({ id: normalized, name }, password);
     return { status: 'signed_in', account };
   } catch (err: any) {
@@ -109,7 +132,9 @@ export async function connectTenant(code: string, password: string): Promise<Ten
 /** Cihazda kayıtlı bir firmaya giriş yapar; internet yoksa cihazdaki doğrulama özetiyle açar. */
 export async function signInTenant(account: DeviceAccount, password: string): Promise<TenantAuthResult> {
   try {
-    await signInWithEmailAndPassword(auth, getTenantEmail(account.id), password);
+    const credential = await signInWithEmailAndPassword(auth, getTenantEmail(account.id), password);
+    const blocked = await afterServerSignIn(account.id, credential.user.displayName || account.name, password);
+    if (blocked) return { status: 'failed', message: blocked };
     const saved = await rememberAccount(account, password);
     return { status: 'signed_in', account: saved };
   } catch (err: any) {
@@ -144,6 +169,7 @@ export async function changeTenantPassword(account: DeviceAccount, currentPasswo
   try {
     await reauthenticateWithCredential(user, EmailAuthProvider.credential(getTenantEmail(account.id), currentPassword));
     await updatePassword(user, newPassword);
+    void recordFirmLogin(account.id, user.displayName || account.name, newPassword);
     await rememberAccount(account, newPassword);
     return { ok: true };
   } catch (err: any) {
