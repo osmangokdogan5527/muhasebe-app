@@ -55,7 +55,7 @@ import {
 import { USERS_SETTING_ID } from './users/staffUsers';
 
 // Read config from the provisioned project
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyCcoCQMZBX4TD07jaP4-LOjlDlBWxbnXWo",
   authDomain: "aesthetic-light-cw2h4.firebaseapp.com",
   projectId: "aesthetic-light-cw2h4",
@@ -63,6 +63,9 @@ const firebaseConfig = {
   messagingSenderId: "191044825350",
   appId: "1:191044825350:web:7471a7c7c855960490ee87"
 };
+
+/** Uygulamanın Firestore veritabanı (kurucu paneli de aynı veritabanına bağlanır) */
+export const FIRESTORE_DATABASE_ID = "ai-studio-59bd0d02-f537-4d2e-bf76-4d16ab336635";
 
 const app = initializeApp(firebaseConfig);
 
@@ -75,7 +78,7 @@ export const db = initializeFirestore(app, {
     tabManager: persistentMultipleTabManager(),
     cacheSizeBytes: CACHE_SIZE_UNLIMITED
   })
-}, "ai-studio-59bd0d02-f537-4d2e-bf76-4d16ab336635");
+}, FIRESTORE_DATABASE_ID);
 export const auth = getAuth();
 
 export {
@@ -117,10 +120,16 @@ const HESAPLAR_COLL = 'hesaplar';
 const HESAP_ISLEMLER_COLL = 'hesapIslemleri';
 const AYARLAR_COLL = 'ayarlar';
 // Firmanın belgelerde (PDF) kullanılan görünüm ayarları: tüm cihazlarda ortak
-const DOCUMENT_BRANDING_DOC_ID = 'belgeGorunumu';
+export const DOCUMENT_BRANDING_DOC_ID = 'belgeGorunumu';
 const TEKRARLAYAN_COLL = 'tekrarlayanIslemler';
 // Kim ne yaptı günlüğü (yedeğe ve geri yüklemeye dahil değildir; eski yedek dönülse de günlük silinmez)
 const HAREKET_COLL = 'hareketGunlugu';
+
+/** Bir firmanın altındaki tüm koleksiyonlar (kurucu panelinden firma silinirken kullanılır) */
+export const TENANT_COLLECTIONS: string[] = [
+  CARILER_COLL, STOKLAR_COLL, ISLEMLER_COLL, CEKSENET_COLL, GIDERLER_COLL, CALISANLAR_COLL, CALISAN_ISLEMLER_COLL,
+  KREDILER_COLL, HESAPLAR_COLL, HESAP_ISLEMLER_COLL, AYARLAR_COLL, TEKRARLAYAN_COLL, HAREKET_COLL,
+];
 
 let currentUserId: string | null = null;
 export function setActiveUser(userId: string | null) {
@@ -1421,6 +1430,9 @@ const ALL_COLLECTIONS: { name: string; backupKey: string; optional?: boolean }[]
   { name: AYARLAR_COLL, backupKey: 'ayarlar', optional: true },
 ];
 
+/** Firma yedek durumu (ayarlar altında); bkz. backup/backupStatus */
+export const BACKUP_STATUS_DOC_ID = 'yedekDurumu';
+
 // Yedek için tüm koleksiyonları ekrandaki listelerden bağımsız olarak doğrudan veritabanından okur
 export async function exportAllDatabaseData(): Promise<{ [backupKey: string]: any[] }> {
   try {
@@ -1452,6 +1464,9 @@ export async function importAllDatabaseData(backupJson: any) {
       // (eski yedekte liste yoksa sistem kapanır, herkes tam yetkiyle girerdi) ya da eski PIN'lerle
       // ezmemeli. Mevcut liste korunur; yalnızca hiç liste yoksa yedektekinden geri yüklenir.
       if (name === AYARLAR_COLL) {
+        // Yedek durumu cihazların gerçek yedek geçmişidir; eski yedekteki hâliyle ezilmez, silinmez
+        backupIds.add(BACKUP_STATUS_DOC_ID);
+        items = items.filter(item => String(item.id) !== BACKUP_STATUS_DOC_ID);
         backupIds.add(USERS_SETTING_ID);
         const currentUsers = await getDoc(doc(db, getPath(AYARLAR_COLL), USERS_SETTING_ID));
         if (currentUsers.exists()) {

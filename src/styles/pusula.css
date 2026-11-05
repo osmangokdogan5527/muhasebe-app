@@ -943,6 +943,24 @@ body:has([data-design-style="pusula"]),
   background: rgba(255, 255, 255, 0.28) !important;
 }
 
+/* Başlıktaki sekme grubu (ör. Yönetim Paneli): açık zemin beyaz yazıyı okunmaz yapıyordu */
+[data-design-style="pusula"] .fixed.inset-0 > :is(div, form) > div:first-child:is(.border-b, [class*="border-b"]) .header-tabs {
+  background: rgba(255, 255, 255, 0.14) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+}
+
+[data-design-style="pusula"] .fixed.inset-0 > :is(div, form) > div:first-child:is(.border-b, [class*="border-b"]) .header-tabs > button {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+[data-design-style="pusula"] .fixed.inset-0 > :is(div, form) > div:first-child:is(.border-b, [class*="border-b"]) .header-tabs > button[data-active="true"] {
+  background: #ffffff !important;
+  color: var(--accent-700) !important;
+  box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.25) !important;
+}
+
 [data-design-style="pusula"] .fixed.inset-0 > :is(div, form) {
   border-radius: 24px !important;
   overflow: hidden;

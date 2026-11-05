@@ -8,6 +8,7 @@ import { InstallAppBanner } from './auth/InstallAppBanner';
 import { PusulaAuthHero } from './auth/PusulaAuthHero';
 import { confirmDialog, alertDialog } from '../utils/dialogs';
 import { isMasterCode, MASTER_CODE_LENGTH } from '../utils/masterCode';
+import { FirmsPanel } from '../admin/FirmsPanel';
 import { logError } from '../utils/errorLogger';
 
 interface AuthScreenProps {
@@ -74,7 +75,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   changelogData, setZoomImage
 }) => {
 
-  const [adminTab, setAdminTab] = React.useState<'errors' | 'feedback'>('errors');
+  const [adminTab, setAdminTab] = React.useState<'errors' | 'feedback' | 'firms'>('errors');
+  // Panel açıkken ana kod yalnızca bellekte tutulur (şifre kasasını açmak için); kapanınca silinir
+  const masterCodeRef = React.useRef('');
   const [expandedLogId, setExpandedLogId] = React.useState<string | null>(null);
 
   const isFluidMesh = designStyle === 'fluid-mesh';
@@ -234,6 +237,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   if (val.length === MASTER_CODE_LENGTH) {
                     isMasterCode(val).then((ok) => {
                       if (ok) {
+                        masterCodeRef.current = val;
                         setShowAdminDashboard(true);
                         setShowAdminLogin(false);
                         setAdminPin('');
@@ -429,8 +433,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   <p className={`text-xs font-mono mt-1 uppercase tracking-widest ${textTertiary}`}>Kullanıcı & Sistem Yönetimi</p>
                 </div>
                 
-                <div className={`flex p-1 rounded-xl w-full md:w-auto ${isLightStyle ? 'bg-slate-100' : 'bg-white/5'}`}>
+                <div className={`header-tabs flex p-1 rounded-xl w-full md:w-auto ${isLightStyle ? 'bg-slate-100' : 'bg-white/5'}`}>
                   <button
+                    data-active={adminTab === 'errors'}
                     onClick={() => setAdminTab('errors')}
                     className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition cursor-pointer ${
                       adminTab === 'errors' 
@@ -441,6 +446,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                     Sistem Hataları
                   </button>
                   <button
+                    data-active={adminTab === 'feedback'}
                     onClick={() => setAdminTab('feedback')}
                     className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition cursor-pointer ${
                       adminTab === 'feedback' 
@@ -450,10 +456,22 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   >
                     İstek & Geri Bildirim
                   </button>
+                  <button
+                    id="admin-tab-firms"
+                    data-active={adminTab === 'firms'}
+                    onClick={() => setAdminTab('firms')}
+                    className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition cursor-pointer ${
+                      adminTab === 'firms'
+                        ? 'bg-sky-500/10 text-sky-500 border border-sky-500/10'
+                        : `${textTertiary} hover:${textPrimary}`
+                    }`}
+                  >
+                    Firmalar
+                  </button>
                 </div>
 
                 <div className="flex items-center gap-4 self-end md:self-auto">
-                  <button 
+                  {adminTab !== 'firms' && <button 
                     onClick={() => {
                       if (adminTab === 'errors') {
                         localStorage.removeItem('storm_error_logs');
@@ -467,9 +485,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   >
                     <Trash2 size={16} />
                     Tümünü Temizle
-                  </button>
+                  </button>}
                   <button 
-                    onClick={() => setShowAdminDashboard(false)} 
+                    onClick={() => { setShowAdminDashboard(false); masterCodeRef.current = ''; setAdminTab('errors'); }} 
                     className={`p-2 rounded-lg transition cursor-pointer ${
                       isLightStyle ? 'bg-slate-100 hover:bg-slate-200 text-slate-500' : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white'
                     }`}
@@ -543,6 +561,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                       ))}
                     </div>
                   )
+                )}
+
+                {adminTab === 'firms' && (
+                  <FirmsPanel masterCode={masterCodeRef.current} isLight={!!isLightStyle} />
                 )}
 
                 {adminTab === 'feedback' && (

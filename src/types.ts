@@ -5,10 +5,8 @@ declare global {
       onUpdateDownloaded: (callback: () => void) => () => void;
       restartApp: () => void;
       downloadUpdate?: () => void;
-      setAutoBackup?: (enabled: boolean) => void;
-      createManualBackup?: () => Promise<{success: boolean, path?: string, error?: string, canceled?: boolean}>;
-      restoreFromBackup?: () => Promise<{success: boolean, error?: string, canceled?: boolean}>;
       openAutoBackupFolder?: () => Promise<{success: boolean, error?: string}>;
+      saveAutoBackup?: (content: string, fileName: string) => Promise<{success: boolean, path?: string, error?: string}>;
       onDownloadProgress?: (callback: (percent: number) => void) => () => void;
     };
   }

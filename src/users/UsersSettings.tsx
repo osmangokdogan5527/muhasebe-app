@@ -16,20 +16,22 @@ import {
   hashPin,
   newUserId,
   validatePin,
+  SPECIAL_PERMISSIONS,
+  SPECIAL_PERMISSION_IDS,
 } from './staffUsers';
 
 /** Kullanıcıya verilebilecek ekranlar (Tahsilat ayrı bir ekran olarak yetkilendirilir) */
 export const STAFF_TAB_OPTIONS: { id: string; label: string }[] = [
   ...Object.entries(TAB_DEFS).map(([id, def]) => ({ id, label: def.label })),
   { id: 'tahsilat', label: 'Tahsilat / Ödeme (hızlı ekran)' },
-  // Ek yetki: herkesin günlük işlerini gösterir; sahip ayrıca açmadıkça kimseye verilmez
-  { id: 'takip', label: 'Çalışan Takibi (herkesin günlük işleri)' },
 ];
 
-/** "Tümü" düğmesi Çalışan Takibi'ni kapsamaz; o ayrıca işaretlenir */
-export const STAFF_TAKIP_TAB = 'takip';
-
+/** Yalnızca ekranlar; sahibe ait ek yetkiler (Çalışan Takibi, Otomatik Yedek) ayrıdır */
 export const ALL_STAFF_TAB_IDS = STAFF_TAB_OPTIONS.map((t) => t.id);
+
+/** Günlükte ekran ve ek yetki adları */
+const permissionLabel = (id: string) =>
+  STAFF_TAB_OPTIONS.find((o) => o.id === id)?.label || SPECIAL_PERMISSIONS.find((p) => p.id === id)?.label || id;
 
 interface UsersSettingsProps {
   staff: StaffSession;
@@ -63,7 +65,7 @@ const userSummary = (u: StaffUser, pinChanged = false) => ({
   name: u.name,
   role: u.role === 'owner' ? 'Sahip' : 'Çalışan',
   active: u.active,
-  screens: u.role === 'owner' ? 'Tümü' : u.allowedTabs.map((t) => STAFF_TAB_OPTIONS.find((o) => o.id === t)?.label || t).join(', '),
+  screens: u.role === 'owner' ? 'Tümü' : u.allowedTabs.map(permissionLabel).join(', '),
   actions: u.role === 'owner' ? 'Tümü' : STAFF_ACTIONS.filter((a) => u.actions[a.key]).map((a) => a.label).join(', ') || 'Yok',
   ...(pinChanged ? { pin: 'Değiştirildi' } : {}),
 });
@@ -199,7 +201,7 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
         return setError('Kendi hesabınızı pasif yapamaz veya çalışana çeviremezsiniz.');
       }
     }
-    if (draft.role === 'staff' && draft.allowedTabs.length === 0) return setError('Çalışana en az bir ekran verin.');
+    if (draft.role === 'staff' && draft.allowedTabs.filter((t) => !SPECIAL_PERMISSION_IDS.includes(t)).length === 0) return setError('Çalışana en az bir ekran verin.');
 
     try {
       setSaving(true);
@@ -386,7 +388,7 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
               <div className="text-[11px] text-white/50 flex flex-wrap gap-x-2">
                 <span className="inline-flex items-center gap-1">
                   {u.role === 'owner' ? <ShieldCheck size={12} className="text-amber-300" /> : <UserIcon size={12} />}
-                  {u.role === 'owner' ? 'Sahip · tüm yetkiler' : `Çalışan · ${u.allowedTabs.length} ekran, ${STAFF_ACTIONS.filter((a) => u.actions[a.key]).length} işlem yetkisi`}
+                  {u.role === 'owner' ? 'Sahip · tüm yetkiler' : `Çalışan · ${u.allowedTabs.filter((t) => !SPECIAL_PERMISSION_IDS.includes(t)).length} ekran, ${STAFF_ACTIONS.filter((a) => u.actions[a.key]).length} işlem yetkisi${u.allowedTabs.some((t) => SPECIAL_PERMISSION_IDS.includes(t)) ? ` · ek: ${SPECIAL_PERMISSIONS.filter((p) => u.allowedTabs.includes(p.id)).map((p) => p.label).join(', ')}` : ''}`}
                 </span>
                 {!u.active && <span className="text-rose-300">Pasif</span>}
               </div>
@@ -451,7 +453,7 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
 
             {draft.role === 'owner' ? (
               <p className="mt-4 text-xs text-white/60 bg-amber-500/5 border border-amber-500/20 rounded-xl p-3">
-                Sahip tüm ekranlara ve işlemlere erişir, kullanıcıları yönetir ve çalışan takibini görür. Sahip PIN'i çalışanların onay isteyen işlemlerinde de kullanılır.
+                Sahip tüm ekranlara ve işlemlere erişir, kullanıcıları yönetir; Çalışan Takibi ve Otomatik Yedek'i görür. Sahip PIN'i çalışanların onay isteyen işlemlerinde de kullanılır.
               </p>
             ) : (
               <>
@@ -459,8 +461,8 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-[11px] font-extrabold text-white/80 uppercase tracking-wider">Görebileceği ekranlar</h4>
                     <div className="flex gap-2 text-[11px]">
-                      <button type="button" onClick={() => setDraft({ ...draft, allowedTabs: ALL_STAFF_TAB_IDS.filter((t) => t !== STAFF_TAKIP_TAB || draft.allowedTabs.includes(STAFF_TAKIP_TAB)) })} className="text-teal-300 cursor-pointer">Tümü</button>
-                      <button type="button" onClick={() => setDraft({ ...draft, allowedTabs: [] })} className="text-white/50 cursor-pointer">Hiçbiri</button>
+                      <button type="button" onClick={() => setDraft({ ...draft, allowedTabs: [...ALL_STAFF_TAB_IDS, ...draft.allowedTabs.filter((t) => SPECIAL_PERMISSION_IDS.includes(t))] })} className="text-teal-300 cursor-pointer">Tümü</button>
+                      <button type="button" onClick={() => setDraft({ ...draft, allowedTabs: draft.allowedTabs.filter((t) => SPECIAL_PERMISSION_IDS.includes(t)) })} className="text-white/50 cursor-pointer">Hiçbiri</button>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
@@ -497,6 +499,30 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
                             onChange={() => setDraft({ ...draft, actions: { ...draft.actions, [a.key]: !on } })}
                           />
                           {a.label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="mt-5">
+                  <h4 className="text-[11px] font-extrabold text-white/80 uppercase tracking-wider mb-2">Sahip yetkileri</h4>
+                  <p className="text-[11px] text-white/45 mb-2">Normalde yalnızca sahip görür. İşaretlerseniz bu kişiye de açılır.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {SPECIAL_PERMISSIONS.map((p) => {
+                      const on = draft.allowedTabs.includes(p.id);
+                      return (
+                        <label key={p.id} className={`flex items-start gap-2 px-3 py-2 rounded-xl border cursor-pointer text-xs transition ${on ? 'bg-amber-500/10 border-amber-500/30 text-white' : 'bg-white/5 border-white/10 text-white/60'}`}>
+                          <input
+                            type="checkbox"
+                            className="accent-amber-500 mt-0.5"
+                            data-special={p.id}
+                            checked={on}
+                            onChange={() => setDraft({ ...draft, allowedTabs: on ? draft.allowedTabs.filter((x) => x !== p.id) : [...draft.allowedTabs, p.id] })}
+                          />
+                          <span>
+                            <span className="block font-bold">{p.label}</span>
+                            <span className="block text-[10px] text-white/45">{p.hint}</span>
+                          </span>
                         </label>
                       );
                     })}

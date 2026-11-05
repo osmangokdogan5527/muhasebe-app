@@ -3,7 +3,6 @@ const path = require('path');
 const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
 
-let autoBackupEnabled = true;
 
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
@@ -281,84 +280,6 @@ app.whenReady().then(() => {
   }
 });
 
-ipcMain.on('set-auto-backup', (event, enabled) => {
-  autoBackupEnabled = enabled;
-});
-
-ipcMain.handle('create-manual-backup', async () => {
-  try {
-    const userDataPath = app.getPath('userData');
-    
-    // Attempt to find the database file, assume database.sqlite if none found
-    let dbFilePath = path.join(userDataPath, 'database.sqlite');
-    const files = fs.readdirSync(userDataPath);
-    const existingDb = files.find(f => f.endsWith('.sqlite') || f.endsWith('.db') || f.endsWith('.json') && f !== 'package.json');
-    if (existingDb) {
-      dbFilePath = path.join(userDataPath, existingDb);
-    } else {
-      // Create a dummy file to satisfy copy operation if no DB exists yet
-      fs.writeFileSync(dbFilePath, '');
-    }
-
-    const dateStr = new Date().toISOString().split('T')[0];
-    const defaultPath = path.join(app.getPath('documents'), `Storm_Yedek_${dateStr}${path.extname(dbFilePath)}`);
-
-    const result = await dialog.showSaveDialog(mainWindow, {
-      title: 'Yedek Dosyasını Kaydet',
-      defaultPath: defaultPath,
-      filters: [
-        { name: 'Veritabanı Yedek Dosyası', extensions: [path.extname(dbFilePath).substring(1) || 'db'] }
-      ]
-    });
-
-    if (!result.canceled && result.filePath) {
-      fs.copyFileSync(dbFilePath, result.filePath);
-      return { success: true, path: result.filePath };
-    }
-    return { success: false, canceled: true };
-  } catch (error) {
-    console.error('Yedekleme hatası:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('restore-from-backup', async () => {
-  try {
-    const result = await dialog.showOpenDialog(mainWindow, {
-      title: 'Yedek Dosyası Seç',
-      properties: ['openFile'],
-      filters: [
-        { name: 'Veritabanı Yedek Dosyası', extensions: ['db', 'sqlite', 'json'] }
-      ]
-    });
-
-    if (!result.canceled && result.filePaths.length > 0) {
-      const sourcePath = result.filePaths[0];
-      const userDataPath = app.getPath('userData');
-      const ext = path.extname(sourcePath);
-      
-      let targetFile = `database${ext}`;
-      const files = fs.readdirSync(userDataPath);
-      const existingDb = files.find(f => f.endsWith(ext));
-      if (existingDb) {
-        targetFile = existingDb;
-      }
-      
-      const destPath = path.join(userDataPath, targetFile);
-      fs.copyFileSync(sourcePath, destPath);
-      
-      // Relaunch the app to apply restored data
-      app.relaunch();
-      app.exit(0);
-      return { success: true };
-    }
-    return { success: false, canceled: true };
-  } catch (error) {
-    console.error('Geri yükleme hatası:', error);
-    return { success: false, error: error.message };
-  }
-});
-
 ipcMain.handle('open-auto-backup-folder', async () => {
   try {
     const backupDir = path.join(app.getPath('userData'), 'Storm_Otomatik_Yedekler');
@@ -372,55 +293,39 @@ ipcMain.handle('open-auto-backup-folder', async () => {
   }
 });
 
-app.on('before-quit', () => {
-  if (autoBackupEnabled) {
-    try {
-      const userDataPath = app.getPath('userData');
-      const backupDir = path.join(userDataPath, 'Storm_Otomatik_Yedekler');
-      
-      if (!fs.existsSync(backupDir)) {
-        fs.mkdirSync(backupDir, { recursive: true });
-      }
-
-      // Find DB file
-      let dbFilePath = path.join(userDataPath, 'database.sqlite');
-      const files = fs.readdirSync(userDataPath);
-      const existingDb = files.find(f => f.endsWith('.sqlite') || f.endsWith('.db') || f.endsWith('.json') && f !== 'package.json');
-      if (existingDb) {
-        dbFilePath = path.join(userDataPath, existingDb);
-      }
-
-      if (fs.existsSync(dbFilePath)) {
-        const now = new Date();
-        const dateStr = now.toISOString().split('T')[0];
-        const timeStr = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
-        const ext = path.extname(dbFilePath);
-        
-        const backupFileName = `Oto_Yedek_${dateStr}_${timeStr}${ext}`;
-        const destPath = path.join(backupDir, backupFileName);
-        
-        fs.copyFileSync(dbFilePath, destPath);
-        
-        // Akıllı rotasyon: 5'ten fazla varsa en eskisini sil
-        const backupFiles = fs.readdirSync(backupDir)
-          .filter(f => f.startsWith('Oto_Yedek_'))
-          .map(f => ({
-            name: f,
-            path: path.join(backupDir, f),
-            time: fs.statSync(path.join(backupDir, f)).mtime.getTime()
-          }))
-          .sort((a, b) => b.time - a.time);
-          
-        if (backupFiles.length > 5) {
-          const filesToDelete = backupFiles.slice(5);
-          for (const file of filesToDelete) {
-            fs.unlinkSync(file.path);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Otomatik yedekleme hatası:', error);
+// Otomatik yedek: arayüz tüm verileri (.storm paketi) hazırlar, burada yedek klasörüne yazılır.
+// Yalnızca "Oto_Yedek_*.storm" dosyaları döndürülür; en yeni AUTO_BACKUP_KEEP adet tutulur.
+const AUTO_BACKUP_KEEP = 8;
+ipcMain.handle('save-auto-backup', async (event, content, fileName) => {
+  try {
+    if (typeof content !== 'string' || !content) {
+      return { success: false, error: 'Yedek içeriği boş.' };
     }
+    const safeName = path.basename(String(fileName || ''));
+    if (!/^Oto_Yedek_[0-9_-]+\.storm$/.test(safeName)) {
+      return { success: false, error: 'Geçersiz yedek dosya adı.' };
+    }
+    const backupDir = path.join(app.getPath('userData'), 'Storm_Otomatik_Yedekler');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    const destPath = path.join(backupDir, safeName);
+    // Önce geçici dosyaya yazılır: yazma yarıda kalırsa eski yedek bozulmaz
+    const tmpPath = `${destPath}.tmp`;
+    fs.writeFileSync(tmpPath, content, 'utf8');
+    fs.renameSync(tmpPath, destPath);
+
+    const backups = fs.readdirSync(backupDir)
+      .filter(f => f.startsWith('Oto_Yedek_') && f.endsWith('.storm'))
+      .map(f => ({ path: path.join(backupDir, f), time: fs.statSync(path.join(backupDir, f)).mtime.getTime() }))
+      .sort((a, b) => b.time - a.time);
+    for (const old of backups.slice(AUTO_BACKUP_KEEP)) {
+      try { fs.unlinkSync(old.path); } catch (e) { console.error('Eski yedek silinemedi:', e); }
+    }
+    return { success: true, path: destPath };
+  } catch (error) {
+    console.error('Otomatik yedek yazılamadı:', error);
+    return { success: false, error: error && error.message ? error.message : String(error) };
   }
 });
 

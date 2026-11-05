@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Loader2, Paperclip, File, FileText, FileSpreadsheet, Sparkles, AlertCircle, Settings, Bot, Mic, HelpCircle, Sliders, BookOpen, ChevronRight, Check } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { runAgent, resumeAgent, AgentResult, AgentSuspension, GeminiContent, GeminiApiError } from '../ai/geminiAgent';
+import { AiCredentials, AiProviderError, PROVIDER_LABELS, hasAnyAiKey } from '../ai/aiProviders';
 import { AiToolContext } from '../ai/aiTools';
 import { useFxRates } from '../hooks/useFxRates';
 import { logError } from '../utils/errorLogger';
 
 interface AiAssistantProps {
-  apiKey: string;
+  /** Gemini ve yedek sağlayıcı anahtarları */
+  aiCredentials: AiCredentials;
   userRole?: 'admin' | 'employee';
   isSecurityActive?: boolean;
   sensitiveTabs?: string[];
@@ -24,6 +26,8 @@ interface Message {
   role: 'user' | 'assistant';
   text: string;
   isError?: boolean;
+  /** Yedek sağlayıcı cevapladıysa küçük not (ör. "Gemini limiti dolu, Groq ile cevaplandı") */
+  note?: string;
   chart?: {
     tip: 'bar' | 'pie';
     data: any[];
@@ -52,7 +56,7 @@ const AI_EXAMPLES = [
 ];
 
 export default function AiAssistant({ 
-  apiKey, 
+  aiCredentials, 
   userRole = 'employee',
   isSecurityActive = false,
   sensitiveTabs = [],
@@ -62,6 +66,7 @@ export default function AiAssistant({
   financialData,
   embedded = false
 }: AiAssistantProps) {
+  const apiKey = hasAnyAiKey(aiCredentials);
   const [isOpenState, setIsOpen] = useState(false);
   const isOpen = embedded || isOpenState;
   const [input, setInput] = useState('');
@@ -603,7 +608,7 @@ export default function AiAssistant({
         : 'Standart ses çözümlemesi yap.';
 
     try {
-      const result = await runAgent(apiKey, agentHistoryRef.current, [
+      const result = await runAgent(aiCredentials, agentHistoryRef.current, [
         { inlineData: { mimeType, data: base64Audio } },
         { text: `Bu bir sesli komuttur. ${sensitivityGuide} Cevabının ilk satırına "🎤 Söylediğiniz: ..." diye anladığın cümleyi yaz, sonra isteği araçlarla yerine getir.` }
       ], buildAgentContext());
@@ -651,6 +656,10 @@ export default function AiAssistant({
   const applyAgentResult = (result: AgentResult) => {
     agentHistoryRef.current = result.history;
     const text = result.texts.join('\n\n');
+    if (result.fallbackFrom && result.provider) {
+      const note = `${PROVIDER_LABELS[result.fallbackFrom]} yanıt veremedi, ${PROVIDER_LABELS[result.provider]} ile cevaplandı.`;
+      setMessages(prev => [...prev, { id: newMessageId(), role: 'assistant', text: '', note }]);
+    }
     if (text || result.charts.length > 0) {
       const [firstChart, ...otherCharts] = result.charts;
       addAssistantMessage(text || 'Grafik hazırlandı:', false, firstChart);
@@ -671,7 +680,7 @@ export default function AiAssistant({
 
   const handleAgentError = (error: any, context: string) => {
     logError(error instanceof Error ? error : new Error(String(error)), context);
-    const message = error instanceof GeminiApiError
+    const message = error instanceof GeminiApiError || error instanceof AiProviderError
       ? error.message
       : 'Yapay zeka ile iletişim kurulurken bir hata oluştu. İnternet bağlantınızı ve API anahtarınızı kontrol edin.';
     addAssistantMessage(message, true);
@@ -684,7 +693,7 @@ export default function AiAssistant({
     setMessages(prev => prev.map(m => m.id === messageId && m.pending ? { ...m, pending: { ...m.pending, status: approved ? 'approved' : 'cancelled' } } : m));
     setIsTyping(true);
     try {
-      const result = await resumeAgent(apiKey, agentHistoryRef.current, suspension, approved, buildAgentContext());
+      const result = await resumeAgent(aiCredentials, agentHistoryRef.current, suspension, approved, buildAgentContext());
       if (result.executionResults.length > 0) {
         addAssistantMessage(
           result.executionResults.map(r => `${r.ok ? '✅' : '❌'} ${r.message}`).join('\n'),
@@ -750,7 +759,7 @@ export default function AiAssistant({
     setAttachedFile(null);
 
     try {
-      const result = await runAgent(apiKey, agentHistoryRef.current, [{ text: finalUserMessage }], buildAgentContext());
+      const result = await runAgent(aiCredentials, agentHistoryRef.current, [{ text: finalUserMessage }], buildAgentContext());
       applyAgentResult(result);
     } catch (error: any) {
       handleAgentError(error, 'AiAssistant.handleSubmit');
@@ -805,7 +814,7 @@ export default function AiAssistant({
                 <AlertCircle size={32} />
               </div>
               <h4 className="text-slate-900 font-bold mb-2">API Anahtarı Eksik</h4>
-              <p className="text-slate-500 text-sm mb-6">Storm AI'ı kullanabilmek için Ayarlar bölümünden Gemini API anahtarınızı girmeniz gerekmektedir.</p>
+              <p className="text-slate-500 text-sm mb-6">Storm AI'ı kullanabilmek için Ayarlar &gt; Yapay Zeka bölümünden Gemini ya da ücretsiz Groq API anahtarı girin.</p>
               <button
                 onClick={() => {
                   setIsOpen(false);
@@ -1007,7 +1016,11 @@ export default function AiAssistant({
               {/* Messages Area */}
               <div ref={messagesContainerRef} className={`p-4 overflow-y-auto bg-slate-50 flex flex-col gap-3 ${embedded ? 'flex-1 min-h-0' : 'h-[55vh] max-h-[350px] sm:h-[350px] sm:max-h-none'}`}>
                 {messages.map((msg) => (
-                  <div 
+                  msg.note ? (
+                  <div key={msg.id} className="flex justify-center">
+                    <span className="ai-provider-note text-[10px] font-semibold text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-2.5 py-1">{msg.note}</span>
+                  </div>
+                ) : <div 
                     key={msg.id} 
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Repeat, Lock, LogOut, ShieldCheck, ChevronDown, ShoppingCart, ArrowDownLeft, UserCheck } from 'lucide-react';
+import { FirmInfoBanner } from '../onboarding/FirmInfoBanner';
+import { Repeat, Lock, LogOut, ShieldCheck, ChevronDown, ShoppingCart, ArrowDownLeft, UserCheck, DatabaseBackup } from 'lucide-react';
 import { TAB_DEFS } from '../constants';
 
 interface MobileMenuViewProps {
@@ -26,6 +27,10 @@ interface MobileMenuViewProps {
   onSwitchUser?: () => void;
   /** Yalnızca sahipte: Çalışan Takibi ekranını açar */
   onOpenStaffActivity?: () => void;
+  /** Yedek yetkisi olanlarda: Yedek Sihirbazı'nı açar */
+  onOpenBackup?: () => void;
+  /** Firma bilgileri eksikse (sahipte): Firma Bilgileri penceresini açar */
+  onCompleteFirmInfo?: () => void;
   isSecurityActive: boolean;
 }
 
@@ -50,6 +55,8 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
   staffUserName,
   onSwitchUser,
   onOpenStaffActivity,
+  onOpenBackup,
+  onCompleteFirmInfo,
   isSecurityActive,
 }) => {
   return (
@@ -69,6 +76,7 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
         </div>
 
         {/* Hızlı işlemler: telefonda en sık kullanılan iki ekran */}
+        {onCompleteFirmInfo && <FirmInfoBanner className="mb-3" onOpen={onCompleteFirmInfo} />}
         <div className="mobile-quick-actions grid grid-cols-2 gap-2.5 mb-5">
           {[
             { id: 'pos', title: 'Hızlı Satış', hint: 'Nakit, kart, veresiye', icon: <ShoppingCart size={22} />, tone: 'bg-teal-500/15 text-teal-300 border-teal-500/30' },
@@ -99,6 +107,20 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
               <span>
                 <span className="block text-sm font-extrabold text-white">Çalışan Takibi</span>
                 <span className="block text-[11px] text-slate-400">Bugün kim ne yaptı, gün sonu raporu</span>
+              </span>
+            </button>
+          )}
+          {onOpenBackup && (
+            <button
+              type="button"
+              id="mobile-quick-backup"
+              onClick={onOpenBackup}
+              className="col-span-2 flex items-center gap-3 p-3.5 rounded-2xl border text-left cursor-pointer active:scale-[0.98] transition bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+            >
+              <span className="mobile-quick-icon w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center"><DatabaseBackup size={20} /></span>
+              <span>
+                <span className="block text-sm font-extrabold text-white">Yedekleme</span>
+                <span className="block text-[11px] text-slate-400">Son yedek durumu, şimdi yedek indir</span>
               </span>
             </button>
           )}

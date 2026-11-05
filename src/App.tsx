@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { lazyWithReload } from './utils/lazyWithReload';
 import { useAppSettings } from './hooks/useAppSettings';
 import { useAppData } from './hooks/useAppData';
@@ -40,6 +40,13 @@ import { PosCartItem, PosPaymentSplit } from './types/pos';
 
 import { enableNetwork, disableNetwork } from 'firebase/firestore';
 import { BackupWizardModal } from './components/backup/BackupWizardModal';
+import { useAutoBackup } from './backup/useAutoBackup';
+import { subscribeFirmStatus } from './admin/firmRegistry';
+import type { AiCredentials } from './ai/aiProviders';
+import { useFirmInfo } from './onboarding/useFirmInfo';
+import { FirmInfoModal } from './onboarding/FirmInfoModal';
+import { FirmInfoBanner } from './onboarding/FirmInfoBanner';
+import { markFirmInfoPrompted, wasFirmInfoPrompted } from './onboarding/firmInfo';
 import { GlobalStyles } from "./components/GlobalStyles";
 import YetkisizErisimView from './components/YetkisizErisimView';
 // Telefonda pratik satış ve tahsilat ekranları (tam sürümün içinde)
@@ -54,7 +61,7 @@ import { AuthScreen } from "./components/AuthScreen";
 import { useStaffSession } from "./users/useStaffSession";
 import { StaffLoginScreen } from "./users/StaffLoginScreen";
 import { ALL_STAFF_TAB_IDS } from "./users/UsersSettings";
-import { DEFAULT_STAFF_TABS, StaffActions, checkPin, restrictedTabsFor } from "./users/staffUsers";
+import { DEFAULT_STAFF_TABS, StaffActions, checkPin, hasSpecialPermission, restrictedTabsFor } from "./users/staffUsers";
 import { registerAdminVerifier } from "./utils/masterCode";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { AppModals } from "./components/AppModals";
@@ -214,6 +221,9 @@ export default function App() {
     hiddenTabs, setHiddenTabs, toggleTabVisibility,
     tabOrder, setTabOrder, moveTab,
     geminiApiKey, setGeminiApiKey,
+    aiSecondaryProvider, setAiSecondaryProvider,
+    aiSecondaryKey, setAiSecondaryKey,
+    aiOrder, setAiOrder,
     isAiEnabled, setIsAiEnabled,
     autoBackupEnabled, setAutoBackupEnabled
   } = useAppSettings();
@@ -222,8 +232,6 @@ export default function App() {
     isBackupLoading,
     backupMessage,
     setBackupMessage,
-    handleManualBackup,
-    handleRestoreBackup,
     toggleAutoBackup,
     handleOpenBackupFolder
   } = useBackupActions(showToast, autoBackupEnabled, setAutoBackupEnabled);
@@ -335,9 +343,36 @@ export default function App() {
     ? (staffUser?.role === 'owner' ? 'admin' : baseUserRole)
     : baseUserRole;
   const isSecurityActive = isStaffSystem ? true : baseSecurityActive;
-  // Çalışan Takibi yalnızca sahiplere açıktır
-  // Çalışan Takibi: sahipler ve sahibin ayrıca yetki verdiği kullanıcılar görür
-  const canSeeStaffActivity = isStaffSystem && !!staffUser && (staffUser.role === 'owner' || staffUser.allowedTabs.includes('takip'));
+  // Sahip yetkileri: sahipler ve sahibin ayrıca yetki verdiği kullanıcılar görür
+  const canSeeStaffActivity = isStaffSystem && hasSpecialPermission(staffUser, 'takip', isStaffSystem);
+  const canManageBackup = hasSpecialPermission(staffUser, 'yedek', isStaffSystem);
+  const aiCredentials = useMemo<AiCredentials>(() => ({
+    geminiKey: (geminiApiKey || '').trim(),
+    secondaryProvider: aiSecondaryProvider,
+    secondaryKey: (aiSecondaryKey || '').trim(),
+    order: aiOrder,
+  }), [geminiApiKey, aiSecondaryProvider, aiSecondaryKey, aiOrder]);
+  // Yedekten geri yükleme tüm verileri değiştirir: yalnızca sahip / yönetici
+  const canRestoreBackup = userRole === 'admin' || !isSecurityActive;
+  // İlk giriş: firma bilgileri (fişte görünen ad, adres, telefon). Yalnızca sahip / yönetici düzenler.
+  const canEditFirmInfo = isStaffSystem ? staffUser?.role === 'owner' : (userRole === 'admin' || !isSecurityActive);
+  const firmInfoReady = !!user?.uid && !authLoading && staff.loaded && !staff.waitingForUsers;
+  const firmInfo = useFirmInfo(user?.uid, firmInfoReady);
+  const [isFirmInfoOpen, setIsFirmInfoOpen] = useState(false);
+  const showFirmInfoBanner = canEditFirmInfo && firmInfo.missing && !isFirmInfoOpen;
+  const closeFirmInfo = (saved: boolean) => {
+    setIsFirmInfoOpen(false);
+    if (user?.uid) markFirmInfoPrompted(user.uid);
+    if (!saved) showToast('Firma bilgilerini istediğiniz zaman Gösterge Paneli\'ndeki karttan ya da Ayarlar > Belge Görünümü\'nden doldurabilirsiniz.', 'info');
+  };
+  const autoBackup = useAutoBackup({
+    tenantId: user?.uid,
+    ready: !!user?.uid && !authLoading && staff.loaded && !staff.waitingForUsers,
+    autoEnabled: autoBackupEnabled,
+    canManage: canManageBackup,
+    actorName: staffUser?.name || profileName || undefined,
+    showToast,
+  });
   // Sistem açıkken eski firma PIN'i geçmez; onaylar sahip PIN'i (ya da sağlayıcı ana kodu) ister
   const escalationPin = isStaffSystem ? '' : baseEscalationPin;
   const sensitiveTabs = useMemo(
@@ -351,7 +386,7 @@ export default function App() {
   // Eski personel ayarları, yeni eklenen çalışanlar için varsayılan yetki olur
   const staffLegacyDefaults = useMemo(() => ({
     allowedTabs: baseSecurityActive
-      ? ALL_STAFF_TAB_IDS.filter((t) => t !== 'takip' && !baseSensitiveTabs.includes(t === 'tahsilat' ? 'islemler' : t))
+      ? ALL_STAFF_TAB_IDS.filter((t) => !baseSensitiveTabs.includes(t === 'tahsilat' ? 'islemler' : t))
       : [...DEFAULT_STAFF_TABS],
     actions: { ...baseActionPermissions } as StaffActions,
   }), [baseSecurityActive, baseSensitiveTabs, baseActionPermissions]);
@@ -570,37 +605,38 @@ export default function App() {
     setShowChangelog(false);
   };
 
-  // Automatic backup reminder check on mount
+  // Firma bilgileri eksikse pencere sahibe bu cihazda bir kez kendiliğinden açılır
   useEffect(() => {
-    const frequency = localStorage.getItem('storm_backup_frequency') || 'weekly';
-    if (frequency === 'disabled') return;
+    // "Yeni sürümde neler değişti" penceresi açıksa o kapanınca açılır (pencereler üst üste binmez)
+    if (!user?.uid || !canEditFirmInfo || !firmInfo.missing || showChangelog || wasFirmInfoPrompted(user.uid)) return;
+    const timer = setTimeout(() => setIsFirmInfoOpen(true), 1200);
+    return () => clearTimeout(timer);
+  }, [user?.uid, canEditFirmInfo, firmInfo.missing, showChangelog]);
 
-    const lastBackupTime = localStorage.getItem('storm_last_backup_time');
-    if (!lastBackupTime) {
-      // First time using the app, set last backup to now so we count from here.
-      localStorage.setItem('storm_last_backup_time', Date.now().toString());
-      return;
-    }
+  // Kurucu firmayı dondurur/silerse açık oturum kapatılır (sunucu kuralları da veriyi kapatır)
+  const firmBlockedRef = useRef(false);
+  useEffect(() => {
+    firmBlockedRef.current = false;
+    if (!user?.uid) return;
+    return subscribeFirmStatus(user.uid, (message) => {
+      if (firmBlockedRef.current) return;
+      firmBlockedRef.current = true;
+      handleSignOut();
+      alertDialog(message);
+    });
+  }, [user?.uid]);
 
-    const lastBackup = parseInt(lastBackupTime);
-    const diffMs = Date.now() - lastBackup;
-    
-    let limitMs = 7 * 24 * 60 * 60 * 1000; // default weekly
-    if (frequency === 'daily') {
-      limitMs = 24 * 60 * 60 * 1000;
-    } else if (frequency === 'monthly') {
-      limitMs = 30 * 24 * 60 * 60 * 1000;
-    }
-
-    if (diffMs > limitMs) {
-      // Trigger backup wizard with a gentle delay
-      const timer = setTimeout(() => {
-        setIsBackupWizardOpen(true);
-        showToast("Veri Sağlığı & Güvenlik Hatırlatıcısı: Son yedeklemeniz üzerinden uzun süre geçti. Lütfen verilerinizi yedekleyin.", "info");
-      }, 3500);
-      return () => clearTimeout(timer);
-    }
-  }, []);
+  // Yedek hatırlatması: otomatik yedeğin çalışmadığı cihazda, yalnızca yedek yetkisi olan kişiye, oturumda bir kez
+  const backupReminderShownRef = useRef(false);
+  useEffect(() => {
+    if (!autoBackup.reminderDue || backupReminderShownRef.current) return;
+    backupReminderShownRef.current = true;
+    const timer = setTimeout(() => {
+      setIsBackupWizardOpen(true);
+      showToast("Yedek zamanı: son yedeğin üzerinden uzun süre geçti. Lütfen verilerinizi yedekleyin.", "info");
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [autoBackup.reminderDue]);
 
   // Listen for auto update events
   useEffect(() => {
@@ -773,9 +809,9 @@ export default function App() {
       settingsPasswordSuccess={settingsPasswordSuccess}
       settingsPasswordError={settingsPasswordError}
       handleProfileUpdate={handleProfileUpdate}
-      handleManualBackup={handleManualBackup}
-      isBackupLoading={isBackupLoading}
-      handleRestoreBackup={handleRestoreBackup}
+      handleManualBackup={() => { autoBackup.backupNow(); }}
+      isBackupLoading={isBackupLoading || autoBackup.running}
+      handleRestoreBackup={() => setIsBackupWizardOpen(true)}
       toggleAutoBackup={toggleAutoBackup}
       autoBackupEnabled={autoBackupEnabled}
       handleOpenBackupFolder={handleOpenBackupFolder}
@@ -784,6 +820,12 @@ export default function App() {
       onOpenBackupWizard={() => setIsBackupWizardOpen(true)}
       geminiApiKey={geminiApiKey}
       setGeminiApiKey={setGeminiApiKey}
+      aiControls={{
+        credentials: aiCredentials,
+        setSecondaryProvider: setAiSecondaryProvider,
+        setSecondaryKey: setAiSecondaryKey,
+        setOrder: setAiOrder,
+      }}
       isAiEnabled={isAiEnabled}
       setIsAiEnabled={setIsAiEnabled}
       isSecurityActive={isSecurityActive}
@@ -1036,6 +1078,7 @@ export default function App() {
         staffUserName={isStaffSystem ? staffUser?.name : null}
         onSwitchUser={isStaffSystem ? staff.logout : undefined}
         onOpenStaffActivity={canSeeStaffActivity ? () => setActiveTab('takip') : undefined}
+        onOpenBackup={canManageBackup && staffUser?.role === 'staff' ? () => setIsBackupWizardOpen(true) : undefined}
       />
       <MobileHeader
         sidebarBg={sidebarBg}
@@ -1094,9 +1137,12 @@ export default function App() {
             staffUserName={isStaffSystem ? staffUser?.name : null}
             onSwitchUser={isStaffSystem ? staff.logout : undefined}
             onOpenStaffActivity={canSeeStaffActivity ? () => setActiveTab('takip') : undefined}
+            onOpenBackup={canManageBackup ? () => setIsBackupWizardOpen(true) : undefined}
+            onCompleteFirmInfo={showFirmInfoBanner ? () => setIsFirmInfoOpen(true) : undefined}
           />
         </div>
         <div className={activeTab === 'dashboard' ? 'block animate-fade-in' : 'hidden'}>
+          {showFirmInfoBanner && <FirmInfoBanner className="mb-4 max-w-7xl mx-auto" onOpen={() => setIsFirmInfoOpen(true)} />}
           {renderWorkspaceView('dashboard', <DashboardView cariler={cariler} stoklar={stoklar} islemler={islemler} ceksenet={ceksenet} expenses={expenses} employeeTransactions={employeeTransactions} recurringTransactions={recurringTransactions} bankAccounts={bankAccounts} accountTransactions={accountTransactions} onNavigate={handleNavigate} />)}
         </div>
         <div className={activeTab === 'pos' ? 'block animate-fade-in' : 'hidden'}>
@@ -1283,7 +1329,7 @@ export default function App() {
         user={user}
         zoomImage={zoomImage}
         setZoomImage={setZoomImage}
-        geminiApiKey={geminiApiKey}
+        aiCredentials={aiCredentials}
         isAiEnabled={isAiEnabled}
         setActiveTab={setActiveTab}
         setAiPrefilledData={setAiPrefilledData}
@@ -1311,7 +1357,19 @@ export default function App() {
         recurringTransactions={recurringTransactions}
         onImportData={importAllDatabaseData}
         showToast={showToast}
+        autoBackup={autoBackup}
+        canRestore={canRestoreBackup}
+        actorName={staffUser?.name || profileName || undefined}
       />
+      {isFirmInfoOpen && (
+        <FirmInfoModal
+          isOpen
+          branding={firmInfo.branding}
+          suggestedFirmName={profileName || user?.displayName || ''}
+          onClose={closeFirmInfo}
+          showToast={showToast}
+        />
+      )}
     </div>
   );
 }

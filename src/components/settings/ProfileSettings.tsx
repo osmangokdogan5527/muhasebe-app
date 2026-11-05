@@ -161,8 +161,8 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                   className="flex flex-col items-center justify-center p-5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition group cursor-pointer disabled:opacity-50"
                 >
                   <Download className="text-blue-500 mb-2 group-hover:scale-110 transition-transform" size={24} />
-                  <span className="text-xs font-bold text-white/80 uppercase tracking-wider mb-1">Yedek Dosyası Oluştur (Manuel)</span>
-                  <span className="text-[10px] text-white/50 text-center">Aktif veritabanınızı güvenli bir konuma .db/.json dosyası olarak indirin</span>
+                  <span className="text-xs font-bold text-white/80 uppercase tracking-wider mb-1">{isBackupLoading ? 'Yedek alınıyor…' : 'Şimdi Yedek Al'}</span>
+                  <span className="text-[10px] text-white/50 text-center">Tüm veriler .storm dosyası olarak alınır (bilgisayarda yedek klasörüne kaydedilir, telefonda indirilir)</span>
                 </button>
                 
                 <button
@@ -171,8 +171,8 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                   className="flex flex-col items-center justify-center p-5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 hover:border-rose-300 transition group cursor-pointer disabled:opacity-50"
                 >
                   <Upload className="text-rose-500 mb-2 group-hover:scale-110 transition-transform" size={24} />
-                  <span className="text-xs font-bold text-rose-700 uppercase tracking-wider mb-1">Yedekten Veri Yükle (Manuel)</span>
-                  <span className="text-[10px] text-rose-600 font-bold text-center">Dikkat: Mevcut verileriniz silinecektir! Eski veritabanını yükler</span>
+                  <span className="text-xs font-bold text-rose-700 uppercase tracking-wider mb-1">Yedekten Geri Yükle</span>
+                  <span className="text-[10px] text-rose-600 font-bold text-center">Yedek Sihirbazı açılır. Dikkat: mevcut veriler yedektekiyle değiştirilir</span>
                 </button>
               </div>
 
@@ -184,7 +184,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                   </div>
                   <div>
                     <span className="text-sm font-bold text-white/90">Otomatik Yedekleme</span>
-                    <p className="text-[10px] text-white/50">Sistem kapanırken (son 5 yedek tutulur)</p>
+                    <p className="text-[10px] text-white/50">Bilgisayarda seçilen sıklıkta (varsayılan haftalık) tüm veriler kendiliğinden yedeklenir; son 8 yedek tutulur</p>
                   </div>
                 </div>
                 

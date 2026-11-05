@@ -18,30 +18,11 @@ import {
   Key
 } from 'lucide-react';
 import { encryptBackup, decryptBackup, BackupDataPayload } from '../../utils/backupCrypto';
-import { getTodayISO } from '../../utils/dateUtils';
-import { exportAllDatabaseData } from '../../firebase';
-import { APP_VERSION } from '../../constants';
 import { confirmDialog } from '../../utils/dialogs';
-
-// Yedeğe alınan ve geri yüklemede kabul edilen ayar anahtarları (başka anahtar geri yüklenmez)
-const BACKUP_SETTINGS_KEYS = [
-  'kolay_hesap_accent_theme',
-  'storm_muhasebe_design_style',
-  'storm_muhasebe_logo_theme',
-  'storm_muhasebe_font_size',
-  'storm_muhasebe_sidebar_bg',
-  'storm_muhasebe_sidebar_pattern',
-  'storm_muhasebe_sidebar_pattern_opacity',
-  'storm_muhasebe_sidebar_pattern_color',
-  'storm_muhasebe_hidden_tabs',
-  'storm_muhasebe_tab_order',
-  'storm_muhasebe_print_settings',
-  'storm_print_templates',
-  'storm_muhasebe_shortcuts',
-  'storm_muhasebe_admin_pin',
-  'storm_muhasebe_security_active',
-  'storm_muhasebe_action_permissions'
-];
+import { logError } from '../../utils/errorLogger';
+import { APP_VERSION } from '../../constants';
+import { BACKUP_SETTINGS_KEYS, countBackupRecords, createBackupPayload, downloadBackupFile, manualBackupFileName } from '../../backup/backupPayload';
+import { BackupStatus, describeBackupStatus, readLocalLastBackup, recordBackupDone } from '../../backup/backupStatus';
 
 interface BackupWizardModalProps {
   isOpen: boolean;
@@ -61,6 +42,18 @@ interface BackupWizardModalProps {
   // Import handler (should clear and batch setDoc in firestore, then reload)
   onImportData: (payload: any) => Promise<void>;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
+  /** Otomatik yedek durumu (firma geneli) */
+  autoBackup?: {
+    status: BackupStatus | null;
+    silentActive: boolean;
+    canSilentSave: boolean;
+    running: boolean;
+    backupNow: () => Promise<boolean>;
+  };
+  /** Yedekten geri yükleme tüm verileri değiştirir: yalnızca sahip / yönetici */
+  canRestore?: boolean;
+  /** Yedeği alan kişi (yedek durumuna yazılır) */
+  actorName?: string;
 }
 
 export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
@@ -78,7 +71,10 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
   accountTransactions,
   recurringTransactions = [],
   onImportData,
-  showToast
+  showToast,
+  autoBackup,
+  canRestore = true,
+  actorName,
 }) => {
   const [activeTab, setActiveTab] = useState<'status' | 'backup' | 'restore' | 'settings'>('status');
   const [backupPassword, setBackupPassword] = useState('');
@@ -108,8 +104,11 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
     bankAccounts.length + 
     accountTransactions.length;
 
-  const lastBackupTime = localStorage.getItem('storm_last_backup_time');
-  const lastBackupDate = lastBackupTime ? new Date(parseInt(lastBackupTime)) : null;
+  // Son yedek: firmanın herhangi bir cihazdan aldığı son yedek ile bu cihazdakinden yenisi
+  const firmLastMs = autoBackup?.status ? new Date(autoBackup.status.lastAt).getTime() || 0 : 0;
+  const lastBackupMs = Math.max(firmLastMs, readLocalLastBackup());
+  const lastBackupTime = lastBackupMs ? String(lastBackupMs) : null;
+  const lastBackupDate = lastBackupMs ? new Date(lastBackupMs) : null;
 
   // Calculate Health Score (0 - 100)
   const [healthScore, setHealthScore] = useState(100);
@@ -162,55 +161,18 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
   const handleCreateBackup = async () => {
     setIsActionLoading(true);
     try {
-      // Veriler ekrandaki listelerden değil doğrudan veritabanından okunur (eksiksiz yedek)
-      const dbData = await exportAllDatabaseData();
-
-      // Gather current localStorage settings
-      const settingsToBackup: { [key: string]: string | null } = {};
-      const settingsKeys = BACKUP_SETTINGS_KEYS;
-
-      settingsKeys.forEach(key => {
-        settingsToBackup[key] = localStorage.getItem(key);
-      });
-
-      const payload: BackupDataPayload = {
-        version: APP_VERSION,
-        timestamp: new Date().toISOString(),
-        collections: {
-          cariler: dbData.cariler || [],
-          stoklar: dbData.stoklar || [],
-          islemler: dbData.islemler || [],
-          ceksenet: dbData.ceksenet || [],
-          giderler: dbData.giderler || [],
-          calisanlar: dbData.calisanlar || [],
-          calisanIslemler: dbData.calisanIslemler || [],
-          krediler: dbData.krediler || [],
-          hesaplar: dbData.hesaplar || [],
-          hesapIslemleri: dbData.hesapIslemleri || [],
-          tekrarlayanIslemler: dbData.tekrarlayanIslemler || []
-        },
-        localStorage: settingsToBackup
-      };
-
+      const payload = await createBackupPayload();
       const pass = backupPassword.trim() || undefined;
       const encryptedString = encryptBackup(payload, pass);
-
-      // Create download
-      const blob = new Blob([encryptedString], { type: 'application/octet-stream' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `storm_yedek_${getTodayISO()}_${pass ? 'sifreli' : 'standart'}.storm`;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      // Update state
-      localStorage.setItem('storm_last_backup_time', Date.now().toString());
+      const fileName = manualBackupFileName(!!pass);
+      downloadBackupFile(encryptedString, fileName);
+      await recordBackupDone({ kind: 'manual', byName: actorName, fileName, records: countBackupRecords(payload) });
       setHasBackedUpThisSession(true);
       showToast('Yedek dosyanız (.storm) başarıyla oluşturuldu ve indirildi.', 'success');
       setActiveTab('status');
     } catch (err: any) {
-      showToast(`Yedekleme hatası: ${err.message || err}`, 'error');
+      logError(err instanceof Error ? err : new Error(String(err)), 'BackupWizardModal.handleCreateBackup');
+      showToast(`Yedekleme hatası: ${err?.message || err}`, 'error');
     } finally {
       setIsActionLoading(false);
     }
@@ -335,10 +297,10 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-zinc-800 bg-zinc-950/20 px-2 pt-1 gap-1">
+        <div className="flex border-b border-zinc-800 bg-zinc-950/20 px-2 pt-1 gap-1 overflow-x-auto shrink-0">
           <button
             onClick={() => setActiveTab('status')}
-            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
+            className={`shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
               activeTab === 'status' 
                 ? 'border-teal-500 text-teal-400 bg-teal-500/5' 
                 : 'border-transparent text-zinc-400 hover:text-white hover:bg-zinc-800/30'
@@ -352,7 +314,7 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
 
           <button
             onClick={() => setActiveTab('backup')}
-            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
+            className={`shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
               activeTab === 'backup' 
                 ? 'border-teal-500 text-teal-400 bg-teal-500/5' 
                 : 'border-transparent text-zinc-400 hover:text-white hover:bg-zinc-800/30'
@@ -364,9 +326,10 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
             </div>
           </button>
 
+          {canRestore && (
           <button
             onClick={() => setActiveTab('restore')}
-            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
+            className={`shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
               activeTab === 'restore' 
                 ? 'border-teal-500 text-teal-400 bg-teal-500/5' 
                 : 'border-transparent text-zinc-400 hover:text-white hover:bg-zinc-800/30'
@@ -377,10 +340,11 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
               <span>Yedekten Geri Yükle</span>
             </div>
           </button>
+          )}
 
           <button
             onClick={() => setActiveTab('settings')}
-            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
+            className={`shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
               activeTab === 'settings' 
                 ? 'border-teal-500 text-teal-400 bg-teal-500/5' 
                 : 'border-transparent text-zinc-400 hover:text-white hover:bg-zinc-800/30'
@@ -486,24 +450,53 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
               </div>
 
               {/* Last Backup Log */}
-              <div className="p-4 rounded-xl bg-zinc-950/20 border border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
+              <div className="p-4 rounded-xl bg-zinc-950/20 border border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-zinc-400">
                 <div className="flex items-center gap-2">
                   <Clock size={16} className="text-zinc-500" />
-                  <span>Son Başarılı Yedekleme Tarihi:</span>
+                  <span>Son Başarılı Yedekleme:</span>
                 </div>
-                <span className="font-bold font-mono text-white">
-                  {lastBackupDate ? lastBackupDate.toLocaleString('tr-TR') : 'Yedekleme kaydı bulunamadı'}
+                <span id="backup-last-status" className="font-bold text-white sm:text-right">
+                  {autoBackup?.status
+                    ? describeBackupStatus(autoBackup.status)
+                    : lastBackupDate ? lastBackupDate.toLocaleString('tr-TR') : 'Yedekleme kaydı bulunamadı'}
                 </span>
               </div>
 
+              {/* Otomatik yedek */}
+              {autoBackup && (
+                <div id="backup-auto-panel" className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${autoBackup.silentActive ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-zinc-950/20 border-zinc-800/80'}`}>
+                  <div className="space-y-1">
+                    <p className={`text-xs font-bold uppercase tracking-wider ${autoBackup.silentActive ? 'text-emerald-400' : 'text-zinc-300'}`}>
+                      {autoBackup.silentActive ? 'Otomatik yedek açık' : autoBackup.canSilentSave ? 'Otomatik yedek kapalı' : 'Bu cihazda otomatik yedek yok'}
+                    </p>
+                    <p className="text-[11px] text-zinc-400 leading-relaxed">
+                      {autoBackup.silentActive
+                        ? `Bu bilgisayar ${frequency === 'daily' ? 'her gün' : frequency === 'monthly' ? 'ayda bir' : 'haftada bir'} tüm verileri yedek klasörüne kendiliğinden kaydeder; son 8 yedek saklanır.`
+                        : autoBackup.canSilentSave
+                          ? 'Ayarlar > Profil bölümündeki "Otomatik Yedekleme" anahtarıyla açabilirsiniz.'
+                          : 'Telefonda ve tarayıcıda dosya kendiliğinden kaydedilemez. Yedek zamanı gelince size hatırlatılır; masaüstü uygulaması açık bir bilgisayar varsa yedek orada otomatik alınır.'}
+                    </p>
+                  </div>
+                  <button
+                    id="btn-backup-now"
+                    type="button"
+                    disabled={autoBackup.running}
+                    onClick={() => { autoBackup.backupNow(); }}
+                    className="shrink-0 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider transition cursor-pointer"
+                  >
+                    {autoBackup.running ? 'Yedek alınıyor…' : autoBackup.canSilentSave ? 'Şimdi Yedekle' : 'Şimdi Yedek İndir'}
+                  </button>
+                </div>
+              )}
+
               {/* Status Action Buttons */}
               <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800/50">
-                <button
+                {canRestore && <button
                   onClick={() => setActiveTab('restore')}
                   className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition"
                 >
                   Yedek Yükle
-                </button>
+                </button>}
                 <button
                   onClick={() => setActiveTab('backup')}
                   className="px-5 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider shadow-lg transition"
@@ -587,7 +580,7 @@ export const BackupWizardModal: React.FC<BackupWizardModalProps> = ({
           )}
 
           {/* TAB 3: RESTORE FROM BACKUP */}
-          {activeTab === 'restore' && (
+          {activeTab === 'restore' && canRestore && (
             <div className="space-y-6 animate-fade-in">
               
               <div className="p-4 bg-rose-500/5 border border-rose-500/10 rounded-xl space-y-1">
