@@ -117,7 +117,7 @@ const HESAPLAR_COLL = 'hesaplar';
 const HESAP_ISLEMLER_COLL = 'hesapIslemleri';
 const AYARLAR_COLL = 'ayarlar';
 // Firmanın belgelerde (PDF) kullanılan görünüm ayarları: tüm cihazlarda ortak
-const DOCUMENT_BRANDING_DOC_ID = 'belgeGorunumu';
+export const DOCUMENT_BRANDING_DOC_ID = 'belgeGorunumu';
 const TEKRARLAYAN_COLL = 'tekrarlayanIslemler';
 // Kim ne yaptı günlüğü (yedeğe ve geri yüklemeye dahil değildir; eski yedek dönülse de günlük silinmez)
 const HAREKET_COLL = 'hareketGunlugu';

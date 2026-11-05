@@ -1,4 +1,5 @@
 import React from 'react';
+import { FirmInfoBanner } from '../onboarding/FirmInfoBanner';
 import { Repeat, Lock, LogOut, ShieldCheck, ChevronDown, ShoppingCart, ArrowDownLeft, UserCheck, DatabaseBackup } from 'lucide-react';
 import { TAB_DEFS } from '../constants';
 
@@ -28,6 +29,8 @@ interface MobileMenuViewProps {
   onOpenStaffActivity?: () => void;
   /** Yedek yetkisi olanlarda: Yedek Sihirbazı'nı açar */
   onOpenBackup?: () => void;
+  /** Firma bilgileri eksikse (sahipte): Firma Bilgileri penceresini açar */
+  onCompleteFirmInfo?: () => void;
   isSecurityActive: boolean;
 }
 
@@ -53,6 +56,7 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
   onSwitchUser,
   onOpenStaffActivity,
   onOpenBackup,
+  onCompleteFirmInfo,
   isSecurityActive,
 }) => {
   return (
@@ -72,6 +76,7 @@ export const MobileMenuView: React.FC<MobileMenuViewProps> = ({
         </div>
 
         {/* Hızlı işlemler: telefonda en sık kullanılan iki ekran */}
+        {onCompleteFirmInfo && <FirmInfoBanner className="mb-3" onOpen={onCompleteFirmInfo} />}
         <div className="mobile-quick-actions grid grid-cols-2 gap-2.5 mb-5">
           {[
             { id: 'pos', title: 'Hızlı Satış', hint: 'Nakit, kart, veresiye', icon: <ShoppingCart size={22} />, tone: 'bg-teal-500/15 text-teal-300 border-teal-500/30' },

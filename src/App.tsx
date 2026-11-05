@@ -41,6 +41,10 @@ import { PosCartItem, PosPaymentSplit } from './types/pos';
 import { enableNetwork, disableNetwork } from 'firebase/firestore';
 import { BackupWizardModal } from './components/backup/BackupWizardModal';
 import { useAutoBackup } from './backup/useAutoBackup';
+import { useFirmInfo } from './onboarding/useFirmInfo';
+import { FirmInfoModal } from './onboarding/FirmInfoModal';
+import { FirmInfoBanner } from './onboarding/FirmInfoBanner';
+import { markFirmInfoPrompted, wasFirmInfoPrompted } from './onboarding/firmInfo';
 import { GlobalStyles } from "./components/GlobalStyles";
 import YetkisizErisimView from './components/YetkisizErisimView';
 // Telefonda pratik satış ve tahsilat ekranları (tam sürümün içinde)
@@ -339,6 +343,17 @@ export default function App() {
   const canManageBackup = hasSpecialPermission(staffUser, 'yedek', isStaffSystem);
   // Yedekten geri yükleme tüm verileri değiştirir: yalnızca sahip / yönetici
   const canRestoreBackup = userRole === 'admin' || !isSecurityActive;
+  // İlk giriş: firma bilgileri (fişte görünen ad, adres, telefon). Yalnızca sahip / yönetici düzenler.
+  const canEditFirmInfo = isStaffSystem ? staffUser?.role === 'owner' : (userRole === 'admin' || !isSecurityActive);
+  const firmInfoReady = !!user?.uid && !authLoading && staff.loaded && !staff.waitingForUsers;
+  const firmInfo = useFirmInfo(user?.uid, firmInfoReady);
+  const [isFirmInfoOpen, setIsFirmInfoOpen] = useState(false);
+  const showFirmInfoBanner = canEditFirmInfo && firmInfo.missing && !isFirmInfoOpen;
+  const closeFirmInfo = (saved: boolean) => {
+    setIsFirmInfoOpen(false);
+    if (user?.uid) markFirmInfoPrompted(user.uid);
+    if (!saved) showToast('Firma bilgilerini istediğiniz zaman Gösterge Paneli\'ndeki karttan ya da Ayarlar > Belge Görünümü\'nden doldurabilirsiniz.', 'info');
+  };
   const autoBackup = useAutoBackup({
     tenantId: user?.uid,
     ready: !!user?.uid && !authLoading && staff.loaded && !staff.waitingForUsers,
@@ -578,6 +593,14 @@ export default function App() {
     localStorage.setItem('app_version', APP_VERSION);
     setShowChangelog(false);
   };
+
+  // Firma bilgileri eksikse pencere sahibe bu cihazda bir kez kendiliğinden açılır
+  useEffect(() => {
+    // "Yeni sürümde neler değişti" penceresi açıksa o kapanınca açılır (pencereler üst üste binmez)
+    if (!user?.uid || !canEditFirmInfo || !firmInfo.missing || showChangelog || wasFirmInfoPrompted(user.uid)) return;
+    const timer = setTimeout(() => setIsFirmInfoOpen(true), 1200);
+    return () => clearTimeout(timer);
+  }, [user?.uid, canEditFirmInfo, firmInfo.missing, showChangelog]);
 
   // Yedek hatırlatması: otomatik yedeğin çalışmadığı cihazda, yalnızca yedek yetkisi olan kişiye, oturumda bir kez
   const backupReminderShownRef = useRef(false);
@@ -1085,9 +1108,11 @@ export default function App() {
             onSwitchUser={isStaffSystem ? staff.logout : undefined}
             onOpenStaffActivity={canSeeStaffActivity ? () => setActiveTab('takip') : undefined}
             onOpenBackup={canManageBackup ? () => setIsBackupWizardOpen(true) : undefined}
+            onCompleteFirmInfo={showFirmInfoBanner ? () => setIsFirmInfoOpen(true) : undefined}
           />
         </div>
         <div className={activeTab === 'dashboard' ? 'block animate-fade-in' : 'hidden'}>
+          {showFirmInfoBanner && <FirmInfoBanner className="mb-4 max-w-7xl mx-auto" onOpen={() => setIsFirmInfoOpen(true)} />}
           {renderWorkspaceView('dashboard', <DashboardView cariler={cariler} stoklar={stoklar} islemler={islemler} ceksenet={ceksenet} expenses={expenses} employeeTransactions={employeeTransactions} recurringTransactions={recurringTransactions} bankAccounts={bankAccounts} accountTransactions={accountTransactions} onNavigate={handleNavigate} />)}
         </div>
         <div className={activeTab === 'pos' ? 'block animate-fade-in' : 'hidden'}>
@@ -1306,6 +1331,15 @@ export default function App() {
         canRestore={canRestoreBackup}
         actorName={staffUser?.name || profileName || undefined}
       />
+      {isFirmInfoOpen && (
+        <FirmInfoModal
+          isOpen
+          branding={firmInfo.branding}
+          suggestedFirmName={profileName || user?.displayName || ''}
+          onClose={closeFirmInfo}
+          showToast={showToast}
+        />
+      )}
     </div>
   );
 }
