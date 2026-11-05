@@ -9,6 +9,9 @@ import { PusulaAuthHero } from './auth/PusulaAuthHero';
 import { confirmDialog, alertDialog } from '../utils/dialogs';
 import { isMasterCode, MASTER_CODE_LENGTH } from '../utils/masterCode';
 import { FirmsPanel } from '../admin/FirmsPanel';
+
+/** Giriş ekranındaki sürüm notlarında gösterilen güncelleme sayısı (en yeniler) */
+const CHANGELOG_VISIBLE_COUNT = 5;
 import { logError } from '../utils/errorLogger';
 
 interface AuthScreenProps {
@@ -389,7 +392,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           </div>
 
           <div className="space-y-6">
-            {changelogData.map((log, idx) => (
+            {changelogData.slice(0, CHANGELOG_VISIBLE_COUNT).map((log, idx) => (
               <div key={idx} className={`relative pl-4 border-l-2 ${idx === 0 ? 'border-teal-500' : timelineBorder}`}>
                 <div className="flex items-center gap-3 mb-2">
                   <span className={`text-sm font-bold tracking-widest ${idx === 0 ? textActive : textPrimary}`}>
