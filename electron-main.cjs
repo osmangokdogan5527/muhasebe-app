@@ -1,6 +1,7 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog, shell, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { autoUpdater } = require('electron-updater');
 
 
@@ -277,6 +278,74 @@ app.whenReady().then(() => {
   } else {
     // Show main app
     if (mainWindow) mainWindow.show();
+  }
+});
+
+// ---------------- Etiket yazıcısına doğrudan basım ----------------
+// Arayüz etiketleri HTML/SVG sayfaları olarak hazırlar; burada gizli bir pencerede açılıp Windows
+// yazdırma penceresi gösterilmeden seçilen yazıcıya etiket ölçüsünde ve %100 ölçekle gönderilir.
+
+ipcMain.handle('list-printers', async () => {
+  try {
+    const source = mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents : null;
+    if (!source) return { success: false, error: 'Pencere hazır değil.' };
+    const list = await source.getPrintersAsync();
+    return {
+      success: true,
+      printers: list.map((p) => ({ name: p.name, displayName: p.displayName || p.name, isDefault: !!p.isDefault })),
+    };
+  } catch (error) {
+    console.error('Yazıcılar okunamadı:', error);
+    return { success: false, error: error && error.message ? error.message : String(error) };
+  }
+});
+
+ipcMain.handle('print-label-html', async (event, job) => {
+  let win = null;
+  let tmpFile = null;
+  try {
+    const html = job && typeof job.html === 'string' ? job.html : '';
+    const deviceName = job && typeof job.deviceName === 'string' ? job.deviceName : '';
+    const widthMm = Number(job && job.widthMm);
+    const heightMm = Number(job && job.heightMm);
+    if (!html || html.length > 30 * 1024 * 1024) return { success: false, error: 'Etiket içeriği geçersiz.' };
+    if (!deviceName) return { success: false, error: 'Yazıcı seçilmedi.' };
+    if (!(widthMm >= 10 && widthMm <= 300 && heightMm >= 10 && heightMm <= 300)) return { success: false, error: 'Etiket ölçüsü geçersiz.' };
+
+    tmpFile = path.join(os.tmpdir(), `storm-etiket-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.html`);
+    fs.writeFileSync(tmpFile, html, 'utf8');
+
+    win = new BrowserWindow({
+      show: false,
+      width: 800,
+      height: 600,
+      webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, javascript: true },
+    });
+    await win.loadFile(tmpFile);
+    // Gömülü yazı tipleri yüklenmeden basılmasın
+    await win.webContents.executeJavaScript('document.fonts.ready.then(() => true)', true);
+
+    const result = await new Promise((resolve) => {
+      win.webContents.print({
+        silent: true,
+        deviceName,
+        printBackground: true,
+        color: false,
+        landscape: false,
+        margins: { marginType: 'none' },
+        pageSize: { width: Math.round(widthMm * 1000), height: Math.round(heightMm * 1000) },
+        scaleFactor: 100,
+        copies: 1,
+      }, (success, failureReason) => resolve({ success, failureReason }));
+    });
+    if (!result.success) return { success: false, error: result.failureReason || 'Yazıcı işi kabul etmedi.' };
+    return { success: true };
+  } catch (error) {
+    console.error('Etiket basılamadı:', error);
+    return { success: false, error: error && error.message ? error.message : String(error) };
+  } finally {
+    try { if (win && !win.isDestroyed()) win.close(); } catch (e) { /* zaten kapalı */ }
+    try { if (tmpFile && fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile); } catch (e) { /* geçici dosya */ }
   }
 });
 
