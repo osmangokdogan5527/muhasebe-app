@@ -119,6 +119,7 @@ export function LedgerDrawer({
   // Filter accounts based on selected account type
   const filteredAccountsForQuick = useMemo(() => {
     return bankAccounts.filter((acc) => {
+      if (acc.archived) return false;
       if (quickTxAccount === "cash") return acc.type === "kasa";
       if (quickTxAccount === "bank") return acc.type === "banka";
       if (quickTxAccount === "pos") return acc.type === "pos";

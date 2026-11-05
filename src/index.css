@@ -447,3 +447,12 @@ body:has(main .fixed.inset-0, [aria-modal="true"]:not(.storm-ai-fab *)) .storm-a
     font-size: max(16px, 1em) !important;
   }
 }
+
+/* Kasa & Banka: sağdan açılan hesap detayı */
+@keyframes storm-slide-in-right {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.animate-slide-in-right {
+  animation: storm-slide-in-right 0.22s ease-out;
+}

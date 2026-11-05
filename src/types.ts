@@ -167,6 +167,7 @@ export interface Expense {
     | "İnternet/Telefon"
     | "Personel Maaş/Avans"
     | "Vergi/SGK"
+    | "Banka/POS Komisyonu"
     | "Diğer";
   amount: number;
   date: string; // YYYY-MM-DD
@@ -217,11 +218,26 @@ export interface EmployeeTransaction {
 
 export interface BankAccount {
   id: string;
+  /** Hesabın kısa adı (ör. "Ticari", "Maaş", "Mağaza Kasası") */
   name: string;
   type: "kasa" | "banka" | "pos";
   currency: "TRY" | "USD" | "EUR";
   initialBalance: number;
   createdAt: string;
+  /** Sistemin oluşturduğu merkez hesap (silinemez) */
+  isDefault?: boolean;
+  /** Banka / POS için banka adı (ör. "Ziraat Bankası") */
+  bankName?: string;
+  /** Banka hesabı IBAN'ı (boşluksuz) */
+  iban?: string;
+  /** Hesap belirtilmeyen yeni kayıtların yazılacağı hesap (tür başına bir tane) */
+  isPrimary?: boolean;
+  /** POS'un parasının geçtiği banka hesabı */
+  linkedBankAccountId?: string;
+  /** POS aktarımında son kullanılan komisyon oranı (%) */
+  lastCommissionRate?: number;
+  /** Kullanılmayan hesap: listede gizlenir, seçim listelerinde çıkmaz */
+  archived?: boolean;
 }
 
 export interface AccountTransaction {

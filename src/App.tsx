@@ -34,6 +34,7 @@ import {
   db,
   setActivityActor,
   recordActivity,
+  setPrimaryCashAccounts,
 } from './firebase';
 import { logError } from './utils/errorLogger';
 import { PosCartItem, PosPaymentSplit } from './types/pos';
@@ -42,6 +43,7 @@ import { enableNetwork, disableNetwork } from 'firebase/firestore';
 import { BackupWizardModal } from './components/backup/BackupWizardModal';
 import { useAutoBackup } from './backup/useAutoBackup';
 import { subscribeFirmStatus } from './admin/firmRegistry';
+import { primaryAccountMap } from './utils/cashAccounts';
 import type { AiCredentials } from './ai/aiProviders';
 import { useFirmInfo } from './onboarding/useFirmInfo';
 import { FirmInfoModal } from './onboarding/FirmInfoModal';
@@ -697,6 +699,12 @@ export default function App() {
     recurringTransactions, setRecurringTransactions,
     loading, setLoading
   } = useAppData(user);
+
+  // Hesap belirtilmeden kaydedilen satış/tahsilat/masraf, türün varsayılan (★) hesabına yazılır
+  useEffect(() => {
+    setPrimaryCashAccounts(bankAccounts && bankAccounts.length ? primaryAccountMap(bankAccounts) : null);
+  }, [bankAccounts]);
+
 
 
 

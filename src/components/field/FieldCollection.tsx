@@ -45,7 +45,7 @@ export const FieldCollection: React.FC<FieldCollectionProps> = ({ cariler, islem
     }
   }, [presetCari, onPresetConsumed]);
 
-  const accountsOfType = bankAccounts.filter(a => a.type === ACCOUNT_TYPE_MAP[account]);
+  const accountsOfType = bankAccounts.filter(a => !a.archived && a.type === ACCOUNT_TYPE_MAP[account]);
   useEffect(() => {
     if (bankAccountId && !accountsOfType.some(a => a.id === bankAccountId)) setBankAccountId('');
   }, [account, bankAccountId, accountsOfType]);

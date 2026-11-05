@@ -16,6 +16,7 @@ import { formatDateISO } from '../../utils/dateUtils';
 import { APP_VERSION } from '../../constants';
 import { confirmDialog, alertDialog } from '../../utils/dialogs';
 import { grossSalesPrice } from '../../utils/stockPricing';
+import { primaryAccountId } from '../../utils/cashAccounts';
 
 interface PosViewProps {
   stocks: Stock[];
@@ -358,14 +359,15 @@ export const PosView: React.FC<PosViewProps> = ({
   const handleQuickPosSale = async () => {
     if (cartItems.length === 0 || isProcessing) return;
 
-    const posAccounts = bankAccounts.filter((a) => a.type === 'pos' || a.type === 'banka');
+    // Kartlı satış varsayılan POS hesabına yazılır (★; yoksa merkez POS)
+    const posAccountId = primaryAccountId(bankAccounts, 'pos');
 
     const split: PosPaymentSplit = {
       cashAmount: 0,
       cashReceived: 0,
       changeGiven: 0,
       posAmount: summary.grandTotal,
-      posAccountId: posAccounts.length > 0 ? posAccounts[0].id : '',
+      posAccountId,
       openAccountAmount: 0,
     };
 

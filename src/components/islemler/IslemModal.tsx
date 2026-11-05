@@ -777,7 +777,7 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
                         className="w-full px-3 py-2.5 bg-teal-50 border border-teal-200 focus:border-teal-500 focus:ring-teal-500 text-teal-950 rounded-lg text-xs font-semibold cursor-pointer"
                       >
                         <option value="">-- Kasa/Banka Seçiniz --</option>
-                        {bankAccounts.filter(a => account === 'cash' ? a.type === 'kasa' : account === 'pos' ? a.type === 'pos' : a.type === 'banka').map(a => (
+                        {bankAccounts.filter(a => !a.archived && (account === 'cash' ? a.type === 'kasa' : account === 'pos' ? a.type === 'pos' : a.type === 'banka')).map(a => (
                           <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
                         ))}
                       </select>
@@ -1054,7 +1054,7 @@ const handleItemFieldChange = (index: number, field: keyof InvoiceItem, value: a
                           className="w-full px-3 py-2.5 bg-teal-50 border border-teal-200 text-teal-900 rounded-lg text-xs focus:outline-hidden transition font-medium cursor-pointer font-sans"
                         >
                           <option value="">-- Hesap Seçiniz --</option>
-                          {bankAccounts.filter(a => account === 'cash' ? a.type === 'kasa' : account === 'pos' ? a.type === 'pos' : a.type === 'banka').map(a => (
+                          {bankAccounts.filter(a => !a.archived && (account === 'cash' ? a.type === 'kasa' : account === 'pos' ? a.type === 'pos' : a.type === 'banka')).map(a => (
                             <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
                           ))}
                         </select>
