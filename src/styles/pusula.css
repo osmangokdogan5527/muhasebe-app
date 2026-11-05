@@ -712,6 +712,16 @@ body:has([data-design-style="pusula"]),
   color: var(--k-text) !important;
 }
 
+/* Para birimi seçimi: diğer başlıklardan farklı olarak çerçeveli kart (kenarları kartlarla,
+   yazısı kartların içindeki yazılarla hizalı) */
+[data-design-style="pusula"] .dashboard-widget-header.dashboard-currency-bar {
+  background: var(--k-surface) !important;
+  border: 1px solid var(--k-border) !important;
+  border-radius: var(--k-radius) !important;
+  box-shadow: var(--k-shadow) !important;
+  padding: 10px 10px 10px 22px !important;
+}
+
 /* Döviz kapsülü (koyu kalması istenen küçük kontrol) açık zemine uyarlanır */
 [data-design-style="pusula"] .currency-dark-capsule {
   background: var(--k-surface) !important;
