@@ -442,21 +442,22 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.9.3';
+export const APP_VERSION = '1.9.4';
 
 export const CHANGELOG = {
-  version: '1.9.3',
+  version: '1.9.4',
   features: [
-    "Gerçek Otomatik Yedek: Bilgisayarda bütün veriler (bulut dahil) haftada bir kendiliğinden yedek klasörüne kaydedilir, son 8 yedek saklanır; telefonda yedek zamanı gelince yetkiliye 'Şimdi Yedek İndir' hatırlatması çıkar. Yedeğe belge görünümü ve etiket ayarları da dahildir.",
-    "Sahip Yetkileri: Çalışan Takibi ve Otomatik Yedek normalde yalnızca sahipte görünür; sahip Ayarlar > Kullanıcılar'dan istediği kişiye açabilir.",
-    "Firma Bilgileri Penceresi: Firma kurulunca ad, telefon, adres, vergi no, IBAN ve logo sorulur; fiş, fatura ve ekstreler bu bilgilerle çıkar. Eksik kalırsa Gösterge Paneli'nde hatırlatma kartı durur.",
-    "Yedek Yapay Zeka: Gemini'nin limiti dolunca Storm AI otomatik olarak ücretsiz Groq (ya da ChatGPT) ile devam eder; ayarlarda her API anahtarının çalışıp çalışmadığı 'Onaylandı / Onaylanmadı' olarak görünür.",
-    "Yönetim Paneli > Firmalar: Sistem kurucusu firmaları listeler, şifrelerini görür, firmayı durdurur / yeniden başlatır, siler ya da panelden yeni firma kurar (bir kerelik Firebase kural kurulumu gerekir).",
+    "Yeni Kasa & Banka: Hesaplar tek listede (Tümü / Banka / Kasa / POS), üstte toplam nakit varlık ve döviz hesapları; hesaba tıklayınca sağdan hesap detayı açılır (bakiye, hareketler, banka mutabakatı / kasa sayımı).",
+    "POS'u Bankaya Aktar: Komisyon %, ₺ ya da 'bankaya geçen tutar' olarak girilir; POS sıfırlanır, bankaya net tutar geçer, komisyon gider olarak yazılır. POS'un bankası ve son oranı hatırlanır.",
+    "Pratik Transfer ve Hızlı Para Çıkışı: Kasadan bankaya, bankadan kasaya, hesaplar arası tek pencerede; hiçbir şeye bağlamadan para girişi/çıkışı; her işlemden sonra 'Geri al'.",
+    "Varsayılan Hesap (★) ve IBAN: Hesap seçilmeyen satış/tahsilat/masraf varsayılan hesaba yazılır; banka adı, kısa ad, IBAN ve arşiv. Hesabı belli olmayan eski hareketler için uyarı ve toplu atama.",
+    "Etiket Yazıcısına Doğrudan Basım (masaüstü): Etiketler Windows penceresi açılmadan seçilen yazıcıya etiket ölçüsünde ve %100 ölçekle gider; gerekirse 90° döndürülür.",
+    "Sahip İçin Yetki Seçimi: 'Tüm yetkiler' kapatılan sahibin ekran ve işlemleri çalışan gibi seçilir; sınırlı sahip kullanıcıları yönetemez ve PIN'i onay vermez.",
   ],
   fixes: [
-    "Eski 'Otomatik Yedekleme' ve 'Manuel Yedek' düğmeleri asıl verileri yedeklemiyordu; artık gerçek yedek alınır. Otomatik Yedekleme anahtarı kapatılınca yeniden açılışta tekrar açılıyordu.",
-    "Yedek Sihirbazı'nın sekmeleri telefonda ekrandan taşıyordu.",
-    "Yönetim Paneli'nde Pusula temasında sekme yazıları okunmuyordu.",
+    "Hızlı kartlı satış (F3) parayı listedeki ilk hesaba (bazen banka hesabına) yazıyordu; artık varsayılan POS hesabına yazılır.",
+    "Gösterge Paneli'nde para birimi seçimi çerçeveli; bölüm başlıkları kartlarla aynı hizada.",
+    "Giriş ekranındaki sürüm notlarında yalnızca son 5 güncelleme gösterilir.",
   ]
 };
 
@@ -697,6 +698,21 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.9.4",
+    date: "05.11.2026",
+    changes: [
+      "Yeni Kasa & Banka: Hesaplar tek listede (Tümü / Banka / Kasa / POS), üstte toplam nakit varlık ve döviz hesapları; hesaba tıklayınca sağdan hesap detayı açılır (bakiye, hareketler, banka mutabakatı / kasa sayımı).",
+      "POS'u Bankaya Aktar: Komisyon %, ₺ ya da 'bankaya geçen tutar' olarak girilir; POS sıfırlanır, bankaya net tutar geçer, komisyon gider olarak yazılır. POS'un bankası ve son oranı hatırlanır.",
+      "Pratik Transfer ve Hızlı Para Çıkışı: Kasadan bankaya, bankadan kasaya, hesaplar arası tek pencerede; hiçbir şeye bağlamadan para girişi/çıkışı; her işlemden sonra 'Geri al'.",
+      "Varsayılan Hesap (★) ve IBAN: Hesap seçilmeyen satış/tahsilat/masraf varsayılan hesaba yazılır; banka adı, kısa ad, IBAN ve arşiv. Hesabı belli olmayan eski hareketler için uyarı ve toplu atama.",
+      "Etiket Yazıcısına Doğrudan Basım (masaüstü): Etiketler Windows penceresi açılmadan seçilen yazıcıya etiket ölçüsünde ve %100 ölçekle gider; gerekirse 90° döndürülür.",
+      "Sahip İçin Yetki Seçimi: 'Tüm yetkiler' kapatılan sahibin ekran ve işlemleri çalışan gibi seçilir; sınırlı sahip kullanıcıları yönetemez ve PIN'i onay vermez.",
+      "Hızlı kartlı satış (F3) parayı listedeki ilk hesaba (bazen banka hesabına) yazıyordu; artık varsayılan POS hesabına yazılır.",
+      "Gösterge Paneli'nde para birimi seçimi çerçeveli; bölüm başlıkları kartlarla aynı hizada.",
+      "Giriş ekranındaki sürüm notlarında yalnızca son 5 güncelleme gösterilir.",
+    ]
+  },
   {
     version: "1.9.3",
     date: "05.11.2026",
