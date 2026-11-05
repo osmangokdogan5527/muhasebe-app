@@ -195,12 +195,15 @@ export function useAppSettings() {
     return localStorage.getItem('storm_auto_backup_enabled') !== 'false';
   });
 
-  // Sync auto backup with electron when it changes
+  // Otomatik yedek anahtarı cihazda hatırlanır (yedek işi backup/useAutoBackup içinde yapılır)
   useEffect(() => {
-    if ((window as any).electronAPI && (window as any).electronAPI.setAutoBackup) {
-      (window as any).electronAPI.setAutoBackup(autoBackupEnabled);
+    try {
+      localStorage.setItem('storm_auto_backup_enabled', autoBackupEnabled ? 'true' : 'false');
+    } catch {
+      /* depolama kapalı: anahtar yalnızca bu oturumda geçerli */
     }
   }, [autoBackupEnabled]);
+
 
   return {
     activeTheme, setActiveTheme,

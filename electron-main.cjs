@@ -3,7 +3,6 @@ const path = require('path');
 const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
 
-let autoBackupEnabled = true;
 
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
@@ -278,84 +277,6 @@ app.whenReady().then(() => {
   } else {
     // Show main app
     if (mainWindow) mainWindow.show();
-  }
-});
-
-ipcMain.on('set-auto-backup', (event, enabled) => {
-  autoBackupEnabled = enabled;
-});
-
-ipcMain.handle('create-manual-backup', async () => {
-  try {
-    const userDataPath = app.getPath('userData');
-    
-    // Attempt to find the database file, assume database.sqlite if none found
-    let dbFilePath = path.join(userDataPath, 'database.sqlite');
-    const files = fs.readdirSync(userDataPath);
-    const existingDb = files.find(f => f.endsWith('.sqlite') || f.endsWith('.db') || f.endsWith('.json') && f !== 'package.json');
-    if (existingDb) {
-      dbFilePath = path.join(userDataPath, existingDb);
-    } else {
-      // Create a dummy file to satisfy copy operation if no DB exists yet
-      fs.writeFileSync(dbFilePath, '');
-    }
-
-    const dateStr = new Date().toISOString().split('T')[0];
-    const defaultPath = path.join(app.getPath('documents'), `Storm_Yedek_${dateStr}${path.extname(dbFilePath)}`);
-
-    const result = await dialog.showSaveDialog(mainWindow, {
-      title: 'Yedek Dosyasını Kaydet',
-      defaultPath: defaultPath,
-      filters: [
-        { name: 'Veritabanı Yedek Dosyası', extensions: [path.extname(dbFilePath).substring(1) || 'db'] }
-      ]
-    });
-
-    if (!result.canceled && result.filePath) {
-      fs.copyFileSync(dbFilePath, result.filePath);
-      return { success: true, path: result.filePath };
-    }
-    return { success: false, canceled: true };
-  } catch (error) {
-    console.error('Yedekleme hatası:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('restore-from-backup', async () => {
-  try {
-    const result = await dialog.showOpenDialog(mainWindow, {
-      title: 'Yedek Dosyası Seç',
-      properties: ['openFile'],
-      filters: [
-        { name: 'Veritabanı Yedek Dosyası', extensions: ['db', 'sqlite', 'json'] }
-      ]
-    });
-
-    if (!result.canceled && result.filePaths.length > 0) {
-      const sourcePath = result.filePaths[0];
-      const userDataPath = app.getPath('userData');
-      const ext = path.extname(sourcePath);
-      
-      let targetFile = `database${ext}`;
-      const files = fs.readdirSync(userDataPath);
-      const existingDb = files.find(f => f.endsWith(ext));
-      if (existingDb) {
-        targetFile = existingDb;
-      }
-      
-      const destPath = path.join(userDataPath, targetFile);
-      fs.copyFileSync(sourcePath, destPath);
-      
-      // Relaunch the app to apply restored data
-      app.relaunch();
-      app.exit(0);
-      return { success: true };
-    }
-    return { success: false, canceled: true };
-  } catch (error) {
-    console.error('Geri yükleme hatası:', error);
-    return { success: false, error: error.message };
   }
 });
 

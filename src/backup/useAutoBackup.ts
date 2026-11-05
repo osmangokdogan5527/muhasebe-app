@@ -8,7 +8,7 @@
  * Telefon / tarayıcı: dosya sessizce kaydedilemez. Yedek zamanı geldiğinde yalnızca yedek yetkisi
  * olan kişiye hatırlatma gösterilir (indirme sihirbazdan yapılır).
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { subscribeSettingDoc } from '../firebase';
 import { logError } from '../utils/errorLogger';
 import { autoBackupFileName, countBackupRecords, createBackupPayload, downloadBackupFile, encodeBackup, manualBackupFileName } from './backupPayload';
@@ -162,23 +162,29 @@ export function useAutoBackup({ tenantId, ready, autoEnabled, canManage, actorNa
     };
   }, [tenantId, ready, autoEnabled, canSilentSave, runBackup]);
 
+  // Hiç yedek yoksa hatırlatmanın sayılacağı başlangıç (cihaza yazma ekran çiziminde değil burada yapılır)
+  const [firstSeen, setFirstSeen] = useState<number>(0);
+  useEffect(() => {
+    setFirstSeen(tenantId ? readFirstSeen(tenantId) : 0);
+  }, [tenantId]);
+
   /**
    * Hatırlatma gerekiyor mu? (otomatik yedeğin çalışmadığı cihazda, yetkili kişiye)
    * Firma durumu sunucudan okunmadan karar verilmez; bu cihazdaki son yedek de sayılır.
    */
   const silentActive = canSilentSave && autoEnabled;
-  let reminderDue = false;
-  try {
-    const freq = readFrequency();
-    if (canManage && ready && statusLoaded && !silentActive && freq !== 'disabled') {
-      const firmLast = status ? new Date(status.lastAt).getTime() : 0;
-      let last = Math.max(firmLast || 0, readLocalLastBackup());
-      if (!last) last = tenantId ? readFirstSeen(tenantId) : Date.now();
-      reminderDue = Date.now() - last > frequencyMs(freq);
+  const reminderDue = useMemo(() => {
+    try {
+      const freq = readFrequency();
+      if (!canManage || !ready || !statusLoaded || silentActive || freq === 'disabled' || !firstSeen) return false;
+      const firmLast = status ? new Date(status.lastAt).getTime() || 0 : 0;
+      const last = Math.max(firmLast, readLocalLastBackup()) || firstSeen;
+      return Date.now() - last > frequencyMs(freq);
+    } catch (err) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'useAutoBackup.reminder');
+      return false;
     }
-  } catch (err) {
-    logError(err instanceof Error ? err : new Error(String(err)), 'useAutoBackup.reminder');
-  }
+  }, [canManage, ready, statusLoaded, silentActive, firstSeen, status]);
 
   const backupNow = useCallback(() => runBackup('manual'), [runBackup]);
 

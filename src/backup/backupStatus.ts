@@ -2,11 +2,11 @@
  * Yedek durumu: firmanın son yedeği ne zaman, hangi cihazdan, kim tarafından alındı.
  * Firma ayarlarında (ayarlar/yedekDurumu) tutulur; böylece sahip başka cihazdan da görür.
  */
-import { saveSettingDoc } from '../firebase';
+import { BACKUP_STATUS_DOC_ID, saveSettingDoc } from '../firebase';
 import { currentDevice } from '../users/activityTypes';
 import { logError } from '../utils/errorLogger';
 
-export const BACKUP_STATUS_SETTING_ID = 'yedekDurumu';
+export const BACKUP_STATUS_SETTING_ID = BACKUP_STATUS_DOC_ID;
 /** Bu cihazda son yedek (eski sihirbaz da bu anahtarı kullanır) */
 export const LOCAL_LAST_BACKUP_KEY = 'storm_last_backup_time';
 export const BACKUP_FREQUENCY_KEY = 'storm_backup_frequency';

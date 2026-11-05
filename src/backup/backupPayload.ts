@@ -6,7 +6,7 @@
  * veritabanından okunur (eksiksiz yedek).
  */
 import { encryptBackup, BackupDataPayload } from '../utils/backupCrypto';
-import { exportAllDatabaseData } from '../firebase';
+import { BACKUP_STATUS_DOC_ID, exportAllDatabaseData } from '../firebase';
 import { APP_VERSION } from '../constants';
 import { logError } from '../utils/errorLogger';
 
@@ -56,6 +56,8 @@ export async function createBackupPayload(): Promise<BackupDataPayload> {
       hesaplar: dbData.hesaplar || [],
       hesapIslemleri: dbData.hesapIslemleri || [],
       tekrarlayanIslemler: dbData.tekrarlayanIslemler || [],
+      // Yedek durumu cihazların yedek geçmişidir, iş verisi değildir: pakete girmez
+      ayarlar: (dbData.ayarlar || []).filter((item: any) => item && item.id !== BACKUP_STATUS_DOC_ID),
     },
     localStorage: settingsToBackup,
   };
@@ -71,11 +73,11 @@ export function countBackupRecords(payload: BackupDataPayload): number {
   }
 }
 
-/** Yerel saatle YYYY-MM-DD_SS-DD */
+/** Yerel saatle YYYY-AA-GG, saatli hâli YYYY-AA-GG_SS-DD-ss (aynı dakikadaki yedekler ayrı dosya olur) */
 function stamp(date: Date, withTime: boolean): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   const day = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-  return withTime ? `${day}_${pad(date.getHours())}-${pad(date.getMinutes())}` : day;
+  return withTime ? `${day}_${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}` : day;
 }
 
 /** Sihirbazdan indirilen yedeğin dosya adı */

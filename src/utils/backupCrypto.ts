@@ -64,6 +64,8 @@ export interface BackupDataPayload {
     hesaplar?: any[];
     hesapIslemleri?: any[];
     tekrarlayanIslemler?: any[];
+    /** Firma ayarları (belge görünümü, etiket tasarımı, kullanıcılar). 1.9.3 öncesi yedeklerde yoktur */
+    ayarlar?: any[];
   };
   localStorage: { [key: string]: string | null };
 }

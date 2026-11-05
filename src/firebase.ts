@@ -1421,6 +1421,9 @@ const ALL_COLLECTIONS: { name: string; backupKey: string; optional?: boolean }[]
   { name: AYARLAR_COLL, backupKey: 'ayarlar', optional: true },
 ];
 
+/** Firma yedek durumu (ayarlar altında); bkz. backup/backupStatus */
+export const BACKUP_STATUS_DOC_ID = 'yedekDurumu';
+
 // Yedek için tüm koleksiyonları ekrandaki listelerden bağımsız olarak doğrudan veritabanından okur
 export async function exportAllDatabaseData(): Promise<{ [backupKey: string]: any[] }> {
   try {
@@ -1452,6 +1455,9 @@ export async function importAllDatabaseData(backupJson: any) {
       // (eski yedekte liste yoksa sistem kapanır, herkes tam yetkiyle girerdi) ya da eski PIN'lerle
       // ezmemeli. Mevcut liste korunur; yalnızca hiç liste yoksa yedektekinden geri yüklenir.
       if (name === AYARLAR_COLL) {
+        // Yedek durumu cihazların gerçek yedek geçmişidir; eski yedekteki hâliyle ezilmez, silinmez
+        backupIds.add(BACKUP_STATUS_DOC_ID);
+        items = items.filter(item => String(item.id) !== BACKUP_STATUS_DOC_ID);
         backupIds.add(USERS_SETTING_ID);
         const currentUsers = await getDoc(doc(db, getPath(AYARLAR_COLL), USERS_SETTING_ID));
         if (currentUsers.exists()) {
