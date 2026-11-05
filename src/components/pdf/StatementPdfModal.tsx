@@ -7,7 +7,7 @@ import { createStatementPdf, statementPeriodLabel } from '../../pdf/statementPdf
 import { useDocumentBranding } from '../../pdf/useDocumentBranding';
 import { PdfPreviewModal } from './PdfPreviewModal';
 import { PdfOptionTabs } from './PdfOptionTabs';
-import { usePaperSize, PAPER_OPTIONS } from './usePaperSize';
+import { useDocumentPaper, PAPER_OPTIONS } from './usePaperSize';
 
 export interface StatementPdfModalProps {
   cari: Cari;
@@ -19,7 +19,7 @@ export interface StatementPdfModalProps {
 
 export const StatementPdfModal: React.FC<StatementPdfModalProps> = ({ cari, islemler, startDate, endDate, onClose }) => {
   const { branding, isLoaded } = useDocumentBranding();
-  const [paper, setPaper] = usePaperSize();
+  const [paper, setPaper] = useDocumentPaper('statement', branding, isLoaded);
 
   const generate = useCallback(
     () => createStatementPdf(cari, islemler, branding, { startDate, endDate, paper }),

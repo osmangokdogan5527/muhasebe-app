@@ -47,6 +47,8 @@ export const PosView: React.FC<PosViewProps> = ({
   const customerInputRef = useRef<HTMLInputElement>(null);
   // SEPET & MÜŞTERİ STATE'LERİ
   const [cartItems, setCartItems] = useState<PosCartItem[]>([]);
+  // Fişe ve satış kaydına yazılan açıklama (isteğe bağlı)
+  const [saleNote, setSaleNote] = useState('');
   const [selectedCari, setSelectedCari] = useState<Cari | null>(null);
   const [cariSearchTerm, setCariSearchTerm] = useState<string>('');
   const [isCariDropdownOpen, setIsCariDropdownOpen] = useState<boolean>(false);
@@ -407,12 +409,14 @@ export const PosView: React.FC<PosViewProps> = ({
         customerName: selectedCari ? selectedCari.name : 'Perakende Müşteri',
         cariId: selectedCari?.id,
         items: [...cartItems],
+        note: saleNote.trim() || undefined,
         totalAmount: summary.grandTotal,
       };
 
       setParkedSales((prev) => [newParked, ...prev]);
       setCartItems([]);
       setSelectedCari(null);
+      setSaleNote('');
       alertDialog('Satış başarıyla askıya alındı.');
     } catch (err: any) {
       logError(err, 'PosView:handleParkSale');
@@ -430,6 +434,7 @@ export const PosView: React.FC<PosViewProps> = ({
   const handleRestoreParkedSale = (parked: PosParkedSale) => {
     try {
       setCartItems(parked.items);
+      setSaleNote(parked.note || '');
       if (parked.cariId) {
         const foundCari = cariler.find((c) => c.id === parked.cariId);
         if (foundCari) setSelectedCari(foundCari);
@@ -461,6 +466,7 @@ export const PosView: React.FC<PosViewProps> = ({
       const time = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
       const cariName = selectedCari ? selectedCari.name : 'Perakende Müşteri';
+      const note = saleNote.trim() || undefined;
 
       // KDV zorunlu değildir: fiyat etiketteki gibi kalır, KDV yalnızca kasada seçilen orana göre
       // fiyatın içinden ayrılır. Fiş, kayıt ve KDV raporu aynı oranı göstersin diye satırlara da
@@ -478,6 +484,7 @@ export const PosView: React.FC<PosViewProps> = ({
         totalTax: summary.totalTax,
         totalDiscount: summary.totalDiscount,
         date,
+        note,
       });
 
       if (success) {
@@ -494,6 +501,7 @@ export const PosView: React.FC<PosViewProps> = ({
           totalDiscount: summary.totalDiscount,
           totalTax: summary.totalTax,
           grandTotal: summary.grandTotal,
+          note,
           credit: openAmount > 0.004 && liveCari
             ? {
                 amount: openAmount,
@@ -509,6 +517,7 @@ export const PosView: React.FC<PosViewProps> = ({
         // Sepeti Sıfırla
         setCartItems([]);
         setSelectedCari(null);
+        setSaleNote('');
         setDiscountVal('');
         setIsSplitModalOpen(false);
       }
@@ -890,6 +899,21 @@ export const PosView: React.FC<PosViewProps> = ({
                 )}
               </div>
             )}
+
+            {/* Fiş açıklaması: fişe ve satış kaydına yazılır */}
+            <div className="mt-2.5">
+              <input
+                id="pos-sale-note"
+                type="text"
+                value={saleNote}
+                maxLength={200}
+                onChange={(e) => setSaleNote(e.target.value)}
+                placeholder="Fiş açıklaması (isteğe bağlı) — ör. Salı teslim edilecek"
+                className="w-full px-3 py-2 bg-slate-950 border-2 border-slate-700 rounded-xl text-xs text-white placeholder-slate-400 font-semibold focus:outline-none focus:border-teal-400 transition-all"
+                style={{ backgroundColor: '#020617', color: '#ffffff' }}
+                aria-label="Fiş açıklaması"
+              />
+            </div>
           </div>
 
           {/* 2. SEPET TABLOSU (SAĞ PANELİ TAM KAPLAR VE RAHATÇA UZAR) */}

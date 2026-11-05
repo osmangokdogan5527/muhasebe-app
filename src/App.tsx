@@ -986,6 +986,7 @@ export default function App() {
     totalTax: number;
     totalDiscount: number;
     date: string;
+    note?: string;
   }) => {
     try {
       const items = saleData.items.map((item) => ({
@@ -1012,7 +1013,8 @@ export default function App() {
         date: saleData.date,
         amount: saleData.grandTotal,
         account: '',
-        description: `POS Hızlı Satış Fişi No: ${saleData.receiptNo}`,
+        // Kasada yazılan fiş açıklaması kayda da yazılır (yoksa fiş numarası)
+        description: saleData.note?.trim() || `POS Hızlı Satış Fişi No: ${saleData.receiptNo}`,
         items,
         createdAt: new Date().toISOString(),
         currency: 'TRY',

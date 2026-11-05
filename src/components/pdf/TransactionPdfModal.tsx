@@ -2,7 +2,7 @@
  * İşlem PDF penceresi: faturalar (satış, alış, iade) ve tahsilat/ödeme makbuzları.
  * Firmanın belge ayarlarını okur, carinin belge öncesi/sonrası bakiyesini hesaplar.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { BankAccount, Cari, Transaction } from '../../types';
 import { createInvoicePdf, isInvoiceTransaction } from '../../pdf/invoicePdf';
 import { createReceiptPdf, receiptNumber, receiptTitle } from '../../pdf/receiptPdf';
@@ -13,7 +13,7 @@ import { documentBalance } from '../../utils/cariLedger';
 import { RETAIL_CARI_ID } from '../../firebase';
 import { PdfPreviewModal } from './PdfPreviewModal';
 import { PdfOptionTabs } from './PdfOptionTabs';
-import { usePaperSize, PAPER_OPTIONS } from './usePaperSize';
+import { useDocumentPaper, PAPER_OPTIONS } from './usePaperSize';
 import { DocumentFormat, SALE_FORMAT_OPTIONS, isReceiptFormat, paperOf, receiptFormatFor, receiptWidthOf } from './documentFormat';
 
 const INVOICE_TITLES: Record<string, string> = {
@@ -41,14 +41,20 @@ export const TransactionPdfModal: React.FC<TransactionPdfModalProps> = ({ transa
   const { branding, isLoaded } = useDocumentBranding();
   const cari = cariler.find((c) => c.id === transaction.cariId);
   const isInvoice = isInvoiceTransaction(transaction);
-  // Satışlar fiş (80 / 58 mm) ya da fatura (A4 / A5) olarak alınabilir; kasadan yapılan satış fişle açılır
+  // Satışlar fiş (80 / 58 mm) ya da fatura (A4 / A5) olarak alınabilir. Açılıştaki biçim firmanın
+  // Belge Görünümü ayarından gelir (varsayılan A5); kasa dışı satışta termal fiş seçiliyse sayfa kağıdı kullanılır.
   const isSale = transaction.type === 'sale';
   const isPosSale = isSale && /^POS-/i.test(transaction.invoiceNo || '');
-  const [paper, setPaper] = usePaperSize();
-  const [format, setFormatState] = useState<DocumentFormat>(isPosSale ? receiptFormatFor(branding.receiptWidth) : paper);
+  const [paper, setPaper] = useDocumentPaper('document', branding, isLoaded);
+  const defaultFormat: DocumentFormat = isPosSale || !isReceiptFormat(branding.saleFormat) ? branding.saleFormat : branding.documentPaper;
+  const [format, setFormatState] = useState<DocumentFormat>(defaultFormat);
+  const [formatTouched, setFormatTouched] = useState(false);
+  useEffect(() => {
+    if (isLoaded && !formatTouched) setFormatState(defaultFormat);
+  }, [isLoaded, formatTouched, defaultFormat]);
   const setFormat = (next: DocumentFormat) => {
+    setFormatTouched(true);
     setFormatState(next);
-    if (!isReceiptFormat(next)) setPaper(paperOf(next));
   };
   const linkedReceipts = useMemo(() => islemler.filter((t) => t.linkedInvoiceId === transaction.id), [islemler, transaction.id]);
   const title = isInvoice ? INVOICE_TITLES[transaction.type] || 'Fatura' : titleCase(receiptTitle(transaction));

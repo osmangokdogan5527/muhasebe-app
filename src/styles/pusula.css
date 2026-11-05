@@ -1847,3 +1847,29 @@ html[data-design-style="pusula"] :is(.fixed.inset-0.z-\[135\]) button.bg-teal-60
   background: var(--k-grad) !important;
   color: #ffffff !important;
 }
+
+/* Belge seçenek sekmeleri (A4 / A5 / fiş): açık zeminde seçili olmayanlar da okunur */
+[data-design-style="pusula"] .pdf-option-tabs {
+  background: var(--k-surface-3) !important;
+  border-color: var(--k-border) !important;
+}
+
+[data-design-style="pusula"] .pdf-option-tabs > button[aria-checked="false"] {
+  color: var(--k-text-2) !important;
+  background: transparent !important;
+}
+
+[data-design-style="pusula"] .pdf-option-tabs > button[aria-checked="false"]:hover {
+  background: var(--k-surface) !important;
+}
+
+/* Belge Görünümü kaydet çubuğu: açık zeminde beyaz kart, mesajlar okunur */
+[data-design-style="pusula"] .doc-settings-savebar {
+  background: color-mix(in srgb, var(--k-surface) 92%, transparent) !important;
+  border-color: var(--k-border) !important;
+  box-shadow: var(--k-shadow-lg) !important;
+}
+
+[data-design-style="pusula"] .doc-settings-savebar .text-emerald-300 { color: #047857 !important; }
+[data-design-style="pusula"] .doc-settings-savebar .text-rose-300 { color: #be123c !important; }
+[data-design-style="pusula"] .doc-settings-savebar .text-amber-300 { color: #b45309 !important; }

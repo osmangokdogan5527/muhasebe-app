@@ -8,6 +8,9 @@
 import { logError } from '../utils/errorLogger';
 
 export type ReceiptWidth = 58 | 80;
+/** Satış belgesinin varsayılan biçimi: termal fiş (80 / 58 mm) ya da sayfa (A4 / A5) */
+export type SaleDocumentFormat = 'receipt80' | 'receipt58' | 'a4' | 'a5';
+export type DefaultPaper = 'a4' | 'a5';
 
 export interface DocumentBranding {
   firmName: string;
@@ -31,6 +34,14 @@ export interface DocumentBranding {
   showAmountInWords: boolean;
   /** POS fişi kağıt genişliği (mm) */
   receiptWidth: ReceiptWidth;
+  /** Satış fişi / faturası açılınca seçili gelen biçim (varsayılan A5) */
+  saleFormat: SaleDocumentFormat;
+  /** Makbuz ve diğer faturalar (varsayılan A5) */
+  documentPaper: DefaultPaper;
+  /** Cari hesap ekstresi (varsayılan A4) */
+  statementPaper: DefaultPaper;
+  /** Raporlar (varsayılan A4) */
+  reportPaper: DefaultPaper;
 }
 
 export const DEFAULT_ACCENT_COLOR = '#0f4c81';
@@ -50,6 +61,10 @@ export const DEFAULT_BRANDING: DocumentBranding = {
   showBalance: true,
   showAmountInWords: true,
   receiptWidth: 80,
+  saleFormat: 'a5',
+  documentPaper: 'a5',
+  statementPaper: 'a4',
+  reportPaper: 'a4',
 };
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
@@ -78,6 +93,10 @@ export function normalizeBranding(raw: Partial<DocumentBranding> | Record<string
     showBalance: source.showBalance !== false,
     showAmountInWords: source.showAmountInWords !== false,
     receiptWidth: Number(source.receiptWidth) === 58 ? 58 : 80,
+    saleFormat: ['receipt80', 'receipt58', 'a4', 'a5'].includes(source.saleFormat) ? source.saleFormat : DEFAULT_BRANDING.saleFormat,
+    documentPaper: source.documentPaper === 'a4' ? 'a4' : 'a5',
+    statementPaper: source.statementPaper === 'a5' ? 'a5' : 'a4',
+    reportPaper: source.reportPaper === 'a5' ? 'a5' : 'a4',
   };
 }
 

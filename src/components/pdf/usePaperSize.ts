@@ -1,25 +1,24 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { PaperSize } from '../../pdf/layout';
-import { logError } from '../../utils/errorLogger';
+import type { DocumentBranding } from '../../pdf/branding';
 
-const STORAGE_KEY = 'storm_pdf_paper_size';
+export type PaperKind = 'document' | 'statement' | 'report';
 
-/** Fatura, makbuz ve ekstre PDF'lerinde seçilen kağıt boyutu (A4 / A5); son seçim hatırlanır. */
-export function usePaperSize(): [PaperSize, (paper: PaperSize) => void] {
-  const [paper, setPaperState] = useState<PaperSize>(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEY) === 'a5' ? 'a5' : 'a4';
-    } catch {
-      return 'a4';
-    }
-  });
+/**
+ * Belge penceresinde kağıt boyutu: firmanın Belge Görünümü ayarındaki varsayılanla açılır
+ * (makbuz/fatura A5, ekstre ve rapor A4). Pencerede değiştirilen seçim yalnızca o belge içindir.
+ */
+export function useDocumentPaper(kind: PaperKind, branding: DocumentBranding, isLoaded: boolean): [PaperSize, (paper: PaperSize) => void] {
+  const fallback: PaperSize = kind === 'statement' ? branding.statementPaper : kind === 'report' ? branding.reportPaper : branding.documentPaper;
+  const [paper, setPaperState] = useState<PaperSize>(fallback);
+  const [touched, setTouched] = useState(false);
+  // Ayar yüklenince (kullanıcı henüz seçim yapmadıysa) firmanın varsayılanı kullanılır
+  useEffect(() => {
+    if (isLoaded && !touched) setPaperState(fallback);
+  }, [isLoaded, touched, fallback]);
   const setPaper = (next: PaperSize) => {
+    setTouched(true);
     setPaperState(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, next);
-    } catch (err) {
-      logError(err instanceof Error ? err : new Error(String(err)), 'usePaperSize.setPaper');
-    }
   };
   return [paper, setPaper];
 }
