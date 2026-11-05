@@ -18,6 +18,7 @@ import {
   validatePin,
   SPECIAL_PERMISSIONS,
   SPECIAL_PERMISSION_IDS,
+  isFullOwner,
 } from './staffUsers';
 
 /** Kullanıcıya verilebilecek ekranlar (Tahsilat ayrı bir ekran olarak yetkilendirilir) */
@@ -51,6 +52,8 @@ interface Draft {
   pinConfirm: string;
   allowedTabs: string[];
   actions: StaffActions;
+  /** Sahip için: tüm yetkiler (kapalıysa ekran/işlem seçilir) */
+  fullAccess: boolean;
 }
 
 const pinInputClass =
@@ -63,10 +66,10 @@ const toErr = (err: unknown) => (err instanceof Error ? err : new Error(String(e
 /** Günlükte saklanacak kullanıcı özeti (PIN özeti saklanmaz) */
 const userSummary = (u: StaffUser, pinChanged = false) => ({
   name: u.name,
-  role: u.role === 'owner' ? 'Sahip' : 'Çalışan',
+  role: u.role === 'owner' ? (isFullOwner(u) ? 'Sahip' : 'Sahip (sınırlı)') : 'Çalışan',
   active: u.active,
-  screens: u.role === 'owner' ? 'Tümü' : u.allowedTabs.map(permissionLabel).join(', '),
-  actions: u.role === 'owner' ? 'Tümü' : STAFF_ACTIONS.filter((a) => u.actions[a.key]).map((a) => a.label).join(', ') || 'Yok',
+  screens: isFullOwner(u) ? 'Tümü' : u.allowedTabs.map(permissionLabel).join(', '),
+  actions: isFullOwner(u) ? 'Tümü' : STAFF_ACTIONS.filter((a) => u.actions[a.key]).map((a) => a.label).join(', ') || 'Yok',
   ...(pinChanged ? { pin: 'Değiştirildi' } : {}),
 });
 
@@ -93,7 +96,8 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
     () => [...users].sort((a, b) => (a.role === b.role ? a.name.localeCompare(b.name, 'tr') : a.role === 'owner' ? -1 : 1)),
     [users],
   );
-  const activeOwnerCount = users.filter((u) => u.role === 'owner' && u.active).length;
+  // Kullanıcıları yönetebilen sınırsız sahip sayısı (en az bir tane kalmalı)
+  const activeOwnerCount = users.filter((u) => isFullOwner(u) && u.active).length;
 
   const persist = async (next: StaffUser[], successText: string): Promise<boolean> => {
     setSaving(true);
@@ -164,6 +168,7 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
       pinConfirm: '',
       allowedTabs: [...legacyDefaults.allowedTabs],
       actions: { ...emptyActions(), ...legacyDefaults.actions },
+      fullAccess: true,
     });
   };
 
@@ -178,6 +183,7 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
       pinConfirm: '',
       allowedTabs: [...u.allowedTabs],
       actions: { ...u.actions },
+      fullAccess: u.role === 'owner' ? isFullOwner(u) : true,
     });
   };
 
@@ -195,13 +201,15 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
     }
     const existing = draft.id ? users.find((u) => u.id === draft.id) : undefined;
     if (existing) {
-      const losesOwner = existing.role === 'owner' && existing.active && (draft.role !== 'owner' || !draft.active);
-      if (losesOwner && activeOwnerCount <= 1) return setError('En az bir aktif sahip kalmalıdır.');
-      if (existing.id === currentUser?.id && (!draft.active || draft.role !== 'owner')) {
-        return setError('Kendi hesabınızı pasif yapamaz veya çalışana çeviremezsiniz.');
+      const staysFullOwner = draft.role === 'owner' && draft.fullAccess && draft.active;
+      const losesOwner = isFullOwner(existing) && existing.active && !staysFullOwner;
+      if (losesOwner && activeOwnerCount <= 1) return setError('En az bir aktif, tüm yetkili sahip kalmalıdır.');
+      if (existing.id === currentUser?.id && !staysFullOwner) {
+        return setError('Kendi hesabınızı pasif yapamaz, çalışana çeviremez ya da yetkilerini kısıtlayamazsınız.');
       }
     }
-    if (draft.role === 'staff' && draft.allowedTabs.filter((t) => !SPECIAL_PERMISSION_IDS.includes(t)).length === 0) return setError('Çalışana en az bir ekran verin.');
+    const restricted = draft.role === 'staff' || !draft.fullAccess;
+    if (restricted && draft.allowedTabs.filter((t) => !SPECIAL_PERMISSION_IDS.includes(t)).length === 0) return setError('Çalışana en az bir ekran verin.');
 
     try {
       setSaving(true);
@@ -216,6 +224,7 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
         active: draft.active,
         allowedTabs: draft.allowedTabs,
         actions: draft.actions,
+        ...(draft.role === 'owner' ? { fullAccess: draft.fullAccess } : {}),
         createdAt: existing?.createdAt || new Date().toISOString(),
       };
       const next = existing ? users.map((u) => (u.id === existing.id ? saved : u)) : [...users, saved];
@@ -243,7 +252,7 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
   const handleDelete = async (u: StaffUser) => {
     setError(null);
     if (u.id === currentUser?.id) return setError('Kendi hesabınızı silemezsiniz.');
-    if (u.role === 'owner' && u.active && activeOwnerCount <= 1) return setError('En az bir aktif sahip kalmalıdır.');
+    if (isFullOwner(u) && u.active && activeOwnerCount <= 1) return setError('En az bir aktif, tüm yetkili sahip kalmalıdır.');
     try {
       const ok = await confirmDialog({
         title: 'Kullanıcıyı sil',
@@ -266,7 +275,7 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
     setError(null);
     if (u.active) {
       if (u.id === currentUser?.id) return setError('Kendi hesabınızı pasif yapamazsınız.');
-      if (u.role === 'owner' && activeOwnerCount <= 1) return setError('En az bir aktif sahip kalmalıdır.');
+      if (isFullOwner(u) && activeOwnerCount <= 1) return setError('En az bir aktif, tüm yetkili sahip kalmalıdır.');
     }
     const done = await persist(
       users.map((x) => (x.id === u.id ? { ...x, active: !x.active } : x)),
@@ -388,7 +397,7 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
               <div className="text-[11px] text-white/50 flex flex-wrap gap-x-2">
                 <span className="inline-flex items-center gap-1">
                   {u.role === 'owner' ? <ShieldCheck size={12} className="text-amber-300" /> : <UserIcon size={12} />}
-                  {u.role === 'owner' ? 'Sahip · tüm yetkiler' : `Çalışan · ${u.allowedTabs.filter((t) => !SPECIAL_PERMISSION_IDS.includes(t)).length} ekran, ${STAFF_ACTIONS.filter((a) => u.actions[a.key]).length} işlem yetkisi${u.allowedTabs.some((t) => SPECIAL_PERMISSION_IDS.includes(t)) ? ` · ek: ${SPECIAL_PERMISSIONS.filter((p) => u.allowedTabs.includes(p.id)).map((p) => p.label).join(', ')}` : ''}`}
+                  {isFullOwner(u) ? 'Sahip · tüm yetkiler' : `${u.role === 'owner' ? 'Sahip (sınırlı)' : 'Çalışan'} · ${u.allowedTabs.filter((t) => !SPECIAL_PERMISSION_IDS.includes(t)).length} ekran, ${STAFF_ACTIONS.filter((a) => u.actions[a.key]).length} işlem yetkisi${u.allowedTabs.some((t) => SPECIAL_PERMISSION_IDS.includes(t)) ? ` · ek: ${SPECIAL_PERMISSIONS.filter((p) => u.allowedTabs.includes(p.id)).map((p) => p.label).join(', ')}` : ''}`}
                 </span>
                 {!u.active && <span className="text-rose-300">Pasif</span>}
               </div>
@@ -451,11 +460,26 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
               </div>
             </div>
 
-            {draft.role === 'owner' ? (
-              <p className="mt-4 text-xs text-white/60 bg-amber-500/5 border border-amber-500/20 rounded-xl p-3">
-                Sahip tüm ekranlara ve işlemlere erişir, kullanıcıları yönetir; Çalışan Takibi ve Otomatik Yedek'i görür. Sahip PIN'i çalışanların onay isteyen işlemlerinde de kullanılır.
-              </p>
-            ) : (
+            {draft.role === 'owner' && (
+              <label className="mt-4 flex items-start gap-3 p-3 rounded-xl border border-white/10 bg-white/5 cursor-pointer">
+                <input
+                  id="user-full-access"
+                  type="checkbox"
+                  className="accent-teal-500 mt-0.5"
+                  checked={draft.fullAccess}
+                  onChange={() => setDraft({ ...draft, fullAccess: !draft.fullAccess })}
+                />
+                <span>
+                  <span className="block text-xs font-bold text-white">Tüm yetkiler</span>
+                  <span className="block text-[11px] text-white/55">
+                    {draft.fullAccess
+                      ? "Sahip tüm ekranlara ve işlemlere erişir, kullanıcıları yönetir; Çalışan Takibi ve Otomatik Yedek'i görür. PIN'i çalışanların onay isteyen işlemlerinde de kullanılır."
+                      : 'Kapalı: bu sahibin ekranlarını ve işlemlerini aşağıdan seçin. Sınırlı sahip kullanıcıları yönetemez ve PIN\'i onay vermez.'}
+                  </span>
+                </span>
+              </label>
+            )}
+            {draft.role === 'owner' && draft.fullAccess ? null : (
               <>
                 <div className="mt-5">
                   <div className="flex items-center justify-between mb-2">
@@ -511,10 +535,10 @@ export const UsersSettings: React.FC<UsersSettingsProps> = ({ staff, legacyDefau
                     {SPECIAL_PERMISSIONS.map((p) => {
                       const on = draft.allowedTabs.includes(p.id);
                       return (
-                        <label key={p.id} className={`flex items-start gap-2 px-3 py-2 rounded-xl border cursor-pointer text-xs transition ${on ? 'bg-amber-500/10 border-amber-500/30 text-white' : 'bg-white/5 border-white/10 text-white/60'}`}>
+                        <label key={p.id} className={`flex items-start gap-2 px-3 py-2 rounded-xl border cursor-pointer text-xs transition ${on ? 'bg-teal-500/10 border-teal-500/30 text-white' : 'bg-white/5 border-white/10 text-white/60'}`}>
                           <input
                             type="checkbox"
-                            className="accent-amber-500 mt-0.5"
+                            className="accent-teal-500 mt-0.5"
                             data-special={p.id}
                             checked={on}
                             onChange={() => setDraft({ ...draft, allowedTabs: on ? draft.allowedTabs.filter((x) => x !== p.id) : [...draft.allowedTabs, p.id] })}

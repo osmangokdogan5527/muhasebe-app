@@ -46,8 +46,13 @@ export interface StaffUser {
   active: boolean;
   /** Çalışanın girebildiği sekmeler (sahip için kullanılmaz) */
   allowedTabs: string[];
-  /** Çalışanın yapabildiği işlemler (sahip için kullanılmaz) */
+  /** Çalışanın yapabildiği işlemler (sınırsız sahip için kullanılmaz) */
   actions: StaffActions;
+  /**
+   * Yalnızca sahip için: false ise "sınırlı sahip" — ekran, işlem ve ek yetkileri çalışan gibi
+   * seçilir; kullanıcıları yönetemez ve PIN'i onay vermez. Alan yoksa sahip sınırsızdır.
+   */
+  fullAccess?: boolean;
   createdAt: string;
 }
 
@@ -76,6 +81,7 @@ export function normalizeUsersDoc(data: Record<string, any> | null | undefined):
         active: u.active !== false,
         allowedTabs: Array.isArray(u.allowedTabs) ? u.allowedTabs.filter((t: any) => typeof t === 'string') : [...DEFAULT_STAFF_TABS],
         actions: { ...emptyActions(), ...(u.actions || {}) },
+        fullAccess: u.role === 'owner' ? u.fullAccess !== false : undefined,
         createdAt: u.createdAt || new Date().toISOString(),
       }));
     return { users };
@@ -109,6 +115,11 @@ export async function checkPin(user: StaffUser, pin: string): Promise<boolean> {
   return verifyPassword(pin, user.pin);
 }
 
+/** Sınırsız sahip mi? (kullanıcı yönetimi, onay PIN'i, tüm ekranlar) */
+export function isFullOwner(user: Pick<StaffUser, 'role' | 'fullAccess'> | null | undefined): boolean {
+  return !!user && user.role === 'owner' && user.fullAccess !== false;
+}
+
 export function newUserId(): string {
   return `u_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -134,7 +145,7 @@ export function hasSpecialPermission(user: StaffUser | null | undefined, permiss
   try {
     if (!systemActive) return true;
     if (!user) return false;
-    if (user.role === 'owner') return true;
+    if (isFullOwner(user)) return true;
     return Array.isArray(user.allowedTabs) && user.allowedTabs.includes(permission);
   } catch (err) {
     logError(err instanceof Error ? err : new Error(String(err)), 'staffUsers.hasSpecialPermission');
@@ -144,6 +155,6 @@ export function hasSpecialPermission(user: StaffUser | null | undefined, permiss
 
 /** Tüm sekmeler: kullanıcının izinli olmadığı sekmeler mevcut yetki sistemine "hassas" olarak verilir */
 export function restrictedTabsFor(user: StaffUser, allTabs: string[]): string[] {
-  if (user.role === 'owner') return [];
+  if (isFullOwner(user)) return [];
   return allTabs.filter((tab) => !user.allowedTabs.includes(tab));
 }

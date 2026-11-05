@@ -61,7 +61,7 @@ import { AuthScreen } from "./components/AuthScreen";
 import { useStaffSession } from "./users/useStaffSession";
 import { StaffLoginScreen } from "./users/StaffLoginScreen";
 import { ALL_STAFF_TAB_IDS } from "./users/UsersSettings";
-import { DEFAULT_STAFF_TABS, StaffActions, checkPin, hasSpecialPermission, restrictedTabsFor } from "./users/staffUsers";
+import { DEFAULT_STAFF_TABS, StaffActions, checkPin, hasSpecialPermission, isFullOwner, restrictedTabsFor } from "./users/staffUsers";
 import { registerAdminVerifier } from "./utils/masterCode";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { AppModals } from "./components/AppModals";
@@ -340,7 +340,7 @@ export default function App() {
   const staffUser = staff.currentUser;
   const isStaffSystem = staff.systemActive;
   const userRole: 'admin' | 'employee' = isStaffSystem
-    ? (staffUser?.role === 'owner' ? 'admin' : baseUserRole)
+    ? (isFullOwner(staffUser) ? 'admin' : baseUserRole)
     : baseUserRole;
   const isSecurityActive = isStaffSystem ? true : baseSecurityActive;
   // Sahip yetkileri: sahipler ve sahibin ayrıca yetki verdiği kullanıcılar görür
@@ -355,7 +355,7 @@ export default function App() {
   // Yedekten geri yükleme tüm verileri değiştirir: yalnızca sahip / yönetici
   const canRestoreBackup = userRole === 'admin' || !isSecurityActive;
   // İlk giriş: firma bilgileri (fişte görünen ad, adres, telefon). Yalnızca sahip / yönetici düzenler.
-  const canEditFirmInfo = isStaffSystem ? staffUser?.role === 'owner' : (userRole === 'admin' || !isSecurityActive);
+  const canEditFirmInfo = isStaffSystem ? isFullOwner(staffUser) : (userRole === 'admin' || !isSecurityActive);
   const firmInfoReady = !!user?.uid && !authLoading && staff.loaded && !staff.waitingForUsers;
   const firmInfo = useFirmInfo(user?.uid, firmInfoReady);
   const [isFirmInfoOpen, setIsFirmInfoOpen] = useState(false);
@@ -414,7 +414,8 @@ export default function App() {
       registerAdminVerifier(null);
       return;
     }
-    const owners = staff.activeUsers.filter((u) => u.role === 'owner');
+    // Sınırlı sahiplerin PIN'i onay vermez (kendi kısıtlarını aşamasınlar)
+    const owners = staff.activeUsers.filter((u) => isFullOwner(u));
     registerAdminVerifier(async (input) => {
       for (const owner of owners) {
         if (await checkPin(owner, input)) return true;
@@ -954,7 +955,7 @@ export default function App() {
           designStyle={designStyle}
           onLogin={(u) => {
             staff.login(u);
-            setActiveTab(isMobileScreen ? 'menu' : (u.role === 'owner' || u.allowedTabs.includes('dashboard') ? 'dashboard' : (u.allowedTabs.find((t) => t !== 'tahsilat') || 'menu')));
+            setActiveTab(isMobileScreen ? 'menu' : (isFullOwner(u) || u.allowedTabs.includes('dashboard') ? 'dashboard' : (u.allowedTabs.find((t) => t !== 'tahsilat') || 'menu')));
           }}
           onSignOutFirm={() => {
             staff.logout();
@@ -1066,7 +1067,7 @@ export default function App() {
         showToast={showToast as any}
         setPendingIslemModal={setPendingIslemModal}
         setActiveTab={setActiveTab}
-        isSecurityActive={isSecurityActive && !(isStaffSystem && staffUser?.role === 'owner')}
+        isSecurityActive={isSecurityActive && !(isStaffSystem && isFullOwner(staffUser))}
         isOnline={isOnline}
         user={user}
         handleSignOut={handleSignOut}
@@ -1133,7 +1134,7 @@ export default function App() {
             setPendingIslemModal={setPendingIslemModal}
             showToast={showToast as any}
             setActiveTab={setActiveTab}
-            isSecurityActive={isSecurityActive && !(isStaffSystem && staffUser?.role === 'owner')}
+            isSecurityActive={isSecurityActive && !(isStaffSystem && isFullOwner(staffUser))}
             staffUserName={isStaffSystem ? staffUser?.name : null}
             onSwitchUser={isStaffSystem ? staff.logout : undefined}
             onOpenStaffActivity={canSeeStaffActivity ? () => setActiveTab('takip') : undefined}
