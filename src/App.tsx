@@ -41,6 +41,7 @@ import { PosCartItem, PosPaymentSplit } from './types/pos';
 import { enableNetwork, disableNetwork } from 'firebase/firestore';
 import { BackupWizardModal } from './components/backup/BackupWizardModal';
 import { useAutoBackup } from './backup/useAutoBackup';
+import type { AiCredentials } from './ai/aiProviders';
 import { useFirmInfo } from './onboarding/useFirmInfo';
 import { FirmInfoModal } from './onboarding/FirmInfoModal';
 import { FirmInfoBanner } from './onboarding/FirmInfoBanner';
@@ -219,6 +220,9 @@ export default function App() {
     hiddenTabs, setHiddenTabs, toggleTabVisibility,
     tabOrder, setTabOrder, moveTab,
     geminiApiKey, setGeminiApiKey,
+    aiSecondaryProvider, setAiSecondaryProvider,
+    aiSecondaryKey, setAiSecondaryKey,
+    aiOrder, setAiOrder,
     isAiEnabled, setIsAiEnabled,
     autoBackupEnabled, setAutoBackupEnabled
   } = useAppSettings();
@@ -341,6 +345,12 @@ export default function App() {
   // Sahip yetkileri: sahipler ve sahibin ayrıca yetki verdiği kullanıcılar görür
   const canSeeStaffActivity = isStaffSystem && hasSpecialPermission(staffUser, 'takip', isStaffSystem);
   const canManageBackup = hasSpecialPermission(staffUser, 'yedek', isStaffSystem);
+  const aiCredentials = useMemo<AiCredentials>(() => ({
+    geminiKey: (geminiApiKey || '').trim(),
+    secondaryProvider: aiSecondaryProvider,
+    secondaryKey: (aiSecondaryKey || '').trim(),
+    order: aiOrder,
+  }), [geminiApiKey, aiSecondaryProvider, aiSecondaryKey, aiOrder]);
   // Yedekten geri yükleme tüm verileri değiştirir: yalnızca sahip / yönetici
   const canRestoreBackup = userRole === 'admin' || !isSecurityActive;
   // İlk giriş: firma bilgileri (fişte görünen ad, adres, telefon). Yalnızca sahip / yönetici düzenler.
@@ -796,6 +806,12 @@ export default function App() {
       onOpenBackupWizard={() => setIsBackupWizardOpen(true)}
       geminiApiKey={geminiApiKey}
       setGeminiApiKey={setGeminiApiKey}
+      aiControls={{
+        credentials: aiCredentials,
+        setSecondaryProvider: setAiSecondaryProvider,
+        setSecondaryKey: setAiSecondaryKey,
+        setOrder: setAiOrder,
+      }}
       isAiEnabled={isAiEnabled}
       setIsAiEnabled={setIsAiEnabled}
       isSecurityActive={isSecurityActive}
@@ -1299,7 +1315,7 @@ export default function App() {
         user={user}
         zoomImage={zoomImage}
         setZoomImage={setZoomImage}
-        geminiApiKey={geminiApiKey}
+        aiCredentials={aiCredentials}
         isAiEnabled={isAiEnabled}
         setActiveTab={setActiveTab}
         setAiPrefilledData={setAiPrefilledData}

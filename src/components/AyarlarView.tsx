@@ -47,6 +47,7 @@ import {
   DEFAULT_SHORTCUTS
 } from '../constants';
 import { confirmDialog } from '../utils/dialogs';
+import type { AiSettingsControls } from './settings/AiSettings';
 
 export interface AyarlarViewProps {
   activeTheme: string;
@@ -93,6 +94,7 @@ export interface AyarlarViewProps {
   backupMessage: { text: string; type: 'success' | 'error' } | null;
   setResetModalOpen: (open: boolean) => void;
   geminiApiKey: string;
+  aiControls: AiSettingsControls;
   setGeminiApiKey: (key: string) => void;
   isAiEnabled: boolean;
   setIsAiEnabled: (enabled: boolean) => void;
@@ -169,6 +171,7 @@ export default function AyarlarView({
   backupMessage,
   setResetModalOpen,
   geminiApiKey,
+  aiControls,
   setGeminiApiKey,
   isAiEnabled,
   setIsAiEnabled,
@@ -538,6 +541,7 @@ export default function AyarlarView({
         {settingsSubTab === 'ai' && (
           <AiSettings
             geminiApiKey={geminiApiKey}
+            aiControls={aiControls}
             setGeminiApiKey={setGeminiApiKey}
             setAiInfoModalOpen={setAiInfoModalOpen}
             isAiEnabled={isAiEnabled}

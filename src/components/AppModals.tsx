@@ -5,6 +5,7 @@ import { RotateCcw, CloudLightning, Check, MessageSquare, ImageIcon, ShieldCheck
 import { StormLogo, } from '../constants';
 import AiAssistant from "./AiAssistant";
 import { alertDialog } from '../utils/dialogs';
+import type { AiCredentials } from '../ai/aiProviders';
 
 interface AppModalsProps {
   resetModalOpen: boolean;
@@ -54,7 +55,7 @@ interface AppModalsProps {
   user: any;
   zoomImage: string | null;
   setZoomImage: (img: string | null) => void;
-  geminiApiKey: string;
+  aiCredentials: AiCredentials;
   isAiEnabled?: boolean;
   setActiveTab: (tab: any) => void;
   setAiPrefilledData,
@@ -115,7 +116,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
   user,
   zoomImage,
   setZoomImage,
-  geminiApiKey,
+  aiCredentials,
   isAiEnabled,
   setActiveTab,
   setAiPrefilledData,
@@ -579,7 +580,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
       {/* AI Assistant Chat UI */}
       {user && isAiEnabled && (
         <AiAssistant 
-          apiKey={geminiApiKey} 
+          aiCredentials={aiCredentials}
           userRole={userRole}
           isSecurityActive={isSecurityActive}
           sensitiveTabs={sensitiveTabs}

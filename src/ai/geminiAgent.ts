@@ -1,5 +1,9 @@
 /**
- * Storm Ön Muhasebe - Gemini Sohbet Motoru (function calling)
+ * Storm Ön Muhasebe - Yapay Zeka Sohbet Motoru (function calling)
+ *
+ * Sağlayıcılar: Gemini (ana) ve yedek (Groq ücretsiz ya da ChatGPT). Biri kota doldurur ya da hata
+ * verirse sıradakiyle devam edilir. Sohbet geçmişi Gemini biçiminde tutulur; Groq/ChatGPT'ye
+ * gönderilirken çevrilir, onlardan gelen cevap da Gemini biçimine döndürülür.
  *
  * Akış: kullanıcı mesajı → Gemini → araç çağrıları. Okuma araçları hemen çalışır ve
  * sonucu modele geri verilir. Yazma araçları için motor durur ve onay bekleyen işlemleri
@@ -14,13 +18,18 @@ import {
 import { getTodayISO } from '../utils/dateUtils';
 import { logError } from '../utils/errorLogger';
 import { DEFAULT_GEMINI_MODEL, generateContentWithFallback } from './geminiModel';
+import {
+  AiCredentials, AiProviderError, AiProviderId, CompatMessage, CompatTool, PROVIDER_LABELS, SecondaryProvider,
+  callCompatChat, isProviderCoolingDown, markProviderLimited, providerOrder, shouldFallback, transcribeAudio,
+} from './aiProviders';
 
 /** Varsayılan model (çalışan model anahtar başına geminiModel.ts'de belirlenir) */
 export const GEMINI_MODEL = DEFAULT_GEMINI_MODEL;
 const MAX_STEPS = 8; // Bir kullanıcı mesajı için en fazla model turu
 const MAX_HISTORY = 40; // Bağlam şişmesin diye tutulan en fazla içerik sayısı
 
-export type GeminiContent = { role: 'user' | 'model'; parts: any[] };
+/** origin 'compat': içerik Groq/ChatGPT'den geldi (Gemini'ye düz metin olarak gönderilir) */
+export type GeminiContent = { role: 'user' | 'model'; parts: any[]; origin?: 'compat' };
 
 export interface PendingWrite {
   callIndex: number;
@@ -40,6 +49,16 @@ export interface AgentResult {
   texts: string[];
   charts: AiChart[];
   suspension?: AgentSuspension;
+  /** Son cevabı veren sağlayıcı */
+  provider?: AiProviderId;
+  /** Sıradaki sağlayıcıya geçildiyse ilk denenen (kullanıcıya küçük not gösterilir) */
+  fallbackFrom?: AiProviderId;
+}
+
+interface ModelTurn {
+  content: GeminiContent;
+  provider: AiProviderId;
+  fallbackFrom?: AiProviderId;
 }
 
 export class GeminiApiError extends Error {
@@ -69,10 +88,44 @@ Kurallar:
 - Cevapların kısa, net ve profesyonel olsun; para tutarlarını ₺ ile ve Türkçe biçimde yaz.${restricted}`;
 }
 
-async function callGemini(apiKey: string, contents: GeminiContent[], tools: AiTool[], ctx: AiToolContext): Promise<GeminiContent> {
+/**
+ * Gemini'ye gönderilecek geçmiş: Groq/ChatGPT'nin araç çağrıları ve sonuçları Gemini'nin
+ * doğrulayamayacağı biçimde olduğundan düz metne çevrilir; ek alanlar (origin) gönderilmez.
+ */
+function toGeminiContents(history: GeminiContent[]): { role: 'user' | 'model'; parts: any[] }[] {
+  const out: { role: 'user' | 'model'; parts: any[] }[] = [];
+  let flattenResponses = false;
+  for (const content of history) {
+    if (content.role === 'model' && content.origin === 'compat') {
+      const parts = content.parts
+        .map((p) => (p.functionCall
+          ? { text: `[Araç çağrısı: ${p.functionCall.name} ${JSON.stringify(p.functionCall.args || {})}]` }
+          : { text: typeof p.text === 'string' ? p.text : '' }))
+        .filter((p) => p.text);
+      out.push({ role: 'model', parts: parts.length ? parts : [{ text: '…' }] });
+      flattenResponses = content.parts.some((p) => p.functionCall);
+      continue;
+    }
+    if (content.role === 'user' && flattenResponses) {
+      out.push({
+        role: 'user',
+        parts: content.parts.map((p) => (p.functionResponse
+          ? { text: `[Araç sonucu: ${p.functionResponse.name} ${JSON.stringify(p.functionResponse.response ?? null).slice(0, 6000)}]` }
+          : p)),
+      });
+      flattenResponses = false;
+      continue;
+    }
+    flattenResponses = false;
+    out.push({ role: content.role, parts: content.parts });
+  }
+  return out;
+}
+
+async function callGemini(apiKey: string, history: GeminiContent[], tools: AiTool[], ctx: AiToolContext): Promise<GeminiContent> {
   const { response } = await generateContentWithFallback(apiKey, {
     systemInstruction: { parts: [{ text: buildSystemInstruction(ctx) }] },
-    contents,
+    contents: toGeminiContents(history),
     tools: [{ functionDeclarations: toFunctionDeclarations(tools) }],
     toolConfig: { functionCallingConfig: { mode: 'AUTO' } },
     generationConfig: { temperature: 0.2 },
@@ -99,6 +152,119 @@ async function callGemini(apiKey: string, contents: GeminiContent[], tools: AiTo
   return { role: 'model', parts: content.parts };
 }
 
+// ---------------- Groq / ChatGPT ----------------
+
+/** Gemini şema türleri (OBJECT, STRING…) OpenAI biçiminde küçük harflidir */
+function toJsonSchema(schema: any): any {
+  if (!schema || typeof schema !== 'object') return schema;
+  if (Array.isArray(schema)) return schema.map(toJsonSchema);
+  const out: any = {};
+  Object.entries(schema).forEach(([key, value]) => {
+    if (key === 'type' && typeof value === 'string') out.type = value.toLowerCase();
+    else if (key === 'required' && Array.isArray(value) && value.length === 0) return;
+    else out[key] = toJsonSchema(value);
+  });
+  return out;
+}
+
+function toCompatTools(tools: AiTool[]): CompatTool[] {
+  return tools.map((tool) => {
+    const hasParams = tool.parameters && tool.parameters.properties && Object.keys(tool.parameters.properties).length > 0;
+    return {
+      type: 'function',
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: hasParams ? toJsonSchema(tool.parameters) : { type: 'object', properties: {} },
+      },
+    };
+  });
+}
+
+/** Sesli mesajların yazıya çevrilmiş hâli (aynı ses tekrar tekrar gönderilmesin) */
+const transcripts = new WeakMap<object, string>();
+
+async function toCompatMessages(history: GeminiContent[], system: string, provider: SecondaryProvider, key: string): Promise<CompatMessage[]> {
+  const messages: CompatMessage[] = [{ role: 'system', content: system }];
+  let callIds: string[] = [];
+  for (let i = 0; i < history.length; i++) {
+    const content = history[i];
+    if (content.role === 'model') {
+      const text = content.parts.filter((p) => typeof p.text === 'string' && !p.thought).map((p) => p.text).join('\n').trim();
+      const calls = content.parts.filter((p) => p.functionCall);
+      callIds = calls.map((_, j) => `call_${i}_${j}`);
+      messages.push({
+        role: 'assistant',
+        content: text || (calls.length ? null : '…'),
+        ...(calls.length ? {
+          tool_calls: calls.map((p, j) => ({ id: callIds[j], type: 'function' as const, function: { name: p.functionCall.name, arguments: JSON.stringify(p.functionCall.args || {}) } })),
+        } : {}),
+      });
+      continue;
+    }
+    const responses = content.parts.filter((p) => p.functionResponse);
+    responses.forEach((p, j) => {
+      messages.push({ role: 'tool', tool_call_id: callIds[j] || `call_${i}_${j}`, content: JSON.stringify(p.functionResponse.response ?? null) });
+    });
+    if (responses.length) callIds = [];
+    const texts: string[] = [];
+    for (const part of content.parts) {
+      if (typeof part.text === 'string' && part.text.trim()) texts.push(part.text);
+      else if (part.inlineData?.data) {
+        let transcript = transcripts.get(part);
+        if (transcript === undefined) {
+          transcript = await transcribeAudio(provider, key, part.inlineData.data, part.inlineData.mimeType || 'audio/webm');
+          transcripts.set(part, transcript);
+        }
+        texts.push(`[Sesli mesaj, yazıya çevrildi]: ${transcript || '(anlaşılamadı)'}`);
+      }
+    }
+    if (texts.length) messages.push({ role: 'user', content: texts.join('\n') });
+  }
+  return messages;
+}
+
+async function callCompat(provider: SecondaryProvider, key: string, history: GeminiContent[], tools: AiTool[], ctx: AiToolContext): Promise<GeminiContent> {
+  const messages = await toCompatMessages(history, buildSystemInstruction(ctx), provider, key);
+  const reply = await callCompatChat(provider, key, messages, toCompatTools(tools));
+  const parts: any[] = [];
+  if (reply.text.trim()) parts.push({ text: reply.text.trim() });
+  reply.toolCalls.forEach((call) => parts.push({ functionCall: { name: call.name, args: call.args || {} } }));
+  if (parts.length === 0) throw new AiProviderError(`${PROVIDER_LABELS[provider]} boş yanıt döndü.`, 500, provider);
+  return { role: 'model', parts, origin: 'compat' };
+}
+
+/**
+ * Sağlayıcıları sırayla dener. Kotası dolan sağlayıcı bir dakika sona alınır. Hepsi başarısızsa
+ * kullanıcıya her birinin sebebi gösterilir.
+ */
+async function callModel(creds: AiCredentials, history: GeminiContent[], tools: AiTool[], ctx: AiToolContext): Promise<ModelTurn> {
+  const configured = providerOrder(creds);
+  if (configured.length === 0) throw new AiProviderError('Yapay zeka anahtarı girilmemiş. Ayarlar > Yapay Zeka bölümünden ekleyin.', 400, 'gemini');
+  const ordered = [...configured.filter((p) => !isProviderCoolingDown(p)), ...configured.filter((p) => isProviderCoolingDown(p))];
+  const errors: { provider: AiProviderId; error: unknown }[] = [];
+  for (let i = 0; i < ordered.length; i++) {
+    const provider = ordered[i];
+    try {
+      const content = provider === 'gemini'
+        ? await callGemini(creds.geminiKey, history, tools, ctx)
+        : await callCompat(provider, creds.secondaryKey, history, tools, ctx);
+      return { content, provider, fallbackFrom: provider !== configured[0] ? configured[0] : undefined };
+    } catch (err) {
+      const status = (err as any)?.status;
+      if (status === 429) markProviderLimited(provider);
+      logError(err instanceof Error ? err : new Error(String(err)), `aiAgent.callModel:${provider}`);
+      errors.push({ provider, error: err });
+      if (!shouldFallback(err) || i === ordered.length - 1) break;
+    }
+  }
+  if (errors.length === 1) throw errors[0].error;
+  const message = errors
+    .map(({ provider, error }) => `${PROVIDER_LABELS[provider]}: ${error instanceof Error ? error.message : String(error)}`)
+    .join('\n');
+  throw new AiProviderError(message, (errors[0].error as any)?.status || 500, errors[0].provider);
+}
+
 function trimHistory(history: GeminiContent[]): GeminiContent[] {
   if (history.length <= MAX_HISTORY) return history;
   let trimmed = history.slice(history.length - MAX_HISTORY);
@@ -111,10 +277,15 @@ function trimHistory(history: GeminiContent[]): GeminiContent[] {
 /**
  * Model turlarını, onay gerektiren bir işlem çıkana ya da metin cevabı gelene kadar sürdürür.
  */
-async function loop(apiKey: string, history: GeminiContent[], ctx: AiToolContext, texts: string[], charts: AiChart[]): Promise<AgentResult> {
+async function loop(creds: AiCredentials, history: GeminiContent[], ctx: AiToolContext, texts: string[], charts: AiChart[]): Promise<AgentResult> {
   const tools = getAvailableTools(ctx.permissions);
+  let provider: AiProviderId | undefined;
+  let fallbackFrom: AiProviderId | undefined;
   for (let step = 0; step < MAX_STEPS; step++) {
-    const modelContent = await callGemini(apiKey, history, tools, ctx);
+    const turn = await callModel(creds, history, tools, ctx);
+    const modelContent = turn.content;
+    provider = turn.provider;
+    fallbackFrom = fallbackFrom || turn.fallbackFrom;
     history.push(modelContent);
 
     modelContent.parts.forEach(part => {
@@ -122,7 +293,7 @@ async function loop(apiKey: string, history: GeminiContent[], ctx: AiToolContext
     });
     const calls = modelContent.parts.filter(part => part.functionCall).map(part => part.functionCall);
     if (calls.length === 0) {
-      return { history: trimHistory(history), texts, charts };
+      return { history: trimHistory(history), texts, charts, provider, fallbackFrom };
     }
 
     const responses: { name: string; response: any }[] = [];
@@ -165,18 +336,18 @@ async function loop(apiKey: string, history: GeminiContent[], ctx: AiToolContext
     });
 
     if (pending.length > 0) {
-      return { history, texts, charts, suspension: { responses, pending } };
+      return { history, texts, charts, suspension: { responses, pending }, provider, fallbackFrom };
     }
     history.push({ role: 'user', parts: responses.map(r => ({ functionResponse: { name: r.name, response: r.response } })) });
   }
   texts.push('İşlem çok fazla adım gerektirdi. Lütfen isteğinizi daha küçük parçalara bölün.');
-  return { history: trimHistory(history), texts, charts };
+  return { history: trimHistory(history), texts, charts, provider, fallbackFrom };
 }
 
 /** Yeni bir kullanıcı mesajı (metin ve/veya ses) ile sohbeti sürdürür. */
-export async function runAgent(apiKey: string, history: GeminiContent[], userParts: any[], ctx: AiToolContext): Promise<AgentResult> {
+export async function runAgent(creds: AiCredentials, history: GeminiContent[], userParts: any[], ctx: AiToolContext): Promise<AgentResult> {
   const nextHistory = [...history, { role: 'user' as const, parts: userParts }];
-  return loop(apiKey, nextHistory, ctx, [], []);
+  return loop(creds, nextHistory, ctx, [], []);
 }
 
 /**
@@ -184,7 +355,7 @@ export async function runAgent(apiKey: string, history: GeminiContent[], userPar
  * approved=true ise işlemler sırayla kaydedilir; biri hata verirse sonrakiler yapılmaz.
  */
 export async function resumeAgent(
-  apiKey: string,
+  creds: AiCredentials,
   history: GeminiContent[],
   suspension: AgentSuspension,
   approved: boolean,
@@ -218,6 +389,6 @@ export async function resumeAgent(
     ...history,
     { role: 'user', parts: responses.map(r => ({ functionResponse: { name: r.name, response: r.response ?? { basarili: false } } })) },
   ];
-  const result = await loop(apiKey, nextHistory, ctx, [], []);
+  const result = await loop(creds, nextHistory, ctx, [], []);
   return { ...result, executionResults };
 }

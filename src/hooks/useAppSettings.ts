@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { logError } from '../utils/errorLogger';
+import { AI_ORDER_STORAGE, AiOrder, SECONDARY_PROVIDER_STORAGE, SecondaryProvider, readAiCredentials, saveAiSetting, secondaryKeyStorage } from '../ai/aiProviders';
 
 /** Ayarlarda seçilebilen arayüz tasarım stilleri */
 export const SUPPORTED_DESIGN_STYLES = ['pusula', 'fluid-mesh'];
@@ -187,6 +188,22 @@ export function useAppSettings() {
     return localStorage.getItem('storm_muhasebe_gemini_api_key') || '';
   });
 
+  // Yedek yapay zeka (Groq / ChatGPT) ve deneme sırası; bu cihazda saklanır
+  const [aiSecondaryProvider, setAiSecondaryProviderState] = useState<SecondaryProvider>(() => readAiCredentials().secondaryProvider);
+  const [aiSecondaryKey, setAiSecondaryKeyState] = useState<string>(() => readAiCredentials().secondaryKey);
+  const [aiOrder, setAiOrderState] = useState<AiOrder>(() => readAiCredentials().order);
+  const setAiSecondaryProvider = (value: SecondaryProvider) => {
+    setAiSecondaryProviderState(value);
+    saveAiSetting(SECONDARY_PROVIDER_STORAGE, value);
+    // Seçilen sağlayıcının daha önce girilmiş anahtarı geri gelir
+    setAiSecondaryKeyState(readAiCredentials().secondaryKey);
+  };
+  const setAiSecondaryKey = (value: string) => {
+    setAiSecondaryKeyState(value);
+    saveAiSetting(secondaryKeyStorage(aiSecondaryProvider), value.trim());
+  };
+  const setAiOrder = (value: AiOrder) => { setAiOrderState(value); saveAiSetting(AI_ORDER_STORAGE, value === 'secondary_first' ? value : ''); };
+
   const [isAiEnabled, setIsAiEnabled] = useState<boolean>(() => {
     return localStorage.getItem('storm_muhasebe_ai_enabled') !== 'false';
   });
@@ -218,6 +235,9 @@ export function useAppSettings() {
     hiddenTabs, setHiddenTabs, toggleTabVisibility,
     tabOrder, setTabOrder, moveTab,
     geminiApiKey, setGeminiApiKey,
+    aiSecondaryProvider, setAiSecondaryProvider,
+    aiSecondaryKey, setAiSecondaryKey,
+    aiOrder, setAiOrder,
     isAiEnabled, setIsAiEnabled,
     autoBackupEnabled, setAutoBackupEnabled
   };

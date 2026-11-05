@@ -1,5 +1,6 @@
+import { logError } from './errorLogger';
 import { parseLocaleNumber } from './excelParser';
-import { generateContentWithFallback } from '../ai/geminiModel';
+import { generateJsonWithFallback, hasAnyAiKey, readAiCredentials } from '../ai/aiProviders';
 
 export interface ParsedCari {
   name: string;
@@ -38,11 +39,11 @@ export const parseExcelWithAI = async (file: File): Promise<ExcelParseResult> =>
         }
 
         const sampleRows = rawData.slice(0, 15);
-        const geminiApiKey = localStorage.getItem('storm_muhasebe_gemini_api_key');
+        const aiAvailable = hasAnyAiKey(readAiCredentials());
         
         let mapping: any = null;
 
-        if (geminiApiKey) {
+        if (aiAvailable) {
           try {
             const prompt = `Bir muhasebe programına müşteri (cari) excel verisi aktaracağız.
 Excel dosyasından çıkarılan ilk 15 satır (iki boyutlu dizi şeklinde) aşağıdadır:
@@ -74,22 +75,10 @@ Görevlerin şunlardır:
   "creditKeywords": ["alacak", "alacaklı"]
 }
 `;
-            // Model anahtara göre seçilir; eski model kapatılmışsa yenisine geçilir
-            const { response } = await generateContentWithFallback(geminiApiKey, {
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: {
-                responseMimeType: "application/json",
-                temperature: 0.1
-              }
-            });
-
-            if (response.ok) {
-              const result = await response.json();
-              const text = result.candidates[0].content.parts[0].text;
-              mapping = JSON.parse(text);
-            }
+            // Gemini, olmazsa yedek yapay zeka (Groq/ChatGPT) denenir; model anahtara göre seçilir
+            mapping = await generateJsonWithFallback(prompt);
           } catch (aiError) {
-            console.error("AI Eşleştirme hatası:", aiError);
+            logError(aiError instanceof Error ? aiError : new Error(String(aiError)), 'aiExcelParser.mapping');
           }
         }
 
