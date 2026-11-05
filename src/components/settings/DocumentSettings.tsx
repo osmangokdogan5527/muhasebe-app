@@ -6,7 +6,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Upload, Trash2, Save, Check, Loader2, AlertTriangle, Eye, Palette, Building2, SlidersHorizontal, Receipt } from 'lucide-react';
 import { saveDocumentBranding } from '../../firebase';
 import { logError } from '../../utils/errorLogger';
-import { DEFAULT_ACCENT_COLOR, DocumentBranding, normalizeBranding } from '../../pdf/branding';
+import { DEFAULT_ACCENT_COLOR, DefaultPaper, DocumentBranding, SaleDocumentFormat, normalizeBranding } from '../../pdf/branding';
 import { useDocumentBranding } from '../../pdf/useDocumentBranding';
 import { prepareLogo } from '../../pdf/logo';
 import { createInvoicePdf } from '../../pdf/invoicePdf';
@@ -231,17 +231,49 @@ export const DocumentSettings: React.FC = () => {
             <Switch label="İmza alanı" hint="Teslim Eden / Teslim Alan, Ödemeyi Yapan / Tahsil Eden" checked={form.showSignatureArea} onChange={(v) => update('showSignatureArea', v)} />
           </Card>
 
-          <Card icon={<Receipt size={18} />} title="POS Fişi" description="Kasadaki fiş yazıcısının kağıt genişliği (fiş penceresinde ayrıca değiştirilebilir).">
-            <PdfOptionTabs<'80' | '58'>
-              value={String(form.receiptWidth) as '80' | '58'}
-              options={[{ value: '80', label: '80 mm' }, { value: '58', label: '58 mm' }]}
-              onChange={(v) => update('receiptWidth', v === '58' ? 58 : 80)}
-            />
+          <Card icon={<Receipt size={18} />} title="Varsayılan Kağıt" description="Belge penceresi bu kağıtla açılır; pencerede o belge için ayrıca değiştirilebilir.">
+            <div className="space-y-3" id="default-paper-settings">
+              <div>
+                <span className={labelClass}>Satış fişi / faturası</span>
+                <PdfOptionTabs<SaleDocumentFormat>
+                  value={form.saleFormat}
+                  options={[{ value: 'a5', label: 'A5' }, { value: 'a4', label: 'A4' }, { value: 'receipt80', label: 'Fiş 80 mm' }, { value: 'receipt58', label: 'Fiş 58 mm' }]}
+                  onChange={(v) => {
+                    update('saleFormat', v);
+                    // Termal fiş seçilince fiş genişliği de buna göre ayarlanır
+                    if (v === 'receipt80' || v === 'receipt58') update('receiptWidth', v === 'receipt58' ? 58 : 80);
+                  }}
+                />
+              </div>
+              <div>
+                <span className={labelClass}>Makbuz ve diğer faturalar</span>
+                <PdfOptionTabs<DefaultPaper> value={form.documentPaper} options={[{ value: 'a5', label: 'A5' }, { value: 'a4', label: 'A4' }]} onChange={(v) => update('documentPaper', v)} />
+              </div>
+              <div>
+                <span className={labelClass}>Cari hesap ekstresi</span>
+                <PdfOptionTabs<DefaultPaper> value={form.statementPaper} options={[{ value: 'a4', label: 'A4' }, { value: 'a5', label: 'A5' }]} onChange={(v) => update('statementPaper', v)} />
+              </div>
+              <div>
+                <span className={labelClass}>Raporlar</span>
+                <PdfOptionTabs<DefaultPaper> value={form.reportPaper} options={[{ value: 'a4', label: 'A4' }, { value: 'a5', label: 'A5' }]} onChange={(v) => update('reportPaper', v)} />
+              </div>
+              <div>
+                <span className={labelClass}>Termal fiş yazıcısı genişliği</span>
+                <PdfOptionTabs<'80' | '58'>
+                  value={String(form.receiptWidth) as '80' | '58'}
+                  options={[{ value: '80', label: '80 mm' }, { value: '58', label: '58 mm' }]}
+                  onChange={(v) => {
+                    update('receiptWidth', v === '58' ? 58 : 80);
+                    if (form.saleFormat === 'receipt80' || form.saleFormat === 'receipt58') update('saleFormat', v === '58' ? 'receipt58' : 'receipt80');
+                  }}
+                />
+              </div>
+            </div>
           </Card>
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-10 flex flex-col sm:flex-row sm:items-center justify-end gap-3 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-md p-4">
+      <div className="doc-settings-savebar sticky bottom-0 z-10 flex flex-col sm:flex-row sm:items-center justify-end gap-3 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-md p-4">
         {message && (
           <p className={`flex-1 text-xs font-semibold flex items-center gap-1.5 ${message.type === 'success' ? 'text-emerald-300' : 'text-rose-300'}`}>
             {message.type === 'success' ? <Check size={14} /> : <AlertTriangle size={14} />} {message.text}

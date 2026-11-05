@@ -442,22 +442,17 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.9.4';
+export const APP_VERSION = '1.9.5';
 
 export const CHANGELOG = {
-  version: '1.9.4',
+  version: '1.9.5',
   features: [
-    "Yeni Kasa & Banka: Hesaplar tek listede (Tümü / Banka / Kasa / POS), üstte toplam nakit varlık ve döviz hesapları; hesaba tıklayınca sağdan hesap detayı açılır (bakiye, hareketler, banka mutabakatı / kasa sayımı).",
-    "POS'u Bankaya Aktar: Komisyon %, ₺ ya da 'bankaya geçen tutar' olarak girilir; POS sıfırlanır, bankaya net tutar geçer, komisyon gider olarak yazılır. POS'un bankası ve son oranı hatırlanır.",
-    "Pratik Transfer ve Hızlı Para Çıkışı: Kasadan bankaya, bankadan kasaya, hesaplar arası tek pencerede; hiçbir şeye bağlamadan para girişi/çıkışı; her işlemden sonra 'Geri al'.",
-    "Varsayılan Hesap (★) ve IBAN: Hesap seçilmeyen satış/tahsilat/masraf varsayılan hesaba yazılır; banka adı, kısa ad, IBAN ve arşiv. Hesabı belli olmayan eski hareketler için uyarı ve toplu atama.",
-    "Etiket Yazıcısına Doğrudan Basım (masaüstü): Etiketler Windows penceresi açılmadan seçilen yazıcıya etiket ölçüsünde ve %100 ölçekle gider; gerekirse 90° döndürülür.",
-    "Sahip İçin Yetki Seçimi: 'Tüm yetkiler' kapatılan sahibin ekran ve işlemleri çalışan gibi seçilir; sınırlı sahip kullanıcıları yönetemez ve PIN'i onay vermez.",
+    "Fiş Açıklaması: Hızlı satışta müşteri kutusunun altına yazılan açıklama fişe, A4/A5 faturaya ve satış kaydına yazılır; askıya alınan satışta korunur.",
+    "Varsayılan Kağıt: Satış fişi/faturası ile makbuzlar A5, cari ekstresi ve raporlar A4 açılır. Ayarlar > Belge Görünümü'nden her biri ayrı değiştirilebilir; belge penceresinde o belge için ayrıca seçilebilir.",
   ],
   fixes: [
-    "Hızlı kartlı satış (F3) parayı listedeki ilk hesaba (bazen banka hesabına) yazıyordu; artık varsayılan POS hesabına yazılır.",
-    "Gösterge Paneli'nde para birimi seçimi çerçeveli; bölüm başlıkları kartlarla aynı hizada.",
-    "Giriş ekranındaki sürüm notlarında yalnızca son 5 güncelleme gösterilir.",
+    "Tek ortak 'son seçilen kağıt' artık tüm belgeleri etkilemiyor (A5 seçilen bir fatura ekstreyi de A5 yapıyordu).",
+    "Pusula temasında belge seçenek düğmeleri (A4 / A5 / Fiş) ve Belge Görünümü kaydet çubuğu okunmuyordu.",
   ]
 };
 
@@ -698,6 +693,16 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.9.5",
+    date: "05.11.2026",
+    changes: [
+      "Fiş Açıklaması: Hızlı satışta müşteri kutusunun altına yazılan açıklama fişe, A4/A5 faturaya ve satış kaydına yazılır; askıya alınan satışta korunur.",
+      "Varsayılan Kağıt: Satış fişi/faturası ile makbuzlar A5, cari ekstresi ve raporlar A4 açılır. Ayarlar > Belge Görünümü'nden her biri ayrı değiştirilebilir; belge penceresinde o belge için ayrıca seçilebilir.",
+      "Tek ortak 'son seçilen kağıt' artık tüm belgeleri etkilemiyor (A5 seçilen bir fatura ekstreyi de A5 yapıyordu).",
+      "Pusula temasında belge seçenek düğmeleri (A4 / A5 / Fiş) ve Belge Görünümü kaydet çubuğu okunmuyordu.",
+    ]
+  },
   {
     version: "1.9.4",
     date: "05.11.2026",

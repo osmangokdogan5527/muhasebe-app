@@ -14,7 +14,7 @@ export function PdfOptionTabs<T extends string>({ label, value, options, onChang
   return (
     <div className="flex items-center gap-3 flex-wrap">
       {label && <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>{label}</span>}
-      <div className="inline-flex p-1 rounded-xl border border-white/10" style={{ backgroundColor: 'rgba(0,0,0,0.25)' }} role="radiogroup" aria-label={label}>
+      <div className="pdf-option-tabs inline-flex p-1 rounded-xl border border-white/10" style={{ backgroundColor: 'rgba(0,0,0,0.25)' }} role="radiogroup" aria-label={label}>
         {options.map((option) => {
           const active = option.value === value;
           return (

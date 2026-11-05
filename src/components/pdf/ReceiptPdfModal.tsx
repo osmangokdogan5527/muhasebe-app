@@ -13,7 +13,6 @@ import { useDocumentBranding } from '../../pdf/useDocumentBranding';
 import { formatMoney } from '../../pdf/format';
 import { PdfPreviewModal } from './PdfPreviewModal';
 import { PdfOptionTabs } from './PdfOptionTabs';
-import { usePaperSize } from './usePaperSize';
 import { DocumentFormat, SALE_FORMAT_OPTIONS, isReceiptFormat, paperOf, receiptFormatFor, receiptWidthOf } from './documentFormat';
 
 export interface ReceiptInvoiceSource {
@@ -40,7 +39,7 @@ export function invoiceSourceFromSummary(sale: PosSaleSummary, cariler: Cari[]):
       date: sale.date,
       amount: sale.grandTotal,
       account: '',
-      description: '',
+      description: sale.note || '',
       items: sale.items.map((item) => ({
         stockId: item.stockId,
         stockName: item.stockName,
@@ -81,14 +80,15 @@ export interface ReceiptPdfModalProps {
 
 export const ReceiptPdfModal: React.FC<ReceiptPdfModalProps> = ({ data, title = 'Satış Fişi', invoice, onClose }) => {
   const { branding, isLoaded } = useDocumentBranding();
-  const [, setPaper] = usePaperSize();
-  const [format, setFormat] = useState<DocumentFormat>(receiptFormatFor(branding.receiptWidth));
+  // Açılıştaki biçim: firmanın satış belgesi ayarı (varsayılan A5); sayfa biçimi seçilemiyorsa termal fiş
+  const defaultFormat: DocumentFormat = invoice || isReceiptFormat(branding.saleFormat) ? branding.saleFormat : receiptFormatFor(branding.receiptWidth);
+  const [format, setFormat] = useState<DocumentFormat>(defaultFormat);
   const [touched, setTouched] = useState(false);
 
-  // Ayar yüklenince (kullanıcı henüz seçim yapmadıysa) firmanın varsayılan fiş genişliği kullanılır
+  // Ayar yüklenince (kullanıcı henüz seçim yapmadıysa) firmanın varsayılanı kullanılır
   useEffect(() => {
-    if (isLoaded && !touched) setFormat(receiptFormatFor(branding.receiptWidth));
-  }, [isLoaded, touched, branding.receiptWidth]);
+    if (isLoaded && !touched) setFormat(defaultFormat);
+  }, [isLoaded, touched, defaultFormat]);
 
   const generate = useCallback(() => {
     if (invoice && !isReceiptFormat(format)) {
@@ -119,7 +119,6 @@ export const ReceiptPdfModal: React.FC<ReceiptPdfModalProps> = ({ data, title = 
           onChange={(next) => {
             setTouched(true);
             setFormat(next);
-            if (!isReceiptFormat(next)) setPaper(paperOf(next));
           }}
         />
       }

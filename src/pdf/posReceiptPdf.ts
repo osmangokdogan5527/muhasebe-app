@@ -151,7 +151,7 @@ export function receiptDataFromTransaction(islem: Transaction, isRetail: boolean
     totalTax: roundMoney(totalTax),
     grandTotal: roundMoney(islem.amount),
     payments,
-    note: islem.description && !/^POS Satışı/i.test(islem.description) ? islem.description : undefined,
+    note: islem.description && !/^POS (Satışı|Hızlı Satış Fişi No)/i.test(islem.description) ? islem.description : undefined,
     currency: normalizeCurrency(islem.currency),
     credit,
   };

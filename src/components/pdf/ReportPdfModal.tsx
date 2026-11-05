@@ -6,7 +6,7 @@ import { ReportDocument, createReportPdf } from '../../pdf/reportPdf';
 import { useDocumentBranding } from '../../pdf/useDocumentBranding';
 import { PdfPreviewModal } from './PdfPreviewModal';
 import { PdfOptionTabs } from './PdfOptionTabs';
-import { usePaperSize, PAPER_OPTIONS } from './usePaperSize';
+import { useDocumentPaper, PAPER_OPTIONS } from './usePaperSize';
 
 export interface ReportPdfModalProps {
   report: ReportDocument;
@@ -15,7 +15,7 @@ export interface ReportPdfModalProps {
 
 export const ReportPdfModal: React.FC<ReportPdfModalProps> = ({ report, onClose }) => {
   const { branding, isLoaded } = useDocumentBranding();
-  const [paper, setPaper] = usePaperSize();
+  const [paper, setPaper] = useDocumentPaper('report', branding, isLoaded);
   const generate = useCallback(() => createReportPdf(report, branding, paper), [report, branding, paper]);
   return (
     <PdfPreviewModal
