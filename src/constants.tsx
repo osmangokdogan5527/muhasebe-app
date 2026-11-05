@@ -442,20 +442,21 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.9.2';
+export const APP_VERSION = '1.9.3';
 
 export const CHANGELOG = {
-  version: '1.9.2',
+  version: '1.9.3',
   features: [
-    "Başka Cihazdan Bağlanma Kolaylaştı: 'Mevcut Firmaya Bağlan' ekranına firma adı da yazılabilir, firma koduna kendiliğinden çevrilir; firma kodu menünün altındaki firma kartında görünür.",
-    "Telefonda Cari Ekstresi: Cariye dokununca ekstre (özet/detaylı, tarih aralığı, PDF) üstte açılır; not ve hızlı işlem paneli altında.",
+    "Gerçek Otomatik Yedek: Bilgisayarda bütün veriler (bulut dahil) haftada bir kendiliğinden yedek klasörüne kaydedilir, son 8 yedek saklanır; telefonda yedek zamanı gelince yetkiliye 'Şimdi Yedek İndir' hatırlatması çıkar. Yedeğe belge görünümü ve etiket ayarları da dahildir.",
+    "Sahip Yetkileri: Çalışan Takibi ve Otomatik Yedek normalde yalnızca sahipte görünür; sahip Ayarlar > Kullanıcılar'dan istediği kişiye açabilir.",
+    "Firma Bilgileri Penceresi: Firma kurulunca ad, telefon, adres, vergi no, IBAN ve logo sorulur; fiş, fatura ve ekstreler bu bilgilerle çıkar. Eksik kalırsa Gösterge Paneli'nde hatırlatma kartı durur.",
+    "Yedek Yapay Zeka: Gemini'nin limiti dolunca Storm AI otomatik olarak ücretsiz Groq (ya da ChatGPT) ile devam eder; ayarlarda her API anahtarının çalışıp çalışmadığı 'Onaylandı / Onaylanmadı' olarak görünür.",
+    "Yönetim Paneli > Firmalar: Sistem kurucusu firmaları listeler, şifrelerini görür, firmayı durdurur / yeniden başlatır, siler ya da panelden yeni firma kurar (bir kerelik Firebase kural kurulumu gerekir).",
   ],
   fixes: [
-    "Storm AI yeni API anahtarlarında 'model artık kullanılamıyor' (404) hatası veriyordu; uygun Gemini modeli kendiliğinden seçilir.",
-    "Kasa sepetinde dar ekranda tutar kartın dışına taşıyordu; fiyat kutusunda çift çerçeve görünüyordu.",
-    "Telefonda ekstre ve PDF düğmesi işlem panelinin arkasında kalıyordu.",
-    "iPhone'da yazı kutusuna dokununca ekran kendiliğinden büyüyüp büyük kalıyordu.",
-    "Hatalı firma bağlantısında mesaj artık ne gerektiğini (firma kodu, firma şifresi) açıklıyor.",
+    "Eski 'Otomatik Yedekleme' ve 'Manuel Yedek' düğmeleri asıl verileri yedeklemiyordu; artık gerçek yedek alınır. Otomatik Yedekleme anahtarı kapatılınca yeniden açılışta tekrar açılıyordu.",
+    "Yedek Sihirbazı'nın sekmeleri telefonda ekrandan taşıyordu.",
+    "Yönetim Paneli'nde Pusula temasında sekme yazıları okunmuyordu.",
   ]
 };
 
@@ -696,6 +697,20 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.9.3",
+    date: "05.11.2026",
+    changes: [
+      "Gerçek Otomatik Yedek: Bilgisayarda bütün veriler (bulut dahil) haftada bir kendiliğinden yedek klasörüne kaydedilir, son 8 yedek saklanır; telefonda yedek zamanı gelince yetkiliye 'Şimdi Yedek İndir' hatırlatması çıkar. Yedeğe belge görünümü ve etiket ayarları da dahildir.",
+      "Sahip Yetkileri: Çalışan Takibi ve Otomatik Yedek normalde yalnızca sahipte görünür; sahip Ayarlar > Kullanıcılar'dan istediği kişiye açabilir.",
+      "Firma Bilgileri Penceresi: Firma kurulunca ad, telefon, adres, vergi no, IBAN ve logo sorulur; fiş, fatura ve ekstreler bu bilgilerle çıkar. Eksik kalırsa Gösterge Paneli'nde hatırlatma kartı durur.",
+      "Yedek Yapay Zeka: Gemini'nin limiti dolunca Storm AI otomatik olarak ücretsiz Groq (ya da ChatGPT) ile devam eder; ayarlarda her API anahtarının çalışıp çalışmadığı 'Onaylandı / Onaylanmadı' olarak görünür.",
+      "Yönetim Paneli > Firmalar: Sistem kurucusu firmaları listeler, şifrelerini görür, firmayı durdurur / yeniden başlatır, siler ya da panelden yeni firma kurar (bir kerelik Firebase kural kurulumu gerekir).",
+      "Eski 'Otomatik Yedekleme' ve 'Manuel Yedek' düğmeleri asıl verileri yedeklemiyordu; artık gerçek yedek alınır. Otomatik Yedekleme anahtarı kapatılınca yeniden açılışta tekrar açılıyordu.",
+      "Yedek Sihirbazı'nın sekmeleri telefonda ekrandan taşıyordu.",
+      "Yönetim Paneli'nde Pusula temasında sekme yazıları okunmuyordu.",
+    ]
+  },
   {
     version: "1.9.2",
     date: "04.11.2026",
