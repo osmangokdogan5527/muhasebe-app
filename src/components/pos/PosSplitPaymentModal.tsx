@@ -4,6 +4,7 @@ import { BankAccount, Cari } from '../../types';
 import { DollarSign, CreditCard, User, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { logError } from '../../utils/errorLogger';
 import { alertDialog } from '../../utils/dialogs';
+import { selectableAccounts } from '../../utils/cashAccounts';
 
 interface PosSplitPaymentModalProps {
   isOpen: boolean;
@@ -31,7 +32,8 @@ export const PosSplitPaymentModal: React.FC<PosSplitPaymentModalProps> = ({
   const [openAccountAmount, setOpenAccountAmount] = useState<number>(0);
 
   // POS Hesaplarını filtrele
-  const posAccounts = bankAccounts.filter(a => a.type === 'pos' || a.type === 'banka');
+  // Varsayılan POS önce, arşivdekiler hariç
+  const posAccounts = [...selectableAccounts(bankAccounts, 'pos'), ...selectableAccounts(bankAccounts, 'banka')];
 
   useEffect(() => {
     try {

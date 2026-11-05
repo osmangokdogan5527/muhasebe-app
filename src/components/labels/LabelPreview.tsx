@@ -3,65 +3,13 @@
  * kullandığı için ekranda görülen etiket basılan etiketle aynıdır.
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import interRegularUrl from '../../pdf/fonts/Inter-Regular.ttf?url';
-import interSemiBoldUrl from '../../pdf/fonts/Inter-SemiBold.ttf?url';
-import interBoldUrl from '../../pdf/fonts/Inter-Bold.ttf?url';
 import { LabelSettings } from '../../pdf/labels/labelSettings';
-import { LabelElement, LabelProduct, MeasureText, computeLabelLayout } from '../../pdf/labels/labelLayout';
-import { logError } from '../../utils/errorLogger';
+import { LabelProduct, computeLabelLayout } from '../../pdf/labels/labelLayout';
+import { LABEL_FONT, LABEL_FONT_WEIGHT, PT_TO_MM, canvasMeasure, loadLabelFonts, qrPath } from '../../pdf/labels/labelSvg';
 
-const PREVIEW_FONT = 'StormLabelInter';
-const PT_TO_MM = 0.3528;
-const PX_TO_MM = 25.4 / 96;
-const WEIGHT = { normal: 400, semibold: 600, bold: 700 } as const;
-
-let fontsPromise: Promise<void> | null = null;
-function loadPreviewFonts(): Promise<void> {
-  if (!fontsPromise) {
-    fontsPromise = (async () => {
-      if (typeof FontFace === 'undefined' || !document.fonts) return;
-      const faces = [
-        new FontFace(PREVIEW_FONT, `url(${interRegularUrl})`, { weight: '400' }),
-        new FontFace(PREVIEW_FONT, `url(${interSemiBoldUrl})`, { weight: '600' }),
-        new FontFace(PREVIEW_FONT, `url(${interBoldUrl})`, { weight: '700' }),
-      ];
-      await Promise.all(faces.map(async (face) => {
-        await face.load();
-        document.fonts.add(face);
-      }));
-    })().catch((err) => {
-      fontsPromise = null;
-      logError(err instanceof Error ? err : new Error(String(err)), 'LabelPreview.loadFonts');
-    });
-  }
-  return fontsPromise;
-}
-
-let measureContext: CanvasRenderingContext2D | null = null;
-const canvasMeasure: MeasureText = (text, sizePt, weight) => {
-  if (!measureContext) measureContext = document.createElement('canvas').getContext('2d');
-  if (!measureContext) return text.length * sizePt * PT_TO_MM * 0.55;
-  const sizePx = (sizePt * 96) / 72;
-  measureContext.font = `${WEIGHT[weight]} ${sizePx}px ${PREVIEW_FONT}, sans-serif`;
-  return measureContext.measureText(text).width * PX_TO_MM;
-};
-
-function qrPath(el: Extract<LabelElement, { kind: 'qr' }>): string {
-  const m = el.size / el.qr.size;
-  let d = '';
-  for (let row = 0; row < el.qr.size; row += 1) {
-    let start = -1;
-    for (let col = 0; col <= el.qr.size; col += 1) {
-      const dark = col < el.qr.size && el.qr.isDark(row, col);
-      if (dark && start < 0) start = col;
-      if (!dark && start >= 0) {
-        d += `M${(el.x + start * m).toFixed(3)} ${(el.y + row * m).toFixed(3)}h${((col - start) * m + 0.01).toFixed(3)}v${(m + 0.01).toFixed(3)}h${(-(col - start) * m - 0.01).toFixed(3)}z`;
-        start = -1;
-      }
-    }
-  }
-  return d;
-}
+const PREVIEW_FONT = LABEL_FONT;
+const WEIGHT = LABEL_FONT_WEIGHT;
+const loadPreviewFonts = loadLabelFonts;
 
 export interface LabelPreviewProps {
   product: LabelProduct;

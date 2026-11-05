@@ -4,7 +4,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Tag, Plus, Minus, Trash2, Search, Ruler, LayoutGrid, Type, Check, Loader2, AlertTriangle, FileText, Package } from 'lucide-react';
+import { X, Tag, Plus, Minus, Trash2, Search, Ruler, LayoutGrid, Type, Check, Loader2, AlertTriangle, FileText, Package, Printer, RotateCw } from 'lucide-react';
 import { Stock } from '../../types';
 import { useDocumentBranding } from '../../pdf/useDocumentBranding';
 import { useLabelSettings } from '../../pdf/labels/useLabelSettings';
@@ -24,6 +24,10 @@ import { LabelPrintItem, MAX_LABELS_PER_PDF, createLabelsPdf } from '../../pdf/l
 import { formatMoney } from '../../pdf/format';
 import { LabelPreview } from './LabelPreview';
 import { PdfPreviewModal } from '../pdf/PdfPreviewModal';
+import {
+  LabelPrinter, LabelPrinterPref, canPrintLabelsDirectly, listLabelPrinters, printLabelsDirectly, readLabelPrinterPref, saveLabelPrinterPref,
+} from '../../pdf/labels/labelPrint';
+import { logError } from '../../utils/errorLogger';
 
 export interface LabelDesignerModalProps {
   /** Başlangıçta seçili ürünler (stok satırından açıldığında tek ürün) */
@@ -145,6 +149,55 @@ export const LabelDesignerModal: React.FC<LabelDesignerModalProps> = ({ initialS
   const setCopies = (id: string, copies: number) => setItems((prev) => prev.map((i) => (i.stock.id === id ? { ...i, copies: Math.max(0, Math.min(999, Math.floor(copies) || 0)) } : i)));
 
   const generate = useCallback(() => createLabelsPdf(items, settings, firmName, startIndex), [items, settings, firmName, startIndex]);
+
+  // Etiket yazıcısına doğrudan basım (masaüstü, rulo etiket)
+  const directPrint = canPrintLabelsDirectly() && settings.mode === 'roll';
+  const [printers, setPrinters] = useState<LabelPrinter[]>([]);
+  const [printerPref, setPrinterPref] = useState<LabelPrinterPref>(() => readLabelPrinterPref());
+  const [printing, setPrinting] = useState(false);
+  const [printMessage, setPrintMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!directPrint) return;
+    let active = true;
+    listLabelPrinters()
+      .then((list) => {
+        if (!active) return;
+        setPrinters(list);
+        // Seçili yazıcı yoksa adında etiket yazıcısı markası geçen ya da varsayılan yazıcı önerilir
+        setPrinterPref((prev) => {
+          if (prev.deviceName && list.some((p) => p.name === prev.deviceName)) return prev;
+          const guess = list.find((p) => /tsc|zebra|godex|argox|xprinter|label|etiket|tdp|ttp|te2|te3/i.test(`${p.name} ${p.displayName}`)) || list.find((p) => p.isDefault) || list[0];
+          return guess ? { ...prev, deviceName: guess.name } : prev;
+        });
+      })
+      .catch((err) => {
+        logError(err instanceof Error ? err : new Error(String(err)), 'LabelDesignerModal.listPrinters');
+        if (active) setPrintMessage({ ok: false, text: 'Yazıcı listesi okunamadı.' });
+      });
+    return () => { active = false; };
+  }, [directPrint]);
+
+  const updatePrinterPref = (next: LabelPrinterPref) => {
+    setPrinterPref(next);
+    saveLabelPrinterPref(next);
+    setPrintMessage(null);
+  };
+
+  const handleDirectPrint = async () => {
+    setPrinting(true);
+    setPrintMessage(null);
+    try {
+      saveLabelPrinterPref(printerPref);
+      const count = await printLabelsDirectly(items, settings, firmName, printerPref);
+      setPrintMessage({ ok: true, text: `${count} etiket yazıcıya gönderildi.` });
+    } catch (err) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'LabelDesignerModal.directPrint');
+      setPrintMessage({ ok: false, text: err instanceof Error ? err.message : 'Yazıcıya gönderilemedi.' });
+    } finally {
+      setPrinting(false);
+    }
+  };
 
   const presetValue = LABEL_PRESETS.some((p) => p.id === settings.presetId) ? settings.presetId : CUSTOM_PRESET_ID;
   const tooMany = totalLabels > MAX_LABELS_PER_PDF;
@@ -382,6 +435,49 @@ export const LabelDesignerModal: React.FC<LabelDesignerModalProps> = ({ initialS
             </div>
             {saveLabel}
           </div>
+          {directPrint && (
+            <div className="flex flex-col gap-1.5 sm:items-end">
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  id="label-printer-select"
+                  value={printerPref.deviceName}
+                  onChange={(e) => updatePrinterPref({ ...printerPref, deviceName: e.target.value })}
+                  className="rounded-xl border border-white/10 px-3 py-2.5 text-xs outline-none max-w-[220px]"
+                  style={{ backgroundColor: 'rgba(0,0,0,0.25)', color: '#ffffff' }}
+                  title="Etiket yazıcısı"
+                >
+                  {printers.length === 0 && <option value="">Yazıcı bulunamadı</option>}
+                  {printers.map((p) => <option key={p.name} value={p.name} style={{ color: '#0f172a' }}>{p.displayName}{p.isDefault ? ' (varsayılan)' : ''}</option>)}
+                </select>
+                <button
+                  type="button"
+                  id="label-printer-rotate"
+                  aria-pressed={printerPref.rotate}
+                  onClick={() => updatePrinterPref({ ...printerPref, rotate: !printerPref.rotate })}
+                  title="Etiket yan ya da ters çıkıyorsa açın"
+                  className="flex items-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-semibold transition cursor-pointer"
+                  style={printerPref.rotate
+                    ? { borderColor: 'var(--accent-500, #0ea5e9)', backgroundColor: 'color-mix(in srgb, var(--accent-500, #0ea5e9) 18%, transparent)', color: '#ffffff' }
+                    : { borderColor: 'rgba(255,255,255,0.1)', color: MUTED }}
+                >
+                  <RotateCw size={14} /> 90° döndür
+                </button>
+                <button
+                  type="button"
+                  id="label-print-direct"
+                  disabled={totalLabels === 0 || tooMany || !isLoaded || printing || !printerPref.deviceName}
+                  onClick={handleDirectPrint}
+                  className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: '#059669', color: '#ffffff' }}
+                >
+                  {printing ? <Loader2 size={17} className="animate-spin" /> : <Printer size={17} />} Yazıcıya Gönder
+                </button>
+              </div>
+              {printMessage && (
+                <span id="label-print-message" className="text-[11px] font-semibold" style={{ color: printMessage.ok ? '#6ee7b7' : '#fda4af' }}>{printMessage.text}</span>
+              )}
+            </div>
+          )}
           <button
             type="button"
             disabled={totalLabels === 0 || tooMany || !isLoaded}

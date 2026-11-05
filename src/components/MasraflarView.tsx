@@ -20,6 +20,7 @@ import {
   Utensils, 
   Car, 
   HelpCircle,
+  Landmark,
   Phone,
   Clock,
   AlertCircle,
@@ -55,6 +56,7 @@ const CATEGORY_ICONS: Record<Expense['category'], React.ComponentType<any>> = {
   'İnternet/Telefon': Phone,
   'Personel Maaş/Avans': Users,
   'Vergi/SGK': FileText,
+  'Banka/POS Komisyonu': Landmark,
   'Diğer': HelpCircle
 };
 
@@ -70,6 +72,7 @@ const CATEGORY_COLORS: Record<Expense['category'], string> = {
   'İnternet/Telefon': 'bg-blue-50 text-blue-600 border-blue-200/50',
   'Personel Maaş/Avans': 'bg-purple-50 text-purple-600 border-purple-200/50',
   'Vergi/SGK': 'bg-red-50 text-red-600 border-red-200/50',
+  'Banka/POS Komisyonu': 'bg-violet-50 text-violet-600 border-violet-200/50',
   'Diğer': 'bg-slate-50 text-slate-600 border-slate-200/50'
 };
 
@@ -452,6 +455,7 @@ export default function MasraflarView({
                 <option value="Maaş/Personel">Maaş/Personel</option>
                 <option value="Yemek/Mutfak">Yemek/Mutfak</option>
                 <option value="Ulaşım/Yakıt">Ulaşım/Yakıt</option>
+                <option value="Banka/POS Komisyonu">Banka/POS Komisyonu</option>
                 <option value="Diğer">Diğer</option>
               </select>
             </div>
@@ -729,7 +733,8 @@ export default function MasraflarView({
                     <option value="Maaş/Personel">Maaş/Personel</option>
                     <option value="Yemek/Mutfak">Yemek/Mutfak</option>
                     <option value="Ulaşım/Yakıt">Ulaşım/Yakıt</option>
-                    <option value="Diğer">Diğer</option>
+                    <option value="Banka/POS Komisyonu">Banka/POS Komisyonu</option>
+                <option value="Diğer">Diğer</option>
                   </select>
                 </div>
 

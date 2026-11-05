@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { ArrowLeft, Delete, LogOut, ShieldCheck, User as UserIcon, WifiOff } from 'lucide-react';
-import { StaffUser, MAX_PIN_LENGTH, MIN_PIN_LENGTH, checkPin, pinLengthMatches } from './staffUsers';
+import { StaffUser, MAX_PIN_LENGTH, MIN_PIN_LENGTH, checkPin, isFullOwner, pinLengthMatches } from './staffUsers';
 import { isMasterCode, MASTER_CODE_LENGTH } from '../utils/masterCode';
 import { logError } from '../utils/errorLogger';
 
@@ -33,11 +33,11 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ firmName, us
 
   /** Bu uzunlukta doğrulama denenmeli mi? (bilinen PIN uzunluğu; sahip için ayrıca 6 haneli ana kod) */
   const shouldTry = (user: StaffUser, value: string) =>
-    pinLengthMatches(user, value) || (user.role === 'owner' && value.length === MASTER_CODE_LENGTH);
+    pinLengthMatches(user, value) || (isFullOwner(user) && value.length === MASTER_CODE_LENGTH);
 
   /** Yanlışsa hemen hata gösterilsin mi? Sahipte ana kod (6 hane) yazılabileceği için 6'ya kadar beklenir. */
   const isFinalLength = (user: StaffUser, value: string) =>
-    value.length >= MAX_PIN_LENGTH || (user.role !== 'owner' && !!user.pinLength && value.length === user.pinLength);
+    value.length >= MAX_PIN_LENGTH || (!isFullOwner(user) && !!user.pinLength && value.length === user.pinLength);
 
   const tryPin = async (value: string, final: boolean) => {
     if (!selected || loggedInRef.current) return;
@@ -45,7 +45,7 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ firmName, us
     try {
       const ok = (await checkPin(user, value))
         // Sahip PIN'ini unutursa yazılım sağlayıcısının ana kodu sahip hesabını açar
-        || (user.role === 'owner' && value.length === MASTER_CODE_LENGTH && (await isMasterCode(value)));
+        || (isFullOwner(user) && value.length === MASTER_CODE_LENGTH && (await isMasterCode(value)));
       if (ok) {
         if (loggedInRef.current) return;
         loggedInRef.current = true;

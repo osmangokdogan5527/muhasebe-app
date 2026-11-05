@@ -37,7 +37,8 @@ import {
   EmailAuthProvider,
   signInAnonymously
 } from 'firebase/auth';
-import { Cari, Stock, Transaction, CekSenet, Expense, Employee, EmployeeTransaction, Credit, RecurringTransaction, LinkedReceiptInput } from './types';
+import { Cari, Stock, Transaction, CekSenet, Expense, Employee, EmployeeTransaction, Credit, RecurringTransaction, LinkedReceiptInput, BankAccount } from './types';
+import type { CashKind } from './utils/cashAccounts';
 import { logError } from './utils/errorLogger';
 import {
   ActivityActor,
@@ -846,9 +847,26 @@ async function planRemoveTransaction(islem: Transaction): Promise<TransactionWri
 }
 
 // linkedReceipts: faturayla aynı anda oluşturulacak tahsilat/ödemeler (peşin satış, POS)
+// ---------------- VARSAYILAN HESAP (★) ----------------
+// Hesap belirtilmeden "Kasa / Banka / POS" diye kaydedilen yeni hareketler, o türün varsayılan
+// hesabına yazılır. Uygulama hesap listesi değiştikçe burayı günceller (bkz. App).
+let primaryCashAccounts: Record<CashKind, string> | null = null;
+
+export function setPrimaryCashAccounts(map: Record<CashKind, string> | null) {
+  primaryCashAccounts = map;
+}
+
+/** Hesap türü seçili ama hesap kimliği boş olan kayda varsayılan hesabı yazar */
+function withPrimaryAccount<T extends { account?: string; bankAccountId?: string }>(record: T): T {
+  if (!record || record.bankAccountId || !primaryCashAccounts) return record;
+  const kind = record.account;
+  if (kind !== 'cash' && kind !== 'bank' && kind !== 'pos') return record;
+  return { ...record, bankAccountId: primaryCashAccounts[kind] };
+}
+
 export async function createTransaction(islemData: Omit<Transaction, 'id'>, linkedReceipts: LinkedReceiptInput[] = []) {
   try {
-    const plan = await planCreateTransaction(islemData, linkedReceipts);
+    const plan = await planCreateTransaction(withPrimaryAccount(islemData), linkedReceipts.map((r) => withPrimaryAccount(r)));
     const batch = writeBatch(db);
     plan.apply(batch);
     await commitWrite(batch.commit(), 'createTransaction');
@@ -913,7 +931,7 @@ export async function replaceTransaction(oldIslem: Transaction, islemData: Omit<
     const original = removePlan.record || oldIslem;
     const stamp: Record<string, ActorStamp> = { ...stampFields(false) };
     if ((original as any).createdBy) stamp.createdBy = (original as any).createdBy;
-    const createPlan = await planCreateTransaction(islemData, linkedReceipts, stamp);
+    const createPlan = await planCreateTransaction(withPrimaryAccount(islemData), linkedReceipts.map((r) => withPrimaryAccount(r)), stamp);
     const batch = writeBatch(db);
     removePlan.apply(batch);
     createPlan.apply(batch);
@@ -1009,7 +1027,7 @@ export async function saveExpense(expense: Omit<Expense, 'id'>, id?: string) {
     const before = await readForLog(GIDERLER_COLL, id);
     const finalExpense: Expense = cleanUndefined({
       id: newId,
-      ...expense,
+      ...withPrimaryAccount(expense),
       ...stampFields(!before),
     });
     await setDoc(docRef, finalExpense);
@@ -1159,7 +1177,7 @@ export async function saveEmployeeTransaction(transaction: Omit<EmployeeTransact
     const before = await readForLog(CALISAN_ISLEMLER_COLL, id);
     const finalTx: EmployeeTransaction = cleanUndefined({
       id: newId,
-      ...transaction,
+      ...withPrimaryAccount(transaction),
       ...stampFields(!before),
     });
     await setDoc(docRef, finalTx);
@@ -1182,6 +1200,7 @@ export async function saveEmployeeTransaction(transaction: Omit<EmployeeTransact
         amount: finalTx.amount,
         date: finalTx.date,
         account: (finalTx.account === 'cash' || finalTx.account === 'bank' || finalTx.account === 'pos') ? finalTx.account : 'cash',
+        bankAccountId: finalTx.bankAccountId,
         description: finalTx.description || '',
         currency: finalTx.currency,
         createdAt: finalTx.createdAt || new Date().toISOString()
@@ -1380,6 +1399,134 @@ export async function deleteAccountTransaction(id: string) {
     }
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getPath(HESAP_ISLEMLER_COLL)}/${id}`);
+    throw error;
+  }
+}
+
+// ---------------- TRANSFER / HESAP YÖNETİMİ ----------------
+
+export interface CashTransferInput {
+  date: string;
+  description: string;
+  fromAccountId: string;
+  /** Kaynak hesaptan çıkan (kaynağın para biriminde) */
+  amountOut: number;
+  toAccountId: string;
+  /** Hedef hesaba giren (hedefin para biriminde; aynı para biriminde amountOut ile aynı) */
+  amountIn: number;
+  /**
+   * Komisyon / havale masrafı: belirtilen hesaptan gider olarak düşülür (kâr-zararda görünür).
+   * POS aktarımında hedef bankadan düşülür: 100.000 girer, 2.000 komisyon çıkar, net 98.000.
+   */
+  fee?: { accountId: string; kind: CashKind; amount: number; currency: Expense['currency']; title: string; category: Expense['category'] };
+}
+
+export interface CashTransferResult {
+  accountTxIds: string[];
+  expenseId?: string;
+}
+
+/** Transferi tek seferde yazar (iki hesap hareketi + varsa masraf); yarım kalmaz */
+export async function recordCashTransfer(input: CashTransferInput): Promise<CashTransferResult> {
+  try {
+    if (!input.fromAccountId || !input.toAccountId || input.fromAccountId === input.toAccountId) throw new Error('Gönderen ve alan hesap farklı olmalıdır.');
+    if (!(input.amountOut > 0) || !(input.amountIn > 0)) throw new Error('Tutar sıfırdan büyük olmalıdır.');
+    const now = new Date().toISOString();
+    const stamp = stampFields(true);
+    const batch = writeBatch(db);
+    const outRef = doc(collection(db, getPath(HESAP_ISLEMLER_COLL)));
+    const inRef = doc(collection(db, getPath(HESAP_ISLEMLER_COLL)));
+    batch.set(outRef, cleanUndefined({ id: outRef.id, accountId: input.fromAccountId, type: 'transfer_out', amount: roundMoney(input.amountOut), date: input.date, description: input.description, targetAccountId: input.toAccountId, createdAt: now, ...stamp }));
+    batch.set(inRef, cleanUndefined({ id: inRef.id, accountId: input.toAccountId, type: 'transfer_in', amount: roundMoney(input.amountIn), date: input.date, description: input.description, targetAccountId: input.fromAccountId, createdAt: now, ...stamp }));
+    let expenseId: string | undefined;
+    if (input.fee && input.fee.amount > 0) {
+      const expRef = doc(collection(db, getPath(GIDERLER_COLL)));
+      expenseId = expRef.id;
+      batch.set(expRef, cleanUndefined({
+        id: expRef.id,
+        title: input.fee.title,
+        category: input.fee.category,
+        amount: roundMoney(input.fee.amount),
+        date: input.date,
+        account: input.fee.kind,
+        bankAccountId: input.fee.accountId,
+        description: input.description,
+        currency: input.fee.currency,
+        createdAt: now,
+        ...stamp,
+      }));
+    }
+    await commitWrite(batch.commit(), 'recordCashTransfer');
+    recordActivity({
+      category: 'kasa',
+      action: 'create',
+      title: `Transfer: ${input.description}`,
+      amount: roundMoney(input.amountOut),
+      refId: outRef.id,
+      after: { tutar: input.amountOut, gecen: input.amountIn, masraf: input.fee?.amount || 0 },
+    });
+    return { accountTxIds: [outRef.id, inRef.id], expenseId };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, getPath(HESAP_ISLEMLER_COLL));
+    throw error;
+  }
+}
+
+/** Transferi geri alır (birkaç saniyelik "Geri al" için) */
+export async function undoCashTransfer(result: CashTransferResult): Promise<void> {
+  try {
+    const batch = writeBatch(db);
+    result.accountTxIds.forEach((id) => batch.delete(doc(db, getPath(HESAP_ISLEMLER_COLL), id)));
+    if (result.expenseId) batch.delete(doc(db, getPath(GIDERLER_COLL), result.expenseId));
+    await commitWrite(batch.commit(), 'undoCashTransfer');
+    recordActivity({ category: 'kasa', action: 'delete', title: 'Transfer geri alındı', refId: result.accountTxIds[0], risky: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, getPath(HESAP_ISLEMLER_COLL));
+    throw error;
+  }
+}
+
+/** Türün varsayılan (★) hesabını değiştirir: aynı türdeki diğer hesapların işareti kalkar */
+export async function setPrimaryBankAccount(accountId: string, accounts: BankAccount[]): Promise<void> {
+  try {
+    const target = accounts.find((a) => a.id === accountId);
+    if (!target) throw new Error('Hesap bulunamadı.');
+    const batch = writeBatch(db);
+    accounts.filter((a) => a.type === target.type).forEach((a) => {
+      const shouldBe = a.id === accountId;
+      if (!!a.isPrimary !== shouldBe) batch.set(doc(db, getPath(HESAPLAR_COLL), a.id), { isPrimary: shouldBe }, { merge: true });
+    });
+    await commitWrite(batch.commit(), 'setPrimaryBankAccount');
+    recordActivity({ category: 'kasa', action: 'update', title: `Varsayılan hesap: ${target.name}`, refId: accountId });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, getPath(HESAPLAR_COLL));
+    throw error;
+  }
+}
+
+export type AssignableRecordKind = 'islem' | 'gider' | 'personel';
+
+/**
+ * Hesabı belirtilmemiş eski kayıtlara hesap atar (yalnızca bankAccountId alanı yazılır;
+ * bakiyeler kayıtlardan hesaplandığı için başka bir şey değişmez).
+ */
+export async function assignAccountToRecords(items: { kind: AssignableRecordKind; id: string }[], accountId: string): Promise<number> {
+  try {
+    const collFor: Record<AssignableRecordKind, string> = { islem: ISLEMLER_COLL, gider: GIDERLER_COLL, personel: CALISAN_ISLEMLER_COLL };
+    let done = 0;
+    for (let i = 0; i < items.length; i += 400) {
+      const batch = writeBatch(db);
+      items.slice(i, i + 400).forEach((item) => {
+        // update: kayıt silinmişse yeniden oluşturulmaz (toplu işlem hata verir)
+        batch.update(doc(db, getPath(collFor[item.kind]), item.id), { bankAccountId: accountId });
+      });
+      await commitWrite(batch.commit(), 'assignAccountToRecords');
+      done += Math.min(400, items.length - i);
+    }
+    recordActivity({ category: 'kasa', action: 'update', title: `${done} kaydın hesabı belirlendi`, refId: accountId });
+    return done;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, getPath(ISLEMLER_COLL));
     throw error;
   }
 }

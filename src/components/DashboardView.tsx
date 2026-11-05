@@ -861,8 +861,8 @@ export default function DashboardView({
       )}
 
       {/* Currency Selection Tab Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 dashboard-widget-header p-3 rounded-xl">
-        <span className="text-[11px] font-extrabold uppercase tracking-widest font-sans ml-2 flex items-center gap-2 text-white" style={{ color: "#ffffff" }}>
+      <div className="dashboard-currency-bar flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 dashboard-widget-header px-4 py-2.5 rounded-xl">
+        <span className="text-[11px] font-extrabold uppercase tracking-widest font-sans flex items-center gap-2 text-white" style={{ color: "#ffffff" }}>
           <span className="w-2 h-2 rounded-full bg-[var(--accent-500)] animate-pulse shadow-[0_0_8px_var(--accent-500)]"></span>
           FİNANSAL GÖSTERGE PARA BİRİMİ SEÇİMİ
         </span>

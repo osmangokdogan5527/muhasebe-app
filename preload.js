@@ -28,7 +28,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   openExternal: (url) => ipcRenderer.send('open-external', url),
   openAutoBackupFolder: () => ipcRenderer.invoke('open-auto-backup-folder'),
-  saveAutoBackup: (content, fileName) => ipcRenderer.invoke('save-auto-backup', content, fileName)
+  saveAutoBackup: (content, fileName) => ipcRenderer.invoke('save-auto-backup', content, fileName),
+  listPrinters: () => ipcRenderer.invoke('list-printers'),
+  printLabelHtml: (job) => ipcRenderer.invoke('print-label-html', job)
 });
 
 window.addEventListener('DOMContentLoaded', () => {

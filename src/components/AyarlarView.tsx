@@ -48,6 +48,7 @@ import {
 } from '../constants';
 import { confirmDialog } from '../utils/dialogs';
 import type { AiSettingsControls } from './settings/AiSettings';
+import { isFullOwner } from '../users/staffUsers';
 
 export interface AyarlarViewProps {
   activeTheme: string;
@@ -193,7 +194,8 @@ export default function AyarlarView({
   staffLegacyDefaults
 }: AyarlarViewProps) {
   const staffSystemActive = !!staff?.systemActive;
-  const isOwner = staff?.currentUser?.role === 'owner';
+  // Kullanıcı yönetimi yalnızca sınırsız sahipte (sınırlı sahip kendine yetki veremesin)
+  const isOwner = isFullOwner(staff?.currentUser);
   // Kullanıcılar sekmesi: sistem açıkken yalnızca sahip; kapalıyken kurulum için (eski PIN sistemine göre yönetici)
   const canManageUsers = staffSystemActive ? isOwner : (!isSecurityActive || userRole === 'admin');
   // Profil, yedek ve veri sıfırlama: sistem açıkken sahip ya da sahip PIN'iyle yetki yükseltilmiş kişi
