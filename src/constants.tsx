@@ -442,17 +442,14 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.9.5';
+export const APP_VERSION = '1.9.6';
 
 export const CHANGELOG = {
-  version: '1.9.5',
-  features: [
-    "Fiş Açıklaması: Hızlı satışta müşteri kutusunun altına yazılan açıklama fişe, A4/A5 faturaya ve satış kaydına yazılır; askıya alınan satışta korunur.",
-    "Varsayılan Kağıt: Satış fişi/faturası ile makbuzlar A5, cari ekstresi ve raporlar A4 açılır. Ayarlar > Belge Görünümü'nden her biri ayrı değiştirilebilir; belge penceresinde o belge için ayrıca seçilebilir.",
-  ],
+  version: '1.9.6',
+  features: [],
   fixes: [
-    "Tek ortak 'son seçilen kağıt' artık tüm belgeleri etkilemiyor (A5 seçilen bir fatura ekstreyi de A5 yapıyordu).",
-    "Pusula temasında belge seçenek düğmeleri (A4 / A5 / Fiş) ve Belge Görünümü kaydet çubuğu okunmuyordu.",
+    "iPhone: Ana ekrana eklenen uygulamada üst başlık (MENÜ / geri butonu) saat ve çentik bölgesinin altında kalıyor, dokunulamıyordu; artık saatin altından başlıyor.",
+    "iPhone: Kasa hesap paneli, cari ekstre paneli ve alttan açılan pencereler (Kasa işlemleri, PDF önizleme, etiket) saat bölgesine taşmıyor.",
   ]
 };
 
@@ -693,6 +690,14 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.9.6",
+    date: "09.11.2026",
+    changes: [
+      "iPhone: Ana ekrana eklenen uygulamada üst başlık (MENÜ / geri butonu) saat ve çentik bölgesinin altında kalıyor, dokunulamıyordu; artık saatin altından başlıyor.",
+      "iPhone: Kasa hesap paneli, cari ekstre paneli ve alttan açılan pencereler (Kasa işlemleri, PDF önizleme, etiket) saat bölgesine taşmıyor.",
+    ]
+  },
   {
     version: "1.9.5",
     date: "05.11.2026",
