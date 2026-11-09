@@ -461,10 +461,12 @@ body:has(main .fixed.inset-0, [aria-modal="true"]:not(.storm-ai-fab *)) .storm-a
    (viewport-fit=cover + şeffaf durum çubuğu). Üstteki başlık ve tam ekran paneller bu kadar aşağı
    itilir; düğmeler saatin altında kalmaz. Çentiksiz cihazlarda değer 0'dır. */
 .app-mobile-header {
-  padding-top: calc(0.75rem + env(safe-area-inset-top, 0px)) !important;
+  /* Çentikli cihazda saatin hemen altından başlar (fazladan boşluk yok); çentiksizde eski 0.75rem */
+  padding-top: max(0.75rem, calc(env(safe-area-inset-top, 0px) + 2px)) !important;
+  padding-bottom: 0.5rem !important;
 }
 .safe-top-pad {
-  padding-top: calc(1.25rem + env(safe-area-inset-top, 0px)) !important;
+  padding-top: max(1.25rem, calc(env(safe-area-inset-top, 0px) + 6px)) !important;
 }
 @media (max-width: 1023px) {
   .safe-top-pad-mobile {
