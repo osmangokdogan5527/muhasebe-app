@@ -82,7 +82,7 @@ export const KasaModal: React.FC<{
   wide?: boolean;
 }> = ({ id, title, subtitle, icon, onClose, children, footer, wide }) => (
   <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
-    <div id={id} className={`bg-[#18181b] border border-white/10 w-full ${wide ? 'sm:max-w-3xl' : 'sm:max-w-lg'} max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl shadow-2xl`}>
+    <div id={id} className={`safe-sheet bg-[#18181b] border border-white/10 w-full ${wide ? 'sm:max-w-3xl' : 'sm:max-w-lg'} max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl shadow-2xl`}>
       <div className="flex items-start justify-between gap-3 p-5 pb-3">
         <div className="flex items-start gap-3 min-w-0">
           {icon && <span className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0">{icon}</span>}

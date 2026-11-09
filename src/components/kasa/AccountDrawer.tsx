@@ -72,7 +72,7 @@ export const AccountDrawer: React.FC<AccountDrawerProps> = ({
       <button type="button" aria-label="Kapat" className="absolute inset-0 bg-black/50 backdrop-blur-[2px] cursor-default" onClick={onClose} />
       <div id="account-drawer" className="kasa-drawer relative w-full sm:max-w-xl h-full bg-[#18181b] border-l border-white/10 shadow-2xl flex flex-col animate-slide-in-right">
         {/* Başlık */}
-        <div className="kasa-drawer-head shrink-0 p-5 text-white" style={{ background: 'linear-gradient(135deg, var(--accent-500, #0ea5e9), var(--accent-700, #0369a1))' }}>
+        <div className="kasa-drawer-head safe-top-pad shrink-0 p-5 text-white" style={{ background: 'linear-gradient(135deg, var(--accent-500, #0ea5e9), var(--accent-700, #0369a1))' }}>
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               {account ? <AccountBadge account={account} size={42} /> : <span className="w-[42px] h-[42px] rounded-xl bg-white/20 flex items-center justify-center"><ArrowRightLeft size={20} /></span>}

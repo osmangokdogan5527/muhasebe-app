@@ -50,7 +50,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
 
   return (
     <div 
-      className="md:hidden px-4 py-3 flex items-center justify-between border-b sticky top-0 z-40 bg-[#070709]/95 backdrop-blur-md border-white/5 text-white"
+      className="app-mobile-header md:hidden px-4 py-3 flex items-center justify-between border-b sticky top-0 z-40 bg-[#070709]/95 backdrop-blur-md border-white/5 text-white"
     >
       {/* Geri (Ana Menüye Dönüş) Button */}
       <button 

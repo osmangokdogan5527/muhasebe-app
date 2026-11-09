@@ -486,7 +486,7 @@ export function LedgerDrawer({
     <>
       <div className="fixed inset-0 z-50 flex justify-end bg-black/85 backdrop-blur-xs animate-fade-in">
         {/* Telefonda (lg altı) ekstre üstte, işlem paneli altında; ikisi birlikte kayar. Geniş ekranda yan yana, ayrı kayar. */}
-        <div className="ledger-drawer-panel bg-[#0c0c0c] border-l border-white/10 w-full max-w-5xl h-full shadow-2xl flex flex-col lg:flex-row animate-slide-left overflow-y-auto lg:overflow-hidden">
+        <div className="ledger-drawer-panel safe-top-pad-mobile bg-[#0c0c0c] border-l border-white/10 w-full max-w-5xl h-full shadow-2xl flex flex-col lg:flex-row animate-slide-left overflow-y-auto lg:overflow-hidden">
           
           {/* Left Column (Ledger Table & Info) */}
           <div
