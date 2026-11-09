@@ -442,14 +442,13 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.9.6';
+export const APP_VERSION = '1.9.7';
 
 export const CHANGELOG = {
-  version: '1.9.6',
+  version: '1.9.7',
   features: [],
   fixes: [
-    "iPhone: Ana ekrana eklenen uygulamada üst başlık (MENÜ / geri butonu) saat ve çentik bölgesinin altında kalıyor, dokunulamıyordu; artık saatin altından başlıyor.",
-    "iPhone: Kasa hesap paneli, cari ekstre paneli ve alttan açılan pencereler (Kasa işlemleri, PDF önizleme, etiket) saat bölgesine taşmıyor.",
+    "iPhone: Üst başlık artık saatin hemen altından başlıyor; saat ile MENÜ butonu arasındaki fazladan boşluk kaldırıldı.",
   ]
 };
 
@@ -690,6 +689,13 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.9.7",
+    date: "09.11.2026",
+    changes: [
+      "iPhone: Üst başlık artık saatin hemen altından başlıyor; saat ile MENÜ butonu arasındaki fazladan boşluk kaldırıldı.",
+    ]
+  },
   {
     version: "1.9.6",
     date: "09.11.2026",
