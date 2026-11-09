@@ -456,3 +456,25 @@ body:has(main .fixed.inset-0, [aria-modal="true"]:not(.storm-ai-fab *)) .storm-a
 .animate-slide-in-right {
   animation: storm-slide-in-right 0.22s ease-out;
 }
+
+/* iPhone çentik / saat bölgesi: ana ekrana eklenmiş uygulamada sayfa durum çubuğunun altına uzanır
+   (viewport-fit=cover + şeffaf durum çubuğu). Üstteki başlık ve tam ekran paneller bu kadar aşağı
+   itilir; düğmeler saatin altında kalmaz. Çentiksiz cihazlarda değer 0'dır. */
+.app-mobile-header {
+  padding-top: calc(0.75rem + env(safe-area-inset-top, 0px)) !important;
+}
+.safe-top-pad {
+  padding-top: calc(1.25rem + env(safe-area-inset-top, 0px)) !important;
+}
+@media (max-width: 1023px) {
+  .safe-top-pad-mobile {
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
+}
+
+/* Telefonda alttan açılan uzun pencereler saat bölgesinin altına taşmaz */
+@media (max-width: 639px) {
+  .safe-sheet {
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 12px) !important;
+  }
+}
