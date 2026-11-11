@@ -133,7 +133,9 @@ export const CariPickerSheet: React.FC<{
   title?: string;
   /** Verilirse listede "Yeni müşteri ekle" seçeneği çıkar (arama metniyle çağrılır) */
   onCreateNew?: (name: string) => void;
-}> = ({ isOpen, cariler, onSelect, onClose, allowNone = false, title = 'Cari Seçin', onCreateNew }) => {
+  /** Satış ekranında müşterinin bakiyesi listede gösterilmez */
+  hideBalance?: boolean;
+}> = ({ isOpen, cariler, onSelect, onClose, allowNone = false, title = 'Cari Seçin', onCreateNew, hideBalance = false }) => {
   const [query, setQuery] = useState('');
   const list = useMemo(() => {
     const q = norm(query);
@@ -184,7 +186,7 @@ export const CariPickerSheet: React.FC<{
                   <div className="text-[11px] text-slate-500">{c.code}{c.phone ? ` • ${c.phone}` : ''}</div>
                 </div>
               </div>
-              <BalanceText value={c.balance || 0} currency={c.currency} className="text-sm shrink-0" />
+              {!hideBalance && <BalanceText value={c.balance || 0} currency={c.currency} className="text-sm shrink-0" />}
             </button>
           ))}
           {list.length === 0 && <EmptyState icon={<User size={28} />} text="Cari bulunamadı." />}

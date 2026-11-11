@@ -8,7 +8,7 @@ import { ReceiptPdfModal, ReceiptInvoiceSource, invoiceSourceFromSummary } from 
 import { receiptDataFromPosSummary } from '../../pdf/posReceiptPdf';
 import { PosParkedSalesModal } from './PosParkedSalesModal';
 import { findStockByBarcodeOrSearch, calculateLineTotal, calculateCartSummary, generateReceiptNo } from '../../utils/posUtils';
-import { ShoppingCart, Zap, DollarSign, CreditCard, User, Clock, CheckCircle2, RotateCcw, Search, Plus, Sparkles, HelpCircle, Percent, BookOpen, UserPlus } from 'lucide-react';
+import { ShoppingCart, Zap, DollarSign, CreditCard, User, Clock, CheckCircle2, RotateCcw, Search, Plus, Sparkles, HelpCircle, Percent, BookOpen, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { QuickCariModal } from '../common/QuickCariModal';
 import { checkCreditLimit, confirmCreditLimit } from '../../utils/creditLimit';
 import { logError } from '../../utils/errorLogger';
@@ -50,6 +50,9 @@ export const PosView: React.FC<PosViewProps> = ({
   // Fişe ve satış kaydına yazılan açıklama (isteğe bağlı)
   const [saleNote, setSaleNote] = useState('');
   const [selectedCari, setSelectedCari] = useState<Cari | null>(null);
+  /** Satış ekranında müşteri bakiyesi varsayılan gizli; göz simgesiyle o an için açılır */
+  const [showCariBalance, setShowCariBalance] = useState(false);
+  useEffect(() => { setShowCariBalance(false); }, [selectedCari?.id]);
   const [cariSearchTerm, setCariSearchTerm] = useState<string>('');
   const [isCariDropdownOpen, setIsCariDropdownOpen] = useState<boolean>(false);
   // Seçili carinin güncel hâli (bakiye satış sırasında başka cihazdan değişmiş olabilir)
@@ -821,22 +824,33 @@ export const PosView: React.FC<PosViewProps> = ({
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-[11px]">
                     <div className="rounded-lg bg-slate-950/60 border border-slate-700 px-2 py-1.5">
-                      <div className="text-slate-400 font-bold">Mevcut bakiye</div>
-                      <div className={`font-black font-mono ${credit.balanceBefore > 0 ? 'text-red-400' : credit.balanceBefore < 0 ? 'text-emerald-400' : 'text-slate-300'}`}>
-                        {money(Math.abs(credit.balanceBefore))} {credit.balanceBefore > 0.004 ? 'Borç' : credit.balanceBefore < -0.004 ? 'Alacak' : ''}
+                      <div className="text-slate-400 font-bold flex items-center justify-between gap-1">
+                        <span>Mevcut bakiye</span>
+                        <button
+                          type="button"
+                          id="pos-toggle-cari-balance"
+                          onClick={() => setShowCariBalance((v) => !v)}
+                          className="p-0.5 rounded text-slate-400 hover:text-white cursor-pointer"
+                          aria-label={showCariBalance ? 'Bakiyeyi gizle' : 'Bakiyeyi göster'}
+                        >
+                          {showCariBalance ? <Eye size={13} /> : <EyeOff size={13} />}
+                        </button>
+                      </div>
+                      <div className={`font-black font-mono ${!showCariBalance ? 'text-slate-400' : credit.balanceBefore > 0 ? 'text-red-400' : credit.balanceBefore < 0 ? 'text-emerald-400' : 'text-slate-300'}`}>
+                        {showCariBalance ? `${money(Math.abs(credit.balanceBefore))} ${credit.balanceBefore > 0.004 ? 'Borç' : credit.balanceBefore < -0.004 ? 'Alacak' : ''}` : '••••••'}
                       </div>
                     </div>
                     <div className="rounded-lg bg-slate-950/60 border border-slate-700 px-2 py-1.5">
                       <div className="text-slate-400 font-bold">Veresiye limiti</div>
                       <div className="font-black font-mono text-white">
-                        {credit.limit === null ? 'Sınırsız' : money(credit.limit)}
+                        {credit.limit === null ? 'Sınırsız' : showCariBalance ? money(credit.limit) : '••••••'}
                       </div>
                     </div>
                   </div>
                   {cartItems.length > 0 && (
                     <div className={`rounded-lg px-2 py-1.5 text-[11px] font-bold border ${credit.exceeded ? 'bg-red-500/20 border-red-400/50 text-red-400' : 'bg-slate-950/60 border-slate-700 text-slate-300'}`}>
-                      Veresiye yazılırsa yeni bakiye: <span className="font-black font-mono">{money(credit.balanceAfter)}</span>
-                      {credit.exceeded && <span className="block">Limit {money(credit.overBy)} aşılıyor — satışta uyarı çıkar.</span>}
+                      Veresiye yazılırsa yeni bakiye: <span className="font-black font-mono">{showCariBalance ? money(credit.balanceAfter) : '••••••'}</span>
+                      {credit.exceeded && <span className="block">{showCariBalance ? `Limit ${money(credit.overBy)} aşılıyor` : 'Veresiye limiti aşılıyor'} — satışta uyarı çıkar.</span>}
                     </div>
                   )}
                 </div>
@@ -890,9 +904,7 @@ export const PosView: React.FC<PosViewProps> = ({
                         className="w-full text-left p-2.5 hover:bg-slate-800 text-xs text-white border-b border-slate-700/60 last:border-none flex justify-between cursor-pointer font-medium"
                       >
                         <span className="font-bold">{c.name}</span>
-                        <span className="font-mono text-xs text-teal-300 font-bold">
-                          ₺{c.balance.toFixed(2)}
-                        </span>
+                        {c.code && <span className="font-mono text-[11px] text-slate-400">{c.code}</span>}
                       </button>
                     ))}
                   </div>
