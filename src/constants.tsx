@@ -442,17 +442,14 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.9.8';
+export const APP_VERSION = '1.9.9';
 
 export const CHANGELOG = {
-  version: '1.9.8',
+  version: '1.9.9',
   features: [
-    "Tutarları Gizle: Cari Hesaplar'da Veresiye Takibi'nin yanındaki butonla tüm bakiyeler gizlenir/gösterilir; Veresiye Takibi penceresinde de aynı seçenek var.",
-    "Tek Cari Gizleme: Her carinin bakiyesinin yanındaki göz simgesiyle yalnızca o müşterinin tutarı gizlenir; tümü gizliyken tek bir müşteri geçici açılabilir.",
+    "Hızlı Satış: Müşteri listesinde bakiye gösterilmiyor; seçili müşterinin bakiyesi, limiti ve veresiye sonrası bakiyesi gizli gelir, göz simgesiyle açılır (bilgisayar ve telefon).",
   ],
-  fixes: [
-    "iPhone: Telefon ana menüsündeki STORM MUHASEBE kartı saat ve çentik bölgesinin altından başlıyor.",
-  ]
+  fixes: []
 };
 
 export const COLOR_PRESETS = [
@@ -692,6 +689,13 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.9.9",
+    date: "11.11.2026",
+    changes: [
+      "Hızlı Satış: Müşteri listesinde bakiye gösterilmiyor; seçili müşterinin bakiyesi, limiti ve veresiye sonrası bakiyesi gizli gelir, göz simgesiyle açılır (bilgisayar ve telefon).",
+    ]
+  },
   {
     version: "1.9.8",
     date: "11.11.2026",
