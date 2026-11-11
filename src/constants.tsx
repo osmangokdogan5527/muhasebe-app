@@ -442,13 +442,16 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.9.7';
+export const APP_VERSION = '1.9.8';
 
 export const CHANGELOG = {
-  version: '1.9.7',
-  features: [],
+  version: '1.9.8',
+  features: [
+    "Tutarları Gizle: Cari Hesaplar'da Veresiye Takibi'nin yanındaki butonla tüm bakiyeler gizlenir/gösterilir; Veresiye Takibi penceresinde de aynı seçenek var.",
+    "Tek Cari Gizleme: Her carinin bakiyesinin yanındaki göz simgesiyle yalnızca o müşterinin tutarı gizlenir; tümü gizliyken tek bir müşteri geçici açılabilir.",
+  ],
   fixes: [
-    "iPhone: Üst başlık artık saatin hemen altından başlıyor; saat ile MENÜ butonu arasındaki fazladan boşluk kaldırıldı.",
+    "iPhone: Telefon ana menüsündeki STORM MUHASEBE kartı saat ve çentik bölgesinin altından başlıyor.",
   ]
 };
 
@@ -689,6 +692,15 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.9.8",
+    date: "11.11.2026",
+    changes: [
+      "Tutarları Gizle: Cari Hesaplar'da Veresiye Takibi'nin yanındaki butonla tüm bakiyeler gizlenir/gösterilir; Veresiye Takibi penceresinde de aynı seçenek var.",
+      "Tek Cari Gizleme: Her carinin bakiyesinin yanındaki göz simgesiyle yalnızca o müşterinin tutarı gizlenir; tümü gizliyken tek bir müşteri geçici açılabilir.",
+      "iPhone: Telefon ana menüsündeki STORM MUHASEBE kartı saat ve çentik bölgesinin altından başlıyor.",
+    ]
+  },
   {
     version: "1.9.7",
     date: "09.11.2026",

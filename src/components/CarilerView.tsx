@@ -25,10 +25,13 @@ import {
   Save,
   Calendar,
   BookOpen,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { compareTransactions } from '../utils/cariLedger';
 import { formatDateISO } from '../utils/dateUtils';
 import { VeresiyeTakipModal } from './cariler/VeresiyeTakipModal';
+import { useBalancePrivacy, MASKED_AMOUNT } from './cariler/useBalancePrivacy';
 
 interface CarilerViewProps {
   showToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
@@ -64,6 +67,8 @@ function CarilerView({
 }: CarilerViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [isVeresiyeOpen, setIsVeresiyeOpen] = useState(false);
+  const balancePrivacy = useBalancePrivacy();
+  const { isHidden: isBalanceHidden, toggleOne: toggleBalanceVisibility } = balancePrivacy;
   const [filterType, setFilterType] = useState<
     "all" | "customer" | "supplier" | "receivable" | "payable" | "passive"
   >("all");
@@ -279,16 +284,30 @@ function CarilerView({
           )}
         </td>
         <td className="p-4 text-right">
-          <div
-            className={`font-semibold text-sm tabular-nums font-sans ${
-              balance > 0
-                ? "text-teal-400"
-                : balance < 0
-                  ? "text-red-400"
-                  : "text-white/50"
-            }`}
-          >
-            {formatCurrency(balance, cari.currency || "TRY")}
+          <div className="flex items-center justify-end gap-1.5">
+            <div
+              className={`font-semibold text-sm tabular-nums font-sans ${
+                isBalanceHidden(cari.id)
+                  ? "text-white/40"
+                  : balance > 0
+                    ? "text-teal-400"
+                    : balance < 0
+                      ? "text-red-400"
+                      : "text-white/50"
+              }`}
+            >
+              {isBalanceHidden(cari.id) ? MASKED_AMOUNT : formatCurrency(balance, cari.currency || "TRY")}
+            </div>
+            <button
+              type="button"
+              id={`btn-balance-eye-${cari.id}`}
+              onClick={(e) => { e.stopPropagation(); toggleBalanceVisibility(cari.id); }}
+              className="cari-balance-eye p-1 rounded-md text-white/35 hover:text-white hover:bg-white/10 cursor-pointer"
+              title={isBalanceHidden(cari.id) ? "Bu carinin bakiyesini göster" : "Bu carinin bakiyesini gizle"}
+              aria-label={isBalanceHidden(cari.id) ? "Bakiyeyi göster" : "Bakiyeyi gizle"}
+            >
+              {isBalanceHidden(cari.id) ? <EyeOff size={13} /> : <Eye size={13} />}
+            </button>
           </div>
           <div className="text-[9px] text-white/30 mt-1 uppercase tracking-wider font-medium">
             {balance > 0
@@ -373,7 +392,7 @@ function CarilerView({
         </td>
       </tr>
     );
-  }, [formatCurrency, onQuickTransaction, setSelectedCariForDetails, handleOpenEditModal, handleDelete]);
+  }, [formatCurrency, onQuickTransaction, setSelectedCariForDetails, handleOpenEditModal, handleDelete, isBalanceHidden, toggleBalanceVisibility]);
 
   // Extract ledger details for the selected Cari
   const cariLedger = useMemo(() => {
@@ -490,6 +509,17 @@ function CarilerView({
           >
             <BookOpen size={16} className="shrink-0" />
             <span className="inline-block">Veresiye Takibi</span>
+          </button>
+          <button
+            type="button"
+            id="btn-toggle-all-balances"
+            aria-pressed={balancePrivacy.hideAll}
+            onClick={balancePrivacy.toggleAll}
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold uppercase tracking-wider px-4 py-3 rounded-lg transition duration-150 border border-white/10 cursor-pointer"
+            title="Cari listesindeki ve Veresiye Takibi'ndeki tüm tutarları gizler / gösterir"
+          >
+            {balancePrivacy.hideAll ? <EyeOff size={16} className="shrink-0" /> : <Eye size={16} className="shrink-0" />}
+            <span className="inline-block">{balancePrivacy.hideAll ? "Tutarları Göster" : "Tutarları Gizle"}</span>
           </button>
           <button
             onClick={() => setIsExcelImportModalOpen(true)}
@@ -793,16 +823,29 @@ function CarilerView({
                         <div className="text-[9px] text-white/30 font-semibold uppercase tracking-wider">
                           Bakiye
                         </div>
-                        <div
-                          className={`font-bold text-sm tabular-nums font-sans ${
-                            balance > 0
-                              ? "text-teal-400"
-                              : balance < 0
-                                ? "text-red-400"
-                                : "text-white/50"
-                          }`}
-                        >
-                          {formatCurrency(balance, cari.currency || "TRY")}
+                        <div className="flex items-center gap-1.5">
+                          <div
+                            className={`font-bold text-sm tabular-nums font-sans ${
+                              isBalanceHidden(cari.id)
+                                ? "text-white/40"
+                                : balance > 0
+                                  ? "text-teal-400"
+                                  : balance < 0
+                                    ? "text-red-400"
+                                    : "text-white/50"
+                            }`}
+                          >
+                            {isBalanceHidden(cari.id) ? MASKED_AMOUNT : formatCurrency(balance, cari.currency || "TRY")}
+                          </div>
+                          <button
+                            type="button"
+                            id={`btn-mob-balance-eye-${cari.id}`}
+                            onClick={(e) => { e.stopPropagation(); toggleBalanceVisibility(cari.id); }}
+                            className="cari-balance-eye p-1.5 rounded-md text-white/35 hover:text-white hover:bg-white/10 cursor-pointer"
+                            aria-label={isBalanceHidden(cari.id) ? "Bakiyeyi göster" : "Bakiyeyi gizle"}
+                          >
+                            {isBalanceHidden(cari.id) ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
                         </div>
                       </div>
                       <div className="flex gap-1">

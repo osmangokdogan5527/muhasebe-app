@@ -1124,7 +1124,7 @@ export default function App() {
         isSecurityActive={isSecurityActive}
       />
 {/* 3. MAIN WORKSPACE CONTENT */}
-      <main className="relative z-10 flex-1 p-4 sm:p-6 overflow-y-auto max-w-7xl mx-auto w-full pb-20 md:pb-6">
+      <main className={`relative z-10 flex-1 p-4 sm:p-6 overflow-y-auto max-w-7xl mx-auto w-full pb-20 md:pb-6${activeTab === 'menu' ? ' safe-top-main' : ''}`}>
         <div className={activeTab === 'menu' ? 'block animate-fade-in md:hidden' : 'hidden'}>
           <MobileMenuView
             tabOrder={tabOrder}

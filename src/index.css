@@ -468,6 +468,12 @@ body:has(main .fixed.inset-0, [aria-modal="true"]:not(.storm-ai-fab *)) .storm-a
 .safe-top-pad {
   padding-top: max(1.25rem, calc(env(safe-area-inset-top, 0px) + 6px)) !important;
 }
+/* Telefon ana menüsünde üst başlık yok; menü kartı saatin altından başlasın */
+@media (max-width: 767px) {
+  .safe-top-main {
+    padding-top: max(1rem, calc(env(safe-area-inset-top, 0px) + 4px)) !important;
+  }
+}
 @media (max-width: 1023px) {
   .safe-top-pad-mobile {
     padding-top: env(safe-area-inset-top, 0px) !important;
