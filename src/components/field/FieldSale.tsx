@@ -1,6 +1,6 @@
 import React, { useMemo, useState, Suspense } from 'react';
 import { lazyWithReload } from '../../utils/lazyWithReload';
-import { Minus, Plus, Trash2, Package, User, Banknote, CreditCard, BookOpen, CheckCircle2, ShoppingCart, ChevronRight, FileText } from 'lucide-react';
+import { Minus, Plus, Trash2, Package, User, Banknote, CreditCard, BookOpen, CheckCircle2, ShoppingCart, ChevronRight, FileText, Eye, EyeOff } from 'lucide-react';
 import { formatQuantity, formatNumber } from '../../pdf/format';
 import { Cari, Stock, BankAccount } from '../../types';
 import { PosCartItem, PosPaymentSplit, PosSaleSummary } from '../../types/pos';
@@ -49,6 +49,9 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
   const [query, setQuery] = useState('');
   const [cart, setCart] = useState<PosCartItem[]>([]);
   const [cari, setCari] = useState<Cari | null>(null);
+  /** Müşteri bakiyesi varsayılan gizli; göz simgesiyle o an için açılır */
+  const [showCariBalance, setShowCariBalance] = useState(false);
+  React.useEffect(() => { setShowCariBalance(false); }, [cari?.id]);
   const [payMethod, setPayMethod] = useState<PayMethod>('cash');
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isCariPickerOpen, setIsCariPickerOpen] = useState(false);
@@ -369,14 +372,25 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
               <Card className="!p-3 space-y-2" >
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   <div>
-                    <div className="text-slate-500">Mevcut bakiye</div>
-                    <div className={`text-sm font-bold tabular-nums ${credit.balanceBefore > 0.004 ? 'text-rose-400' : credit.balanceBefore < -0.004 ? 'text-emerald-400' : 'text-slate-300'}`}>
-                      {formatMoney(Math.abs(credit.balanceBefore), cur)} {credit.balanceBefore > 0.004 ? 'Borç' : credit.balanceBefore < -0.004 ? 'Alacak' : ''}
+                    <div className="text-slate-500 flex items-center gap-1.5">
+                      <span>Mevcut bakiye</span>
+                      <button
+                        type="button"
+                        id="field-toggle-cari-balance"
+                        onClick={() => setShowCariBalance((v) => !v)}
+                        className="p-1 -m-1 rounded text-slate-400 cursor-pointer"
+                        aria-label={showCariBalance ? 'Bakiyeyi gizle' : 'Bakiyeyi göster'}
+                      >
+                        {showCariBalance ? <Eye size={14} /> : <EyeOff size={14} />}
+                      </button>
+                    </div>
+                    <div className={`text-sm font-bold tabular-nums ${!showCariBalance ? 'text-slate-400' : credit.balanceBefore > 0.004 ? 'text-rose-400' : credit.balanceBefore < -0.004 ? 'text-emerald-400' : 'text-slate-300'}`}>
+                      {showCariBalance ? `${formatMoney(Math.abs(credit.balanceBefore), cur)} ${credit.balanceBefore > 0.004 ? 'Borç' : credit.balanceBefore < -0.004 ? 'Alacak' : ''}` : '••••••'}
                     </div>
                   </div>
                   <div>
                     <div className="text-slate-500">Veresiye limiti</div>
-                    <div className="text-sm font-bold text-white tabular-nums">{credit.limit === null ? 'Sınırsız' : formatMoney(credit.limit, cur)}</div>
+                    <div className="text-sm font-bold text-white tabular-nums">{credit.limit === null ? 'Sınırsız' : showCariBalance ? formatMoney(credit.limit, cur) : '••••••'}</div>
                   </div>
                 </div>
                 {payMethod === 'credit' && (
@@ -393,8 +407,8 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
                       />
                     </label>
                     <div className={`rounded-xl px-3 py-2 text-[12px] font-semibold ${credit.exceeded ? 'bg-rose-500/15 text-rose-300' : 'bg-white/[0.04] text-slate-300'}`}>
-                      Veresiye: <span className="font-bold tabular-nums">{formatMoney(openAmount, cur)}</span> • Yeni bakiye: <span className="font-bold tabular-nums">{formatMoney(credit.balanceAfter, cur)}</span>
-                      {credit.exceeded && <span className="block">Limit {formatMoney(credit.overBy, cur)} aşılıyor — onay istenecek.</span>}
+                      Veresiye: <span className="font-bold tabular-nums">{formatMoney(openAmount, cur)}</span> • Yeni bakiye: <span className="font-bold tabular-nums">{showCariBalance ? formatMoney(credit.balanceAfter, cur) : '••••••'}</span>
+                      {credit.exceeded && <span className="block">{showCariBalance ? `Limit ${formatMoney(credit.overBy, cur)} aşılıyor` : 'Veresiye limiti aşılıyor'} — onay istenecek.</span>}
                     </div>
                   </>
                 )}
@@ -425,6 +439,7 @@ export const FieldSale: React.FC<FieldSaleProps> = ({ stoklar, cariler, bankAcco
         onClose={() => setIsCariPickerOpen(false)}
         title="Müşteri Seçin"
         onCreateNew={(name) => setQuickCariName(name)}
+        hideBalance
       />
       {quickCariName !== null && (
         <QuickCariModal
