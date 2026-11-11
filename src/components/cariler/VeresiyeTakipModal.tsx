@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { X, BookOpen, Search, MessageCircle, FileText, ExternalLink, AlertTriangle, Users, Clock, Wallet } from 'lucide-react';
+import { X, BookOpen, Search, MessageCircle, FileText, ExternalLink, AlertTriangle, Users, Clock, Wallet, Eye, EyeOff } from 'lucide-react';
 import type { Cari, Transaction } from '../../types';
 import { computeDebtAging, DebtAging } from '../../utils/debtAging';
 import { creditLimitOf } from '../../utils/creditLimit';
@@ -7,6 +7,7 @@ import { whatsAppUrl, openExternalLink } from '../../utils/whatsapp';
 import { formatDate } from '../../pdf/format';
 import { useDocumentBranding } from '../../pdf/useDocumentBranding';
 import { StatementPdfModal } from '../pdf/StatementPdfModal';
+import { useBalancePrivacy, MASKED_AMOUNT } from './useBalancePrivacy';
 import { logError } from '../../utils/errorLogger';
 
 interface VeresiyeTakipModalProps {
@@ -44,6 +45,10 @@ export const VeresiyeTakipModal: React.FC<VeresiyeTakipModalProps> = ({ cariler,
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('balance');
   const [statementCari, setStatementCari] = useState<Cari | null>(null);
+  const privacy = useBalancePrivacy();
+  /** Ekranda gösterilecek tutar: gizliyse yıldızlı (WhatsApp mesajı gerçek tutarı kullanır) */
+  const shown = (value: number, currency = 'TRY', cariId?: string) =>
+    (cariId ? privacy.isHidden(cariId) : privacy.hideAll) ? MASKED_AMOUNT : money(value, currency);
 
   const rows: Row[] = useMemo(() => {
     try {
@@ -108,16 +113,29 @@ export const VeresiyeTakipModal: React.FC<VeresiyeTakipModalProps> = ({ cariler,
               <p className="text-[11px] text-white/50 truncate">Borcu olan müşteriler, bekleme süreleri ve hatırlatma</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 cursor-pointer" aria-label="Kapat"><X size={18} /></button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              id="veresiye-toggle-all"
+              aria-pressed={privacy.hideAll}
+              onClick={privacy.toggleAll}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 text-xs font-semibold cursor-pointer"
+              title="Tüm tutarları gizle / göster"
+            >
+              {privacy.hideAll ? <EyeOff size={15} /> : <Eye size={15} />}
+              <span className="hidden sm:inline">{privacy.hideAll ? 'Tutarları Göster' : 'Tutarları Gizle'}</span>
+            </button>
+            <button type="button" onClick={onClose} className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 cursor-pointer" aria-label="Kapat"><X size={18} /></button>
+          </div>
         </div>
 
         <div className="p-4 sm:p-5 space-y-4 overflow-y-auto">
           {/* Özet */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { icon: <Wallet size={17} />, tone: 'bg-rose-500/15 text-rose-300', label: 'Toplam Veresiye (TL)', value: money(totals.total) },
+              { icon: <Wallet size={17} />, tone: 'bg-rose-500/15 text-rose-300', label: 'Toplam Veresiye (TL)', value: shown(totals.total) },
               { icon: <Users size={17} />, tone: 'bg-teal-500/15 text-teal-300', label: 'Borçlu Müşteri', value: `${totals.count}` },
-              { icon: <Clock size={17} />, tone: 'bg-amber-500/15 text-amber-300', label: '30 Günü Geçen', value: money(totals.over30) },
+              { icon: <Clock size={17} />, tone: 'bg-amber-500/15 text-amber-300', label: '30 Günü Geçen', value: shown(totals.over30) },
               { icon: <AlertTriangle size={17} />, tone: 'bg-orange-500/15 text-orange-300', label: 'Limiti Aşan', value: `${totals.overLimit}` },
             ].map((card) => (
               <div key={card.label} className="rounded-xl border border-white/10 bg-white/5 p-3 flex items-center gap-3">
@@ -183,7 +201,20 @@ export const VeresiyeTakipModal: React.FC<VeresiyeTakipModalProps> = ({ cariler,
                           <div className="font-semibold text-white">{row.cari.name}</div>
                           <div className="text-[11px] text-white/40">{row.cari.code}{row.cari.phone ? ` • ${row.cari.phone}` : ''}</div>
                         </td>
-                        <td className="px-3 py-3 text-right font-bold tabular-nums text-rose-400 whitespace-nowrap">{money(row.aging.balance, currency)}</td>
+                        <td className="px-3 py-3 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center gap-1.5">
+                            <span className={`font-bold tabular-nums ${privacy.isHidden(row.cari.id) ? 'text-white/40' : 'text-rose-400'}`}>{shown(row.aging.balance, currency, row.cari.id)}</span>
+                            <button
+                              type="button"
+                              id={`veresiye-eye-${row.cari.id}`}
+                              onClick={() => privacy.toggleOne(row.cari.id)}
+                              className="p-1 rounded-md text-white/35 hover:text-white hover:bg-white/10 cursor-pointer"
+                              aria-label={privacy.isHidden(row.cari.id) ? 'Tutarı göster' : 'Tutarı gizle'}
+                            >
+                              {privacy.isHidden(row.cari.id) ? <EyeOff size={13} /> : <Eye size={13} />}
+                            </button>
+                          </div>
+                        </td>
                         <td className="px-3 py-3 min-w-[130px]">
                           {row.limit === null ? (
                             <span className="text-[11px] text-white/40">Sınırsız</span>
@@ -193,7 +224,7 @@ export const VeresiyeTakipModal: React.FC<VeresiyeTakipModalProps> = ({ cariler,
                                 <div className={`h-full rounded-full ${over ? 'bg-rose-500' : usage > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${usage}%` }} />
                               </div>
                               <div className={`text-[11px] mt-1 tabular-nums ${over ? 'text-rose-400 font-semibold' : 'text-white/50'}`}>
-                                {money(row.limit, currency)}{over ? ' • aşıldı' : ''}
+                                {shown(row.limit, currency, row.cari.id)}{over ? ' • aşıldı' : ''}
                               </div>
                             </div>
                           )}
