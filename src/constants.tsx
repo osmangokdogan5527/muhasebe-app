@@ -442,12 +442,12 @@ export const StormLogo = ({
   );
 };
 
-export const APP_VERSION = '1.9.9';
+export const APP_VERSION = '1.9.10';
 
 export const CHANGELOG = {
-  version: '1.9.9',
+  version: '1.9.10',
   features: [
-    "Hızlı Satış: Müşteri listesinde bakiye gösterilmiyor; seçili müşterinin bakiyesi, limiti ve veresiye sonrası bakiyesi gizli gelir, göz simgesiyle açılır (bilgisayar ve telefon).",
+    "Ekstreden Düzeltme: Cari ekstresinde her hareketin başındaki kalemle fatura, tahsilat, ödeme ve iadeler ekstreden çıkmadan düzeltilir; yetkisi olmayan çalışandan yönetici PIN'i istenir.",
   ],
   fixes: []
 };
@@ -689,6 +689,13 @@ export const SIDEBAR_PATTERNS = [
 ];
 
 export const changelogData = [
+  {
+    version: "1.9.10",
+    date: "13.11.2026",
+    changes: [
+      "Ekstreden Düzeltme: Cari ekstresinde her hareketin başındaki kalemle fatura, tahsilat, ödeme ve iadeler ekstreden çıkmadan düzeltilir; yetkisi olmayan çalışandan yönetici PIN'i istenir.",
+    ]
+  },
   {
     version: "1.9.9",
     date: "11.11.2026",
