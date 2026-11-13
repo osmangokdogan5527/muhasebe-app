@@ -49,6 +49,11 @@ interface CarilerViewProps {
   onCariAdded?: () => void;
   selectedCariIdForDetails?: string | null;
   onSelectCariForDetails?: (cariId: string | null) => void;
+  /** Ekstreden hareket düzeltme yetkisi */
+  userRole?: string;
+  actionPermissions?: Record<string, boolean>;
+  escalationPin?: string;
+  isSecurityActive?: boolean;
 }
 
 function CarilerView({
@@ -64,6 +69,10 @@ function CarilerView({
   selectedCariIdForDetails,
   onSelectCariForDetails,
   showToast,
+  userRole,
+  actionPermissions,
+  escalationPin,
+  isSecurityActive,
 }: CarilerViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [isVeresiyeOpen, setIsVeresiyeOpen] = useState(false);
@@ -900,7 +909,11 @@ function CarilerView({
           stoklar={stoklar}
           bankAccounts={bankAccounts}
           islemler={islemler}
-
+          cariler={cariler}
+          userRole={userRole}
+          actionPermissions={actionPermissions}
+          escalationPin={escalationPin}
+          isSecurityActive={isSecurityActive}
         />
       )}
 
