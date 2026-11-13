@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { StatementPdfModal } from '../pdf/StatementPdfModal';
 import { Cari, Transaction, Stock } from '../../types';
-import { X, Printer, Download, Plus, ArrowRight, ArrowLeft, RotateCcw, AlertTriangle } from 'lucide-react';
+import { X, Printer, Download, Plus, ArrowRight, ArrowLeft, RotateCcw, AlertTriangle, Pencil } from 'lucide-react';
+import { IslemModal } from '../islemler/IslemModal';
+import { PinPromptModal } from '../common/PinPromptModal';
+import { logError } from '../../utils/errorLogger';
 
 
 import { createTransaction, saveCari } from '../../firebase';
@@ -18,8 +21,17 @@ export interface LedgerDrawerProps {
   stoklar: Stock[];
   bankAccounts: any[];
   islemler: Transaction[];
-
+  /** Ekstreden hareket düzeltirken fatura penceresindeki cari listesi */
+  cariler?: Cari[];
+  /** Düzeltme yetkisi (Finansal Hareketler'deki kuralların aynısı) */
+  userRole?: string;
+  actionPermissions?: Record<string, boolean>;
+  escalationPin?: string;
+  isSecurityActive?: boolean;
 }
+
+type EditableType = 'sale' | 'purchase' | 'collection' | 'payment' | 'sale_return' | 'purchase_return';
+const EDITABLE_TYPES: EditableType[] = ['sale', 'purchase', 'collection', 'payment', 'sale_return', 'purchase_return'];
 
 export function LedgerDrawer({
   isOpen,
@@ -28,7 +40,34 @@ export function LedgerDrawer({
   stoklar,
   bankAccounts,
   islemler,
+  cariler,
+  userRole,
+  actionPermissions,
+  escalationPin = '',
+  isSecurityActive = false,
 }: LedgerDrawerProps) {
+  // Ekstreden hareket düzeltme
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [pendingEditTx, setPendingEditTx] = useState<Transaction | null>(null);
+
+  const handleEditRow = (rowId: string) => {
+    try {
+      const tx = islemler.find((t) => t.id === rowId);
+      if (!tx || !EDITABLE_TYPES.includes(tx.type as EditableType)) return;
+      if (tx.linkedInvoiceId) {
+        alertDialog('Bu kayıt bir faturayla birlikte otomatik oluşturulmuş peşin tahsilat/ödemedir. Değiştirmek için bağlı faturayı düzeltin.');
+        return;
+      }
+      const actionKey = ['sale', 'sale_return'].includes(tx.type) ? 'edit_sale' : 'edit_payment';
+      if (!isSecurityActive || userRole === 'admin' || actionPermissions?.[actionKey]) {
+        setEditingTx(tx);
+      } else {
+        setPendingEditTx(tx);
+      }
+    } catch (err) {
+      logError(err instanceof Error ? err : new Error(String(err)), 'LedgerDrawer.handleEditRow');
+    }
+  };
 
 
   const [notesText, setNotesText] = useState(currentCari.notes || "");
@@ -605,6 +644,7 @@ export function LedgerDrawer({
                 <table className="w-full text-left border-collapse text-xs">
                   <thead className="bg-[#111] text-white/50 print:bg-gray-100 print:text-black sticky top-0 uppercase tracking-widest font-mono text-[9px]">
                     <tr>
+                      <th className="hidden-print print:hidden py-3 pl-2 pr-0 border-b border-white/10 w-8"><span className="sr-only">Düzelt</span></th>
                       <th className="py-3 px-4 border-b border-white/10 print:border-black/20 font-semibold">Tarih</th>
                       <th className="py-3 px-4 border-b border-white/10 print:border-black/20 font-semibold">İşlem Türü</th>
                       <th className="py-3 px-4 border-b border-white/10 print:border-black/20 font-semibold">Evrak No</th>
@@ -620,7 +660,7 @@ export function LedgerDrawer({
                   <tbody className="divide-y divide-white/5 print:divide-black/10">
                     {filteredCariLedger.length === 0 ? (
                       <tr>
-                        <td colSpan={ekstreType === "detailed" ? 8 : 7} className="py-8 text-center text-white/40">
+                        <td colSpan={ekstreType === "detailed" ? 9 : 8} className="py-8 text-center text-white/40">
                           Bu tarih aralığında hareket bulunamadı.
                         </td>
                       </tr>
@@ -631,6 +671,20 @@ export function LedgerDrawer({
                         
                         return (
                           <tr key={row.id || index} className={`hover:bg-white/[0.02] print:text-black ${isOpening ? "bg-white/[0.02]" : ""}`}>
+                            <td className="hidden-print print:hidden py-2 pl-2 pr-0 text-center">
+                              {!isOpening && row.id && (
+                                <button
+                                  type="button"
+                                  id={`ledger-edit-${row.id}`}
+                                  onClick={() => handleEditRow(row.id)}
+                                  className="p-1.5 rounded-lg text-white/40 hover:text-amber-300 hover:bg-white/10 cursor-pointer"
+                                  title="Bu hareketi düzelt"
+                                  aria-label="Hareketi düzelt"
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                              )}
+                            </td>
                             <td className="py-3 px-4 text-white/70 print:text-black whitespace-nowrap">{row.date}</td>
                             <td className="py-3 px-4 text-white/90 print:text-black font-semibold">{row.type}</td>
                             <td className="py-3 px-4 text-white/50 print:text-black font-mono">{row.invoiceNo || "-"}</td>
@@ -1110,6 +1164,28 @@ export function LedgerDrawer({
           onClose={() => setIsStatementPdfOpen(false)}
         />
       )}
+      {editingTx && (
+        <IslemModal
+          isOpen
+          onClose={() => setEditingTx(null)}
+          modalType={editingTx.type as EditableType}
+          editingTransaction={editingTx}
+          preselectedCariId={currentCari.id}
+          cariler={cariler && cariler.length ? cariler : [currentCari]}
+          stoklar={stoklar}
+          bankAccounts={bankAccounts}
+          islemler={islemler}
+        />
+      )}
+      <PinPromptModal
+        isOpen={!!pendingEditTx}
+        escalationPin={escalationPin}
+        onSuccess={() => {
+          setEditingTx(pendingEditTx);
+          setPendingEditTx(null);
+        }}
+        onCancel={() => setPendingEditTx(null)}
+      />
     </>
   );
 }

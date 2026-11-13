@@ -1210,6 +1210,10 @@ export default function App() {
             onCariAdded={() => setPendingAddCari(false)}
             selectedCariIdForDetails={selectedCariIdForDetails}
             onSelectCariForDetails={setSelectedCariIdForDetails}
+            userRole={userRole}
+            actionPermissions={actionPermissions}
+            escalationPin={escalationPin}
+            isSecurityActive={isSecurityActive}
           />)}
         </div>
         <div className={activeTab === 'stoklar' ? 'block animate-fade-in' : 'hidden'}>
